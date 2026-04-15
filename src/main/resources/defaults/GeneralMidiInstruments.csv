@@ -1,0 +1,127 @@
+0;Piano1;Acoustic Grand Piano
+1;Piano2;Bright Acoustic Piano
+2;Piano3;Electric Grand Piano
+3;Piano4;Honky-Tonk Piano
+4;EPiano1;Electric Piano 1
+5;EPiano2;Electric Piano 2
+6;Harps;Harpsichord
+7;Clav;Clavinet
+8;Celesta;Celesta
+9;Glock;Glockenspiel
+10;MusicBox;Music Box
+11;Vibes;Vibraphone
+12;Marimba;Marimba
+13;Xylo;Xylophone
+14;Tubular;Tubular Bells
+15;Org1;Drawbar Organ
+16;Org2;Percussive Organ
+17;Org3;Rock Organ
+18;Church;Church Organ
+19;Reed;Reed Organ
+20;Acc1;Accordion
+21;Harmo;Harmonica
+22;Tango;Tango Accordion
+23;Guitar1;Acoustic Guitar (nylon)
+24;Guitar2;Acoustic Guitar (steel)
+25;EGuitar1;Electric Guitar (jazz)
+26;EGuitar2;Electric Guitar (clean)
+27;EGuitar3;Electric Guitar (muted)
+28;Overdrive;Overdriven Guitar
+29;Distorted;Distortion Guitar
+30;HarmGuitar;Guitar Harmonics
+31;Bass1;Acoustic Bass
+32;Bass2;Electric Bass (finger)
+33;Bass3;Electric Bass (pick)
+34;Fretless;Fretless Bass
+35;Slap1;Slap Bass 1
+36;Slap2;Slap Bass 2
+37;SynthBass1;Synth Bass 1
+38;SynthBass2;Synth Bass 2
+39;Violin;Violin
+40;Viola;Viola
+41;Cello;Cello
+42;Contrabass;Contrabass
+43;TremStrings;Tremolo Strings
+44;PizzStrings;Pizzicato Strings
+45;Harp;Orchestral Harp
+46;Timpani;Timpani
+47;StringEns1;String Ensemble 1
+48;StringEns2;String Ensemble 2
+49;SynthStrings1;Synth Strings 1
+50;SynthStrings2;Synth Strings 2
+51;ChoirAahs;Choir Aahs
+52;VoiceOohs;Voice Oohs
+53;SynthVoice;Synth Voice
+54;OrchestraHit;Orchestra Hit
+55;Trumpet;Trumpet
+56;Trombone;Trombone
+57;Tuba;Tuba
+58;MutedTrumpet;Muted Trumpet
+59;FrenchHorn;French Horn
+60;BrassEns;Brass Section
+61;SynthBrass1;Synth Brass 1
+62;SynthBrass2;Synth Brass 2
+63;SopranoSax;Soprano Sax
+64;AltoSax;Alto Sax
+65;TenorSax;Tenor Sax
+66;BaritoneSax;Baritone Sax
+67;Oboe;Oboe
+68;EnglishHorn;English Horn
+69;Bassoon;Bassoon
+70;Clarinet;Clarinet
+71;Piccolo;Piccolo
+72;Flute;Flute
+73;Recorder;Recorder
+74;PanFlute;Pan Flute
+75;BlownBottle;Blown Bottle
+76;Shakuhachi;Shakuhachi
+77;Whistle;Whistle
+78;Ocarina;Ocarina
+79;SquareLead;Lead 1 (square)
+80;SawLead;Lead 2 (sawtooth)
+81;CalliopeLead;Lead 3 (calliope)
+82;ChiffLead;Lead 4 (chiff)
+83;CharangLead;Lead 5 (charang)
+84;VoiceLead;Lead 6 (voice)
+85;FifthLead;Lead 7 (fifths)
+86;BassLead;Lead 8 (bass + lead)
+87;Pad1;Pad 1 (new age)
+88;Pad2;Pad 2 (warm)
+89;Pad3;Pad 3 (polysynth)
+90;Pad4;Pad 4 (choir)
+91;Pad5;Pad 5 (bowed)
+92;Pad6;Pad 6 (metallic)
+93;Pad7;Pad 7 (halo)
+94;Pad8;Pad 8 (sweep)
+95;FX1;FX 1 (rain)
+96;FX2;FX 2 (soundtrack)
+97;FX3;FX 3 (crystal)
+98;FX4;FX 4 (atmosphere)
+99;FX5;FX 5 (brightness)
+100;FX6;FX 6 (goblins)
+101;FX7;FX 7 (echoes)
+102;FX8;FX 8 (sci-fi)
+103;Sitar;Sitar
+104;Banjo;Banjo
+105;Shamisen;Shamisen
+106;Koto;Koto
+107;Kalimba;Kalimba
+108;Bagpipe;Bag pipe
+109;Fiddle;Fiddle
+110;Shanai;Shanai
+111;TinkleBell;Tinkle Bell
+112;Agogo;Agogo
+113;SteelDrums;Steel Drums
+114;Woodblock;Woodblock
+115;TaikoDrum;Taiko Drum
+116;MelodicTom;Melodic Tom
+117;SynthDrum;Synth Drum
+118;ReverseCymbal;Reverse Cymbal
+119;GuitarFret;Guitar Fret Noise
+120;BreathNoise;Breath Noise
+121;Seashore;Seashore
+122;BirdTweet;Bird Tweet
+123;Telephone;Telephone Ring
+124;Helicopter;Helicopter
+125;Applause;Applause
+126;Gunshot;Gunshot

@@ -1,0 +1,40 @@
+Id;Name;IsToggle;Row;Col;TextOn;TextOff;TipText;IsActive
+31;TitleButton;B;1;1;Title;;Title;On
+32;AuthorButton;B;1;2;Author;;Author;On
+36;DescriptionButton;B;1;3;Descr;;Description;On
+0;PlayButton;T;2;1;|>;||;Play / Pause;On
+1;TimeSignatureButton;B;2;3;;;Time signature properties;On
+2;FirstPageButton;B;3;1;||<;;Begining;On
+3;NextColButton;B;3;2;<;;Backwards;On
+4;PrevColButton;B;3;3;>;;Forwards;On
+5;PrevPageButton;B;4;2;<<;;Previous page;On
+6;NextPageButton;B;4;3;>>;;Next page;On
+7;PageNumButton;B;4;1;1;;Current page;On
+33;LouderButton;B;5;1;Vol+;;Vol up;On
+34;QuieterButton;B;5;2;Vol-;;Vol down;On
+35;VolumeButton;B;5;3;;;Current vol (0..127);On
+8;FasterButton;B;6;1;Spd+;;Speed up;On
+9;SlowerButton;B;6;2;Spd-;;Speed down;On
+10;TempoButton;B;6;3;;;Current speed (bpm);On
+11;TransposeUpButton;B;7;1;Trp+;;Transpose up;On
+12;TransposeDownButton;B;7;2;Trp-;;Transpose down;On
+13;LoadButton;B;10;1;Load;;Load;On
+14;SaveButton;B;10;2;Save;;Save;On
+15;NewButton;B;10;3;New ;;New score;On
+16;NextExerciseButton;B;11;1;Ex>>;;Next exercise;Off
+17;PrevExerciseButton;B;11;2;Ex<<;;Prev exercise;Off
+18;RestartExerciseButton;B;11;3;;;Restart exercise;Off
+19;NextKeyButton;B;8;1;Key >>;;Next key;On
+20;PrevKeyButton;B;8;2;Key <<;;Prev key;On
+21;ResetKeyButton;B;8;3;;;Select key (Do / do);On
+22;DrumsButton;T;13;2;Music;Drums;Music / Drums;Off
+24;InstrButton;B;13;1;;;Change Instrument;Off
+25;PentaVsChoiceButton;T;14;1;Penta;Templ;Pentagram / Template;On
+26;LeftVsRightButton;T;14;2;Left;Right;Keyboard left / right;On
+27;SelectChoiceButton;T;14;3;Templ;Selecting;Select template pattern (click on keyboard);On
+28;NamesVsHideButton;T;15;1;Names;Hide;Show / Hide note names;On
+29;AbsoluteVsMobileDoButton;T;15;2;Absol;Mobile;Absolute pitch / Mobile do;Off
+30;MixerButton;T;15;3;Mixer;Mixer;Mixer on / Mixer off;Off
+14;SaveButton;B;10;2;Save;;Save;On
+37;ChordSymbolsButton;B;16;1;Export;;Export screen to svg;On
+38;HelpButton;B;16;2;Help;;Show help info;On

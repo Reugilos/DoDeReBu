@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"G:/La meva unitat/Dodecaphenia/DoDeReBu_v4.0\" init)",
+      "Bash(git -C \"G:/La meva unitat/Dodecaphenia/DoDeReBu_v4.0\" status)",
+      "Bash(git -C \"G:/La meva unitat/Dodecaphenia/DoDeReBu_v4.0\" add .gitignore 01_baixa_jre21_FET_A_HP.bat 02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat 03_BuildZip.bat AllSymbols.csv ChordSymbols.csv MeMima.ttf SongsInBooklet config nbactions.xml pom.xml src vendor)"
+    ]
+  }
+}

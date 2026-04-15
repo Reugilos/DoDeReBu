@@ -1,0 +1,35 @@
+Simbol;Sinonims;Posicions;Notes;Intervals;DodecaNotes;Noms
+Tríades;;;;;;
+C;;[1,3,5];[C, E, G];[0,4,7];[do, mi, so];Major
+Cm;C-;[1,b3,5];[C, Eb, G];[0,3,7];[do, ri, so];Menor
+Cdim;Cmb5, C°, Co;[1,b3,b5];[C, Eb, Gb];[0,3,6];[do, ri, fo];Disminuit
+Caug;C+;[1,3,#5];[C, E, G#];[0,4,8];[do, mi, sa];Augmentat
+Csus2;C2;[1,2,5];[C, D, G];[0,2,7];[do, re, so];Suspès 2
+Csus4;C4;[1,4,5];[C, F, G];[0,5,7];[do, fa, so];Suspès 4
+Quatríedes diatòniques;;;;;;
+Cmaj7;C?;[1,3,5,7];[C, E, G, B];[0,4,7,11];[do, mi, so, ti];Major sèptima
+Cm7;C-7;[1,b3,5,b7];[C, Eb, G, Bb];[0,3,7,10];[do, ri, so, li];Menor sèptima
+C7;;[1,3,5,b7];[C, E, G, Bb];[0,4,7,10];[do, mi, so, li];Dominant
+Cm7b5;C?;[1,b3,b5,b7];[C, Eb, Gb, Bb];[0,3,6,10];[do, ri, fo, li];Semidisminuit
+Altres quatríades;;;;;;
+C6;;[1,3,5,6];[C, E, G, A];[0,4,7,9];[do, mi, so, la];
+C7sus2;;[1,2,5,b7];[C, D, G, Bb];[0,2,7,10];[do, re, so, li];
+C7sus4;;[1 ,4,5,b7];[C, F, G, Bb];[0,5,7,10];[do, fa, so, li];
+Cdim7;C°, Co, , C°7, Co7 ,Cmb5bb7;[1,b3,b5,bb7];[C, Eb, Gb, bbB];[0,3,6,9];[do, ri, fo, la];Completament disminuit
+Baix;;;;;;
+C/D;;"[2;1,3,5]";"[D; C, E, G]";"[-10;0,4,7]";"[re; do, mi, so]";
+Tensions;;;;;;
+b9;;[]+b9;Db;13;[]+de;
+9;;[]+9;D;14;[]+re;
+#9;;[]+#9;D#;15;[]+ri;
+11;;[]+11;F;17;[]+fa;
+#11;;[]+#11;F#;18;[]+fo;
+b13;;[]+b13;Ab;20;[]+sa;
+13;;[]+13;A;21;[]+la;
+Acord + tensió;;;;;;
+Cmaj9;;[1,3,5,7,9];[C, E, G, B, D];[0,4,7,11,14];[do, mi, so, ti,re];
+Cm9;;[1,b3,5,b7,9];[C, Eb, G, Bb, D];[0,3,7,10,14];[do, ri, so, li,re];
+C9;C79;[1,3,5,b7,9];[C, E, G, Bb, D];[0,4,7,10,14];[do, mi, so,li,re];
+Cm9b5;;[1,3b,b5,b7,9];[C, Eb, Gb, Bb, D];[0,3,6,10,14];[do, ri, fo,li,re];
+Cm add9;Substituiex la 7a;[1,b3,5,9];[C, Eb, G, D];[0,3,7,14];[do, ri, so, re];
+Cadd9;Substituiex la 7a;[1,3,5,9];[C, E, G, D];[0,4,7,14];[do, mi, so,re];

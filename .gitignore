@@ -1,0 +1,39 @@
+# Maven
+target/
+*.class
+
+# NetBeans
+nbproject/private/
+nbproject/Makefile-*.mk
+nbproject/Package-*.bash
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Fitxers temporals / Temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Portable build (gran i generat) / Portable build (large and generated)
+portable/
+portable_bkp/
+_build_jre/
+
+# JRE integrat al projecte (binaris, no al repositori) / Embedded JRE (binaries, not in repo)
+vendor/
+
+# ZIP de distribució / Distribution ZIP
+*.zip
+
+# Exportacions puntuals / One-off exports
+export.svg
+prova.mid
+
+# IDE genèrics / Generic IDE
+.idea/
+*.iml
+.vscode/
