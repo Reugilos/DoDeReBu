@@ -3,6 +3,7 @@ package dodecagraphone.model.component;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.color.ColorSets;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.Graphics2D;
@@ -118,19 +119,13 @@ public class MyButtonPanel extends MyComponent {
                 int row = Integer.parseInt(fields[3].trim()) - 1;
                 int col = Integer.parseInt(fields[4].trim());
                 String textOn = "";
-                if (fields.length > 5) {
-                    textOn = fields[5].trim();
-                    //  if (!"".equals(textOn)) textOn = textOn.substring(1, textOn.length() - 1);
+                if (fields.length > 5 && !fields[5].trim().isEmpty()) {
+                    textOn = I18n.t(fields[5].trim());
                 }
-                String textOff = fields.length > 6 ? fields[6].trim() : "";
-//                if (!"".equals(textOff)) {
-//                    textOff = textOff.substring(1, textOff.length() - 1);
-//                }
+                String textOff = (fields.length > 6 && !fields[6].trim().isEmpty()) ? I18n.t(fields[6].trim()) : "";
                 String tipText = "";
-                if (fields.length > 7) {
-                    //tipText = I18n.t(fields[7].trim());
-                    tipText = fields[7].trim();
-//                    if (!"".equals(tipText)) tipText = tipText.substring(1, tipText.length() - 1);
+                if (fields.length > 7 && !fields[7].trim().isEmpty()) {
+                    tipText = I18n.t(fields[7].trim());
                 }
                 String active = "";
                 if (fields.length > 8) {

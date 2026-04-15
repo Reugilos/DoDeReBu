@@ -1493,8 +1493,27 @@ public class MyController {
         replicador.start();
     }
 
-    public void onTempoButtonPressed(MyButton togg){
-        // Obrir un dialeg
+    public void onTempoButtonPressed(MyButton togg) {
+        this.buttons.hideTip();
+        togg.setPressed(false);
+        String input = MyDialogs.mostraInputDialog(
+                I18n.t("MyController.onTempoButtonPressed.prompt"),
+                I18n.t("MyController.onTempoButtonPressed.title"),
+                String.valueOf(MyTempo.getTempo())
+        );
+        if (input == null) {
+            return;
+        }
+        try {
+            int requested = Integer.parseInt(input);
+            int actual = MyTempo.setTempo(requested);
+            this.buttons.updateTempoButton(String.valueOf(actual));
+        } catch (NumberFormatException e) {
+            MyDialogs.mostraError(
+                    I18n.f("MyController.onTempoButtonPressed.invalidInput", input),
+                    I18n.t("MyController.dialog.error.title")
+            );
+        }
     }
     
     public void onFasterButtonPressed(MyButton togg) {

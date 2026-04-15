@@ -207,7 +207,7 @@ public class Settings {
 //        int n = getnColsScore();
 //        n = getnColsSquare(); // 
         chordSymbolVertical = CHORD_SYMBOL_VERTICAL;
-        String language = AppConfig.get().get("language", "en");
+        String language = AppConfig.get().get("ui.language", "en");
         I18n.initFromLanguageTag(language);
 //        // Dependent parameters
 //        n = getnColsCam();

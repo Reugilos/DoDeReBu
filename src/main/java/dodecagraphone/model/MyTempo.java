@@ -7,10 +7,14 @@ public class MyTempo {
     // private static int numSquaresBeat = Settings.DEFAULT_NUM_COLS_BEAT;
     private static final double factor = 1.1;
     private static final double increment = 5;
-    public static void setTempo(int tpo){
-        tempo = tpo;
-        // int numSquaresBeat = Settings.getnColsBeat();
-        // if (numSquaresBeat!=Settings.getnColsBeat()) System.out.println("MyTempo::setTempo: param = "+numSquaresBeat+", settings = "+Settings.getnColsBeat());
+    public static int setTempo(int tpo){
+        if (tpo>Settings.MAX_BPM)
+            tempo = Settings.MAX_BPM;
+        else if (tpo < 0)
+            tempo = 0;
+        else
+          tempo = tpo;
+        return tempo;
     }
     public static double getNanosPerSquareGrid(){
         double mpsq = 60000000000.0/(double)(Settings.getnColsBeat()*tempo);
