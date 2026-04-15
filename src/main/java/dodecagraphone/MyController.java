@@ -42,7 +42,6 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import javax.sound.midi.MetaMessage;
 import javax.swing.JOptionPane;
 
@@ -184,6 +183,7 @@ public class MyController {
 //this.cam.reset();
 //
         this.allPurposeScore.initOffscreen();
+        this.myChordSymbolLine.initOffscreen();
         Utilities.printOutWithPriority(false, "MyController::MyController(): offScreenWidth = "+this.allPurposeScore.getOffscreenImage().getWidth());
 //        this.setScreenKeyboardRight(!left);
         //this.getUi().getPanel().repinta(true);
@@ -594,20 +594,22 @@ public class MyController {
     public void onMousePressed(double posX, double posY) {
         /* Check chord symbol */
         int chordCol = this.myChordSymbolLine.whichCol(posX, posY);
-        if (Settings.IS_BU) chordCol = -1;
+        // if (Settings.IS_BU) chordCol = -1;
         if (chordCol != -1) {
             Chord oldchord = this.allPurposeScore.getChordSymbol(chordCol);
             Chord chord = this.myChordSymbolLine.enterChord(oldchord);
 
-            if (chord != null) {
+            if (chord != null && chord != oldchord) { // chord != oldchord means not cancelled
                 if (chord.isValidChord()) {
                     this.allPurposeScore.placeChordSymbol(chord, chordCol); // crea el chordTrack si no existeix
                     this.needsSaving = true;
+                    this.myChordSymbolLine.drawFullChordLineInOffscreen();
                     //this.getMixer().refreshMixer();
                 }
-            } else if (oldchord != null) {
+            } else if (chord == null && oldchord != null) { // empty input = delete
                 this.allPurposeScore.removeChordSymbol(chordCol);
                 this.needsSaving = true;
+                this.myChordSymbolLine.drawFullChordLineInOffscreen();
                 //this.getMixer().refreshMixer();
             }
 //            this.myChordSymbolLine.thisAndAncestorsNeedDrawing();
@@ -1296,6 +1298,7 @@ public class MyController {
         if (togg.isPressed()) {
             if (this.allPurposeScore.isGridColorsHaveChanged()){
                 this.allPurposeScore.initOffscreen();
+                this.myChordSymbolLine.initOffscreen();
             }
             this.play();
         } else {
@@ -1943,6 +1946,7 @@ public class MyController {
             allPurposeScore.resetAllPurposeScore();
             this.mixer = new MyMixer(this);
             allPurposeScore.readMidiScore(fitxer);
+            this.myChordSymbolLine.initOffscreen();
             //this.myChordSymbolLine.setScore(allPurposeScore);
             //this.cam.setScore(allPurposeScore);
             //this.cam.setSymbolLine(myChordSymbolLine);
@@ -1968,6 +1972,7 @@ public class MyController {
         this.currentMidiFile = "";
         this.setDefaultTrack();
         this.allPurposeScore.initOffscreen();
+        this.myChordSymbolLine.initOffscreen();
 
 //        this.allPurposeScore.getChoice().setNoneChoice();
     }
@@ -2106,6 +2111,7 @@ public class MyController {
         this.stop();
         this.buttons.stopPlayButton();
         this.exerciseList.resetCurrentExercise();
+        this.myChordSymbolLine.initOffscreen();
         this.buttons.setToggleButtonsToProgramValues();
         this.statusLine.setText(allPurposeScore.getLabel() + ": " + allPurposeScore.getDescription());
     }
