@@ -665,6 +665,28 @@ public class MyController {
             return;
         }
 
+        /* Check lyrics strip */
+        int lyricsCol = this.myLyrics.whichCol(posX, posY);
+        if (lyricsCol != -1) {
+            int trackId   = this.getMixer().getCurrentTrackId();
+            String oldText = this.myLyrics.getLyric(lyricsCol, trackId);
+            String text    = this.myLyrics.enterLyrics(oldText);
+            if (text != null) { // null = cancel·lat
+                if (text.isEmpty()) {
+                    if (oldText != null) {
+                        this.myLyrics.removeLyric(lyricsCol, trackId);
+                        this.needsSaving = true;
+                    }
+                } else if (!text.equals(oldText)) {
+                    this.myLyrics.setLyric(lyricsCol, trackId, text);
+                    this.needsSaving = true;
+                }
+                this.myLyrics.drawFullLyricsInOffscreen();
+                this.drawFull(true);
+            }
+            return;
+        }
+
         /* Check XiloKey. */
         int keyId = this.keyboard.whichKey(posX, posY);
         if (keyId != -1) {

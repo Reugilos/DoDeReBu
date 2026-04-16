@@ -1,14 +1,21 @@
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
+import dodecagraphone.ui.I18n;
+import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An horizontal strip below the score that scrolls in sync with the grid,
@@ -29,6 +36,15 @@ public class MyLyrics extends MyComponent {
     private Graphics2D offscreenGraphics;
 
     /**
+     * All lyrics segments, grouped by track ID.
+     * Key = track ID, Value = list of segments for that track.
+     */
+    private final Map<Integer, List<LyricSegment>> lyricsByTrack = new HashMap<>();
+
+    /** Track whose lyrics are currently displayed in the offscreen buffer. */
+    private int displayTrackId = 0;
+
+    /**
      * @param firstCol  col within parent (camera)
      * @param firstRow  row within parent (camera)
      * @param nCols     number of columns
@@ -41,6 +57,163 @@ public class MyLyrics extends MyComponent {
                     MyComponent parent, MyController contr, MyGridScore score) {
         super(firstCol, firstRow, nCols, nRows, parent, contr);
         this.score = score;
+    }
+
+    // -------------------------------------------------------------------------
+    // Hit-testing and editing
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the exact score column corresponding to the screen position
+     * (screenX, screenY), or -1 if the position is outside the lyrics strip.
+     *
+     * @param screenX  screen X in panel coordinates
+     * @param screenY  screen Y in panel coordinates
+     * @return column index or -1
+     */
+    public int whichCol(double screenX, double screenY) {
+        if (this.contains(screenX, screenY)) {
+            return controller.getAllPurposeScore().getCol(screenX);
+        }
+        return -1;
+    }
+
+    /**
+     * Opens an input dialog to enter or edit the lyric at a column.
+     * Returns null if the user cancels, an empty string to signal deletion,
+     * or the new text otherwise.
+     *
+     * @param oldText  current lyric (may be null)
+     * @return new text, "" (delete), or null (cancel)
+     */
+    public String enterLyrics(String oldText) {
+        String defStr = (oldText != null) ? oldText : "";
+        String input = MyDialogs.mostraInputDialog(
+                I18n.t("myLyrics.enterLyrics.prompt"),
+                I18n.t("myLyrics.enterLyrics.title"),
+                defStr);
+        if (input == null) {
+            return null; // cancel·lat
+        }
+        return input.trim(); // "" = esborrar, text = nou valor
+    }
+
+    // -------------------------------------------------------------------------
+    // Public lyrics API
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the lyric text at {@code col} for {@code track}, or null if none.
+     */
+    public String getLyric(int col, int track) {
+        LyricSegment seg = findSegment(col, track);
+        return seg != null ? seg.text : null;
+    }
+
+    /**
+     * Adds or replaces the lyric at {@code col} for {@code track}.
+     * The row (0=top, 1=mid, 2=bottom) is assigned automatically to avoid
+     * overlapping with other segments on the same row: tries 1→2→0;
+     * if all are occupied the text goes to row 1 (tough luck).
+     */
+    public void setLyric(int col, int track, String text) {
+        List<LyricSegment> segs =
+                lyricsByTrack.computeIfAbsent(track, k -> new ArrayList<>());
+        // Remove any existing segment at this col
+        segs.removeIf(s -> s.col == col);
+        int w   = computeWidthCols(text);
+        int row = assignRow(col, w, segs);
+        segs.add(new LyricSegment(col, track, text, row, w));
+    }
+
+    /**
+     * Removes the lyric at {@code col} for {@code track} (no-op if absent).
+     */
+    public void removeLyric(int col, int track) {
+        List<LyricSegment> segs = lyricsByTrack.get(track);
+        if (segs != null) {
+            segs.removeIf(s -> s.col == col);
+        }
+    }
+
+    /**
+     * Updates the track whose lyrics are drawn. Triggers a redraw of the
+     * offscreen buffer so the new track's lyrics appear immediately.
+     *
+     * @param trackId  new display track ID
+     */
+    public void setDisplayTrackId(int trackId) {
+        if (this.displayTrackId != trackId) {
+            this.displayTrackId = trackId;
+            if (offscreenGraphics != null) {
+                drawFullLyricsInOffscreen();
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the first segment at {@code col} for {@code track}, or null.
+     */
+    private LyricSegment findSegment(int col, int track) {
+        List<LyricSegment> segs = lyricsByTrack.get(track);
+        if (segs == null) return null;
+        for (LyricSegment s : segs) {
+            if (s.col == col) return s;
+        }
+        return null;
+    }
+
+    /**
+     * Computes the width of {@code text} in score columns (ceiling), adding a
+     * small padding. Falls back to 4 columns if the offscreen context is not
+     * yet initialised.
+     */
+    private int computeWidthCols(String text) {
+        if (offscreenGraphics == null) return 4;
+        FontMetrics fm = offscreenGraphics.getFontMetrics();
+        int px = fm.stringWidth(text) + 4; // 4 px right-padding
+        return Math.max(1, (int) Math.ceil(px / Settings.getColWidth()));
+    }
+
+    /**
+     * Assigns a row to a new segment at {@code col} with width {@code widthCols}
+     * given the existing segments {@code segs} for the same track.
+     * Priority: 1 (middle) → 2 (bottom) → 0 (top) → 1 (mala sort).
+     */
+    private int assignRow(int col, int widthCols, List<LyricSegment> segs) {
+        for (int tryRow : new int[]{1, 2, 0}) {
+            boolean overlap = false;
+            for (LyricSegment s : segs) {
+                if (s.row == tryRow && overlaps(col, widthCols, s.col, s.widthCols)) {
+                    overlap = true;
+                    break;
+                }
+            }
+            if (!overlap) return tryRow;
+        }
+        return 1; // mala sort: all rows occupied
+    }
+
+    /** True if column range [colA, colA+wA) overlaps [colB, colB+wB). */
+    private static boolean overlaps(int colA, int wA, int colB, int wB) {
+        return colA < colB + wB && colB < colA + wA;
+    }
+
+    /**
+     * Draws a single lyric segment into {@code g} using offscreen coordinates.
+     * Each of the 3 lyrics rows occupies {@code rowHeight} pixels;
+     * the text is vertically centred within its row.
+     */
+    private void drawSegment(LyricSegment seg, Graphics2D g) {
+        FontMetrics fm = g.getFontMetrics();
+        double rowH = Settings.getRowHeight();
+        int x     = (int) Math.floor(seg.col * Settings.getColWidth()) + 2;
+        int textY = (int) (seg.row * rowH + (rowH + fm.getAscent() - fm.getDescent()) / 2.0);
+        g.drawString(seg.text, x, textY);
     }
 
     // -------------------------------------------------------------------------
@@ -86,14 +259,22 @@ public class MyLyrics extends MyComponent {
             if ((col % (Settings.getnColsBeat() * score.getNumBeatsMeasure())) == 0) {
                 drawMeasureLine(col, offscreenGraphics);
             }
-            // All columns
+            // All columns: beat and measure separator lines
             for (col = numCols - 1; col >= 0; col--) {
-                // --- future: draw lyric text for this col ---
                 if ((col % Settings.getnColsBeat()) == 0) {
                     drawBeatLine(col, offscreenGraphics);
                 }
                 if ((col % (Settings.getnColsBeat() * score.getNumBeatsMeasure())) == 0) {
                     drawMeasureLine(col, offscreenGraphics);
+                }
+            }
+
+            // Lyrics text for the current display track
+            List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
+            if (segs != null && !segs.isEmpty()) {
+                offscreenGraphics.setColor(Color.BLACK);
+                for (LyricSegment seg : segs) {
+                    drawSegment(seg, offscreenGraphics);
                 }
             }
         }
@@ -219,5 +400,43 @@ public class MyLyrics extends MyComponent {
         // white offscreen background.
         g.setColor(Color.BLACK);
         g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+    }
+
+    // =========================================================================
+    // Inner class: LyricSegment
+    // =========================================================================
+
+    /**
+     * A single lyric text fragment attached to a specific score column and
+     * MIDI track. The {@code row} field (0=top, 1=middle, 2=bottom) is
+     * assigned automatically to avoid visual overlap with neighbouring
+     * segments on the same row.
+     */
+    public static class LyricSegment {
+
+        /** Score column where the segment starts (exact column where the user clicked). */
+        public final int col;
+        /** MIDI track index this segment belongs to. */
+        public final int track;
+        /** The lyric text. */
+        public String text;
+        /**
+         * Row within the lyrics strip: 0 = top, 1 = middle, 2 = bottom.
+         * Assigned automatically by {@link MyLyrics#assignRow}.
+         */
+        public int row;
+        /**
+         * Width of this segment expressed in score columns (ceiling of
+         * pixelWidth / colWidth). Used for overlap detection.
+         */
+        public int widthCols;
+
+        public LyricSegment(int col, int track, String text, int row, int widthCols) {
+            this.col       = col;
+            this.track     = track;
+            this.text      = text;
+            this.row       = row;
+            this.widthCols = widthCols;
+        }
     }
 }
