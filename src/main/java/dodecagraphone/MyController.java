@@ -10,6 +10,7 @@ import dodecagraphone.model.MyTempo;
 import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.component.MyCamera;
 import dodecagraphone.model.component.MyChordSymbolLine;
+import dodecagraphone.model.component.MyLyrics;
 import dodecagraphone.model.component.MyAllPurposeScore;
 import dodecagraphone.model.component.MyButton;
 import dodecagraphone.model.component.MyComponent;
@@ -37,6 +38,7 @@ import dodecagraphone.ui.MyUserInterface;
 import dodecagraphone.ui.SVGandPDF;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -67,6 +69,7 @@ public class MyController {
     private MyAllPurposeScore allPurposeScore;
     // private MyAllPurposeScore patternScore;
     private final MyChordSymbolLine myChordSymbolLine;
+    private final MyLyrics myLyrics;
     private final MyCamera cam;
     private final MyButtonPanel buttons;
     private final MyStatusLine statusLine;
@@ -137,6 +140,9 @@ public class MyController {
         this.myChordSymbolLine = new MyChordSymbolLine(Settings.getChordFirstCol(), Settings.getChordFirstRow(), Settings.getnColsChord(), Settings.getnRowsChord(), this.cam, this, this.allPurposeScore);
         this.cam.setSymbolLine(myChordSymbolLine);
         this.cam.add(myChordSymbolLine);
+        this.myLyrics = new MyLyrics(Settings.getLyricsFirstCol(), Settings.getLyricsFirstRow(), Settings.getnColsLyrics(), Settings.getnRowsLyrics(), this.cam, this, this.allPurposeScore);
+        this.cam.setLyrics(myLyrics);
+        this.cam.add(myLyrics);
         this.cam.reset();
         this.buttons = new MyButtonPanel(Settings.getFirstColControl(), Settings.getControlFirstRow(), Settings.getnColsControl(), Settings.getnRowsControl(), this.screen, this);
         this.statusLine = new MyStatusLine(Settings.getStatusFirstCol(), Settings.getStatusFirstRow(), Settings.getnColsStatus(), Settings.getnRowsStatus(), this.screen, this);
@@ -184,6 +190,7 @@ public class MyController {
 //
         this.allPurposeScore.initOffscreen();
         this.myChordSymbolLine.initOffscreen();
+        this.myLyrics.initOffscreen();
         Utilities.printOutWithPriority(false, "MyController::MyController(): offScreenWidth = "+this.allPurposeScore.getOffscreenImage().getWidth());
 //        this.setScreenKeyboardRight(!left);
         //this.getUi().getPanel().repinta(true);
@@ -421,6 +428,46 @@ public class MyController {
      *
      * @param g
      */
+    /**
+     * Fills the keyboard-column areas of the chord and lyrics strips with
+     * white, and draws a vertical separator line at the camera left edge for
+     * each strip. Called at the start of redraw(), before screen.draw().
+     */
+    private void drawStripsBackground(Graphics2D g) {
+        double rowH   = Settings.getRowHeight();
+        double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
+
+        int chordY  = (int) Math.round(Settings.getChordFirstRow()  * rowH); // = 0
+        int chordH  = (int) Math.round(Settings.getnRowsChord()     * rowH);
+        int lyricsY = (int) Math.round(Settings.getLyricsFirstRow() * rowH);
+        int lyricsH = (int) Math.round(Settings.getnRowsLyrics()    * rowH);
+        int kw      = (int) Math.ceil(keyW);
+        int sepX    = kw; // x of vertical separator = camera left edge
+
+        // White fill for the keyboard-column part of each strip
+        g.setColor(Color.WHITE);
+        g.fillRect(0, chordY,  kw, chordH);
+        g.fillRect(0, lyricsY, kw, lyricsH);
+
+        // Vertical separator line between keyboard column and camera area
+        // (same default stroke as MyCamera.drawRect — BasicStroke(1f))
+        g.setColor(Color.BLACK);
+        g.drawLine(sepX, chordY,  sepX, chordY  + chordH);
+        g.drawLine(sepX, lyricsY, sepX, lyricsY + lyricsH);
+
+        // Labels: vertically centered, left-aligned with a small margin
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int textH  = fm.getAscent() - fm.getDescent();
+        int margin = (int) Math.max(4, Settings.getColWidth());
+        g.setColor(Color.BLACK);
+        g.drawString(I18n.t("myChordSymbolLine.label"),
+                margin,
+                chordY  + (chordH  + textH) / 2);
+        g.drawString(I18n.t("myLyrics.label"),
+                margin,
+                lyricsY + (lyricsH + textH) / 2);
+    }
+
     public void redraw(Graphics2D g) {
 //        if (doRedraw) { 
         //g.setColor(Color.WHITE);
@@ -433,6 +480,7 @@ public class MyController {
         //this.setScreenKeyboardRight(this.allPurposeScore.isUseScreenKeyboardRight());
         if(this.isNeedsDrawing()){
             Utilities.printOutWithPriority(5, "MyController::redraw: count = " + count3++);
+            drawStripsBackground(g);
             this.screen.draw(g);
 //            System.out.println("MyController::redraw(): "+count3++);
         }
@@ -1299,6 +1347,7 @@ public class MyController {
             if (this.allPurposeScore.isGridColorsHaveChanged()){
                 this.allPurposeScore.initOffscreen();
                 this.myChordSymbolLine.initOffscreen();
+                this.myLyrics.initOffscreen();
             }
             this.play();
         } else {
@@ -1947,6 +1996,7 @@ public class MyController {
             this.mixer = new MyMixer(this);
             allPurposeScore.readMidiScore(fitxer);
             this.myChordSymbolLine.initOffscreen();
+            this.myLyrics.initOffscreen();
             //this.myChordSymbolLine.setScore(allPurposeScore);
             //this.cam.setScore(allPurposeScore);
             //this.cam.setSymbolLine(myChordSymbolLine);
@@ -1973,6 +2023,7 @@ public class MyController {
         this.setDefaultTrack();
         this.allPurposeScore.initOffscreen();
         this.myChordSymbolLine.initOffscreen();
+        this.myLyrics.initOffscreen();
 
 //        this.allPurposeScore.getChoice().setNoneChoice();
     }
@@ -2112,6 +2163,7 @@ public class MyController {
         this.buttons.stopPlayButton();
         this.exerciseList.resetCurrentExercise();
         this.myChordSymbolLine.initOffscreen();
+        this.myLyrics.initOffscreen();
         this.buttons.setToggleButtonsToProgramValues();
         this.statusLine.setText(allPurposeScore.getLabel() + ": " + allPurposeScore.getDescription());
     }

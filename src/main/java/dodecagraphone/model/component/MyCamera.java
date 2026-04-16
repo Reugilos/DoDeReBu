@@ -30,9 +30,11 @@ public class MyCamera extends MyComponent {
 
     /** The score. The camera shows only the visible part of the score. */
     public MyGridScore score;
-    /** The chord symbol line. An horizontal strip where chords can be 
+    /** The chord symbol line. An horizontal strip where chords can be
      * displayed at their corresponding beat and measure (as in a fake book).*/
     public MyChordSymbolLine chordSymbolLine;
+    /** The lyrics strip below the score. */
+    public MyLyrics lyrics;
     /** The camera column of the play bar. The score column that hits the
      * playbar is the column that is being played. 
      * When the keyboard is on the left,
@@ -77,12 +79,20 @@ public class MyCamera extends MyComponent {
         this.score = score;
    }
 
-    /** 
+    /**
      * Sets the chord symbol line.
-     * @param chords 
+     * @param chords
      */
     public void setSymbolLine(MyChordSymbolLine chords) {
         this.chordSymbolLine = chords;
+    }
+
+    /**
+     * Sets the lyrics strip.
+     * @param lyrics
+     */
+    public void setLyrics(MyLyrics lyrics) {
+        this.lyrics = lyrics;
     }
 
     /**
@@ -253,17 +263,16 @@ public class MyCamera extends MyComponent {
      * @param g 
      */
     public void drawPlayBar(Graphics2D g){
-        int nrsc = (int) Settings.getnRowsKeyboard();
         double rh = Settings.getRowHeight();
         Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke((float) 3));        
+        g.setStroke(new BasicStroke((float) 3));
         g.setColor(java.awt.Color.BLACK);
         int x = (int) getScreenX(playBarCol);
-        int y = ((int) getScreenY(score.getParentFirstRow()))+1;
-        int w = (int) Settings.getColWidth();
-        int h = (int) (nrsc * rh);
+        // Extend from top of camera (chord rows) to bottom (lyrics rows)
+        int y = (int) getScreenY(0) + 1;
+        int h = (int) (Settings.getnRowsCam() * rh) - 2;
 //        if (this.controller.isPrinting()){
-            g.drawLine(x, y+1, x, y+h-2);
+            g.drawLine(x, y, x, y + h);
 //        }else{
 //            g.drawRect(x, y, w, h);
 //        }
@@ -292,6 +301,9 @@ public class MyCamera extends MyComponent {
             this.chordSymbolLine.draw(g);
 //            this.score.setNeedsDrawing(false);
 //        }
+        if (this.lyrics != null) {
+            this.lyrics.draw(g);
+        }
         this.drawPlayBar(g);
         g.setColor(java.awt.Color.BLACK);
         g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);

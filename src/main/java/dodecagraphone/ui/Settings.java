@@ -70,6 +70,7 @@ public class Settings {
     private static final double DEFAULT_CONTROL_RATIO = 4.6 / 16;
     private static final double DEFAULT_CHORD_RATIO = 6.0 / 59;
     private static final double DEFAULT_STATUS_RATIO = 4.5 / 59;
+    private static final int DEFAULT_NROWS_LYRICS = 3;
     private static final int DEFAULT_NCOLS_SQUARE = 1;
     private static final int DEFAULT_NROWS_BUTTON = 2;
     private static final boolean CHORD_SYMBOL_VERTICAL = true;
@@ -397,8 +398,12 @@ public class Settings {
         return (int) (getnRowsScore() * DEFAULT_STATUS_RATIO);
     }
 
+    public static int getnRowsLyrics() {
+        return DEFAULT_NROWS_LYRICS;
+    }
+
     public static int getnRowsScreen() {
-        return getnRowsScore() + getnRowsChord() + getnRowsStatus();
+        return getnRowsScore() + getnRowsChord() + getnRowsLyrics() + getnRowsStatus();
     }
 
     public static double getScreenHeight() {
@@ -512,7 +517,19 @@ public class Settings {
     }
 
     public static int getnRowsCam() {
-        return getnRowsScore() + getnRowsChord();
+        return getnRowsScore() + getnRowsChord() + getnRowsLyrics();
+    }
+
+    public static int getLyricsFirstCol() {
+        return 0;
+    }
+
+    public static int getLyricsFirstRow() {
+        return getnRowsChord() + getnRowsScore();
+    }
+
+    public static int getnColsLyrics() {
+        return getnColsCam();
     }
 
     public static int getControlFirstRow() {
@@ -520,11 +537,11 @@ public class Settings {
     }
 
     public static int getnRowsControl() {
-        return getnRowsScore() + getnRowsChord();
+        return getnRowsScore() + getnRowsChord() + getnRowsLyrics();
     }
 
     public static int getStatusFirstRow() {
-        return getnRowsScore() + getnRowsChord();
+        return getnRowsScore() + getnRowsChord() + getnRowsLyrics();
     }
 
     public static int getPlayBarCol(boolean left) {
