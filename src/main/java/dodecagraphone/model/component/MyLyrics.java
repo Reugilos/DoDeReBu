@@ -11,6 +11,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +45,16 @@ public class MyLyrics extends MyComponent {
     /** Track whose lyrics are currently displayed in the offscreen buffer. */
     private int displayTrackId = 0;
 
+    // ---- inline edit mode state ----
+    private boolean      editMode          = false;
+    private int          editCursorCol     = 0;
+    private int          editTrack         = 0;
+    private StringBuilder editBuffer       = new StringBuilder();
+    /** Character position of the cursor within editBuffer (0 = before first char). */
+    private int          editCursorCharPos = 0;
+    /** Row (0/1/2) currently assigned to the text being typed. */
+    private int          previewRow        = 1;
+
     /**
      * @param firstCol  col within parent (camera)
      * @param firstRow  row within parent (camera)
@@ -73,7 +84,9 @@ public class MyLyrics extends MyComponent {
      */
     public int whichCol(double screenX, double screenY) {
         if (this.contains(screenX, screenY)) {
-            return controller.getAllPurposeScore().getCol(screenX);
+            int col = controller.getAllPurposeScore().getCol(screenX);
+            col = Math.max(0, Math.min(col, score.getNumCols() - 1));
+            return col;
         }
         return -1;
     }
@@ -113,8 +126,8 @@ public class MyLyrics extends MyComponent {
     /**
      * Adds or replaces the lyric at {@code col} for {@code track}.
      * The row (0=top, 1=mid, 2=bottom) is assigned automatically to avoid
-     * overlapping with other segments on the same row: tries 1→2→0;
-     * if all are occupied the text goes to row 1 (tough luck).
+     * overlapping with other segments on the same row: tries 0→1→2;
+     * if all are occupied the text goes to row 0 (tough luck).
      */
     public void setLyric(int col, int track, String text) {
         List<LyricSegment> segs =
@@ -156,13 +169,45 @@ public class MyLyrics extends MyComponent {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the first segment at {@code col} for {@code track}, or null.
+     * Returns the first segment whose {@code col} equals {@code col} for
+     * {@code track}, or null.
      */
     private LyricSegment findSegment(int col, int track) {
         List<LyricSegment> segs = lyricsByTrack.get(track);
         if (segs == null) return null;
         for (LyricSegment s : segs) {
             if (s.col == col) return s;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the character index within {@code text} closest to
+     * {@code offsetPx} pixels from the start of the text, measured with the
+     * offscreen FontMetrics. Used to position the cursor on a mouse click.
+     */
+    private int charPositionFromPixel(String text, int offsetPx) {
+        if (offscreenGraphics == null || offsetPx <= 0) return 0;
+        FontMetrics fm = offscreenGraphics.getFontMetrics();
+        for (int i = 0; i < text.length(); i++) {
+            int wBefore = fm.stringWidth(text.substring(0, i));
+            int wAfter  = fm.stringWidth(text.substring(0, i + 1));
+            if (offsetPx <= (wBefore + wAfter) / 2) return i;
+        }
+        return text.length();
+    }
+
+    /**
+     * Returns the segment for {@code track} that visually covers {@code col}:
+     * exact start-column match first, then any segment whose span includes col.
+     * Returns null if none.
+     */
+    private LyricSegment findSegmentAt(int col, int track) {
+        LyricSegment exact = findSegment(col, track);
+        if (exact != null) return exact;
+        List<LyricSegment> segs = lyricsByTrack.getOrDefault(track, new ArrayList<>());
+        for (LyricSegment s : segs) {
+            if (col > s.col && col < s.col + s.widthCols) return s;
         }
         return null;
     }
@@ -182,10 +227,10 @@ public class MyLyrics extends MyComponent {
     /**
      * Assigns a row to a new segment at {@code col} with width {@code widthCols}
      * given the existing segments {@code segs} for the same track.
-     * Priority: 1 (middle) → 2 (bottom) → 0 (top) → 1 (mala sort).
+     * Priority: 0 (top) → 1 (middle) → 2 (bottom) → 0 (mala sort).
      */
     private int assignRow(int col, int widthCols, List<LyricSegment> segs) {
-        for (int tryRow : new int[]{1, 2, 0}) {
+        for (int tryRow : new int[]{0, 1, 2}) {
             boolean overlap = false;
             for (LyricSegment s : segs) {
                 if (s.row == tryRow && overlaps(col, widthCols, s.col, s.widthCols)) {
@@ -195,7 +240,7 @@ public class MyLyrics extends MyComponent {
             }
             if (!overlap) return tryRow;
         }
-        return 1; // mala sort: all rows occupied
+        return 0; // mala sort: all rows occupied
     }
 
     /** True if column range [colA, colA+wA) overlaps [colB, colB+wB). */
@@ -214,6 +259,283 @@ public class MyLyrics extends MyComponent {
         int x     = (int) Math.floor(seg.col * Settings.getColWidth()) + 2;
         int textY = (int) (seg.row * rowH + (rowH + fm.getAscent() - fm.getDescent()) / 2.0);
         g.drawString(seg.text, x, textY);
+    }
+
+    // -------------------------------------------------------------------------
+    // Inline edit mode
+    // -------------------------------------------------------------------------
+
+    /** Returns true while the lyrics strip is in inline edit mode. */
+    public boolean isEditMode() { return editMode; }
+
+    /**
+     * Enters inline edit mode at {@code col} for {@code track}.
+     * If a committed segment already exists at that position its text is loaded
+     * into the edit buffer and the segment is temporarily removed from the
+     * committed store (it will be re-added on commit).
+     */
+    public void startEdit(int col, int track, double clickScreenX) {
+        editMode       = true;
+        editCursorCol  = col;
+        editTrack      = track;
+        displayTrackId = track;   // assegura que el preview es mostra per al track correcte
+        editBuffer.setLength(0);
+        // Search for an existing segment that the user clicked on.
+        // We look in displayTrackId (what is currently visible on screen) so that
+        // clicking on any visible text always loads the right segment, regardless
+        // of which track is currently selected in the mixer.
+        LyricSegment existing = findSegmentAt(col, displayTrackId);
+        if (existing != null) {
+            // Edit the segment that is visually under the click
+            editCursorCol  = existing.col;
+            editTrack      = existing.track;
+            // displayTrackId stays the same (already correct)
+            editBuffer.append(existing.text);
+            List<LyricSegment> segs = lyricsByTrack.get(existing.track);
+            if (segs != null) segs.remove(existing);
+            // Place the char cursor at the click position within the text
+            int textStartX = colToScreenX(existing.col) + 2;
+            editCursorCharPos = charPositionFromPixel(
+                    existing.text, (int)(clickScreenX - textStartX));
+        } else {
+            // No existing segment: start a fresh edit for the requested track
+            editTrack         = track;
+            displayTrackId    = track;
+            editCursorCharPos = 0;
+        }
+        updatePreviewRow();
+        if (offscreenGraphics != null) drawFullLyricsInOffscreen();
+    }
+
+    /**
+     * Commits any pending text and exits edit mode.
+     * Called on Enter, Escape, or when the user clicks outside the strip.
+     */
+    public void exitEditMode() {
+        commitCurrentWord();
+        editMode = false;
+        if (offscreenGraphics != null) drawFullLyricsInOffscreen();
+    }
+
+    /**
+     * Handles key-pressed events (special keys) while in edit mode.
+     *
+     * @return true if the event was consumed (edit mode was active)
+     */
+    public boolean handleKeyPressed(KeyEvent e) {
+        if (!editMode) return false;
+        int code = e.getKeyCode();
+        if (code == KeyEvent.VK_ENTER || code == KeyEvent.VK_ESCAPE) {
+            exitEditMode();
+        } else if (code == KeyEvent.VK_LEFT) {
+            if (editCursorCharPos > 0) {
+                editCursorCharPos--;
+                drawFullLyricsInOffscreen();
+            }
+        } else if (code == KeyEvent.VK_RIGHT) {
+            if (editCursorCharPos < editBuffer.length()) {
+                editCursorCharPos++;
+                drawFullLyricsInOffscreen();
+            }
+        } else if (code == KeyEvent.VK_BACK_SPACE) {
+            if (editCursorCharPos > 0) {
+                // Esborra el caràcter immediatament a l'esquerra del cursor
+                editBuffer.deleteCharAt(editCursorCharPos - 1);
+                editCursorCharPos--;
+                updatePreviewRow();
+                drawFullLyricsInOffscreen();
+            } else if (editBuffer.length() == 0) {
+                // Buffer buit: torna al segment anterior i carrega'l per editar
+                List<LyricSegment> segs = lyricsByTrack.get(editTrack);
+                if (segs != null && !segs.isEmpty()) {
+                    LyricSegment prev = null;
+                    for (LyricSegment s : segs) {
+                        if (s.col < editCursorCol) {
+                            if (prev == null || s.col > prev.col) prev = s;
+                        }
+                    }
+                    if (prev != null) {
+                        editCursorCol     = prev.col;
+                        editBuffer.setLength(0);
+                        editBuffer.append(prev.text);
+                        editCursorCharPos = editBuffer.length(); // cursor al final
+                        segs.remove(prev);
+                        updatePreviewRow();
+                        drawFullLyricsInOffscreen();
+                    }
+                }
+            }
+        } else if (code == KeyEvent.VK_SPACE && e.isShiftDown()) {
+            // Shift+Espai: commit i salta a la nota ANTERIOR (com findPrevCol)
+            commitCurrentWord();
+            int prevCol = findPrevCol(editCursorCol);
+            editCursorCol = prevCol;
+            // Carrega text existent a la nova posició, si n'hi ha
+            LyricSegment existing = findSegmentAt(prevCol, editTrack);
+            if (existing != null) {
+                editBuffer.append(existing.text);
+                List<LyricSegment> segs = lyricsByTrack.get(editTrack);
+                if (segs != null) segs.remove(existing);
+            }
+            editCursorCharPos = 0;  // cursor al principi
+            updatePreviewRow();
+            drawFullLyricsInOffscreen();
+        } else if (code == KeyEvent.VK_SPACE) {
+            commitCurrentWord();  // reseteja editBuffer i editCursorCharPos
+            // Advance to next note column (or next beat if no note found)
+            editCursorCol = findNextCol(editCursorCol);
+            // Load existing text at new position, if any
+            LyricSegment existing = findSegment(editCursorCol, editTrack);
+            if (existing != null) {
+                editBuffer.append(existing.text);
+                List<LyricSegment> segs = lyricsByTrack.get(editTrack);
+                if (segs != null) segs.remove(existing);
+            }
+            editCursorCharPos = 0;  // cursor al principi del segment (nou o existent)
+            updatePreviewRow();
+            drawFullLyricsInOffscreen();
+        }
+        return true; // consume all key events while in edit mode
+    }
+
+    /**
+     * Handles key-typed events (printable characters) while in edit mode.
+     *
+     * @return true if the event was consumed (edit mode was active)
+     */
+    public boolean handleKeyTyped(KeyEvent e) {
+        if (!editMode) return false;
+        char c = e.getKeyChar();
+        // Ignore control characters and chars handled by keyPressed
+        if (c == KeyEvent.CHAR_UNDEFINED || c < 32 || c == 127
+                || c == ' ' || c == '\n' || c == '\r') {
+            return true;
+        }
+        // Hyphen: insert at cursor, commit and advance to next note (like space)
+        if (c == '-') {
+            editBuffer.insert(editCursorCharPos, '-');
+            editCursorCharPos++;
+            commitCurrentWord();  // reseteja editBuffer i editCursorCharPos
+            editCursorCol = findNextCol(editCursorCol);
+            // Load existing text at new position, if any
+            LyricSegment existing = findSegment(editCursorCol, editTrack);
+            if (existing != null) {
+                editBuffer.append(existing.text);
+                List<LyricSegment> segs = lyricsByTrack.get(editTrack);
+                if (segs != null) segs.remove(existing);
+            }
+            editCursorCharPos = 0;  // cursor al principi del segment nou
+            updatePreviewRow();
+            drawFullLyricsInOffscreen();
+            return true;
+        }
+        // Normal character: insert at cursor position and advance
+        editBuffer.insert(editCursorCharPos, c);
+        editCursorCharPos++;
+        updatePreviewRow();
+        drawFullLyricsInOffscreen();
+        return true;
+    }
+
+    // ---- private helpers for edit mode ----
+
+    /** Commits the current edit buffer as a real segment (if non-empty). */
+    private void commitCurrentWord() {
+        String text = editBuffer.toString().trim();
+        if (!text.isEmpty()) {
+            setLyric(editCursorCol, editTrack, text);
+        }
+        editBuffer.setLength(0);
+        editCursorCharPos = 0;
+    }
+
+    /**
+     * Recalculates {@link #previewRow} based on the current edit buffer width
+     * and the committed segments of the current track. When the buffer is empty
+     * a width of 1 column is used so the cursor already points to the row where
+     * the next text will appear.
+     */
+    private void updatePreviewRow() {
+        int w = (editBuffer.length() == 0)
+                ? 1
+                : computeWidthCols(editBuffer.toString());
+        List<LyricSegment> segs = lyricsByTrack.getOrDefault(editTrack, new ArrayList<>());
+        previewRow = assignRow(editCursorCol, w, segs);
+    }
+
+    /**
+     * Returns the first score column after {@code fromCol} that contains at
+     * least one note belonging to {@code editTrack}. Falls back to the next
+     * beat boundary if no such column is found before the end of the score.
+     */
+    private int findNextCol(int fromCol) {
+        int nKeys = score.getnKeys();
+        int nCols = score.getNumCols();
+        for (int col = fromCol + 1; col < nCols; col++) {
+            for (int key = 0; key < nKeys; key++) {
+                MyGridSquare sq = score.getGridSquare(key, col);
+                if (sq != null) {
+                    for (MyGridSquare.SubSquare note : sq.getPoliNotes()) {
+                        // Inici de nota: visible i no linked (no és una prolongació)
+                        if (note.getTrack() == editTrack
+                                && note.isVisible()
+                                && !note.isLinked()) {
+                            return col;
+                        }
+                    }
+                }
+            }
+        }
+        // Fallback: advance by one beat
+        return fromCol + Settings.getnColsBeat();
+    }
+
+    /**
+     * Returns the first score column strictly before {@code fromCol} that
+     * contains at least one note start (visible and not linked) belonging to
+     * {@code editTrack}. Falls back to the previous beat boundary if none found.
+     */
+    private int findPrevCol(int fromCol) {
+        int nKeys = score.getnKeys();
+        for (int col = fromCol - 1; col >= 0; col--) {
+            for (int key = 0; key < nKeys; key++) {
+                MyGridSquare sq = score.getGridSquare(key, col);
+                if (sq != null) {
+                    for (MyGridSquare.SubSquare note : sq.getPoliNotes()) {
+                        if (note.getTrack() == editTrack
+                                && note.isVisible()
+                                && !note.isLinked()) {
+                            return col;
+                        }
+                    }
+                }
+            }
+        }
+        // Fallback: go back one beat (clamp to 0)
+        return Math.max(0, fromCol - Settings.getnColsBeat());
+    }
+
+    /**
+     * Converts a score column index to a screen X coordinate, taking the
+     * current camera scroll position into account.
+     *
+     * @param col  score column
+     * @return screen X in panel coordinates
+     */
+    private int colToScreenX(int col) {
+        boolean left = !score.isUseScreenKeyboardRight();
+        int ccol = score.getCurrentCol();
+        if (left) {
+            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
+            return (int) Math.round(screenPosX
+                    + (col - firstColToDraw) * Settings.getColWidth());
+        } else {
+            int firstCamColIn  = Math.max(0, Settings.getnColsCam() - ccol);
+            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
+            return (int) Math.round(screenPosX
+                    + firstCamColIn  * Settings.getColWidth()
+                    + (col - firstColToDraw) * Settings.getColWidth());
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -269,13 +591,23 @@ public class MyLyrics extends MyComponent {
                 }
             }
 
-            // Lyrics text for the current display track
+            // Committed lyrics for the current display track
             List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
             if (segs != null && !segs.isEmpty()) {
                 offscreenGraphics.setColor(Color.BLACK);
                 for (LyricSegment seg : segs) {
                     drawSegment(seg, offscreenGraphics);
                 }
+            }
+
+            // Preview: text currently being typed (shown in dark-grey)
+            if (editMode && editBuffer.length() > 0
+                    && editTrack == displayTrackId) {
+                offscreenGraphics.setColor(Color.DARK_GRAY);
+                LyricSegment preview = new LyricSegment(
+                        editCursorCol, editTrack,
+                        editBuffer.toString(), previewRow, 0);
+                drawSegment(preview, offscreenGraphics);
             }
         }
     }
@@ -400,6 +732,29 @@ public class MyLyrics extends MyComponent {
         // white offscreen background.
         g.setColor(Color.BLACK);
         g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+
+        // Cursor: vertical bar after the last typed character (screen coords)
+        if (editMode) {
+            double rowH = Settings.getRowHeight();
+            // Text in drawSegment starts at col*colWidth+2 (offscreen), which maps
+            // to colToScreenX(col)+2 on screen.  Add the pixel width of typed text
+            // so the cursor sits right after the last character (normal text cursor).
+            // Use the offscreen FontMetrics so the measurement matches the rendered text.
+            FontMetrics fm = offscreenGraphics != null
+                    ? offscreenGraphics.getFontMetrics()
+                    : g.getFontMetrics();
+            // Only measure the text to the LEFT of the cursor (not the full buffer)
+            int safePos = Math.min(editCursorCharPos, editBuffer.length());
+            int typedPx = fm.stringWidth(editBuffer.substring(0, safePos));
+            int cursorX  = colToScreenX(editCursorCol) + 2 + typedPx;
+            int cursorY1 = (int) Math.round(screenPosY + previewRow * rowH) + 2;
+            int cursorY2 = (int) Math.round(screenPosY + (previewRow + 1) * rowH) - 2;
+            Stroke oldStroke = g.getStroke();
+            g.setStroke(new BasicStroke(2f));
+            g.setColor(Color.BLUE);
+            g.drawLine(cursorX, cursorY1, cursorX, cursorY2);
+            g.setStroke(oldStroke);
+        }
     }
 
     // =========================================================================

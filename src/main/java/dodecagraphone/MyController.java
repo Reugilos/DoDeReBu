@@ -304,7 +304,7 @@ public class MyController {
         this.cam.setPlayBar(Settings.getPlayBarCol(left) + this.allPurposeScore.getDelay(left));
         this.allPurposeScore.setDimensions(Settings.getScoreFirstCol() + allPurposeScore.getDelay(left), Settings.getScoreFirstRow(), Settings.getnColsScore(), Settings.getnRowsScore());
         this.allPurposeScore.setCurrentCol(Settings.getInitialCurrentCol(left,allPurposeScore));
-        Utilities.printOutWithPriority(true,"MyController::setScreenKeyboardRight() currentCol = "+this.allPurposeScore.getCurrentCol());
+        Utilities.printOutWithPriority(false,"MyController::setScreenKeyboardRight() currentCol = "+this.allPurposeScore.getCurrentCol());
         this.statusLine.setDimensions(Settings.getStatusFirstCol(), Settings.getStatusFirstRow(), Settings.getnColsStatus(), Settings.getnRowsStatus());
         this.myChordSymbolLine.setDimensions(Settings.getChordFirstCol(), Settings.getChordFirstRow(), Settings.getnColsChord(), Settings.getnRowsChord());
         this.cam.reset();
@@ -551,6 +551,10 @@ public class MyController {
         return cam;
     }
 
+    public MyLyrics getMyLyrics() {
+        return myLyrics;
+    }
+
     public MyButtonPanel getButtons() {
         return buttons;
     }
@@ -640,6 +644,14 @@ public class MyController {
      * @param posY
      */
     public void onMousePressed(double posX, double posY) {
+        /* Exit lyrics edit mode on any click (commits pending text) */
+        if (this.myLyrics.isEditMode()) {
+            this.myLyrics.exitEditMode();
+            this.needsSaving = true;
+            // Do NOT return: continue processing the click normally
+            // (if the click lands on the lyrics strip, startEdit will be called below)
+        }
+
         /* Check chord symbol */
         int chordCol = this.myChordSymbolLine.whichCol(posX, posY);
         // if (Settings.IS_BU) chordCol = -1;
@@ -665,25 +677,12 @@ public class MyController {
             return;
         }
 
-        /* Check lyrics strip */
+        /* Check lyrics strip: enter inline edit mode */
         int lyricsCol = this.myLyrics.whichCol(posX, posY);
         if (lyricsCol != -1) {
-            int trackId   = this.getMixer().getCurrentTrackId();
-            String oldText = this.myLyrics.getLyric(lyricsCol, trackId);
-            String text    = this.myLyrics.enterLyrics(oldText);
-            if (text != null) { // null = cancel·lat
-                if (text.isEmpty()) {
-                    if (oldText != null) {
-                        this.myLyrics.removeLyric(lyricsCol, trackId);
-                        this.needsSaving = true;
-                    }
-                } else if (!text.equals(oldText)) {
-                    this.myLyrics.setLyric(lyricsCol, trackId, text);
-                    this.needsSaving = true;
-                }
-                this.myLyrics.drawFullLyricsInOffscreen();
-                this.drawFull(true);
-            }
+            int trackId = this.getMixer().getCurrentTrackId();
+            this.myLyrics.startEdit(lyricsCol, trackId, posX);
+            this.drawFull(true);
             return;
         }
 

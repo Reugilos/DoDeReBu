@@ -1456,8 +1456,16 @@ public class MyGridScore extends MyComponent {
      */
     public int whichRow(double screenX, double screenY) {
         if (cam.contains(screenX, screenY)) {
-            this.whichCol = getCol(screenX);
-            this.whichRow = getRow(screenY);
+            int c = getCol(screenX);
+            int r = getRow(screenY);
+            // Guard against values that fall outside the grid array bounds
+            if (c < 0 || c >= getNumCols() || r < 0 || r >= getnKeys()) {
+                this.whichRow = -1;
+                this.whichCol = -1;
+                return -1;
+            }
+            this.whichCol = c;
+            this.whichRow = r;
             return this.whichRow;
         }
         this.whichRow = -1;

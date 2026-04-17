@@ -200,7 +200,10 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
 //    }
     @Override
     public void keyTyped(KeyEvent e) {
-//        System.err.println("Key typed, not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if (controller.getMyLyrics().isEditMode()) {
+            controller.getMyLyrics().handleKeyTyped(e);
+            this.repinta(true);
+        }
     }
 
     private static boolean needsRepaint = false;
@@ -224,6 +227,12 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
+        // While in lyrics edit mode all key events are consumed by the editor
+        if (controller.getMyLyrics().isEditMode()) {
+            controller.getMyLyrics().handleKeyPressed(e);
+            this.repinta(true);
+            return;
+        }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
             if (e.isShiftDown()) {
                 controller.redo();
@@ -285,6 +294,7 @@ class MyNewMouseAdapter extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
 //        System.err.println("MyMouseListener.mousePressed()");
+        panel.requestFocusInWindow(); // assegura que el JPanel té el focus de teclat
         double posX = e.getX();
         double posY = e.getY();
         int pointer = e.getButton();
