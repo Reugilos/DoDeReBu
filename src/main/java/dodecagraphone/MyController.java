@@ -1505,7 +1505,7 @@ public class MyController {
             if (togg.isPressed()) {
                 try {
                     // Pausa entre cada pas per controlar la velocitat
-                    Thread.sleep(600); // Ajusta el temps segons sigui necessari
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS); // Ajusta el temps segons sigui necessari
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1543,7 +1543,7 @@ public class MyController {
             if (togg.isPressed()) {
                 try {
                     // Pausa entre cada pas per controlar la velocitat
-                    Thread.sleep(600); // Ajusta el temps segons sigui necessari
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS); // Ajusta el temps segons sigui necessari
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1598,7 +1598,7 @@ public class MyController {
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
-                    Thread.sleep(600);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1607,7 +1607,7 @@ public class MyController {
                 try {
                     MyTempo.faster();
                     this.buttons.updateTempoButton("" + MyTempo.getTempo());
-                    Thread.sleep(25);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1626,7 +1626,7 @@ public class MyController {
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
-                    Thread.sleep(600);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1636,7 +1636,7 @@ public class MyController {
                     int v = this.getMixer().louder();
                     this.buttons.updateVolumeButton("" + v);
                     this.mixer.refreshMixer();
-                    Thread.sleep(25);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1655,7 +1655,7 @@ public class MyController {
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
-                    Thread.sleep(600);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1665,7 +1665,7 @@ public class MyController {
                     int v = this.getMixer().quieter();
                     this.buttons.updateVolumeButton("" + v);
                     this.mixer.refreshMixer();
-                    Thread.sleep(25);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1683,7 +1683,7 @@ public class MyController {
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
-                    Thread.sleep(600);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1692,7 +1692,7 @@ public class MyController {
                 try {
                     MyTempo.slower();
                     this.buttons.updateTempoButton("" + MyTempo.getTempo());
-                    Thread.sleep(25);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1749,7 +1749,7 @@ public class MyController {
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
-                    Thread.sleep(600);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1776,7 +1776,7 @@ public class MyController {
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
-                    Thread.sleep(600);
+                    Thread.sleep(Settings.BUTTON_REPEAT_INITIAL_DELAY_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
