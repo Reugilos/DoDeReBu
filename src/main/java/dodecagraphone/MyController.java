@@ -1530,7 +1530,6 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    System.out.println("MyController:onPrevCol() currentCol = "+this.allPurposeScore.getCurrentCol());
                     if (allPurposeScore.getCurrentCol() < allPurposeScore.getNumCols()) {
                         allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
                         allPurposeScore.drawCurrentCamInOffscreen();
