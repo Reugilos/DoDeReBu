@@ -15,6 +15,7 @@ import dodecagraphone.model.component.MyAllPurposeScore;
 import dodecagraphone.model.component.MyButton;
 import dodecagraphone.model.component.MyComponent;
 import dodecagraphone.model.component.MyGridSquare;
+import dodecagraphone.model.component.MyGridScore;
 import dodecagraphone.model.component.MyMidiScore;
 import dodecagraphone.model.component.MyScreen;
 import dodecagraphone.model.component.MySlide;
@@ -99,6 +100,12 @@ public class MyController {
 
     private final PilaEvents pilaEvents = new PilaEvents();
     private MouseSequence mouseSequence = null;
+
+    /**
+     * Canvi de paràmetre pendent de col·locació per part de l'usuari.
+     * Quan és no-null, el pròxim clic al grid col·loca el canvi a aquella columna.
+     */
+    private MyGridScore.ScoreChange pendingChange = null;
 
     private SampleOrMidi instrument;
 //    private int numBeatsMeasure;
@@ -648,8 +655,16 @@ public class MyController {
         if (this.myLyrics.isEditMode()) {
             this.myLyrics.exitEditMode();
             this.needsSaving = true;
-            // Do NOT return: continue processing the click normally
-            // (if the click lands on the lyrics strip, startEdit will be called below)
+        }
+
+        /* Col·locar canvi pendent: el clic al grid determina la columna */
+        if (pendingChange != null) {
+            int row = this.allPurposeScore.whichRow(posX, posY);
+            int col = this.allPurposeScore.whichCol();
+            if (row != -1 && col != -1) {
+                placePendingChangeAt(col);
+            }
+            return; // el clic queda consumit pel canvi pendent
         }
 
         /* Check chord symbol */
@@ -1426,15 +1441,19 @@ public class MyController {
     }
 
     public void onResetKeyButtonPressed(MyButton togg) {
-//        System.out.println("MyController::onResetKeyButtonPressed: (id) " + togg.getId());
         int old_key = this.allPurposeScore.getMidiKey();
         if (Settings.IS_BU){
+            if (cam.isPlaying()) { togg.setPressed(false); return; }
             String to = MyDialogs.mostraInputDialog(I18n.t("keyButton.prompt"),I18n.t("keyButton.title"));
             char mode = ToneRange.getScaleMode(to);
             if (mode ==' ') return;
             int midiKey = ToneRange.getMidiKey(to);
             this.allPurposeScore.setMidiKey(midiKey);
             this.allPurposeScore.setScaleMode(mode);
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.midiKey   = allPurposeScore.getMidiKey();
+            sc.scaleMode = allPurposeScore.getScaleMode();
+            setPendingChange(sc, I18n.t("scoreChange.key"));
             togg.setPressed(false);
         } else {
             int new_key = this.getRandKey();
@@ -1590,6 +1609,7 @@ public class MyController {
     }
     
     public void onFasterButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) return; // no es permet canviar durant la reproducció
         MyTempo.faster();
         this.buttons.updateTempoButton("" + MyTempo.getTempo());
         if (replicador != null && replicador.isAlive()) {
@@ -1612,17 +1632,25 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
+            // Quan es deixa anar el botó, registra el canvi com a pendent
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.tempo = MyTempo.getTempo();
+            setPendingChange(sc, I18n.t("scoreChange.tempo"));
         });
         replicador.start();
+        // Si no hi ha repetició (un sol clic), registra igualment com a pendent
+        // però ho fa quan es deixa anar (el thread acaba ràpid si !togg.isPressed())
     }
 
     public void onLouderButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) return;
         int vol = this.getMixer().louder();
         this.buttons.updateVolumeButton("" + vol);
         this.mixer.refreshMixer();
         if (replicador != null && replicador.isAlive()) {
             return;
         }
+        int trackId = this.getMixer().getCurrentTrackId();
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
@@ -1641,17 +1669,25 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
+            MyTrack tr = getMixer().getTrackFromId(trackId);
+            if (tr != null) {
+                MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+                sc.trackVelocities.put(trackId, tr.getVelocity());
+                setPendingChange(sc, I18n.t("scoreChange.volume"));
+            }
         });
         replicador.start();
     }
 
     public void onQuieterButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) return;
         int vol = this.getMixer().quieter();
         this.buttons.updateVolumeButton("" + vol);
         this.mixer.refreshMixer();
         if (replicador != null && replicador.isAlive()) {
             return;
         }
+        int trackId = this.getMixer().getCurrentTrackId();
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
@@ -1670,11 +1706,18 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
+            MyTrack tr = getMixer().getTrackFromId(trackId);
+            if (tr != null) {
+                MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+                sc.trackVelocities.put(trackId, tr.getVelocity());
+                setPendingChange(sc, I18n.t("scoreChange.volume"));
+            }
         });
         replicador.start();
     }
 
     public void onSlowerButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) return;
         MyTempo.slower();
         this.buttons.updateTempoButton("" + MyTempo.getTempo());
         if (replicador != null && replicador.isAlive()) {
@@ -1697,6 +1740,9 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.tempo = MyTempo.getTempo();
+            setPendingChange(sc, I18n.t("scoreChange.tempo"));
         });
         replicador.start();
     }
@@ -1860,8 +1906,8 @@ public class MyController {
     }
 
     public void onTimeSignatureButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
         String currentTS = this.allPurposeScore.params2TimeSignature();
-//        String compas = JOptionPane.showInputDialog("Compàs?", currentTS);
         MeterData current = MeterDialog.timeSignature2MeterData(currentTS);
         MeterData selection = inputMeterDialog(current);
         if (selection == null) {
@@ -1869,15 +1915,15 @@ public class MyController {
             return;
         }
         String compas = MeterDialog.meterData2TimeSignature(selection);
-
-        // selection.meterType, selection.meterPattern, selection.otherText
-        // Aquí apliques la selecció on toqui (score/tempo/config, etc.)
-
+        // Aplica els nous paràmetres a l'objecte score (afecta la vista local)
         this.allPurposeScore.timeSignature2Params(compas);
-//        this.setScreenKeyboardRight(this.allPurposeScore.isUseScreenKeyboardRight());
-//        this.allPurposeScore.setCurrentCol(Settings.getInitialCurrentCol(this.allPurposeScore.isUseScreenKeyboardRight())+this.allPurposeScore.getDelay());
         MetaMessage message = MyMidiScore.composeTimeSignatureMessage(compas);
         this.allPurposeScore.placeAppendMidiMessage(message);
+        // Crea el canvi pendent (s'aplicarà a la columna on l'usuari faci clic)
+        MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+        sc.nBeatsMeasure = allPurposeScore.getNumBeatsMeasure();
+        sc.nColsQuarter  = Settings.getnColsQuarter();
+        setPendingChange(sc, I18n.t("scoreChange.timeSignature"));
         togg.setPressed(false);
     }
 
@@ -1909,7 +1955,16 @@ public class MyController {
 //        String titolGeneral = this.getUi().getVersion();
 //        titolGeneral += "          " + this.allPurposeScore.getTitle() + ", " + this.allPurposeScore.getAuthor(); // +", "+this.allPurposeScore.getDescription()
 //        this.getUi().setTitle(titolGeneral);
-        String pageNo = "" + this.cam.getCurrentPage();
+
+        // Aplica els canvis de paràmetres registrats a la columna actual
+        applyChangesAt(getEditingCol());
+
+        // Mostra el número de pàgina i el temps dins el compàs (1-based)
+        int editCol  = getEditingCol();
+        int colsBeat = Settings.getnColsBeat();
+        int colsMeas = colsBeat * allPurposeScore.getNumBeatsMeasure();
+        int beat     = (colsMeas > 0) ? (editCol % colsMeas) / colsBeat + 1 : 1;
+        String pageNo = cam.getCurrentPage() + " (" + beat + ")";
         this.buttons.updatePageNumButton(pageNo);
         String tempo = "" + MyTempo.getTempo();
         this.buttons.updateTempoButton(tempo);
@@ -1940,6 +1995,83 @@ public class MyController {
         this.buttons.updateInstrButton(instr);
 //        this.mixer.refreshMixer();
 //        this.buttons.setNeedsDrawing(false);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Mètodes del mapa de canvis per columna (ScoreChange)
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Desa un canvi pendent i mostra el missatge a la barra d'estat demanant
+     * a l'usuari que faci clic a la columna on vol aplicar el canvi.
+     *
+     * @param change      el canvi a col·locar
+     * @param description clau I18n (sense prefix) del tipus de canvi per al missatge
+     */
+    private void setPendingChange(MyGridScore.ScoreChange change, String description) {
+        this.pendingChange = change;
+        // description ja és el text traduit (p.ex. "tempo", "compàs"...)
+        this.statusLine.setText(I18n.f("scoreChange.clickToPlace", description));
+        this.drawFull(true);
+    }
+
+    /**
+     * Si hi ha un canvi pendent, el col·loca a la columna indicada, neteja
+     * l'estat pendent i restaura el text de la barra d'estat.
+     *
+     * @param col columna de partitura on col·locar el canvi
+     * @return true si s'ha col·locat un canvi pendent
+     */
+    private boolean placePendingChangeAt(int col) {
+        if (pendingChange == null) return false;
+        allPurposeScore.setScoreChange(col, pendingChange);
+        pendingChange = null;
+        needsSaving = true;
+        this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
+        this.updateTextOfButtons();
+        this.drawFull(true);
+        return true;
+    }
+
+    /**
+     * Retorna la columna de partitura que correspon a la posició actual de la playbar.
+     *
+     * @return columna de partitura actual (mínim 0)
+     */
+    private int getEditingCol() {
+        int camPBar = cam.getPlayBar();
+        int col = allPurposeScore.getScoreCol(camPBar)
+                  + allPurposeScore.getDelay(!allPurposeScore.isUseScreenKeyboardRight());
+        return Math.max(0, col);
+    }
+
+    /**
+     * Aplica els canvis de paràmetres globals efectius a la columna indicada.
+     * No fa res si el changeMap és buit (tots els camps null).
+     *
+     * @param col columna de partitura
+     */
+    public void applyChangesAt(int col) {
+        MyGridScore.ScoreChange sc = allPurposeScore.getEffectiveChange(col);
+        if (sc.tempo != null)        MyTempo.setTempo(sc.tempo);
+        if (sc.midiKey != null)      allPurposeScore.setMidiKey(sc.midiKey);
+        if (sc.scaleMode != null)    allPurposeScore.setScaleMode(sc.scaleMode);
+        if (sc.nBeatsMeasure != null) {
+            allPurposeScore.setNumBeatsMeasure(sc.nBeatsMeasure);
+            Settings.setnBeatsMeasure(sc.nBeatsMeasure);
+        }
+        if (sc.nColsQuarter != null) {
+            // El paràmetre independent és nColsQuarter; nColsBeat es recalcula
+            Settings.setnColsQuarter(sc.nColsQuarter);
+            Settings.updateNColsBeat();
+        }
+        if (sc.nMeasuresCam != null) {
+            Settings.setnMeasuresCam(sc.nMeasuresCam);
+        }
+        for (java.util.Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
+            MyTrack t = getMixer().getTrackFromId(e.getKey());
+            if (t != null) t.setVelocity(e.getValue());
+        }
     }
 
     public void saveScore(String fitxer) {
@@ -2029,6 +2161,8 @@ public class MyController {
 
     private void newScore() {
         allPurposeScore.resetAllPurposeScore(); //new MyAllPurposeScore(this);
+        this.allPurposeScore.clearScore();  // buida notes, acords i missatges
+        this.myLyrics.clear();
         this.stop();
         this.buttons.stopPlayButton();
         this.exercisesOn = false;
@@ -2050,7 +2184,9 @@ public class MyController {
     }
 
     public void clearScore() {
-        this.allPurposeScore.clearScore();
+        this.allPurposeScore.clearScore();   // també crida clearChangeMap() internament
+        this.allPurposeScore.clearChangeMap(); // crida explícita addicional per garantia
+        this.myLyrics.clear();
         this.getStatusLine().clear();
         this.buttons.resetButtons(Settings.getFirstColControl(), Settings.getControlFirstRow(), Settings.getnColsControl(), Settings.getnRowsControl());
         this.allPurposeScore.setUseScreenKeyboardRight(false);

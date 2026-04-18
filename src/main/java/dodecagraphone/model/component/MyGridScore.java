@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import javax.sound.midi.MidiMessage;
 
 /**
@@ -137,6 +138,42 @@ public class MyGridScore extends MyComponent {
      * SoundWithMidi class).
      */
     protected Map<Integer, ArrayList<MidiMessage>> midiMessages;
+    /**
+     * Mapa de canvis de paràmetres indexat per columna de partitura.
+     * Cada entrada registra quins paràmetres canvien en arribar a aquella columna.
+     */
+    private final TreeMap<Integer, ScoreChange> changeMap = new TreeMap<>();
+
+    /**
+     * Representa un conjunt de canvis de paràmetres globals en una columna concreta.
+     * Els camps null signifiquen "sense canvi" per a aquell paràmetre.
+     */
+    public static class ScoreChange {
+        public Integer tempo;
+        public Integer midiKey;
+        public Character scaleMode;
+        public Integer nBeatsMeasure;
+        /** Nombre de columnes per quarter note. La resta (nColsBeat, nColsCam…) es recalcula a partir d'aquest. */
+        public Integer nColsQuarter;
+        public Integer nMeasuresCam;
+        public final Map<Integer, Integer> trackVelocities = new HashMap<>();
+
+        /**
+         * Aplica els camps no-null de {@code other} sobre aquest objecte.
+         *
+         * @param other el ScoreChange a fusionar
+         */
+        public void mergeFrom(ScoreChange other) {
+            if (other.tempo != null)         this.tempo = other.tempo;
+            if (other.midiKey != null)       this.midiKey = other.midiKey;
+            if (other.scaleMode != null)     this.scaleMode = other.scaleMode;
+            if (other.nBeatsMeasure != null) this.nBeatsMeasure = other.nBeatsMeasure;
+            if (other.nColsQuarter != null)  this.nColsQuarter = other.nColsQuarter;
+            if (other.nMeasuresCam != null)  this.nMeasuresCam = other.nMeasuresCam;
+            this.trackVelocities.putAll(other.trackVelocities);
+        }
+    }
+
     /**
      * The first column of the score to the right of the camera. When 0, the
      * score is just out of sight.
@@ -640,6 +677,7 @@ public class MyGridScore extends MyComponent {
         description = "Descripció";
         gridColorsHaveChanged = true;
         setNumBeatsMeasure(Settings.getnBeatsMeasure());
+        clearChangeMap();
     }
 
     /**
@@ -2016,6 +2054,49 @@ public class MyGridScore extends MyComponent {
             return false;
         }
         return true;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Mètodes del changeMap (mapa de canvis per columna)
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Registra (o fusiona) un ScoreChange a la columna indicada.
+     * Si ja hi ha una entrada, es fusionen els camps no-null.
+     *
+     * @param col    columna de partitura
+     * @param change canvis a registrar
+     */
+    public void setScoreChange(int col, ScoreChange change) {
+        ScoreChange existing = changeMap.get(col);
+        if (existing == null) {
+            existing = new ScoreChange();
+            changeMap.put(col, existing);
+        }
+        existing.mergeFrom(change);
+    }
+
+    /**
+     * Retorna el ScoreChange efectiu a la columna indicada, acumulant
+     * tots els canvis de les columnes anteriors o iguals a {@code col}.
+     * Els camps null indiquen que aquell paràmetre no ha estat mai modificat.
+     *
+     * @param col columna de partitura
+     * @return ScoreChange acumulat (pot tenir tots els camps null si changeMap és buit)
+     */
+    public ScoreChange getEffectiveChange(int col) {
+        ScoreChange result = new ScoreChange();
+        for (ScoreChange sc : changeMap.headMap(col + 1, true).values()) {
+            result.mergeFrom(sc);
+        }
+        return result;
+    }
+
+    /**
+     * Buida el mapa de canvis per columna.
+     */
+    public void clearChangeMap() {
+        changeMap.clear();
     }
 
     private Thread playThread;
