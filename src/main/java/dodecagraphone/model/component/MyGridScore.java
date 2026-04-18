@@ -1018,42 +1018,29 @@ public class MyGridScore extends MyComponent {
      */
     public void drawFullGridinOffscreen() {
         synchronized (offscreenGraphics) {
-//            int firstDrawCol = Math.max(0,ccol-nccam);
-//            int lastDrawCol = Math.min(ccol-delay, nCols);
             int firstDrawCol = 0;
-            int lastDrawCol = this.getnCols();//Math.min(ccol-delay, nCols);
+            int lastDrawCol  = this.getnCols();
+            int numCols      = lastDrawCol;
 
-            int col = lastDrawCol;
-            if ((col % Settings.getnColsBeat()) == 0) {
-                //System.out.println("MyGridScore::draw: "+col+" acabo de pintar tots els grids.");
-                drawBeatLine(col, offscreenGraphics);
-                //System.out.println("MyGridScore::draw: "+col+" ara he pintat beat line.");
-            }
-            if ((col % (Settings.getnColsBeat() * getNumBeatsMeasure())) == 0) {
-                drawMeasureLine(col, offscreenGraphics);
-            }
+            // Calcula línies de beat/compàs tenint en compte canvis mid-score
+            boolean[] isBeat    = new boolean[numCols + 1];
+            boolean[] isMeasure = new boolean[numCols + 1];
+            computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+
+            if (isBeat[numCols])    drawBeatLine(numCols, offscreenGraphics);
+            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
+
             Utilities.printOutWithPriority(false, "MyGridScore::drawFullGridInOffscreen first, last = " + firstDrawCol + ", " + (lastDrawCol - 1) + ", countDrawFull = " + countDrawFull++);
-            for (col = lastDrawCol - 1; col >= firstDrawCol; col--) {
-//        for (int col = firstDrawCol; col < this.getCurrentCol() && col < this.nCols; col++) {
+            for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
                 for (int row = 0; row < nKeys; row++) {
                     this.drawSquare(row, col, offscreenGraphics);
                 }
             }
-            for (col = lastDrawCol - 1; col >= firstDrawCol; col--) {
-                if ((col % Settings.getnColsBeat()) == 0) {
-                    //System.out.println("MyGridScore::draw: "+col+" acabo de pintar tots els grids.");
-                    drawBeatLine(col, offscreenGraphics);
-                    //System.out.println("MyGridScore::draw: "+col+" ara he pintat beat line.");
-                }
-                if ((col % (Settings.getnColsBeat() * getNumBeatsMeasure())) == 0) {
-                    drawMeasureLine(col, offscreenGraphics);
-                }
+            for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
+                if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
+                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
             }
-            col = nCols;
-            if ((col % (Settings.getnColsBeat() * getNumBeatsMeasure())) == 0) {
-                drawMeasureLine(col, offscreenGraphics);
-            }
-            //setLastColDrawn(lastDrawCol-1);
+            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
             setGridColorsHaveChanged(false);
         }
     }
@@ -1115,36 +1102,24 @@ public class MyGridScore extends MyComponent {
             // if (true) return;
 
             //------------------------------------------
-            int col = lastDrawCol;
-            if ((col % Settings.getnColsBeat()) == 0) {
-                //System.out.println("MyGridScore::draw: "+col+" acabo de pintar tots els grids.");
-                drawBeatLine(col, offscreenGraphics);
-                //System.out.println("MyGridScore::draw: "+col+" ara he pintat beat line.");
-            }
-            if ((col % (Settings.getnColsBeat() * getNumBeatsMeasure())) == 0) {
-                drawMeasureLine(col, offscreenGraphics);
-            }
-            for (col = lastDrawCol - 1; col >= firstDrawCol; col--) {
-//        for (int col = firstDrawCol; col < this.getCurrentCol() && col < this.nCols; col++) {
+            // Calcula línies de beat/compàs tenint en compte canvis mid-score
+            boolean[] isBeat    = new boolean[nCols + 1];
+            boolean[] isMeasure = new boolean[nCols + 1];
+            computeBeatMeasureLines(nCols + 1, isBeat, isMeasure);
+
+            if (isBeat[lastDrawCol])    drawBeatLine(lastDrawCol, offscreenGraphics);
+            if (isMeasure[lastDrawCol]) drawMeasureLine(lastDrawCol, offscreenGraphics);
+
+            for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
                 for (int row = 0; row < nKeys; row++) {
                     this.drawSquare(row, col, offscreenGraphics);
                 }
             }
-            for (col = lastDrawCol - 1; col >= firstDrawCol; col--) {
-                if ((col % Settings.getnColsBeat()) == 0) {
-                    //System.out.println("MyGridScore::draw: "+col+" acabo de pintar tots els grids.");
-                    drawBeatLine(col, offscreenGraphics);
-                    //System.out.println("MyGridScore::draw: "+col+" ara he pintat beat line.");
-                }
-                if ((col % (Settings.getnColsBeat() * getNumBeatsMeasure())) == 0) {
-                    drawMeasureLine(col, offscreenGraphics);
-                }
+            for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
+                if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
+                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
             }
-            col = nCols;
-            if ((col % (Settings.getnColsBeat() * getNumBeatsMeasure())) == 0) {
-                drawMeasureLine(col, offscreenGraphics);
-            }
-            //setLastColDrawn(lastDrawCol-1);
+            if (isMeasure[nCols]) drawMeasureLine(nCols, offscreenGraphics);
             Utilities.printOutWithPriority(false, "MyGridScore::drawCurrentCamInOffscreen first, last = " + firstDrawCol + ", " + (lastDrawCol - 1) + ", countDrawFull = " + countDrawFull++);
         }
     }

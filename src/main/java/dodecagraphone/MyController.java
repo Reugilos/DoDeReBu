@@ -2019,15 +2019,28 @@ public class MyController {
      * @param change      el canvi a col·locar
      * @param description clau I18n (sense prefix) del tipus de canvi per al missatge
      */
+    /** Finestra emergent no modal que es mostra mentre hi ha un canvi pendent. */
+    private javax.swing.JDialog pendingChangeDialog = null;
+
     private void setPendingChange(MyGridScore.ScoreChange change, String description) {
         this.pendingChange = change;
-        // Mostra un missatge emergent (no bloquejant visualment: és informatiu)
-        // description ja és el text traduit (p.ex. "tempo", "compàs"...)
-        javax.swing.JOptionPane.showMessageDialog(
-                this.getUi(),
+        // Tanca qualsevol diàleg pendent anterior
+        if (pendingChangeDialog != null) {
+            pendingChangeDialog.dispose();
+        }
+        // Diàleg no modal: no bloqueja l'usuari, desapareix quan es col·loca el canvi
+        javax.swing.JDialog dlg = new javax.swing.JDialog(
+                this.getUi(), I18n.t("scoreChange.clickToPlace.title"), false);
+        dlg.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+        javax.swing.JLabel label = new javax.swing.JLabel(
                 I18n.f("scoreChange.clickToPlace", description),
-                I18n.t("scoreChange.clickToPlace.title"),
-                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                javax.swing.SwingConstants.CENTER);
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 24, 16, 24));
+        dlg.add(label);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this.getUi());
+        dlg.setVisible(true);
+        pendingChangeDialog = dlg;
         this.drawFull(true);
     }
 
@@ -2042,8 +2055,14 @@ public class MyController {
         if (pendingChange == null) return false;
         allPurposeScore.setScoreChange(col, pendingChange);
         pendingChange = null;
+        // Tanca el diàleg informatiu
+        if (pendingChangeDialog != null) {
+            pendingChangeDialog.dispose();
+            pendingChangeDialog = null;
+        }
         needsSaving = true;
         // Redibuixa les franges que tenen línies de beat/compàs depenents del changeMap
+        this.allPurposeScore.drawFullGridinOffscreen();
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
         this.myLyrics.drawFullLyricsInOffscreen();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
