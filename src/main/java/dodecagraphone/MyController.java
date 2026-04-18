@@ -1510,7 +1510,6 @@ public class MyController {
     }
 
     public void onPrevColButtonPressed(MyButton togg) {
-        System.out.println("MyController:onPrevCol() currentCol = "+this.allPurposeScore.getCurrentCol());
         if (allPurposeScore.getCurrentCol() < allPurposeScore.getNumCols()) {
             allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
         }
