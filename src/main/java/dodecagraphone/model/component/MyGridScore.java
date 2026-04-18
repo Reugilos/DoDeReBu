@@ -78,6 +78,12 @@ public class MyGridScore extends MyComponent {
      * 4 = quarter note.
      */
     protected int beatFigure;
+    /**
+     * Valors de base (col 0) per a computeBeatMeasureLines.
+     * No es modifiquen per applyChangesAt; reflecteixen l'estat inicial de la partitura.
+     */
+    private int baseNColsBeat    = 0;
+    private int baseNBeatsMeasure = 0;
     protected String label = "";
     protected String title = "Cançó";
     protected String author = "Tradicional";
@@ -218,6 +224,7 @@ public class MyGridScore extends MyComponent {
         this.currentCol = Settings.getInitialCurrentCol(left,this);
         setNumBeatsMeasure(Settings.getnBeatsMeasure());
         setBeatFigure(Settings.getBeatFigure());
+        freezeBaseTimingParams();
         midiKey = ToneRange.getDefaultKey(); // midi
         scaleMode = ToneRange.getDefaultMode();
         choice = new MyChoice(this.controller);
@@ -680,6 +687,8 @@ public class MyGridScore extends MyComponent {
         description = "Descripció";
         gridColorsHaveChanged = true;
         setNumBeatsMeasure(Settings.getnBeatsMeasure());
+        setBeatFigure(Settings.getBeatFigure());
+        freezeBaseTimingParams();
         clearChangeMap();
     }
 
@@ -1769,6 +1778,25 @@ public class MyGridScore extends MyComponent {
         //Settings.setnBeatsMeasure(numBM);
     }
 
+    /**
+     * Desa els valors de timing de base (col 0) usats per computeBeatMeasureLines.
+     * S'ha de cridar quan s'inicialitza la partitura o quan es fa clearScore,
+     * però NO des d'applyChangesAt (que modifica Settings per a la reproducció).
+     */
+    public void freezeBaseTimingParams() {
+        // Comença amb els valors actuals de Settings/score
+        int nColsBeat     = Settings.getnColsBeat();
+        int nBeatsMeasure = this.numBeatsMeasure;
+        // Si hi ha un canvi a la col 0, aplica'l sobre la base
+        ScoreChange sc0 = changeMap.get(0);
+        if (sc0 != null) {
+            if (sc0.nColsBeat     != null) nColsBeat     = sc0.nColsBeat;
+            if (sc0.nBeatsMeasure != null) nBeatsMeasure = sc0.nBeatsMeasure;
+        }
+        this.baseNColsBeat     = nColsBeat;
+        this.baseNBeatsMeasure = nBeatsMeasure;
+    }
+
 //    /**
 //     * Saves the current grid in a simple format (to be replaced).
 //     * 
@@ -2088,8 +2116,10 @@ public class MyGridScore extends MyComponent {
      * @param isMeasure array de sortida: {@code true} si la columna és inici de compàs
      */
     public void computeBeatMeasureLines(int numCols, boolean[] isBeat, boolean[] isMeasure) {
-        int curNColsBeat    = Settings.getnColsBeat();
-        int curNBeatsMeasure = getNumBeatsMeasure();
+        // Usa els valors de base (col 0), no els valors globals de Settings que
+        // applyChangesAt pot haver modificat per a la posició del playbar.
+        int curNColsBeat     = (baseNColsBeat    > 0) ? baseNColsBeat    : Settings.getnColsBeat();
+        int curNBeatsMeasure = (baseNBeatsMeasure > 0) ? baseNBeatsMeasure : getNumBeatsMeasure();
         int colInBeat       = 0;
         int beatInMeasure   = 0;
 

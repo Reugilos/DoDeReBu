@@ -2054,6 +2054,8 @@ public class MyController {
         if (pendingChange == null) return false;
         allPurposeScore.setScoreChange(col, pendingChange);
         pendingChange = null;
+        // Si el canvi és a la columna 0 actualitzem també la base de timing
+        if (col == 0) allPurposeScore.freezeBaseTimingParams();
         // Tanca el diàleg informatiu
         if (pendingChangeDialog != null) {
             pendingChangeDialog.dispose();
