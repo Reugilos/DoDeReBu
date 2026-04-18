@@ -273,22 +273,24 @@ public class MyChordSymbolLine extends MyComponent {
             Map<Integer, Chord> chords = score.getChordSimbolLine();
             int numCols = score.getNumCols();
 
-            // Last column measure line
-            int col = numCols;
-            if ((col % (Settings.getnColsBeat() * score.getNumBeatsMeasure())) == 0) {
-                drawMeasureLine(col, offscreenGraphics, true);
+            // Calcula les línies de beat i compàs considerant canvis de compàs mid-score
+            boolean[] isBeat    = new boolean[numCols + 1];
+            boolean[] isMeasure = new boolean[numCols + 1];
+            score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+
+            // Línia final (columna numCols)
+            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
+
+            // Totes les columnes cap enrere (primer línies, després acords per sobre)
+            for (int col = numCols - 1; col >= 0; col--) {
+                if (isBeat[col])    drawBeatLine(col, offscreenGraphics, true);
+                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics, true);
             }
-            // All columns backwards
-            for (col = numCols - 1; col >= 0; col--) {
+            // Acords per sobre de les línies
+            for (int col = 0; col < numCols; col++) {
                 Chord chord = chords.get(col);
                 if (chord != null) {
                     drawChordSymbol(chord, col, offscreenGraphics, true);
-                }
-                if ((col % Settings.getnColsBeat()) == 0) {
-                    drawBeatLine(col, offscreenGraphics, true);
-                }
-                if ((col % (Settings.getnColsBeat() * score.getNumBeatsMeasure())) == 0) {
-                    drawMeasureLine(col, offscreenGraphics, true);
                 }
             }
         }

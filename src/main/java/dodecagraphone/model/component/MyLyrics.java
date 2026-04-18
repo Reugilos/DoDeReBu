@@ -150,6 +150,21 @@ public class MyLyrics extends MyComponent {
     }
 
     /**
+     * Esborra totes les lletres i surt del mode edició. S'ha de cridar quan
+     * s'obre o es crea una partitura nova.
+     */
+    public void clear() {
+        if (editMode) {
+            editMode = false;
+            editBuffer.setLength(0);
+            editCursorCharPos = 0;
+        }
+        lyricsByTrack.clear();
+        displayTrackId = 0;
+        if (offscreenGraphics != null) drawFullLyricsInOffscreen();
+    }
+
+    /**
      * Updates the track whose lyrics are drawn. Triggers a redraw of the
      * offscreen buffer so the new track's lyrics appear immediately.
      *
@@ -576,19 +591,17 @@ public class MyLyrics extends MyComponent {
 
             int numCols = score.getNumCols();
 
-            // Last-column measure line
-            int col = numCols;
-            if ((col % (Settings.getnColsBeat() * score.getNumBeatsMeasure())) == 0) {
-                drawMeasureLine(col, offscreenGraphics);
-            }
-            // All columns: beat and measure separator lines
-            for (col = numCols - 1; col >= 0; col--) {
-                if ((col % Settings.getnColsBeat()) == 0) {
-                    drawBeatLine(col, offscreenGraphics);
-                }
-                if ((col % (Settings.getnColsBeat() * score.getNumBeatsMeasure())) == 0) {
-                    drawMeasureLine(col, offscreenGraphics);
-                }
+            // Calcula les línies de beat i compàs considerant canvis de compàs mid-score
+            boolean[] isBeat    = new boolean[numCols + 1];
+            boolean[] isMeasure = new boolean[numCols + 1];
+            score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+
+            // Línia final
+            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
+            // Totes les columnes cap enrere
+            for (int col = numCols - 1; col >= 0; col--) {
+                if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
+                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
             }
 
             // Committed lyrics for the current display track

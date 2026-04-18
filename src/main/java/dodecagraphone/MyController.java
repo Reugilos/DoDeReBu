@@ -1569,7 +1569,6 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-        System.out.println("MyController:onNextCol() currentCol = "+this.allPurposeScore.getCurrentCol());
                     if (allPurposeScore.getCurrentCol() >(Settings.getInitialCurrentCol(left,allPurposeScore))) {
                         allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
                         allPurposeScore.drawCurrentCamInOffscreen();
@@ -1915,14 +1914,27 @@ public class MyController {
             return;
         }
         String compas = MeterDialog.meterData2TimeSignature(selection);
-        // Aplica els nous paràmetres a l'objecte score (afecta la vista local)
-        this.allPurposeScore.timeSignature2Params(compas);
+        // Analitza el nou compàs SEN aplicar-lo globalment:
+        // guardem els valors actuals, parsem els nous, i restaurem els antics.
+        int oldNBeatsMeasure = allPurposeScore.getNumBeatsMeasure();
+        int oldBeatFigure    = allPurposeScore.getBeatFigure();
+        int oldNColsQuarter  = Settings.getnColsQuarter();
+        this.allPurposeScore.timeSignature2Params(compas); // aplica temporalment
+        int newNBeatsMeasure = allPurposeScore.getNumBeatsMeasure();
+        int newNColsQuarter  = Settings.getnColsQuarter();
+        int newNColsBeat     = Settings.getnColsBeat();
+        // Restaura els valors antics (el canvi s'aplicarà a la columna triada)
+        allPurposeScore.setNumBeatsMeasure(oldNBeatsMeasure);
+        allPurposeScore.setBeatFigure(oldBeatFigure);
+        Settings.setnColsQuarter(oldNColsQuarter);
+        Settings.updateNColsBeat();
         MetaMessage message = MyMidiScore.composeTimeSignatureMessage(compas);
         this.allPurposeScore.placeAppendMidiMessage(message);
         // Crea el canvi pendent (s'aplicarà a la columna on l'usuari faci clic)
         MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-        sc.nBeatsMeasure = allPurposeScore.getNumBeatsMeasure();
-        sc.nColsQuarter  = Settings.getnColsQuarter();
+        sc.nBeatsMeasure = newNBeatsMeasure;
+        sc.nColsQuarter  = newNColsQuarter;
+        sc.nColsBeat     = newNColsBeat;
         setPendingChange(sc, I18n.t("scoreChange.timeSignature"));
         togg.setPressed(false);
     }
@@ -2010,8 +2022,13 @@ public class MyController {
      */
     private void setPendingChange(MyGridScore.ScoreChange change, String description) {
         this.pendingChange = change;
+        // Mostra un missatge emergent (no bloquejant visualment: és informatiu)
         // description ja és el text traduit (p.ex. "tempo", "compàs"...)
-        this.statusLine.setText(I18n.f("scoreChange.clickToPlace", description));
+        javax.swing.JOptionPane.showMessageDialog(
+                this.getUi(),
+                I18n.f("scoreChange.clickToPlace", description),
+                I18n.t("scoreChange.clickToPlace.title"),
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
         this.drawFull(true);
     }
 
@@ -2027,6 +2044,9 @@ public class MyController {
         allPurposeScore.setScoreChange(col, pendingChange);
         pendingChange = null;
         needsSaving = true;
+        // Redibuixa les franges que tenen línies de beat/compàs depenents del changeMap
+        this.myChordSymbolLine.drawFullChordLineInOffscreen();
+        this.myLyrics.drawFullLyricsInOffscreen();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
         this.updateTextOfButtons();
         this.drawFull(true);
@@ -2061,8 +2081,15 @@ public class MyController {
             Settings.setnBeatsMeasure(sc.nBeatsMeasure);
         }
         if (sc.nColsQuarter != null) {
-            // El paràmetre independent és nColsQuarter; nColsBeat es recalcula
             Settings.setnColsQuarter(sc.nColsQuarter);
+            Settings.updateNColsBeat(); // recalcula nColsBeat a partir de nColsQuarter i beatFigure
+        }
+        // nColsBeat pot estar present sense nColsQuarter (p.ex. si s'ha calculat per avançat)
+        // En aquest cas s'usa directament si no hi ha nColsQuarter
+        if (sc.nColsBeat != null && sc.nColsQuarter == null) {
+            // No hi ha manera de recalcular beatFigure des de nColsBeat sol;
+            // apliquem directament (cas inusual, conservatiu)
+            Settings.setnColsQuarter(sc.nColsBeat); // aproximació: quarter = beat
             Settings.updateNColsBeat();
         }
         if (sc.nMeasuresCam != null) {

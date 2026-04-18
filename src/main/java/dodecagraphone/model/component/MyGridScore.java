@@ -153,8 +153,10 @@ public class MyGridScore extends MyComponent {
         public Integer midiKey;
         public Character scaleMode;
         public Integer nBeatsMeasure;
-        /** Nombre de columnes per quarter note. La resta (nColsBeat, nColsCam…) es recalcula a partir d'aquest. */
+        /** Nombre de columnes per quarter note (paràmetre independent de l'amplada del beat). */
         public Integer nColsQuarter;
+        /** Nombre de columnes per beat (calculat a partir de nColsQuarter i beatFigure). */
+        public Integer nColsBeat;
         public Integer nMeasuresCam;
         public final Map<Integer, Integer> trackVelocities = new HashMap<>();
 
@@ -169,6 +171,7 @@ public class MyGridScore extends MyComponent {
             if (other.scaleMode != null)     this.scaleMode = other.scaleMode;
             if (other.nBeatsMeasure != null) this.nBeatsMeasure = other.nBeatsMeasure;
             if (other.nColsQuarter != null)  this.nColsQuarter = other.nColsQuarter;
+            if (other.nColsBeat != null)     this.nColsBeat = other.nColsBeat;
             if (other.nMeasuresCam != null)  this.nMeasuresCam = other.nMeasuresCam;
             this.trackVelocities.putAll(other.trackVelocities);
         }
@@ -2097,6 +2100,47 @@ public class MyGridScore extends MyComponent {
      */
     public void clearChangeMap() {
         changeMap.clear();
+    }
+
+    /**
+     * Calcula les posicions de les línies de beat i de compàs per a totes les
+     * columnes de la partitura, tenint en compte els canvis de compàs registrats
+     * al {@code changeMap}. Útil per a {@code MyChordSymbolLine} i
+     * {@code MyLyrics} que necessiten dibuixar les mateixes línies.
+     *
+     * @param numCols   nombre de columnes (longitud dels arrays de sortida)
+     * @param isBeat    array de sortida: {@code true} si la columna és inici de beat
+     * @param isMeasure array de sortida: {@code true} si la columna és inici de compàs
+     */
+    public void computeBeatMeasureLines(int numCols, boolean[] isBeat, boolean[] isMeasure) {
+        int curNColsBeat    = Settings.getnColsBeat();
+        int curNBeatsMeasure = getNumBeatsMeasure();
+        int colInBeat       = 0;
+        int beatInMeasure   = 0;
+
+        for (int col = 0; col < numCols; col++) {
+            // Aplica canvis de compàs registrats exactament en aquesta columna
+            ScoreChange sc = changeMap.get(col);
+            if (sc != null) {
+                if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
+                if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
+                // Reinicia els comptadors al punt de canvi
+                colInBeat     = 0;
+                beatInMeasure = 0;
+            }
+
+            if (colInBeat == 0) {
+                if (isBeat    != null) isBeat[col]    = true;
+                if (beatInMeasure == 0 && isMeasure != null) isMeasure[col] = true;
+            }
+
+            colInBeat++;
+            if (colInBeat >= curNColsBeat) {
+                colInBeat = 0;
+                beatInMeasure++;
+                if (beatInMeasure >= curNBeatsMeasure) beatInMeasure = 0;
+            }
+        }
     }
 
     private Thread playThread;
