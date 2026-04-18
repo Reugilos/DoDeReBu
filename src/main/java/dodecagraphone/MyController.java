@@ -2213,6 +2213,8 @@ public class MyController {
         this.buttons.stopPlayButton();
         this.exercisesOn = false;
         Settings.setnMeasuresCam(4);
+        // Restaura el compàs per defecte (4/4) i recalcula nColsBeat
+        this.allPurposeScore.timeSignature2Params("4/4");
         // allPurposeScore.resetAllPurposeScore();
         //this.myChordSymbolLine.setScore(allPurposeScore);
         //this.cam.setScore(allPurposeScore);
