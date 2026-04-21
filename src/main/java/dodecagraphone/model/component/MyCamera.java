@@ -154,27 +154,29 @@ public class MyCamera extends MyComponent {
     }
     
     /**
-     * Moves the score to the next page.
+     * Moves the score forward by exactly one page (fixedColsPerPage columns).
      */
     public void nextPage() {
-        if (score.getCurrentCol() < Settings.getnColsScore()) {
-            this.currentPage++;
+        int cols = score.getFixedColsPerPage();
+        int newCol = score.getCurrentCol() + cols;
+        if (newCol <= Settings.getnColsScore()) {
+            score.setCurrentCol(newCol);
         }
-        goToFirstColOfPage(currentPage);
+        updateCurrentPage();
         this.playing = false;
-//        this.timer.reset();
     }
 
     /**
-     * Moves the score to the previous page.
+     * Moves the score backward by exactly one page (fixedColsPerPage columns).
      */
     public void prevPage() {
-        if (this.getCurrentPage() > 1) {
-            this.currentPage--;
-        }
-        goToFirstColOfPage(currentPage);
+        int cols = score.getFixedColsPerPage();
+        boolean left = !this.controller.getAllPurposeScore().isUseScreenKeyboardRight();
+        int minCol = Settings.getInitialCurrentCol(left, score);
+        int newCol = score.getCurrentCol() - cols;
+        score.setCurrentCol(Math.max(minCol, newCol));
+        updateCurrentPage();
         this.playing = false;
-//        this.timer.reset();
     }
 
     /**

@@ -84,6 +84,9 @@ public class MyGridScore extends MyComponent {
      */
     private int baseNColsBeat    = 0;
     private int baseNBeatsMeasure = 0;
+    private int baseBeatFigure    = 0; // 0 = no inicialitzat
+    /** Nombre de columnes per pàgina, calculat una sola vegada a freezeBaseTimingParams(). */
+    private int fixedColsPerPage  = 0;
     protected String label = "";
     protected String title = "Cançó";
     protected String author = "Tradicional";
@@ -159,6 +162,8 @@ public class MyGridScore extends MyComponent {
         public Integer midiKey;
         public Character scaleMode;
         public Integer nBeatsMeasure;
+        /** Figura del beat (4 = negra, 8 = corxera, etc.). */
+        public Integer beatFigure;
         /** Nombre de columnes per quarter note (paràmetre independent de l'amplada del beat). */
         public Integer nColsQuarter;
         /** Nombre de columnes per beat (calculat a partir de nColsQuarter i beatFigure). */
@@ -176,6 +181,7 @@ public class MyGridScore extends MyComponent {
             if (other.midiKey != null)       this.midiKey = other.midiKey;
             if (other.scaleMode != null)     this.scaleMode = other.scaleMode;
             if (other.nBeatsMeasure != null) this.nBeatsMeasure = other.nBeatsMeasure;
+            if (other.beatFigure != null)    this.beatFigure = other.beatFigure;
             if (other.nColsQuarter != null)  this.nColsQuarter = other.nColsQuarter;
             if (other.nColsBeat != null)     this.nColsBeat = other.nColsBeat;
             if (other.nMeasuresCam != null)  this.nMeasuresCam = other.nMeasuresCam;
@@ -342,8 +348,15 @@ public class MyGridScore extends MyComponent {
         if (cam == null) {
             throw new NullPointerException("The camera should be created before calling MyGridScore::getNumColsPage()");
         }
-        int numMeasuresPage = cam.getnCols() / (Settings.getnColsBeat() * getNumBeatsMeasure());
-        int numColsPage = numMeasuresPage * Settings.getnColsBeat() * getNumBeatsMeasure();
+        // Usa els valors base congelats (baseNColsBeat / baseNBeatsMeasure) per garantir
+        // que la mida de pàgina sigui consistent independentment dels canvis mid-score
+        // que applyChangesAt hagi aplicat a numBeatsMeasure.
+        int colsBeat    = (baseNColsBeat     > 0) ? baseNColsBeat     : Settings.getnColsBeat();
+        int beatsMeasure = (baseNBeatsMeasure > 0) ? baseNBeatsMeasure : numBeatsMeasure;
+        int colsPerMeasure = colsBeat * beatsMeasure;
+        if (colsPerMeasure <= 0) colsPerMeasure = 1;
+        int numMeasuresPage = cam.getnCols() / colsPerMeasure;
+        int numColsPage = numMeasuresPage * colsPerMeasure;
         return numColsPage;
     }
 
@@ -1692,6 +1705,14 @@ public class MyGridScore extends MyComponent {
         while (midiKey < ToneRange.getLowestMidi()) {
             midiKey += 12;
         }
+        // Transposa les marques de tonalitat registrades al changeMap
+        for (ScoreChange sc : changeMap.values()) {
+            if (sc.midiKey != null) {
+                sc.midiKey = sc.midiKey + step;
+                while (sc.midiKey > ToneRange.getHighestMidi()) sc.midiKey -= 12;
+                while (sc.midiKey < ToneRange.getLowestMidi()) sc.midiKey += 12;
+            }
+        }
         this.grid = newgrid;
         this.transposeChordSymbolLine(step);
         this.transposeBackgroundChordLine(step);
@@ -1787,14 +1808,32 @@ public class MyGridScore extends MyComponent {
         // Comença amb els valors actuals de Settings/score
         int nColsBeat     = Settings.getnColsBeat();
         int nBeatsMeasure = this.numBeatsMeasure;
+        int beatFig       = this.beatFigure;
         // Si hi ha un canvi a la col 0, aplica'l sobre la base
         ScoreChange sc0 = changeMap.get(0);
         if (sc0 != null) {
             if (sc0.nColsBeat     != null) nColsBeat     = sc0.nColsBeat;
             if (sc0.nBeatsMeasure != null) nBeatsMeasure = sc0.nBeatsMeasure;
+            if (sc0.beatFigure    != null) beatFig       = sc0.beatFigure;
         }
         this.baseNColsBeat     = nColsBeat;
         this.baseNBeatsMeasure = nBeatsMeasure;
+        this.baseBeatFigure    = beatFig;
+        // Calcula i congela el nombre de columnes per pàgina (valor fix per a la navegació)
+        if (cam != null) {
+            this.fixedColsPerPage = getNumColsPage();
+        }
+    }
+
+    public int getBaseNBeatsMeasure() { return baseNBeatsMeasure; }
+    public int getBaseBeatFigure()    { return (baseBeatFigure > 0) ? baseBeatFigure : beatFigure; }
+
+    /**
+     * Retorna el nombre de columnes per pàgina congelat en la inicialització.
+     * Si encara no s'ha calculat, usa getNumColsPage() com a fallback.
+     */
+    public int getFixedColsPerPage() {
+        return (fixedColsPerPage > 0) ? fixedColsPerPage : getNumColsPage();
     }
 
 //    /**
@@ -1911,7 +1950,7 @@ public class MyGridScore extends MyComponent {
             if (midis != null) {
                 for (MidiMessage mess : midis) {
                     SoundWithMidi.runMidiMessage(mess, this);
-                    System.out.println("Col="+col+" "+SoundWithMidi.showMidiMessageBytes(mess));
+//                    System.out.println("Col="+col+" "+SoundWithMidi.showMidiMessageBytes(mess));
                 }
             }
         }
@@ -2092,7 +2131,9 @@ public class MyGridScore extends MyComponent {
      */
     public ScoreChange getEffectiveChange(int col) {
         ScoreChange result = new ScoreChange();
-        for (ScoreChange sc : changeMap.headMap(col + 1, true).values()) {
+        // headMap(col, true) = claus <= col: el canvi a la columna X
+        // entra en vigor exactament a X, no un pas abans.
+        for (ScoreChange sc : changeMap.headMap(col, true).values()) {
             result.mergeFrom(sc);
         }
         return result;
@@ -2106,6 +2147,14 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
+     * Retorna el mapa de canvis per columna (lectura). Útil per a components
+     * com MyChordSymbolLine que necessiten consultar les marques de canvi.
+     */
+    public java.util.TreeMap<Integer, ScoreChange> getChangeMap() {
+        return changeMap;
+    }
+
+    /**
      * Calcula les posicions de les línies de beat i de compàs per a totes les
      * columnes de la partitura, tenint en compte els canvis de compàs registrats
      * al {@code changeMap}. Útil per a {@code MyChordSymbolLine} i
@@ -2115,6 +2164,74 @@ public class MyGridScore extends MyComponent {
      * @param isBeat    array de sortida: {@code true} si la columna és inici de beat
      * @param isMeasure array de sortida: {@code true} si la columna és inici de compàs
      */
+    /**
+     * Retorna la primera columna del compàs que conté {@code col}.
+     * Si {@code col} ja és l'inici d'un compàs, el retorna directament.
+     * Gestiona canvis de compàs mid-score via computeBeatMeasureLines.
+     *
+     * @param col columna clicada (0-based)
+     * @return primera columna del compàs corresponent
+     */
+    public int getFirstColOfCurrentMeasure(int col) {
+        if (col <= 0) return 0;
+        // Calcula fins a col+1 (només necessitem isMeasure[0..col])
+        boolean[] isMeasure = new boolean[col + 1];
+        computeBeatMeasureLines(col + 1, null, isMeasure);
+        for (int c = col; c >= 0; c--) {
+            if (isMeasure[c]) return c;
+        }
+        return 0;
+    }
+
+    /**
+     * Retorna el número de compàs (1-based) i el beat dins del compàs (1-based)
+     * a la columna {@code col}, tenint en compte els canvis de compàs del changeMap.
+     *
+     * @param col columna (0-based)
+     * @return array de dos elements: [measureNumber, beatNumber], ambdós 1-based
+     */
+    public int[] getMeasureAndBeatAt(int col) {
+        if (col < 0) return new int[]{1, 1};
+
+        int curNColsBeat     = (baseNColsBeat     > 0) ? baseNColsBeat     : Settings.getnColsBeat();
+        int curNBeatsMeasure = (baseNBeatsMeasure  > 0) ? baseNBeatsMeasure  : getNumBeatsMeasure();
+        int colInBeat        = 0;
+        int beatInMeasure    = 0;
+        int measure          = 1;  // 1-based
+        int beat             = 1;  // 1-based
+
+        for (int c = 0; c <= col; c++) {
+            // Aplica canvis de compàs registrats exactament en aquesta columna
+            ScoreChange sc = changeMap.get(c);
+            if (sc != null) {
+                if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
+                if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
+                colInBeat     = 0;
+                beatInMeasure = 0;
+            }
+
+            // Inici de beat
+            if (colInBeat == 0) {
+                // Inici de compàs
+                if (beatInMeasure == 0) {
+                    if (c > 0) measure++;  // col 0 ja és el compàs 1
+                    beat = 1;
+                } else {
+                    beat = beatInMeasure + 1;
+                }
+            }
+
+            colInBeat++;
+            if (colInBeat >= curNColsBeat) {
+                colInBeat = 0;
+                beatInMeasure++;
+                if (beatInMeasure >= curNBeatsMeasure) beatInMeasure = 0;
+            }
+        }
+
+        return new int[]{measure, beat};
+    }
+
     public void computeBeatMeasureLines(int numCols, boolean[] isBeat, boolean[] isMeasure) {
         // Usa els valors de base (col 0), no els valors globals de Settings que
         // applyChangesAt pot haver modificat per a la posició del playbar.

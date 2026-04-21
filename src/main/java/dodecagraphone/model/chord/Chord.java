@@ -20,6 +20,8 @@ public class Chord {
     protected String info;
     protected int bass; // the slash bass note of the chord, relative to root
     protected int ncols = 1;
+    /** Column offset within the beat at which this chord actually sounds (0 = beat start). */
+    protected int beatColOffset = 0;
 
     public Chord() {
         this.root = Settings.INVALID_CHORD;
@@ -188,6 +190,14 @@ public class Chord {
     public void setNCols(int ncols) {
         this.ncols = ncols;
     }
+
+    public int getBeatColOffset() {
+        return beatColOffset;
+    }
+
+    public void setBeatColOffset(int beatColOffset) {
+        this.beatColOffset = beatColOffset;
+    }
     
     public int getMidiKey() {
         return midiKey;
@@ -217,6 +227,7 @@ public class Chord {
             ch.shape = this.shape.clone();
             ch.info = new String(this.info);
             ch.bass = this.bass;
+            ch.beatColOffset = this.beatColOffset;
         }
         return ch;
     }

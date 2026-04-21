@@ -278,6 +278,7 @@ public class MyPatternScore extends MyGridScore {
         MyMixer mixer = this.controller.getMixer();
         int oldCurrentTrack = mixer.getCurrentTrackId();
         int ncols = chord.getNCols();
+        // The chord symbol is stored at the beat-start column (for display and lookup).
         this.chordSymbolLine.put(col, chord);
         int[] midiChord = chord.getMidiNotes();
         int oldCol = currentWriteCol;
@@ -289,9 +290,11 @@ public class MyPatternScore extends MyGridScore {
         }
         int channel = this.controller.getMixer().getCurrentChannelOfTrack(track.getId());
         int velocity = track.getVelocity();
+        // The notes are placed at col + beatColOffset so playback fires at the right sub-beat.
+        int playCol = col + chord.getBeatColOffset();
         for (int j = 0; j < midiChord.length; j++) {
-            this.currentWriteCol = col;
-            this.placeNote(midiChord[j], ncols, false, false, channel, track.getId(), velocity );
+            this.currentWriteCol = playCol;
+            this.placeNote(midiChord[j], ncols, false, false, channel, track.getId(), velocity);
         }
         currentWriteCol = oldCol;
         mixer.setCurrentTrack(oldCurrentTrack);

@@ -1165,7 +1165,7 @@ public class MyController {
         Thread playbackThread = new Thread(() -> {
             long nextStep = System.nanoTime();
             // long nanosPerStep = (long) MyTempo.getNanosPerSquareGrid(); // o calcula-ho
-            Utilities.printOutWithPriority(true,"MyController::play():");
+//            Utilities.printOutWithPriority(true,"MyController::play():");
 
             while (this.getCam().isPlaying()) {
                 int camPBar = cam.getPlayBar();
@@ -1218,9 +1218,9 @@ public class MyController {
             }
         });
         playbackThread.start();
-        System.out.println("MyController::play, playBarCol = "+cam.getPlayBar()+" nColsCam = "+Settings.getnColsCam()+
-                " currentCol = "+this.allPurposeScore.getCurrentCol()+        
-                " delay = "+this.allPurposeScore.getDelay(!this.allPurposeScore.isUseScreenKeyboardRight()));        
+//        System.out.println("MyController::play, playBarCol = "+cam.getPlayBar()+" nColsCam = "+Settings.getnColsCam()+
+//                " currentCol = "+this.allPurposeScore.getCurrentCol()+
+//                " delay = "+this.allPurposeScore.getDelay(!this.allPurposeScore.isUseScreenKeyboardRight()));
     }
 
 //    public void old_play_desglossat() {
@@ -1280,6 +1280,9 @@ public class MyController {
 
     public void transpose(int step) {
         this.allPurposeScore.transpose(step);
+        this.updateTextOfButtons();
+        this.allPurposeScore.drawCurrentCamInOffscreen();
+        this.getUi().getPanel().repinta(true);
     }
 
     public void setDrums(boolean drumsOn) {
@@ -1421,6 +1424,7 @@ public class MyController {
     }
 
     public void onNextKeyButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
         int old_key = this.allPurposeScore.getMidiKey();
         int new_key = this.getNextKey();
         this.transpose(new_key - old_key);
@@ -1431,6 +1435,7 @@ public class MyController {
     }
 
     public void onPrevKeyButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
 //        System.out.println("MyController::onPrevKeyButtonPressed: (id) " + togg.getId());
         int old_key = this.allPurposeScore.getMidiKey();
         int new_key = this.getPrevKey();
@@ -1441,21 +1446,37 @@ public class MyController {
     }
 
     public void onResetKeyButtonPressed(MyButton togg) {
-        int old_key = this.allPurposeScore.getMidiKey();
-        if (Settings.IS_BU){
-            if (cam.isPlaying()) { togg.setPressed(false); return; }
-            String to = MyDialogs.mostraInputDialog(I18n.t("keyButton.prompt"),I18n.t("keyButton.title"));
-            char mode = ToneRange.getScaleMode(to);
-            if (mode ==' ') return;
-            int midiKey = ToneRange.getMidiKey(to);
-            this.allPurposeScore.setMidiKey(midiKey);
-            this.allPurposeScore.setScaleMode(mode);
-            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-            sc.midiKey   = allPurposeScore.getMidiKey();
-            sc.scaleMode = allPurposeScore.getScaleMode();
-            setPendingChange(sc, I18n.t("scoreChange.key"));
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
+        if (Settings.IS_BU) {
+            // Botó de tonalitat: demana la nova to i activa el workflow de canvi pendent.
+            // Si l'usuari tria "A l'inici", se li ofereix transportar la partitura.
             togg.setPressed(false);
+            String to = MyDialogs.mostraInputDialog(I18n.t("keyButton.prompt"), I18n.t("keyButton.title"));
+            if (to == null || to.isBlank()) return;
+            char mode = ToneRange.getScaleMode(to);
+            if (mode == ' ') return;
+            int newMidiKey = ToneRange.getMidiKey(to);
+            int oldMidiKey = allPurposeScore.getMidiKey();
+            int step = newMidiKey - oldMidiKey;
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.midiKey   = newMidiKey;
+            sc.scaleMode = mode;
+            setPendingChange(sc, I18n.t("scoreChange.key"), () -> {
+                // "A l'inici" escollit: preguntar si vol transportar la partitura
+                if (step != 0) {
+                    int res = MyDialogs.demanaConfirmacio(
+                            I18n.t("keyButton.transposeConfirm"),
+                            I18n.t("keyButton.transposeConfirm.title"));
+                    if (res == javax.swing.JOptionPane.YES_OPTION) {
+                        // Transposa primer (actualitza notes i marques de to),
+                        // llavors col·loca la marca a col 0 amb la to exacta demanada.
+                        allPurposeScore.transpose(step);
+                    }
+                }
+                placePendingChangeAt(0);
+            });
         } else {
+            int old_key = allPurposeScore.getMidiKey();
             int new_key = this.getRandKey();
             this.transpose(new_key - old_key);
             if (this.exercisesOn) {
@@ -1481,6 +1502,9 @@ public class MyController {
     public void onPageNumButtonPressed(MyButton togg) {
     }
 
+    public void onVolumeButtonPressed(MyButton togg) {
+    }
+
     public void onFirstPageButtonPressed(MyButton togg) {
         this.stop();
         this.cam.reset();
@@ -1499,14 +1523,16 @@ public class MyController {
         this.stop();
         this.cam.nextPage();
         this.buttons.stopPlayButton();
-//        this.drawFull(true);
+        this.updateTextOfButtons();
+        this.drawFull(true);
     }
 
     public void onPrevPageButtonPressed(MyButton togg) {
         this.stop();
         this.cam.prevPage();
         this.buttons.stopPlayButton();
-  //      this.drawFull(true);
+        this.updateTextOfButtons();
+        this.drawFull(true);
     }
 
     public void onPrevColButtonPressed(MyButton togg) {
@@ -1532,6 +1558,7 @@ public class MyController {
                 try {
                     if (allPurposeScore.getCurrentCol() < allPurposeScore.getNumCols()) {
                         allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
+                        updateTextOfButtons();
                         allPurposeScore.drawCurrentCamInOffscreen();
                         this.getUi().getPanel().repinta(true);
                     }
@@ -1546,7 +1573,7 @@ public class MyController {
     }
 
     public void onNextColButtonPressed(MyButton togg) {
-        System.out.println("MyController:onNextCol() currentCol = "+this.allPurposeScore.getCurrentCol());
+//        System.out.println("MyController:onNextCol() currentCol = "+this.allPurposeScore.getCurrentCol());
         boolean left = !this.getAllPurposeScore().isUseScreenKeyboardRight();
         if (allPurposeScore.getCurrentCol() > (Settings.getInitialCurrentCol(left,allPurposeScore))) {
             allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
@@ -1569,6 +1596,7 @@ public class MyController {
                 try {
                     if (allPurposeScore.getCurrentCol() >(Settings.getInitialCurrentCol(left,allPurposeScore))) {
                         allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
+                        updateTextOfButtons();
                         allPurposeScore.drawCurrentCamInOffscreen();
                         this.getUi().getPanel().repinta(true);
                     }
@@ -1583,20 +1611,24 @@ public class MyController {
     }
 
     public void onTempoButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) return;
         this.buttons.hideTip();
         togg.setPressed(false);
         String input = MyDialogs.mostraInputDialog(
                 I18n.t("MyController.onTempoButtonPressed.prompt"),
                 I18n.t("MyController.onTempoButtonPressed.title"),
-                String.valueOf(MyTempo.getTempo())
+                String.valueOf(MyTempo.getPlaybackTempo())
         );
         if (input == null) {
             return;
         }
         try {
             int requested = Integer.parseInt(input);
-            int actual = MyTempo.setTempo(requested);
-            this.buttons.updateTempoButton(String.valueOf(actual));
+            // Clamp the value without touching MyTempo state (preserves playbackTempo).
+            int clamped = Math.max(0, Math.min(Settings.MAX_BPM, requested));
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.tempo = clamped;
+            setPendingChange(sc, I18n.t("scoreChange.tempo"));
         } catch (NumberFormatException e) {
             MyDialogs.mostraError(
                     I18n.f("MyController.onTempoButtonPressed.invalidInput", input),
@@ -1606,9 +1638,10 @@ public class MyController {
     }
     
     public void onFasterButtonPressed(MyButton togg) {
-        if (cam.isPlaying()) return; // no es permet canviar durant la reproducció
+        // Vel+: modifica el playbackTempo (velocitat de reproducció en viu).
+        // El botó mostra el playbackTempo en tot moment.
         MyTempo.faster();
-        this.buttons.updateTempoButton("" + MyTempo.getTempo());
+        this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -1623,24 +1656,17 @@ public class MyController {
             while (togg.isPressed()) {
                 try {
                     MyTempo.faster();
-                    this.buttons.updateTempoButton("" + MyTempo.getTempo());
+                    this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
                     Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
-            // Quan es deixa anar el botó, registra el canvi com a pendent
-            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-            sc.tempo = MyTempo.getTempo();
-            setPendingChange(sc, I18n.t("scoreChange.tempo"));
         });
         replicador.start();
-        // Si no hi ha repetició (un sol clic), registra igualment com a pendent
-        // però ho fa quan es deixa anar (el thread acaba ràpid si !togg.isPressed())
     }
 
     public void onLouderButtonPressed(MyButton togg) {
-        if (cam.isPlaying()) return;
         int vol = this.getMixer().louder();
         this.buttons.updateVolumeButton("" + vol);
         this.mixer.refreshMixer();
@@ -1666,18 +1692,12 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
-            MyTrack tr = getMixer().getTrackFromId(trackId);
-            if (tr != null) {
-                MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-                sc.trackVelocities.put(trackId, tr.getVelocity());
-                setPendingChange(sc, I18n.t("scoreChange.volume"));
-            }
+            // Volum: s'aplica directament, sense workflow de canvi pendent.
         });
         replicador.start();
     }
 
     public void onQuieterButtonPressed(MyButton togg) {
-        if (cam.isPlaying()) return;
         int vol = this.getMixer().quieter();
         this.buttons.updateVolumeButton("" + vol);
         this.mixer.refreshMixer();
@@ -1703,20 +1723,16 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
-            MyTrack tr = getMixer().getTrackFromId(trackId);
-            if (tr != null) {
-                MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-                sc.trackVelocities.put(trackId, tr.getVelocity());
-                setPendingChange(sc, I18n.t("scoreChange.volume"));
-            }
+            // Volum: s'aplica directament, sense workflow de canvi pendent.
         });
         replicador.start();
     }
 
     public void onSlowerButtonPressed(MyButton togg) {
-        if (cam.isPlaying()) return;
+        // Vel-: modifica el playbackTempo (velocitat de reproducció en viu).
+        // El botó mostra el playbackTempo en tot moment.
         MyTempo.slower();
-        this.buttons.updateTempoButton("" + MyTempo.getTempo());
+        this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -1731,15 +1747,12 @@ public class MyController {
             while (togg.isPressed()) {
                 try {
                     MyTempo.slower();
-                    this.buttons.updateTempoButton("" + MyTempo.getTempo());
+                    this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
                     Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
-            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-            sc.tempo = MyTempo.getTempo();
-            setPendingChange(sc, I18n.t("scoreChange.tempo"));
         });
         replicador.start();
     }
@@ -1785,6 +1798,7 @@ public class MyController {
     }
 
     public void onTransposeDownButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
         this.transpose(-1);
         if (replicador != null && replicador.isAlive()) {
             return;
@@ -1812,6 +1826,7 @@ public class MyController {
     }
 
     public void onTransposeUpButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
         this.transpose(1);
         if (replicador != null && replicador.isAlive()) {
             return;
@@ -1919,6 +1934,7 @@ public class MyController {
         int oldNColsQuarter  = Settings.getnColsQuarter();
         this.allPurposeScore.timeSignature2Params(compas); // aplica temporalment
         int newNBeatsMeasure = allPurposeScore.getNumBeatsMeasure();
+        int newBeatFigure    = allPurposeScore.getBeatFigure();
         int newNColsQuarter  = Settings.getnColsQuarter();
         int newNColsBeat     = Settings.getnColsBeat();
         // Restaura els valors antics (el canvi s'aplicarà a la columna triada)
@@ -1931,6 +1947,7 @@ public class MyController {
         // Crea el canvi pendent (s'aplicarà a la columna on l'usuari faci clic)
         MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
         sc.nBeatsMeasure = newNBeatsMeasure;
+        sc.beatFigure    = newBeatFigure;
         sc.nColsQuarter  = newNColsQuarter;
         sc.nColsBeat     = newNColsBeat;
         setPendingChange(sc, I18n.t("scoreChange.timeSignature"));
@@ -1969,14 +1986,13 @@ public class MyController {
         // Aplica els canvis de paràmetres registrats a la columna actual
         applyChangesAt(getEditingCol());
 
-        // Mostra el número de pàgina i el temps dins el compàs (1-based)
-        int editCol  = getEditingCol();
-        int colsBeat = Settings.getnColsBeat();
-        int colsMeas = colsBeat * allPurposeScore.getNumBeatsMeasure();
-        int beat     = (colsMeas > 0) ? (editCol % colsMeas) / colsBeat + 1 : 1;
-        String pageNo = cam.getCurrentPage() + " (" + beat + ")";
+        // Mostra el número de compàs i el beat actual (1-based), tenint en
+        // compte els canvis de compàs registrats al changeMap.
+        int editCol = getEditingCol();
+        int[] mb = allPurposeScore.getMeasureAndBeatAt(editCol);
+        String pageNo = mb[0] + " (" + mb[1] + ")";
         this.buttons.updatePageNumButton(pageNo);
-        String tempo = "" + MyTempo.getTempo();
+        String tempo = "" + MyTempo.getPlaybackTempo();
         this.buttons.updateTempoButton(tempo);
         MyTrack track = this.getMixer().getCurrentTrack();
         int volume = 63;
@@ -2022,6 +2038,14 @@ public class MyController {
     private javax.swing.JDialog pendingChangeDialog = null;
 
     private void setPendingChange(MyGridScore.ScoreChange change, String description) {
+        setPendingChange(change, description, null);
+    }
+
+    /**
+     * @param onPlaceAtStart callback opcional executat quan l'usuari prem "A l'inici"
+     *        en lloc de l'acció per defecte. Si és null s'usa placePendingChangeAt(0).
+     */
+    private void setPendingChange(MyGridScore.ScoreChange change, String description, Runnable onPlaceAtStart) {
         this.pendingChange = change;
         // Tanca qualsevol diàleg pendent anterior
         if (pendingChangeDialog != null) {
@@ -2034,8 +2058,23 @@ public class MyController {
         javax.swing.JLabel label = new javax.swing.JLabel(
                 I18n.f("scoreChange.clickToPlace", description),
                 javax.swing.SwingConstants.CENTER);
-        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 24, 16, 24));
-        dlg.add(label);
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 24, 8, 24));
+        // Botó "Inici": col·loca el canvi a la columna 0. És el botó per defecte,
+        // de manera que prémer Enter el dispara.
+        javax.swing.JButton btnInici = new javax.swing.JButton(I18n.t("scoreChange.placeAtStart"));
+        btnInici.addActionListener(ev -> {
+            if (onPlaceAtStart != null) {
+                onPlaceAtStart.run();
+            } else {
+                placePendingChangeAt(0);
+            }
+        });
+        javax.swing.JPanel contentPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 24, 16, 24));
+        contentPanel.add(label, java.awt.BorderLayout.CENTER);
+        contentPanel.add(btnInici, java.awt.BorderLayout.SOUTH);
+        dlg.add(contentPanel);
+        dlg.getRootPane().setDefaultButton(btnInici);
         dlg.pack();
         dlg.setLocationRelativeTo(this.getUi());
         dlg.setVisible(true);
@@ -2052,6 +2091,9 @@ public class MyController {
      */
     private boolean placePendingChangeAt(int col) {
         if (pendingChange == null) return false;
+        // Snap a la primera columna del compàs que conté col:
+        // tempo, compàs i to només té sentit aplicar-los a l'inici d'un compàs.
+        col = allPurposeScore.getFirstColOfCurrentMeasure(col);
         allPurposeScore.setScoreChange(col, pendingChange);
         pendingChange = null;
         // Si el canvi és a la columna 0 actualitzem també la base de timing
@@ -2070,6 +2112,17 @@ public class MyController {
         this.updateTextOfButtons();
         this.drawFull(true);
         return true;
+    }
+
+    /**
+     * Col·loca el canvi pendent a la columna del playBar (editingCol).
+     * Es crida quan l'usuari prem Enter mentre hi ha un canvi pendent.
+     *
+     * @return true si hi havia un canvi pendent i s'ha col·locat
+     */
+    public boolean placePendingChangeAtPlayBar() {
+        if (pendingChange == null) return false;
+        return placePendingChangeAt(getEditingCol());
     }
 
     /**
@@ -2095,22 +2148,18 @@ public class MyController {
         if (sc.tempo != null)        MyTempo.setTempo(sc.tempo);
         if (sc.midiKey != null)      allPurposeScore.setMidiKey(sc.midiKey);
         if (sc.scaleMode != null)    allPurposeScore.setScaleMode(sc.scaleMode);
-        if (sc.nBeatsMeasure != null) {
-            allPurposeScore.setNumBeatsMeasure(sc.nBeatsMeasure);
-            Settings.setnBeatsMeasure(sc.nBeatsMeasure);
-        }
-        if (sc.nColsQuarter != null) {
-            Settings.setnColsQuarter(sc.nColsQuarter);
-            Settings.updateNColsBeat(); // recalcula nColsBeat a partir de nColsQuarter i beatFigure
-        }
-        // nColsBeat pot estar present sense nColsQuarter (p.ex. si s'ha calculat per avançat)
-        // En aquest cas s'usa directament si no hi ha nColsQuarter
-        if (sc.nColsBeat != null && sc.nColsQuarter == null) {
-            // No hi ha manera de recalcular beatFigure des de nColsBeat sol;
-            // apliquem directament (cas inusual, conservatiu)
-            Settings.setnColsQuarter(sc.nColsBeat); // aproximació: quarter = beat
-            Settings.updateNColsBeat();
-        }
+        // Compàs: sempre apliquem un valor (el del canvi o el base), per garantir
+        // que tornar enrere restauri el compàs original i no deixi el canvi encallat.
+        // NO actualitzem Settings.nBeatsMeasure ni Settings.nColsBeat perquè canviarien
+        // getnColsCam() i getColWidth(); computeBeatMeasureLines() usa baseNColsBeat.
+        allPurposeScore.setNumBeatsMeasure(sc.nBeatsMeasure != null
+                ? sc.nBeatsMeasure
+                : allPurposeScore.getBaseNBeatsMeasure());
+        allPurposeScore.setBeatFigure(sc.beatFigure != null
+                ? sc.beatFigure
+                : allPurposeScore.getBaseBeatFigure());
+        // nColsQuarter i nColsBeat: tampoc s'apliquen a Settings per no alterar getColWidth().
+        // computeBeatMeasureLines() llegeix sc.nColsBeat directament del changeMap.
         if (sc.nMeasuresCam != null) {
             Settings.setnMeasuresCam(sc.nMeasuresCam);
         }
@@ -2215,6 +2264,13 @@ public class MyController {
         Settings.setnMeasuresCam(4);
         // Restaura el compàs per defecte (4/4) i recalcula nColsBeat
         this.allPurposeScore.timeSignature2Params("4/4");
+        // Marques per defecte a la columna 0 (tempo i tonalitat)
+        MyGridScore.ScoreChange defaultMarks = new MyGridScore.ScoreChange();
+        defaultMarks.tempo    = Settings.getDefaultTempo();
+        defaultMarks.midiKey  = ToneRange.getDefaultKey();
+        defaultMarks.scaleMode = 'M'; // per defecte Major
+        this.allPurposeScore.setScoreChange(0, defaultMarks);
+        MyTempo.setTempo(Settings.getDefaultTempo());
         // allPurposeScore.resetAllPurposeScore();
         //this.myChordSymbolLine.setScore(allPurposeScore);
         //this.cam.setScore(allPurposeScore);
@@ -2252,8 +2308,11 @@ public class MyController {
     }
 
     public void setConfigProperties() {
+        // NOTE: Settings that have no UI control (tipsVisible, screenWidthRatio,
+        // screenHeightRatio, ui.language, nColsQuarter) are intentionally NOT saved here.
+        // The user sets them by editing config.properties while the app is closed.
+        // Saving them here would overwrite manual edits made between runs.
         AppConfig.get().set("autoCorrect", "" + Settings.isAutoCorrect());
-        AppConfig.get().set("tipsVisible", "" + Settings.isTipsVisible());
         AppConfig.get().set("showMutted", "" + Settings.isShowMutted());
         AppConfig.get().set("nMeasuresCam", "" + Settings.getnMeasuresCam());
         AppConfig.get().set("nBeatsMeasure", "" + Settings.getnBeatsMeasure());
@@ -2267,8 +2326,6 @@ public class MyController {
             AppConfig.get().set("leadInstrument", "" + SoundWithMidi.getLeadInstrument());
             AppConfig.get().set("chordInstrument", "" + SoundWithMidi.getChordInstrument());
         }
-        AppConfig.get().set("screenWidthRatio", "" + Settings.getScreenWidthRatio());
-        AppConfig.get().set("screenHeightRatio", "" + Settings.getScreenHeightRatio());
         AppConfig.get().set(MyDialogs.CONFIG_KEY_LAST_DIR, MyDialogs.lastDirectory.getAbsolutePath());
         AppConfig.get().set(MyDialogs.CONFIG_KEY_LAST_DIR_SVG, MyDialogs.lastDirectorySvg.getAbsolutePath());
     }

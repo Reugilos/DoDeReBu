@@ -1,17 +1,22 @@
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
+import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  *
@@ -27,6 +32,13 @@ public class MyChordSymbolLine extends MyComponent {
     private MyController contr;
     private BufferedImage offscreenImage;
     private Graphics2D offscreenGraphics;
+
+    /** Background colour for tempo change markers (white text on blue). */
+    private static final Color COLOR_TEMPO_BG = new Color(0, 90, 190);
+    /** Background colour for key change markers (white text on granate). */
+    private static final Color COLOR_KEY_BG   = new Color(140, 0, 30);
+    /** Small bold font used inside change markers. */
+    private static final Font  MARK_FONT      = new Font("SansSerif", Font.BOLD, 9);
 
     /**
      *
@@ -55,14 +67,34 @@ public class MyChordSymbolLine extends MyComponent {
 
     public Chord enterChord(Chord oldChord) {
         String defStr = (oldChord != null) ? oldChord.basicString() : "";
-        String input = MyDialogs.mostraInputDialog("Enter chord (empty to delete):", "Chord", defStr);
+        String input = MyDialogs.mostraInputDialog(
+                I18n.t("myChordSymbolLine.enterChord.prompt"),
+                I18n.t("myChordSymbolLine.enterChord.title"),
+                defStr);
         if (input == null) {
             return oldChord; // cancel·lat → no fer res
         }
         if (input.trim().isEmpty()) {
             return null; // buit → esborrar
         }
-        return new Chord(input.trim());
+        Chord chord = new Chord(input.trim());
+        if (!chord.isValidChord() || chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) {
+            return chord; // text lliure o acord no vàlid: no demanem offset
+        }
+        // Preguntem en quina columna del beat ha de sonar
+        int nColsBeat = Settings.getnColsBeat();
+        int defOffset = (oldChord != null) ? oldChord.getBeatColOffset() : 0;
+        String offsetStr = MyDialogs.mostraInputDialog(
+                I18n.f("myChordSymbolLine.enterBeatColOffset.prompt", nColsBeat - 1),
+                I18n.t("myChordSymbolLine.enterBeatColOffset.title"),
+                "" + defOffset);
+        if (offsetStr != null && !offsetStr.trim().isEmpty()) {
+            try {
+                int offset = Integer.parseInt(offsetStr.trim());
+                chord.setBeatColOffset(Math.max(0, Math.min(nColsBeat - 1, offset)));
+            } catch (NumberFormatException ignore) { /* deixem 0 */ }
+        }
+        return chord;
 //        String defStr = "";
 //        int ncols = 0;
 //        if (oldChord != null) {
@@ -199,47 +231,130 @@ public class MyChordSymbolLine extends MyComponent {
      * @param g
      */
     public void drawChordSymbol(Chord chord, int col, Graphics2D g) {
-        drawChordSymbol(chord, col, g, false);
+        drawChordSymbol(chord, col, g, false, 0);
     }
 
     private void drawChordSymbol(Chord chord, int col, Graphics2D g, boolean offscreen) {
+        drawChordSymbol(chord, col, g, offscreen, 0);
+    }
+
+    /**
+     * Draws a chord symbol at the given column, shifted right by {@code xOffset}
+     * pixels (used to avoid overlap with change markers at the same column).
+     */
+    private void drawChordSymbol(Chord chord, int col, Graphics2D g, boolean offscreen, int xOffset) {
         g.setColor(java.awt.Color.BLACK);
-        int camX = 3 + (offscreen
+        FontMetrics fm = g.getFontMetrics();
+        int gap = 3; // pixels between sub-columns
+        int camX = 3 + xOffset + (offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) score.getScreenX(col));
         int camY = 8 + (int) Settings.getRowHeight() + (offscreen
                 ? (int) (2 * Settings.getRowHeight())
                 : (int) getScreenY(2));
         if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) { // draws info
-            g.drawString(chord.getInfo(), (int) (camX), (int) (camY));
+            g.drawString(chord.getInfo(), camX, camY);
         } else {
             if (Settings.isChordSymbolVertical()) {
-                int camYFirst = camY;
-                g.drawString(chord.getSimbolWithNumericBass(), camX, camY);
                 int[] shape = chord.getShape();
-                camX += 10;
-                if (chord.getBass() != Chord.NULL_BASS) {
-                    camX += 30;
+                // --- Measure all sub-columns first to avoid overlap ---
+                String col1Text = chord.getSimbolWithNumericBass();
+                int col1W = fm.stringWidth(col1Text);
+
+                int col2W = 0;
+                for (int i = 0; i < 4 && i < shape.length; i++) {
+                    col2W = Math.max(col2W, fm.stringWidth(String.format("%2d", shape[i])));
                 }
+
+                // --- Draw column 1: chord symbol ---
+                int camYFirst = camY;
+                g.drawString(col1Text, camX, camY);
+                camX += col1W + gap;
+
+                // --- Draw column 2: intervals 0..3 (going upward) ---
                 camY = camYFirst;
                 for (int i = 0; i < 4; i++) {
                     if (i < shape.length) {
-                        g.drawString(String.format("%2d", shape[i]) + "", camX, camY);
-                        camY -= 10;
+                        g.drawString(String.format("%2d", shape[i]), camX, camY);
+                        camY -= fm.getHeight();
                     }
                 }
-                camX += 20;
-                camY = camYFirst;
-                for (int i = 4; i < shape.length; i++) {
-                    if (i < shape.length) {
-                        g.drawString(String.format("%2d", shape[i]) + "", camX, camY);
-                        camY -= 10;
+                if (shape.length > 4) {
+                    camX += col2W + gap;
+                    // --- Draw column 3: intervals 4+ (going upward) ---
+                    camY = camYFirst;
+                    for (int i = 4; i < shape.length; i++) {
+                        g.drawString(String.format("%2d", shape[i]), camX, camY);
+                        camY -= fm.getHeight();
                     }
                 }
             } else {
                 g.drawString(chord.basicString(), camX, camY);
             }
         }
+    }
+
+    // -----------------------------------------------------------------------
+    //  Change markers (tempo / key)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Draws a tempo-change marker at the bottom-left corner of the chord strip
+     * cell at {@code col}, offset {@code existingXOff} pixels to the right to
+     * allow stacking multiple markers.  Returns the pixel width of the drawn box.
+     */
+    /**
+     * Draws a tempo-change marker stacked {@code existingYOff} pixels above the
+     * bottom of the chord strip.  Returns the height of the drawn box.
+     */
+    private int drawTempoMark(int col, int bpm, Graphics2D g, boolean offscreen, int existingYOff) {
+        return drawChangeMark(col, "\u2669=" + bpm, COLOR_TEMPO_BG, g, offscreen, existingYOff);
+    }
+
+    /**
+     * Draws a key-change marker stacked {@code existingYOff} pixels above the
+     * bottom of the chord strip.  Returns the height of the drawn box.
+     */
+    private int drawKeyMark(int col, int midiKey, char mode, Graphics2D g, boolean offscreen, int existingYOff) {
+        String text;
+        try {
+            text = ToneRange.getKeyName(midiKey, mode);
+        } catch (Exception ex) {
+            text = "?";
+        }
+        return drawChangeMark(col, text, COLOR_KEY_BG, g, offscreen, existingYOff);
+    }
+
+    /**
+     * Draws a small filled rectangle with white text at the bottom-left of the
+     * chord strip cell at {@code col}, stacked {@code existingYOff} pixels above
+     * the bottom edge (markers stack upward).
+     * Returns the height of the box so the caller can stack further markers.
+     */
+    private int drawChangeMark(int col, String text, Color bgColor,
+                               Graphics2D g, boolean offscreen, int existingYOff) {
+        Font prevFont = g.getFont();
+        g.setFont(MARK_FONT);
+        FontMetrics fm = g.getFontMetrics();
+        int pad  = 2;
+        int boxW = fm.stringWidth(text) + 2 * pad;
+        int boxH = fm.getAscent() + fm.getDescent() + 2 * pad;
+
+        int cellX   = offscreen
+                ? (int) Math.floor(col * Settings.getColWidth())
+                : (int) Math.floor(score.getScreenX(col));
+        int stripH  = (int) Math.round(nRows * Settings.getRowHeight());
+        int cellTop = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
+        int boxX    = cellX;
+        int boxY    = cellTop + stripH - boxH - existingYOff;
+
+        g.setColor(bgColor);
+        g.fillRect(boxX, boxY, boxW, boxH);
+        g.setColor(Color.WHITE);
+        g.drawString(text, boxX + pad, boxY + pad + fm.getAscent());
+
+        g.setFont(prevFont);
+        return boxH;
     }
 
     /**
@@ -281,16 +396,56 @@ public class MyChordSymbolLine extends MyComponent {
             // Línia final (columna numCols)
             if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
 
-            // Totes les columnes cap enrere (primer línies, després acords per sobre)
+            // Línies de beat i compàs
             for (int col = numCols - 1; col >= 0; col--) {
                 if (isBeat[col])    drawBeatLine(col, offscreenGraphics, true);
                 if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics, true);
             }
-            // Acords per sobre de les línies
+
+            // Marques de canvi de tempo i to (excloent col 0, que és la marca inicial).
+            // Les marques s'apilen verticalment de baix cap amunt.
+            // Per a cada columna guardem l'amplada màxima de les marques (per desplaçar l'acord).
+            TreeMap<Integer, Integer> markerMaxWidths = new TreeMap<>();
+            TreeMap<Integer, MyGridScore.ScoreChange> changeMap = score.getChangeMap();
+            for (Map.Entry<Integer, MyGridScore.ScoreChange> entry : changeMap.entrySet()) {
+                int col = entry.getKey();
+                if (col <= 0 || col >= numCols) continue;
+                MyGridScore.ScoreChange sc = entry.getValue();
+                int yOff   = 0;  // alçada acumulada (s'apila cap amunt)
+                int maxW   = 0;  // amplada màxima de les marques en aquesta columna
+                if (sc.tempo != null) {
+                    yOff += drawTempoMark(col, sc.tempo, offscreenGraphics, true, yOff);
+                }
+                if (sc.midiKey != null) {
+                    char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
+                    yOff += drawKeyMark(col, sc.midiKey, mode, offscreenGraphics, true, yOff);
+                }
+                // Calculem l'amplada màxima rellegint els textos (aproximació: refem FontMetrics)
+                if (yOff > 0) {
+                    offscreenGraphics.setFont(MARK_FONT);
+                    FontMetrics fm = offscreenGraphics.getFontMetrics();
+                    int pad = 2;
+                    if (sc.tempo != null) {
+                        maxW = Math.max(maxW, fm.stringWidth("\u2669=" + sc.tempo) + 2 * pad);
+                    }
+                    if (sc.midiKey != null) {
+                        char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
+                        String kn;
+                        try { kn = ToneRange.getKeyName(sc.midiKey, mode); }
+                        catch (Exception e) { kn = "?"; }
+                        maxW = Math.max(maxW, fm.stringWidth(kn) + 2 * pad);
+                    }
+                    markerMaxWidths.put(col, maxW);
+                }
+            }
+
+            // Acords per sobre de les línies i les marques;
+            // el text comença desplaçat per l'amplada màxima de les marques.
             for (int col = 0; col < numCols; col++) {
                 Chord chord = chords.get(col);
                 if (chord != null) {
-                    drawChordSymbol(chord, col, offscreenGraphics, true);
+                    int xOff = markerMaxWidths.getOrDefault(col, 0);
+                    drawChordSymbol(chord, col, offscreenGraphics, true, xOff);
                 }
             }
         }

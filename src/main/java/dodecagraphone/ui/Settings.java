@@ -52,7 +52,7 @@ public class Settings {
     /** Retard inicial (ms) abans de començar a replicar quan es manté apretat un botó. */
     public static final int BUTTON_REPEAT_INITIAL_DELAY_MS = 600;
     /** Interval (ms) entre rèpliques mentre es manté apretat un botó. */
-    public static final int BUTTON_REPEAT_INTERVAL_MS = 80;
+    public static final int BUTTON_REPEAT_INTERVAL_MS = 100;
     public static final boolean SHOW_DRAW_HIERARCHY = false;
     public static final boolean SHOW_DIMENSIONS = false;
     public static int PRINT_OUT_PRIORITY = 1; // 1 Max priority, 0 no printOut
