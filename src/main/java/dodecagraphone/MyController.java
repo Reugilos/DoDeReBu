@@ -657,11 +657,22 @@ public class MyController {
             this.needsSaving = true;
         }
 
-        /* Col·locar canvi pendent: el clic al grid determina la columna */
+        /* Check MyButton PRIMER — els botons han de funcionar sempre, fins i tot
+           quan hi ha un canvi pendent. */
+        int button = this.buttons.whichButton(posX, posY);
+        if (button != -1) {
+            this.buttons.onButtonPressed(button);
+            this.lastButtonPressed = button;
+            this.buttons.setModified(true);
+            return;
+        }
+
+        /* Col·locar canvi pendent: qualsevol clic a la zona de la càmera col·loca
+           el canvi. La columna es calcula des de posX (sense dependre de whichRow),
+           de manera que clics al chord symbol line o al score funcionen igual. */
         if (pendingChange != null) {
-            int row = this.allPurposeScore.whichRow(posX, posY);
-            int col = this.allPurposeScore.whichCol();
-            if (row != -1 && col != -1) {
+            int col = this.allPurposeScore.getCol(posX);
+            if (col >= 0) {
                 placePendingChangeAt(col);
             }
             return; // el clic queda consumit pel canvi pendent
@@ -769,14 +780,7 @@ public class MyController {
 //            this.allPurposeScore.thisAndAncestorsNeedDrawing();
         }
 
-        /* Check MyButton. */
-        int button = this.buttons.whichButton(posX, posY);
-        if (button != -1) {
-            this.buttons.onButtonPressed(button);
-            this.lastButtonPressed = button;
-            this.buttons.setModified(true);
-//            this.buttons.thisAndAncestorsNeedDrawing();
-        }
+        /* Check MyButton — ja gestionat al principi del mètode. */
         this.drawFull(true);
     }
 
