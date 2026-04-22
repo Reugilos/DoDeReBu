@@ -233,6 +233,14 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             this.repinta(true);
             return;
         }
+        // Enter: col·loca el canvi pendent a la columna del playBar
+        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+            if (controller.placePendingChangeAtPlayBar()) {
+                controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+                this.repinta(true);
+            }
+            return;
+        }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
             if (e.isShiftDown()) {
                 controller.redo();
