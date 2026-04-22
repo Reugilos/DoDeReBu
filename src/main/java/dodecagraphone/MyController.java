@@ -1542,8 +1542,8 @@ public class MyController {
     public void onPrevColButtonPressed(MyButton togg) {
         if (allPurposeScore.getCurrentCol() < allPurposeScore.getNumCols()) {
             allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
+            updateTextOfButtons();
         }
-        int ccol = allPurposeScore.getCurrentCol();
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -1581,6 +1581,7 @@ public class MyController {
         boolean left = !this.getAllPurposeScore().isUseScreenKeyboardRight();
         if (allPurposeScore.getCurrentCol() > (Settings.getInitialCurrentCol(left,allPurposeScore))) {
             allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
+            updateTextOfButtons();
         }
         if (replicador != null && replicador.isAlive()) {
             return;
@@ -2149,9 +2150,17 @@ public class MyController {
      */
     public void applyChangesAt(int col) {
         MyGridScore.ScoreChange sc = allPurposeScore.getEffectiveChange(col);
-        if (sc.tempo != null)        MyTempo.setTempo(sc.tempo);
-        if (sc.midiKey != null)      allPurposeScore.setMidiKey(sc.midiKey);
-        if (sc.scaleMode != null)    allPurposeScore.setScaleMode(sc.scaleMode);
+        // Apliquem sempre un valor (el del canvi o el per defecte), igual que fem amb
+        // el compàs, perquè tornar enrere restauri els valors anteriors a la marca.
+        MyTempo.setTempo(sc.tempo != null
+                ? sc.tempo
+                : Settings.DEFAULT_TEMPO);
+        allPurposeScore.setMidiKey(sc.midiKey != null
+                ? sc.midiKey
+                : ToneRange.getDefaultKey());
+        allPurposeScore.setScaleMode(sc.scaleMode != null
+                ? sc.scaleMode
+                : ToneRange.getDefaultMode());
         // Compàs: sempre apliquem un valor (el del canvi o el base), per garantir
         // que tornar enrere restauri el compàs original i no deixi el canvi encallat.
         // NO actualitzem Settings.nBeatsMeasure ni Settings.nColsBeat perquè canviarien

@@ -1040,6 +1040,11 @@ public class MyGridScore extends MyComponent {
      */
     public void drawFullGridinOffscreen() {
         synchronized (offscreenGraphics) {
+            // Esborrem el buffer sencer per eliminar línies divisòries antigues
+            // (les línies de compàs poden deixar píxels residuals si el compàs ha canviat).
+            offscreenGraphics.setColor(java.awt.Color.WHITE);
+            offscreenGraphics.fillRect(0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
+
             int firstDrawCol = 0;
             int lastDrawCol  = this.getnCols();
             int numCols      = lastDrawCol;

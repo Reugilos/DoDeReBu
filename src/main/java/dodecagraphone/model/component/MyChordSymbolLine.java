@@ -308,7 +308,7 @@ public class MyChordSymbolLine extends MyComponent {
      * bottom of the chord strip.  Returns the height of the drawn box.
      */
     private int drawTempoMark(int col, int bpm, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "\u2669=" + bpm, COLOR_TEMPO_BG, g, offscreen, existingYOff);
+        return drawChangeMark(col, "" + bpm, COLOR_TEMPO_BG, g, offscreen, existingYOff);
     }
 
     /**
@@ -426,7 +426,7 @@ public class MyChordSymbolLine extends MyComponent {
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
                     int pad = 2;
                     if (sc.tempo != null) {
-                        maxW = Math.max(maxW, fm.stringWidth("\u2669=" + sc.tempo) + 2 * pad);
+                        maxW = Math.max(maxW, fm.stringWidth("" + sc.tempo) + 2 * pad);
                     }
                     if (sc.midiKey != null) {
                         char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
