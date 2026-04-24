@@ -203,6 +203,17 @@ public class MyButtonPanel extends MyComponent {
         }
     }
 
+    public void showCustomTip(String text, double posX, double posY) {
+        if (Settings.isTipsVisible() && !popUp.isVisible()) {
+            this.popUp.removeAll();
+            JToolTip toolTip = new JToolTip();
+            toolTip.setTipText(text);
+            this.popUp.add(toolTip);
+            popUp.pack();
+            popUp.show(this.controller.getUi().getPanel(), (int) posX - 10, (int) posY - 10);
+        }
+    }
+
     public void hideTip() {
         popUp.setVisible(false);
     }

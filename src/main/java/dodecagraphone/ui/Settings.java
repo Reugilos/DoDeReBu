@@ -47,7 +47,7 @@ public class Settings {
 
     // Various
     public static final boolean COLORS_BU = true;
-    public static final boolean IS_BU = true;
+    public static final boolean IS_BU = false;
     public static final int REFRESH_PERIOD = 30; // 30ms -> ~33fps
     /** Retard inicial (ms) abans de començar a replicar quan es manté apretat un botó. */
     public static final int BUTTON_REPEAT_INITIAL_DELAY_MS = 600;
@@ -72,7 +72,7 @@ public class Settings {
     private static final double DEFAULT_SCREEN_HEIGHT_RATIO = 0.8;
     private static final double DEFAULT_KEYBOARD_RATIO = 2.4 / 16;
     private static final double DEFAULT_CONTROL_RATIO = 4.6 / 16;
-    private static final double DEFAULT_CHORD_RATIO = 6.0 / 59;
+    private static final int DEFAULT_NROWS_CHORD = 5;
     private static final double DEFAULT_STATUS_RATIO = 4.5 / 59;
     private static final int DEFAULT_NROWS_LYRICS = 3;
     private static final int DEFAULT_NCOLS_SQUARE = 1;
@@ -395,7 +395,7 @@ public class Settings {
     }
 
     public static int getnRowsChord() {
-        return (int) (getnRowsScore() * DEFAULT_CHORD_RATIO);
+        return DEFAULT_NROWS_CHORD;
     }
 
     public static int getnRowsStatus() {

@@ -1075,11 +1075,6 @@ public class MyGridScore extends MyComponent {
     // Podem ajuntar-lo amb drawFullGridInOffscreen(), canviant paràmetres.
     public void drawCurrentCamInOffscreen() {
         synchronized (offscreenGraphics) {
-            if (!Settings.IS_BU) {
-                System.out.println("MyGridScore::drawCurrentCamInOffscreen nColsBeat = " + Settings.getnColsBeat() + " nBM = " + this.getNumBeatsMeasure()
-                        + " colWidth=" + Settings.getColWidth()
-                        + " beatPx=" + (Settings.getnColsBeat() * Settings.getColWidth()));
-            }
             int ccol = getCurrentCol();
             int firstDrawCol = Math.max(0, ccol - Settings.getnColsCam());
             int lastDrawCol = ccol;//Math.min(ccol-delay, nCols);
@@ -1635,7 +1630,6 @@ public class MyGridScore extends MyComponent {
             camX1 = (int) Math.floor(getOffScreenScreenX(col));
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
-        if (!Settings.IS_BU) System.out.println("MyGridScore::drawMeasureLine camX1 = "+camX1);
         int camX2 = camX1;
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
         g.setColor(java.awt.Color.BLACK);
@@ -1913,7 +1907,7 @@ public class MyGridScore extends MyComponent {
      */
     public boolean playScoreCol(int col) {
         Utilities.printOutWithPriority(false,"MyGridScore::playScoreCol(): col = "+col+" playBar = "+this.cam.getPlayBar());
-        if (col >= 0 && col < this.getNumCols() && col <= this.controller.getAllPurposeScore().getLastColWritten()) {
+        if (col >= 0 && col < this.getNumCols() && col < this.controller.getAllPurposeScore().getStopCol()) {
             if (Settings.isPlayAtBeat() && once) {
                 once = false;
                 System.out.println("MyGridScore::playScoreCol: playing at Beat is on");

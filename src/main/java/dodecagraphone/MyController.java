@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import javax.sound.midi.MetaMessage;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 /**
  * Class controller implements user commands by managing model objects.
@@ -464,15 +465,40 @@ public class MyController {
 
         // Labels: vertically centered, left-aligned with a small margin
         java.awt.FontMetrics fm = g.getFontMetrics();
-        int textH  = fm.getAscent() - fm.getDescent();
+        int lineH  = fm.getAscent() + fm.getDescent();
         int margin = (int) Math.max(4, Settings.getColWidth());
         g.setColor(Color.BLACK);
-        g.drawString(I18n.t("myChordSymbolLine.label"),
-                margin,
-                chordY  + (chordH  + textH) / 2);
+
+        // "Acords" label at top of chord strip
+        int acordsY = chordY + margin + fm.getAscent();
+        g.drawString(I18n.t("myChordSymbolLine.label"), margin, acordsY);
+
+        // Format button below the "Acords" label
+        String fmtLabel = dodecagraphone.model.chord.ChordSymbols.formatLabel(
+                myChordSymbolLine.getDisplayFormat());
+        int btnPad = 4;
+        int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
+        int btnH = lineH + 2 * btnPad;
+        int btnX = margin;
+        int btnY = acordsY + fm.getDescent() + 3;
+        g.setColor(new Color(220, 230, 255));
+        g.fillRoundRect(btnX, btnY, btnW, btnH, 4, 4);
+        g.setColor(Color.BLACK);
+        g.drawRoundRect(btnX, btnY, btnW, btnH, 4, 4);
+        g.drawString(fmtLabel, btnX + btnPad, btnY + btnPad + fm.getAscent());
+
+        // Lyrics label
         g.drawString(I18n.t("myLyrics.label"),
                 margin,
-                lyricsY + (lyricsH + textH) / 2);
+                lyricsY + (lyricsH + lineH) / 2);
+    }
+
+    private boolean isChordFormatButtonClick(double posX, double posY) {
+        double rowH   = Settings.getRowHeight();
+        double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
+        double chordY = Settings.getChordFirstRow()  * rowH;
+        double chordH = Settings.getnRowsChord()     * rowH;
+        return posX >= 0 && posX < keyW && posY >= chordY && posY < chordY + chordH;
     }
 
     public void redraw(Graphics2D g) {
@@ -597,6 +623,7 @@ public class MyController {
             wasLinked = note.isLinked();
             wasDotted = tr.isDotted();
             this.turningOn = false; // Subsequent dragging will setPressed rows off
+            this.allPurposeScore.updateStopMarker();
             MyGridSquare nextSq = square.next();
             if (nextSq != null && nextSq.isSqVisible()) {
                 nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
@@ -616,6 +643,7 @@ public class MyController {
                     this.getMixer().getCurrentTrack().isDotted());
             //square = this.getAllPurposeScore().getGridSquare(keyId, col);
             this.turningOn = true; // Subsequent dragging will setPressed rows on
+            this.allPurposeScore.expandStopIfNeeded(col);
         }
         square.updateState();
         if (this.allPurposeScore.isNotNullAndVisible(keyId, col)) {
@@ -676,6 +704,14 @@ public class MyController {
                 placePendingChangeAt(col);
             }
             return; // el clic queda consumit pel canvi pendent
+        }
+
+        /* Check chord format button (left keyboard-column area of the chord strip) */
+        if (isChordFormatButtonClick(posX, posY)) {
+            myChordSymbolLine.cycleDisplayFormat();
+            myChordSymbolLine.drawFullChordLineInOffscreen();
+            drawFull(true);
+            return;
         }
 
         /* Check chord symbol */
@@ -979,12 +1015,14 @@ public class MyController {
             if (col + 1 > this.getAllPurposeScore().getLastColWritten()) {
                 this.getAllPurposeScore().setLastColWritten(col + 1);
             }
+            this.allPurposeScore.expandStopIfNeeded(col);
         } else {
             MyGridSquare square = this.allPurposeScore.getGrid()[row][col];
             if (square!=null && square.isSqVisible()) {
                 MyGridSquare nextSq = square.next();
                 MyGridSquare.SubSquare note = this.getAllPurposeScore().removeNoteFromSquare(row,col,this.getMixer().getCurrentChannelOfCurrentTrack(),
                     this.getMixer().getCurrentTrackId());
+                this.allPurposeScore.updateStopMarker();
                 wasChannel = this.getMixer().getCurrentChannelOfCurrentTrack();
                 wasTrack = this.getMixer().getCurrentTrackId();
                 wasVelocity = note.getVelocity();
@@ -1061,6 +1099,18 @@ public class MyController {
                 this.buttons.showTip(button, posX, posY);
                 lastTipButton = button;
             }
+        } else if (isChordFormatButtonClick(posX, posY)) {
+            if (lastTipButton != -2) {
+                this.buttons.hideTip();
+                this.buttons.showCustomTip(I18n.t("myChordSymbolLine.formatBtn.tip"), posX, posY);
+                lastTipButton = -2;
+            }
+        } else if (myChordSymbolLine.whichCol(posX, posY) != -1) {
+            if (lastTipButton != -3) {
+                this.buttons.hideTip();
+                this.buttons.showCustomTip(I18n.t("myChordSymbolLine.chord.tip"), posX, posY);
+                lastTipButton = -3;
+            }
         } else {
             if (lastTipButton != -1) {
                 this.buttons.hideTip();
@@ -1116,12 +1166,14 @@ public class MyController {
                 if (intermediateCol + 1 > this.getAllPurposeScore().getLastColWritten()) {
                     this.getAllPurposeScore().setLastColWritten(intermediateCol + 1);
                 }
+                this.allPurposeScore.expandStopIfNeeded(intermediateCol);
             } else {
                 MyGridSquare square = this.allPurposeScore.getGrid()[intermediateRow][intermediateCol];
                 if (square!=null && square.isSqVisible()) {
                     MyGridSquare nextSq = square.next();
                     MyGridSquare.SubSquare note = this.getAllPurposeScore().removeNoteFromSquare(intermediateRow,intermediateCol,this.getMixer().getCurrentChannelOfCurrentTrack(),
                         this.getMixer().getCurrentTrackId());
+                    this.allPurposeScore.updateStopMarker();
                     wasChannel = this.getMixer().getCurrentChannelOfCurrentTrack();
                     wasTrack = this.getMixer().getCurrentTrackId();
                     wasVelocity = note.getVelocity();
@@ -1178,9 +1230,13 @@ public class MyController {
 
                 boolean played = allPurposeScore.playScoreCol(col);
                 if (!played) {
-                    stop(); // també posa isPlaying = false
+                    stop();
                     buttons.stopPlayButton();
                     this.keyboard.stopAll();
+                    SwingUtilities.invokeLater(() -> {
+                        updateTextOfButtons();
+                        this.getUi().getPanel().repinta(true);
+                    });
                     break;
                 }
 
@@ -1540,7 +1596,7 @@ public class MyController {
     }
 
     public void onPrevColButtonPressed(MyButton togg) {
-        if (allPurposeScore.getCurrentCol() < allPurposeScore.getNumCols()) {
+        if (allPurposeScore.getCurrentCol() < allPurposeScore.getStopCol()) {
             allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
             updateTextOfButtons();
         }
@@ -1560,7 +1616,7 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    if (allPurposeScore.getCurrentCol() < allPurposeScore.getNumCols()) {
+                    if (allPurposeScore.getCurrentCol() < allPurposeScore.getStopCol()) {
                         allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
                         updateTextOfButtons();
                         allPurposeScore.drawCurrentCamInOffscreen();
@@ -2256,6 +2312,7 @@ public class MyController {
             allPurposeScore.resetAllPurposeScore();
             this.mixer = new MyMixer(this);
             allPurposeScore.readMidiScore(fitxer);
+            allPurposeScore.updateStopMarker();
             this.myChordSymbolLine.initOffscreen();
             this.myLyrics.initOffscreen();
             //this.myChordSymbolLine.setScore(allPurposeScore);
@@ -2289,6 +2346,7 @@ public class MyController {
         //this.cam.setScore(allPurposeScore);
         //this.cam.setSymbolLine(myChordSymbolLine);
         this.cam.reset();
+        allPurposeScore.updateStopMarker();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
         this.buttons.setToggleButtonsToProgramValues();
         this.currentMidiFile = "";

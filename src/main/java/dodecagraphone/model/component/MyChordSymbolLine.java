@@ -3,6 +3,7 @@ package dodecagraphone.model.component;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
+import dodecagraphone.model.chord.ChordSymbols;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
@@ -15,6 +16,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -33,12 +35,54 @@ public class MyChordSymbolLine extends MyComponent {
     private BufferedImage offscreenImage;
     private Graphics2D offscreenGraphics;
 
+    /** Index into ChordSymbols.DISPLAY_FORMATS for the current display format. */
+    private int displayFormatIdx = 0;
+
+    public String getDisplayFormat() {
+        return ChordSymbols.DISPLAY_FORMATS[displayFormatIdx];
+    }
+
+    public void cycleDisplayFormat() {
+        displayFormatIdx = (displayFormatIdx + 1) % ChordSymbols.DISPLAY_FORMATS.length;
+    }
+
     /** Background colour for tempo change markers (white text on blue). */
     private static final Color COLOR_TEMPO_BG = new Color(0, 90, 190);
     /** Background colour for key change markers (white text on granate). */
     private static final Color COLOR_KEY_BG   = new Color(140, 0, 30);
     /** Small bold font used inside change markers. */
     private static final Font  MARK_FONT      = new Font("SansSerif", Font.BOLD, 9);
+    /** Cached chord font and the row height it was computed for. */
+    private Font   cachedChordFont   = null;
+    private double cachedChordRowH   = 0;
+
+    /** Line gap in pixels between chord text lines (tighter than font leading). */
+    private static final int LINE_GAP = 1;
+
+    private Font getChordFont(Graphics2D g) {
+        double rowH = Settings.getRowHeight();
+        if (cachedChordFont != null && rowH == cachedChordRowH) return cachedChordFont;
+        cachedChordRowH = rowH;
+        int chordH = (int) Math.round(nRows * rowH);
+        int arrowH = 7;   // 5px triangle + 2px gap
+        int botMargin = 2;
+        int available = chordH - arrowH - botMargin;
+        // Use tight line step (no font leading) so font can be larger
+        int size = Math.max(6, available / 4);
+        Font f = new Font("SansSerif", Font.BOLD, size);
+        FontMetrics fm = g.getFontMetrics(f);
+        while (lineStep(fm) * 4 - LINE_GAP > available && size > 6) {
+            size--;
+            f = new Font("SansSerif", Font.BOLD, size);
+            fm = g.getFontMetrics(f);
+        }
+        cachedChordFont = f;
+        return f;
+    }
+
+    private static int lineStep(FontMetrics fm) {
+        return fm.getAscent() + fm.getDescent() + LINE_GAP;
+    }
 
     /**
      *
@@ -66,18 +110,31 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     public Chord enterChord(Chord oldChord) {
-        String defStr = (oldChord != null) ? oldChord.basicString() : "";
-        String input = MyDialogs.mostraInputDialog(
+        // Show default in current display format (or basicString if unknown)
+        String defStr = "";
+        if (oldChord != null) {
+            String converted = ChordSymbols.chordToFormat(oldChord, getDisplayFormat());
+            defStr = (converted != null) ? converted : oldChord.basicString();
+        }
+        String input = MyDialogs.mostraInputDialogAllowEmpty(
                 I18n.t("myChordSymbolLine.enterChord.prompt"),
                 I18n.t("myChordSymbolLine.enterChord.title"),
                 defStr);
         if (input == null) {
             return oldChord; // cancel·lat → no fer res
         }
-        if (input.trim().isEmpty()) {
+        if (input.isEmpty()) {
             return null; // buit → esborrar
         }
-        Chord chord = new Chord(input.trim());
+        // Auto-detect format and convert to user's format (Root[intervals])
+        String myFmt = ChordSymbols.detectAndConvert(input.trim(), oldChord);
+        if (myFmt == null) {
+            MyDialogs.mostraError(
+                I18n.t("myChordSymbolLine.invalidFormat"),
+                I18n.t("myChordSymbolLine.enterChord.title"));
+            return oldChord;
+        }
+        Chord chord = new Chord(myFmt);
         if (!chord.isValidChord() || chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) {
             return chord; // text lliure o acord no vàlid: no demanem offset
         }
@@ -188,7 +245,6 @@ public class MyChordSymbolLine extends MyComponent {
         int camX1 = offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
-        if (!offscreen && !Settings.IS_BU) System.out.println("MyChordSymbolLine::drawMeasureLine camX1 = "+camX1);
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camX2 = camX1;
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
@@ -244,54 +300,83 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private void drawChordSymbol(Chord chord, int col, Graphics2D g, boolean offscreen, int xOffset) {
         g.setColor(java.awt.Color.BLACK);
+        Font prevFont = g.getFont();
+        g.setFont(getChordFont(g));
         FontMetrics fm = g.getFontMetrics();
-        int gap = 3; // pixels between sub-columns
+
         int camX = 3 + xOffset + (offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) score.getScreenX(col));
-        int camY = 8 + (int) Settings.getRowHeight() + (offscreen
-                ? (int) (2 * Settings.getRowHeight())
-                : (int) getScreenY(2));
-        if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) { // draws info
+
+        // Bottom of chord strip — text baseline drawn upward from here
+        int chordH = (int) Math.round(Settings.getnRowsChord() * Settings.getRowHeight());
+        int camY = (offscreen ? 0 : (int) screenPosY) + chordH - fm.getDescent() - 2;
+        int gap   = 3;
+
+        if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) {
             g.drawString(chord.getInfo(), camX, camY);
-        } else {
-            if (Settings.isChordSymbolVertical()) {
-                int[] shape = chord.getShape();
-                // --- Measure all sub-columns first to avoid overlap ---
-                String col1Text = chord.getSimbolWithNumericBass();
-                int col1W = fm.stringWidth(col1Text);
-
-                int col2W = 0;
-                for (int i = 0; i < 4 && i < shape.length; i++) {
-                    col2W = Math.max(col2W, fm.stringWidth(String.format("%2d", shape[i])));
-                }
-
-                // --- Draw column 1: chord symbol ---
-                int camYFirst = camY;
-                g.drawString(col1Text, camX, camY);
-                camX += col1W + gap;
-
-                // --- Draw column 2: intervals 0..3 (going upward) ---
-                camY = camYFirst;
-                for (int i = 0; i < 4; i++) {
-                    if (i < shape.length) {
-                        g.drawString(String.format("%2d", shape[i]), camX, camY);
-                        camY -= fm.getHeight();
-                    }
-                }
-                if (shape.length > 4) {
-                    camX += col2W + gap;
-                    // --- Draw column 3: intervals 4+ (going upward) ---
-                    camY = camYFirst;
-                    for (int i = 4; i < shape.length; i++) {
-                        g.drawString(String.format("%2d", shape[i]), camX, camY);
-                        camY -= fm.getHeight();
-                    }
-                }
-            } else {
-                g.drawString(chord.basicString(), camX, camY);
-            }
+            return;
         }
+
+        String fmt = getDisplayFormat();
+        List<String> lines = ChordSymbols.chordToFormatLines(chord, fmt);
+
+        if (lines != null && !lines.isEmpty()) {
+            // Column 1: root (lines[0]) at bottom
+            String root  = lines.get(0);
+            int    col1W = fm.stringWidth(root);
+            g.drawString(root, camX, camY);
+
+            // Split index: base notes end here, tensions start
+            int splitIdx = ChordSymbols.baseLinesCount(chord); // tensions start at this index
+            int col2Count = Math.min(splitIdx - 1, 4); // base notes in col 2, max 4
+
+            // Column 2: base notes from bottom to top
+            int col2X = camX + col1W + gap;
+            int col2W = 0;
+            int y = camY;
+            for (int i = 1; i <= col2Count; i++) {
+                String n = lines.get(i);
+                col2W = Math.max(col2W, fm.stringWidth(n));
+                g.drawString(n, col2X, y);
+                y -= lineStep(fm);
+            }
+
+            // Column 3: tensions always here, from bottom to top
+            if (lines.size() > splitIdx) {
+                int col3X = col2X + col2W + gap;
+                y = camY;
+                for (int i = splitIdx; i < lines.size(); i++) {
+                    g.drawString(lines.get(i), col3X, y);
+                    y -= lineStep(fm);
+                }
+            }
+        } else {
+            // Inline: FORMAT_SIMBOL, FORMAT_NOM
+            String displayStr = ChordSymbols.chordToFormat(chord, fmt);
+            g.drawString(displayStr != null ? displayStr : chord.basicString(), camX, camY);
+        }
+
+        // Arrow at top pointing to the actual attack column (only when offset > 0)
+        int offset = chord.getBeatColOffset();
+        if (offset > 0) {
+            int cw   = (int) Settings.getColWidth();
+            int ax   = (offscreen
+                    ? (int) Math.floor((col + offset) * Settings.getColWidth())
+                    : (int) Math.floor(score.getScreenX(col + offset)))
+                    + cw / 2;
+            int ay   = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
+            int aw   = 5;  // half-width of arrow base
+            int ah   = 5;  // arrow height
+            int[] xs = { ax - aw, ax + aw, ax };
+            int[] ys = { ay,      ay,      ay + ah };
+            Color prevColor = g.getColor();
+            g.setColor(Color.BLACK);
+            g.fillPolygon(xs, ys, 3);
+            g.setColor(prevColor);
+        }
+
+        g.setFont(prevFont);
     }
 
     // -----------------------------------------------------------------------

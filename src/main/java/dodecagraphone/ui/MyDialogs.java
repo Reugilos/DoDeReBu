@@ -108,6 +108,18 @@ public class MyDialogs {
         return resposta.trim();
     }
 
+    /**
+     * Com mostraInputDialog(prompt, header, defaultValue) però distingeix
+     * entre camp buit (retorna "") i cancel·lació (retorna null).
+     */
+    public static String mostraInputDialogAllowEmpty(String prompt, String header, String defaultValue) {
+        Object ob = JOptionPane.showInputDialog(
+                null, prompt, header,
+                JOptionPane.PLAIN_MESSAGE, null, null, defaultValue);
+        if (ob == null) return null;          // cancel·lat
+        return ((String) ob).trim();          // "" si buit, text si hi ha contingut
+    }
+
     public static void mostraError(String missatge, String titol) {
         JOptionPane.showMessageDialog(null, missatge, titol, JOptionPane.ERROR_MESSAGE);
     }

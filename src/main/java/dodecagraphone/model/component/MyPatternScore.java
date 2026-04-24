@@ -34,6 +34,8 @@ public class MyPatternScore extends MyGridScore {
      * moved back to the mark.
      */
     private int lastColWritten;
+    /** Column at which playback stops (end of the measure that contains endOfScore). */
+    private int stopCol = 0;
     private int mark;
     /**
      * For guessing exercises, messages are placed with a certain delay, so as
@@ -136,6 +138,93 @@ public class MyPatternScore extends MyGridScore {
 
     public void setLastColWritten(int lastColWritten) {
         this.lastColWritten = lastColWritten;
+    }
+
+    public int getStopCol() {
+        return stopCol;
+    }
+
+    public void setStopCol(int c) {
+        stopCol = c;
+    }
+
+    /** Returns the column after the last note's OFF in any non-chord track. */
+    public int computeNoteEndCol() {
+        int chordTrackId = controller.getMixer().getChordTrackId();
+        int upper = Math.min(getLastColWritten(), getNumCols() - 1);
+        for (int col = upper; col >= 0; col--) {
+            for (int row = 0; row < nKeys; row++) {
+                MyGridSquare sq = getGridSquare(row, col);
+                if (sq != null) {
+                    for (MyGridSquare.SubSquare note : sq.getPoliNotes()) {
+                        if (note.getTrack() != chordTrackId) return col + 1;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    /** Extends stopCol to cover the measure containing noteCol. O(1); only grows. */
+    public void expandStopIfNeeded(int noteCol) {
+        int colsPerMeasure = Settings.getnColsBeat() * getNumBeatsMeasure();
+        if (colsPerMeasure <= 0) colsPerMeasure = 1;
+        int needed = ((noteCol + colsPerMeasure) / colsPerMeasure) * colsPerMeasure;
+        needed = Math.min(needed, getNumCols());
+        if (needed > stopCol) stopCol = needed;
+    }
+
+    /**
+     * Recomputes endOfScore (last note off or last chord position),
+     * updates the last chord's duration to match endOfScore,
+     * and sets stopCol to the end of the measure containing endOfScore.
+     */
+    public void updateStopMarker() {
+        int noteEnd = computeNoteEndCol();
+        setLastColWritten(noteEnd > 0 ? noteEnd - 1 : 0);
+
+        // Find last valid chord
+        Integer lastBeatCol = null;
+        for (Integer k : chordSymbolLine.keySet()) {
+            Chord c = chordSymbolLine.get(k);
+            if (c != null && c.isValidChord() && c.getRoot() != Settings.USE_INFO_AS_SIMBOL) {
+                if (lastBeatCol == null || k > lastBeatCol) lastBeatCol = k;
+            }
+        }
+
+        int endOfScore;
+        if (lastBeatCol != null) {
+            Chord lastChord = chordSymbolLine.get(lastBeatCol);
+            int playCol = lastBeatCol + lastChord.getBeatColOffset();
+            endOfScore = Math.max(noteEnd, playCol + 1);
+            int newNcols = Math.max(1, endOfScore - playCol);
+            if (newNcols != lastChord.getNCols()) {
+                removeChordMidiNotes(lastBeatCol);
+                lastChord.setNCols(newNcols);
+                MyTrack track = controller.getMixer().getChordTrack();
+                if (track != null) {
+                    int channel = controller.getMixer().getCurrentChannelOfTrack(track.getId());
+                    int velocity = track.getVelocity();
+                    int savedCol = currentWriteCol;
+                    for (int midiNote : lastChord.getMidiNotes()) {
+                        currentWriteCol = playCol;
+                        placeNote(midiNote, newNcols, false, false, channel, track.getId(), velocity);
+                    }
+                    currentWriteCol = savedCol;
+                }
+            }
+        } else {
+            endOfScore = noteEnd;
+        }
+
+        int colsPerMeasure = Settings.getnColsBeat() * getNumBeatsMeasure();
+        if (colsPerMeasure <= 0) colsPerMeasure = 1;
+        if (endOfScore <= 0) {
+            stopCol = colsPerMeasure;
+        } else {
+            stopCol = ((endOfScore + colsPerMeasure - 1) / colsPerMeasure) * colsPerMeasure;
+            stopCol = Math.min(stopCol, getNumCols());
+        }
     }
 
     /**
@@ -265,39 +354,106 @@ public class MyPatternScore extends MyGridScore {
         if (getCurrentWriteCol()+1>getLastColWritten()) setLastColWritten(getCurrentWriteCol()+1);
     }
 
-    public void removeChordSymbol(int col){
+    public void removeChordSymbol(int col) {
+        removeChordMidiNotes(col);
+        Integer prevCol = prevChordCol(col);
+        if (prevCol != null) removeChordMidiNotes(prevCol);
         this.chordSymbolLine.remove(col);
+        if (prevCol != null) {
+            Chord prevChord = chordSymbolLine.get(prevCol);
+            if (prevChord != null) {
+                MyTrack track = this.controller.getMixer().getChordTrack();
+                if (track != null) placeChordMidiNotes(prevCol, prevChord, track);
+            }
+        }
+        updateStopMarker();
     }
+
+    private void removeChordMidiNotes(int col) {
+        Chord old = this.chordSymbolLine.get(col);
+        if (old == null || !old.isValidChord()
+                || old.getRoot() == Settings.USE_INFO_AS_SIMBOL) return;
+        MyTrack track = this.controller.getMixer().getChordTrack();
+        if (track == null) return;
+        int channel = this.controller.getMixer().getCurrentChannelOfTrack(track.getId());
+        int playCol = col + old.getBeatColOffset();
+        int ncols = Math.max(1, old.getNCols());
+        for (int midiNote : old.getMidiNotes()) {
+            int row = ToneRange.midiToKeyId(midiNote);
+            for (int c = playCol; c < playCol + ncols; c++) {
+                removeNoteFromSquare(row, c, channel, track.getId());
+            }
+        }
+    }
+
+    private int calcNcols(int col, Chord chord) {
+        Integer nextCol = nextChordCol(col);
+        int nextPlayCol = (nextCol != null)
+                ? nextCol + chordSymbolLine.get(nextCol).getBeatColOffset()
+                : getNumCols();
+        return Math.max(1, nextPlayCol - (col + chord.getBeatColOffset()));
+    }
+
+    private void placeChordMidiNotes(int col, Chord chord, MyTrack track) {
+        if (!chord.isValidChord() || chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) return;
+        int ncols = calcNcols(col, chord);
+        chord.setNCols(ncols);
+        int channel = this.controller.getMixer().getCurrentChannelOfTrack(track.getId());
+        int velocity = track.getVelocity();
+        int playCol = col + chord.getBeatColOffset();
+        int savedCol = currentWriteCol;
+        for (int midiNote : chord.getMidiNotes()) {
+            this.currentWriteCol = playCol;
+            this.placeNote(midiNote, ncols, false, false, channel, track.getId(), velocity);
+        }
+        currentWriteCol = savedCol;
+    }
+
+    private Integer prevChordCol(int col) {
+        Integer prev = null;
+        for (Integer k : chordSymbolLine.keySet()) {
+            if (k < col && (prev == null || k > prev)) prev = k;
+        }
+        return prev;
+    }
+
+    private Integer nextChordCol(int col) {
+        Integer next = null;
+        for (Integer k : chordSymbolLine.keySet()) {
+            if (k > col && (next == null || k < next)) next = k;
+        }
+        return next;
+    }
+
     /**
-     * Places a chord at the currentWriteCol of the chordSymbol line Map,
-     * without updating the currentWriteCol.
-     *
-     * @param chord
+     * Places a chord at the given beat-start column, updating MIDI notes so
+     * each chord lasts until the next chord (or end of score).
      */
-    public void placeChordSymbol(Chord chord,int col) {
+    public void placeChordSymbol(Chord chord, int col) {
         MyMixer mixer = this.controller.getMixer();
         int oldCurrentTrack = mixer.getCurrentTrackId();
-        int ncols = chord.getNCols();
-        // The chord symbol is stored at the beat-start column (for display and lookup).
+        // Remove old notes at this col and at the previous chord (its duration changes)
+        removeChordMidiNotes(col);
+        Integer prevCol = prevChordCol(col);
+        if (prevCol != null) removeChordMidiNotes(prevCol);
+        // Update map
         this.chordSymbolLine.put(col, chord);
-        int[] midiChord = chord.getMidiNotes();
-        int oldCol = currentWriteCol;
+        // Ensure chord track exists
         MyTrack track = mixer.getChordTrack();
-        if (track==null) {
+        if (track == null) {
             track = new MyTrack(mixer.getChordTrackId(), mixer.getChordTrackName());
             this.controller.addChordTrackAndInstrumentToMixer(track);
             track = mixer.getChordTrack();
         }
-        int channel = this.controller.getMixer().getCurrentChannelOfTrack(track.getId());
-        int velocity = track.getVelocity();
-        // The notes are placed at col + beatColOffset so playback fires at the right sub-beat.
-        int playCol = col + chord.getBeatColOffset();
-        for (int j = 0; j < midiChord.length; j++) {
-            this.currentWriteCol = playCol;
-            this.placeNote(midiChord[j], ncols, false, false, channel, track.getId(), velocity);
+        // Re-place previous chord with its new (shorter) duration
+        if (prevCol != null) {
+            Chord prevChord = chordSymbolLine.get(prevCol);
+            if (prevChord != null) placeChordMidiNotes(prevCol, prevChord, track);
         }
-        currentWriteCol = oldCol;
+        // Place new chord
+        placeChordMidiNotes(col, chord, track);
         mixer.setCurrentTrack(oldCurrentTrack);
+        updateStopMarker();
     }
 
     public Chord getChordSymbol(int col) {

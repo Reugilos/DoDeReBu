@@ -48,7 +48,7 @@ public class Chord {
     }
 
     public Chord(String chordString) {
-        boolean VERBOSE = true;
+        boolean VERBOSE = false;
         /*
         Format de chordSting
             Do ---> Do[0,4,7]
