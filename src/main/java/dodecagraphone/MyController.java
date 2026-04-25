@@ -643,7 +643,9 @@ public class MyController {
                     this.getMixer().getCurrentTrack().isDotted());
             //square = this.getAllPurposeScore().getGridSquare(keyId, col);
             this.turningOn = true; // Subsequent dragging will setPressed rows on
-            this.allPurposeScore.expandStopIfNeeded(col);
+            if (col + 1 > this.allPurposeScore.getLastColWritten())
+                this.allPurposeScore.setLastColWritten(col + 1);
+            this.allPurposeScore.updateStopMarker();
         }
         square.updateState();
         if (this.allPurposeScore.isNotNullAndVisible(keyId, col)) {
@@ -1015,7 +1017,7 @@ public class MyController {
             if (col + 1 > this.getAllPurposeScore().getLastColWritten()) {
                 this.getAllPurposeScore().setLastColWritten(col + 1);
             }
-            this.allPurposeScore.expandStopIfNeeded(col);
+            this.allPurposeScore.updateStopMarker();
         } else {
             MyGridSquare square = this.allPurposeScore.getGrid()[row][col];
             if (square!=null && square.isSqVisible()) {
@@ -1166,7 +1168,7 @@ public class MyController {
                 if (intermediateCol + 1 > this.getAllPurposeScore().getLastColWritten()) {
                     this.getAllPurposeScore().setLastColWritten(intermediateCol + 1);
                 }
-                this.allPurposeScore.expandStopIfNeeded(intermediateCol);
+                this.allPurposeScore.updateStopMarker();
             } else {
                 MyGridSquare square = this.allPurposeScore.getGrid()[intermediateRow][intermediateCol];
                 if (square!=null && square.isSqVisible()) {
