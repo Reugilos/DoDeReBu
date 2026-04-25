@@ -90,7 +90,10 @@ public class MyController {
     private int lastColPressed;
     private int lastButtonPressed;
     private boolean turningOn;
-    private boolean linking = false;
+    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT }
+    private DragMode dragMode = DragMode.NONE;
+    private int extendStartRow = -1;
+    private int extendStartCol = -1;
     private MyExerciseList exerciseList;
     private Thread replicador;
     private MyGridSquare firstNote = null;
@@ -673,14 +676,150 @@ public class MyController {
         }
     }
 
+    /** Afegeix una nota al cell (row,col) del track actual i la registra al mouseSequence. */
+    private void addNoteAtCell(int row, int col) {
+        MyTrack tr = this.mixer.getCurrentTrack();
+        tr.oneNoteMore();
+        MyGridSquare sq = this.allPurposeScore.addNoteToSquare(row, col, 1, Settings.getnRowsSquare(),
+                (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
+                this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
+                this.mixer.getCurrentTrack().getVelocity(), true, false, true,
+                this.mixer.getCurrentTrack().isDotted());
+        lastNote = this.allPurposeScore.getGrid()[row][col];
+        mouseSequence.addChange(sq, true,
+                this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
+                this.mixer.getCurrentTrack().getVelocity(),
+                sq.isSqVisible(), !sq.isSqAudible(), sq.isSq_is_linked(),
+                this.mixer.getCurrentTrack().isDotted());
+        if (col + 1 > this.allPurposeScore.getLastColWritten())
+            this.allPurposeScore.setLastColWritten(col + 1);
+        this.allPurposeScore.updateStopMarker();
+    }
+
+    /** Elimina la nota al cell (row,col) del track actual i la registra al mouseSequence. */
+    private void removeNoteAtCell(int row, int col) {
+        MyGridSquare square = this.allPurposeScore.getGrid()[row][col];
+        if (square == null || !square.isSqVisible()) return;
+        MyGridSquare nextSq = square.next();
+        MyGridSquare.SubSquare note = this.allPurposeScore.removeNoteFromSquare(row, col,
+                this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId());
+        if (note == null) return;
+        this.allPurposeScore.updateStopMarker();
+        mouseSequence.addChange(square, false,
+                this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
+                note.getVelocity(), note.isVisible(), !note.isAudible(), note.isLinked(),
+                this.mixer.getCurrentTrack().isDotted());
+        if (nextSq != null && nextSq.isSqVisible() && nextSq.isSq_is_linked()) {
+            nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
+                    SoundWithMidi.getCurrentKeyboardVelocity(), false, false, false,
+                    this.mixer.getCurrentTrack().isDotted());
+            mouseSequence.addLinkChange(nextSq,
+                    this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
+                    SoundWithMidi.getCurrentKeyboardVelocity(), true, false,
+                    this.mixer.getCurrentTrack().isDotted(), true, false);
+        }
+    }
+
+    /** Linka la nota d'un square i registra el canvi al mouseSequence per undo. */
+    private void linkNoteAtCell(MyGridSquare sq) {
+        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        int tr = this.mixer.getCurrentTrackId();
+        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
+        boolean wasMuted = !sq.isSqAudible();
+        boolean wasDotted = this.mixer.getCurrentTrack().isDotted();
+        sq.linkNote(ch, tr, vel, true, wasMuted, false, wasDotted);
+        mouseSequence.addLinkChange(sq, ch, tr, vel, true, wasMuted, wasDotted, false, true);
+    }
+
+    /** Deslinka la nota d'un square i registra el canvi al mouseSequence per undo. */
+    private void unlinkNoteForUndo(MyGridSquare sq) {
+        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        int tr = this.mixer.getCurrentTrackId();
+        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
+        boolean wasMuted = !sq.isSqAudible();
+        boolean wasDotted = this.mixer.getCurrentTrack().isDotted();
+        boolean wasLinked = sq.isSq_is_linked();
+        sq.unlinkNote(ch, tr, vel, true, wasMuted, false, wasDotted);
+        if (wasLinked) {
+            mouseSequence.addLinkChange(sq, ch, tr, vel, true, wasMuted, wasDotted, true, false);
+        }
+    }
+
+    /** Processa un cell individual durant el drag, segons el dragMode actiu. */
+    private void processDragCell(int row, int col) {
+        switch (dragMode) {
+            case ADD: {
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq != null && sq.isSqVisible()) {
+                    if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                } else {
+                    addNoteAtCell(row, col);
+                    this.keyboard.play(row);
+                }
+                break;
+            }
+            case ERASE:
+                removeNoteAtCell(row, col);
+                break;
+            case EXTEND_PENDING: {
+                if (col > extendStartCol) {
+                    dragMode = DragMode.EXTEND_RIGHT;
+                    // Link start note to its left neighbour if one exists (join notes).
+                    if (extendStartCol > 0) {
+                        MyGridSquare startSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol);
+                        MyGridSquare leftSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol - 1);
+                        if (startSq != null && startSq.isSqVisible() && !startSq.isSq_is_linked()
+                                && leftSq != null && leftSq.isSqVisible()) {
+                            linkNoteAtCell(startSq);
+                        }
+                    }
+                    addNoteAtCell(row, col);
+                } else if (col < extendStartCol) {
+                    dragMode = DragMode.EXTEND_LEFT;
+                    MyGridSquare startSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol);
+                    if (startSq != null && startSq.isSqVisible() && !startSq.isSq_is_linked())
+                        linkNoteAtCell(startSq);
+                    addNoteAtCell(row, col);
+                    firstNote = this.allPurposeScore.getGrid()[row][col];
+                }
+                break;
+            }
+            case EXTEND_RIGHT: {
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq != null && sq.isSqVisible()) {
+                    if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                    lastNote = sq;
+                } else {
+                    addNoteAtCell(row, col);
+                }
+                break;
+            }
+            case EXTEND_LEFT: {
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq != null && sq.isSqVisible()) {
+                    if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                    if (firstNote == null || col < firstNote.getScoreCol()) firstNote = sq;
+                } else {
+                    addNoteAtCell(row, col);
+                    MyGridSquare added = this.allPurposeScore.getGrid()[row][col];
+                    if (firstNote == null || col < firstNote.getScoreCol()) firstNote = added;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
     /**
      * On mouse pressed, checks if a XiloKey or a MyGridSquare or a MyButton has
      * been pressed and activates it.
      *
      * @param posX
      * @param posY
+     * @param shiftDown true if the Shift key is held (erase mode)
      */
-    public void onMousePressed(double posX, double posY) {
+    public void onMousePressed(double posX, double posY, boolean shiftDown) {
         /* Exit lyrics edit mode on any click (commits pending text) */
         if (this.myLyrics.isEditMode()) {
             this.myLyrics.exitEditMode();
@@ -774,20 +913,24 @@ public class MyController {
             this.lastRowPressed = row;
             this.lastColPressed = col;
             MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-            if (sq!=null && sq.isSqVisible() && !sq.isSq_is_linked()){
-                sq.linkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                        false, false, false, this.mixer.getCurrentTrack().isDotted());
-                this.linking = true;
-                return;
-            }
-            this.toggle(row, col); // Aquí dins es fa l'add i el remove Note i firstNote
-            this.keyboard.getKey(row).doNotHighlight(false);
-            if (this.isTurningOn()) {
+            if (shiftDown) {
+                dragMode = DragMode.ERASE;
+                this.turningOn = false;
+                removeNoteAtCell(row, col);
+            } else if (sq != null && sq.isSqVisible()) {
+                dragMode = DragMode.EXTEND_PENDING;
+                this.turningOn = false;
+                extendStartRow = row;
+                extendStartCol = col;
+            } else {
+                dragMode = DragMode.ADD;
+                this.turningOn = true;
+                addNoteAtCell(row, col);
+                firstNote = this.allPurposeScore.getGrid()[row][col];
+                lastNote = firstNote;
                 this.keyboard.play(row);
             }
-            if (col + 1 > this.getAllPurposeScore().getLastColWritten()) {
-                this.getAllPurposeScore().setLastColWritten(col + 1);
-            }
+            this.keyboard.getKey(row).doNotHighlight(false);
         }
 
         /* Check SlideKey. */
@@ -840,79 +983,64 @@ public class MyController {
         }
         /* MyGridSquare. */
         if (this.lastRowPressed != -1) {
-            if (this.linking){
-                this.linking = false;
-                return;
-            }
-            MyGridSquare wasFirstNote = firstNote;
-            if (firstNote != null) {
-                if (firstNote.getScoreCol() <= lastNote.getScoreCol()) {
-                    firstNote.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                            false, false, false, this.mixer.getCurrentTrack().isDotted());
-                } else {
-                    lastNote.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                            false, false, false, this.mixer.getCurrentTrack().isDotted());
+            if (dragMode == DragMode.ADD && firstNote != null) {
+                unlinkNoteForUndo(firstNote);
+            } else if (dragMode == DragMode.EXTEND_LEFT && firstNote != null) {
+                // Only unlink firstNote if there's no note immediately to its left.
+                int prevCol = firstNote.getScoreCol() - 1;
+                int frow = firstNote.getScoreRow();
+                MyGridSquare prevSq = prevCol >= 0 ? this.allPurposeScore.getGridSquare(frow, prevCol) : null;
+                if (prevSq == null || !prevSq.isSqVisible()) {
+                    unlinkNoteForUndo(firstNote);
                 }
-                firstNote = null;
             }
-            if (mouseSequence != null) {
-                this.afegirEvent(mouseSequence);
-                mouseSequence = null;
-            }
-            this.keyboard.stop(lastRowPressed);
-            this.keyboard.getKey(this.lastRowPressed).doNotHighlight(this.allPurposeScore.isUseScreenKeyboardRight());
-            this.lastRowPressed = -1;
-            this.lastColPressed = -1;
 
-            int curRow = this.allPurposeScore.whichRow(posX, posY);
-            int curCol = this.allPurposeScore.whichCol();
-            if (Settings.isAutoCorrect()) {
-                if (this.turningOn && wasFirstNote != null && curCol != -1) {
+            MyGridSquare wasFirstNote = firstNote;
+            DragMode wasDragMode = dragMode;
+            firstNote = null;
+            lastNote = null;
+
+            if (mouseSequence != null && !mouseSequence.isEmpty()) {
+                this.afegirEvent(mouseSequence);
+            }
+            mouseSequence = null;
+
+            // Autocorrect: straighten diagonal ADD drag into a horizontal line.
+            if (Settings.isAutoCorrect() && wasDragMode == DragMode.ADD && wasFirstNote != null) {
+                int acRow = this.allPurposeScore.whichRow(posX, posY);
+                int acCol = this.allPurposeScore.whichCol();
+                if (acCol != -1) {
                     int fcol = wasFirstNote.getScoreCol();
                     int frow = wasFirstNote.getScoreRow();
                     this.undo();
                     mouseSequence = new MouseSequence(this);
-                    int step = 1;
-                    if (curCol < fcol) {
-                        step = -1;
+                    int step = (acCol >= fcol) ? 1 : -1;
+                    MyGridSquare acFirst = null;
+                    MyGridSquare acLast = null;
+                    for (int c = fcol; c != acCol + step; c += step) {
+                        addNoteAtCell(frow, c);
+                        acLast = this.allPurposeScore.getGrid()[frow][c];
+                        if (acFirst == null) acFirst = acLast;
                     }
-                    boolean isFirst = true;
-                    for (int col = fcol; col - step != curCol; col += step) {
-                        MyTrack tr = this.mixer.getCurrentTrack();
-                        tr.oneNoteMore();
-                        MyGridSquare sq = this.allPurposeScore.addNoteToSquare(frow,col,1,Settings.getnRowsSquare(),(MyComponent) allPurposeScore,this,allPurposeScore,this.getCam(),
-                                this.mixer.getCurrentChannelOfCurrentTrack(),
-                                this.mixer.getCurrentTrackId(), this.mixer.getCurrentTrack().getVelocity(),
-                                true, false, true, this.mixer.getCurrentTrack().isDotted());
-                        lastNote = this.allPurposeScore.getGrid()[frow][col];
-                        if (isFirst){
-                            firstNote = lastNote;
-                            isFirst = false;
-                        }
-                        mouseSequence.addChange(
-                                sq,
-                                true,
-                                this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
-                                this.mixer.getCurrentTrack().getVelocity(), sq.isSqVisible(),!sq.isSqAudible(),sq.isSq_is_linked(), this.mixer.getCurrentTrack().isDotted()
-                        );
-
-                        if (col + 1 > this.getAllPurposeScore().getLastColWritten()) {
-                            this.getAllPurposeScore().setLastColWritten(col + 1);
-                        }
-
+                    MyGridSquare acHead = (step == 1) ? acFirst : acLast;
+                    if (acHead != null) unlinkNoteForUndo(acHead);
+                    if (mouseSequence != null && !mouseSequence.isEmpty()) {
+                        this.afegirEvent(mouseSequence);
                     }
-                    MyGridSquare wasLastNote = lastNote;
-                    if (firstNote.getScoreCol() <= lastNote.getScoreCol()) {
-                        firstNote.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                                false, false, false, this.mixer.getCurrentTrack().isDotted());
-                    } else {
-                        lastNote.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                                false, false, false, this.mixer.getCurrentTrack().isDotted());
-                    }
-                    this.afegirEvent(mouseSequence);
                     mouseSequence = null;
+                    firstNote = null;
+                    lastNote = null;
                 }
             }
+
+            dragMode = DragMode.NONE;
+            extendStartRow = -1;
+            extendStartCol = -1;
+
+            this.keyboard.stop(lastRowPressed);
+            this.keyboard.getKey(this.lastRowPressed).doNotHighlight(this.allPurposeScore.isUseScreenKeyboardRight());
+            this.lastRowPressed = -1;
+            this.lastColPressed = -1;
             return;
         }
         /* MyButton. */
@@ -957,115 +1085,44 @@ public class MyController {
 //    }
 //
     public void onMouseDragged(double posX, double posY) {
-        int wasChannel = -1;
-        int wasTrack = -1;
-        int wasVelocity = 0;
-        boolean wasVisible = false;
-        boolean wasMutted = false;
-        boolean wasLinked = false;
-        boolean wasDotted = false;
+        if (dragMode == DragMode.NONE) return;
 
         /* Check MyGridSquare. */
         int row = this.allPurposeScore.whichRow(posX, posY);
         int col = this.allPurposeScore.whichCol();
 
-        if (this.linking) return;
-        
-//        System.out.println("MyController::onMouseDraged() row, col = "+row+", "+col);
+        if (row == -1 || col == -1) return;
+        if (row == lastRowPressed && col == lastColPressed) return;
 
-        if (row == -1 || col == -1) {
-            return; // Ignore out-of-bounds values
-        }
-        
-        if (row == lastRowPressed && col == lastColPressed){
-            return; // Ignore repeated squares
-        }
-
-        // Interpolate if we have a last pressed row and column to fill in gaps
+        // Interpolate gaps between last and current position
         if (this.lastRowPressed != -1) {
-            int lastRow = this.lastRowPressed;
-            int lastCol = this.lastColPressed;
-
-            if (lastRow != row || lastCol != col) {
-                // Interpolate cells between the last and current position
-                interpolateCells(lastRow, lastCol, row, col);
-                // linked = false;
+            if (lastRowPressed != row || lastColPressed != col) {
+                interpolateCells(lastRowPressed, lastColPressed, row, col);
             }
         }
 
         this.lastRowPressed = row;
         this.lastColPressed = col;
 
-        // Perform the action based on `turningOn` flag
-        if (this.turningOn) {
-            MyTrack tr = this.mixer.getCurrentTrack();
-            tr.oneNoteMore();
-            MyGridSquare sq = this.allPurposeScore.addNoteToSquare(row,col,1,Settings.getnRowsSquare(),(MyComponent) allPurposeScore,this,allPurposeScore,this.getCam(),
-                    this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
-                    this.mixer.getCurrentTrack().getVelocity(),
-                    true, false, true, this.mixer.getCurrentTrack().isDotted());
-            lastNote = this.allPurposeScore.getGrid()[row][col];
-            mouseSequence.addChange(
-                    sq,
-                    true, // added
-                    this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
-                    this.mixer.getCurrentTrack().getVelocity(),
-                    sq.isSqVisible(), !sq.isSqAudible(), sq.isSq_is_linked(), this.mixer.getCurrentTrack().isDotted()
-            );
-            this.keyboard.getKey(row).doNotHighlight(false);
-            this.keyboard.play(row);
-            if (col + 1 > this.getAllPurposeScore().getLastColWritten()) {
-                this.getAllPurposeScore().setLastColWritten(col + 1);
-            }
-            this.allPurposeScore.updateStopMarker();
-        } else {
-            MyGridSquare square = this.allPurposeScore.getGrid()[row][col];
-            if (square!=null && square.isSqVisible()) {
-                MyGridSquare nextSq = square.next();
-                MyGridSquare.SubSquare note = this.getAllPurposeScore().removeNoteFromSquare(row,col,this.getMixer().getCurrentChannelOfCurrentTrack(),
-                    this.getMixer().getCurrentTrackId());
-                this.allPurposeScore.updateStopMarker();
-                wasChannel = this.getMixer().getCurrentChannelOfCurrentTrack();
-                wasTrack = this.getMixer().getCurrentTrackId();
-                wasVelocity = note.getVelocity();
-                wasVisible = note.isVisible();
-                wasMutted = !note.isAudible();
-                wasLinked = note.isLinked();
-                wasDotted = this.getMixer().getCurrentTrack().isDotted();
-                mouseSequence.addChange(
-                        square,
-                        false,
-                        wasChannel, wasTrack,
-                        wasVelocity, wasVisible, wasMutted, wasLinked, wasDotted
-                );
-                if (nextSq != null && nextSq.isSqVisible()) {
-                    nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                            false, false, false, this.mixer.getCurrentTrack().isDotted());
-                }
-            }
-        }
+        processDragCell(row, col);
+
         this.drawFull(true);
-//        this.allPurposeScore.thisAndAncestorsNeedDrawing();
-//        this.keyboard.thisAndAncestorsNeedDrawing();
     }
 
     public void onDoubleClick(double posX, double posY){
-//        int row = this.allPurposeScore.whichRow(posX, posY);
-//        int col = this.allPurposeScore.whichCol();
-//        if (row == -1 || col == -1) {
-//            return; // Ignore out-of-bounds values
-//        }
-//        MyGridSquare square = this.allPurposeScore.getGrid()[row][col];
-//        if (square!=null && square.isSqVisible()) {
-//            if (square.isSq_is_linked()){
-//                square.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-//                            false, false, false, this.mixer.getCurrentTrack().isDotted());
-//            }
-//            else{
-//                square.linkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-//                            false, false, false, this.mixer.getCurrentTrack().isDotted());
-//            }
-//        }
+        int row = this.allPurposeScore.whichRow(posX, posY);
+        int col = this.allPurposeScore.whichCol();
+        if (row == -1 || col == -1) return;
+        MyGridSquare sq = this.allPurposeScore.getGrid()[row][col];
+        if (sq == null || !sq.isSqVisible() || !sq.isSq_is_linked()) return;
+        // Split: unlink this note (makes it a new head)
+        mouseSequence = new MouseSequence(this);
+        unlinkNoteForUndo(sq);
+        if (!mouseSequence.isEmpty()) {
+            this.afegirEvent(mouseSequence);
+            this.needsSaving = true;
+        }
+        mouseSequence = null;
     }
     
     /**
@@ -1123,80 +1180,19 @@ public class MyController {
     }
     
     private void interpolateCells(int startRow, int startCol, int endRow, int endCol) {
-        int wasChannel = -1;
-        int wasTrack = -1;
-        int wasVelocity = 0;
-        boolean wasVisible = false;
-        boolean wasMutted = false;
-        boolean wasLinked = false;
-        boolean wasDotted = false;
-
         int stepCount = Math.max(Math.abs(endRow - startRow), Math.abs(endCol - startCol));
         int intermediateRow = startRow;
         int intermediateCol = startCol;
         int prevRow;
-        int prevCol;
-        for (int i = 1; i <= stepCount; i++) {
-//            this.allPurposeScore.thisAndAncestorsNeedDrawing();
-//            this.keyboard.thisAndAncestorsNeedDrawing();
+        for (int i = 1; i < stepCount; i++) {
             prevRow = intermediateRow;
-            prevCol = intermediateCol;
             intermediateRow = startRow + i * (endRow - startRow) / stepCount;
             intermediateCol = startCol + i * (endCol - startCol) / stepCount;
-
             if (intermediateRow != prevRow) {
                 this.keyboard.stop(prevRow);
             }
-
-            // Perform the same action as onMouseDragged for interpolated cells
-            if (this.turningOn) {
-                MyTrack tr = this.mixer.getCurrentTrack();
-                tr.oneNoteMore();
-                MyGridSquare sq = this.allPurposeScore.addNoteToSquare(intermediateRow,intermediateCol,1,Settings.getnRowsSquare(),(MyComponent) allPurposeScore,this,allPurposeScore,this.getCam(),
-                        this.mixer.getCurrentChannelOfCurrentTrack(),
-                        this.mixer.getCurrentTrackId(), this.mixer.getCurrentTrack().getVelocity(),
-                        true, false, true, this.mixer.getCurrentTrack().isDotted());
-                lastNote = this.allPurposeScore.getGrid()[intermediateRow][intermediateCol];
-                mouseSequence.addChange(
-                        sq,
-                        true,
-                        this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
-                        this.mixer.getCurrentTrack().getVelocity(), sq.isSqVisible(), !sq.isSqAudible(), sq.isSq_is_linked(), this.mixer.getCurrentTrack().isDotted()
-                );
-
-                // this.allPurposeScore.setOn(intermediateRow, intermediateCol);
-                if (intermediateCol + 1 > this.getAllPurposeScore().getLastColWritten()) {
-                    this.getAllPurposeScore().setLastColWritten(intermediateCol + 1);
-                }
-                this.allPurposeScore.updateStopMarker();
-            } else {
-                MyGridSquare square = this.allPurposeScore.getGrid()[intermediateRow][intermediateCol];
-                if (square!=null && square.isSqVisible()) {
-                    MyGridSquare nextSq = square.next();
-                    MyGridSquare.SubSquare note = this.getAllPurposeScore().removeNoteFromSquare(intermediateRow,intermediateCol,this.getMixer().getCurrentChannelOfCurrentTrack(),
-                        this.getMixer().getCurrentTrackId());
-                    this.allPurposeScore.updateStopMarker();
-                    wasChannel = this.getMixer().getCurrentChannelOfCurrentTrack();
-                    wasTrack = this.getMixer().getCurrentTrackId();
-                    wasVelocity = note.getVelocity();
-                    wasVisible = note.isVisible();
-                    wasMutted = !note.isAudible();
-                    wasLinked = note.isLinked();
-                    wasDotted = this.getMixer().getCurrentTrack().isDotted();
-                    mouseSequence.addChange(
-                            square,
-                            false,
-                            wasChannel, wasTrack,
-                            wasVelocity, wasVisible, wasMutted, wasLinked, wasDotted
-                    );
-                    if (nextSq != null && nextSq.isSqVisible()) {
-                        nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
-                                false, false, false, this.mixer.getCurrentTrack().isDotted());
-                    }
-                }
-            }
+            processDragCell(intermediateRow, intermediateCol);
         }
-        this.drawFull(true);
     }
 
     public void onDemoButtonPressed() {
