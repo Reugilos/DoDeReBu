@@ -27,9 +27,11 @@ import dodecagraphone.model.mixer.MyMixer;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
+import dodecagraphone.teclesControl.ClipNote;
 import dodecagraphone.teclesControl.Event;
 import dodecagraphone.teclesControl.MouseSequence;
 import dodecagraphone.teclesControl.MoveNoteEvent;
+import dodecagraphone.teclesControl.PasteEvent;
 import dodecagraphone.teclesControl.PilaEvents;
 import dodecagraphone.ui.AppConfig;
 import dodecagraphone.ui.I18n;
@@ -46,6 +48,8 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import javax.sound.midi.MetaMessage;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -91,7 +95,7 @@ public class MyController {
     private int lastColPressed;
     private int lastButtonPressed;
     private boolean turningOn;
-    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT, MOVE }
+    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT, MOVE, SELECT, PASTE }
     private DragMode dragMode = DragMode.NONE;
     private int extendStartRow = -1;
     private int extendStartCol = -1;
@@ -109,6 +113,21 @@ public class MyController {
     private boolean[] moveMuteds;
     private boolean[] moveLinkeds;
     private boolean moveDotted;
+    // SELECT mode state
+    private int selStartRow = -1;
+    private int selStartCol = -1;
+    private int selEndRow   = -1;
+    private int selEndCol   = -1;
+    private boolean selectionActive = false;
+    // Clipboard
+    private List<ClipNote> clipboard = null;
+    // PASTE mode state
+    private boolean pendingPaste = false;
+    private int pasteCurrentRow = -1;
+    private int pasteCurrentCol = -1;
+    private int pasteCh = -1;
+    private int pasteTr = -1;
+    private boolean pasteDotted = false;
     private MyExerciseList exerciseList;
     private Thread replicador;
     private MyGridSquare firstNote = null;
@@ -764,6 +783,158 @@ public class MyController {
 
     // ── END MOVE helpers ─────────────────────────────────────────────────────────
 
+    // ── Selection overlay getters (read by MyGridScore) ──────────────────────────
+
+    public boolean isSelectionActive() { return selectionActive; }
+    public int getSelStartRow()        { return selStartRow; }
+    public int getSelStartCol()        { return selStartCol; }
+    public int getSelEndRow()          { return selEndRow; }
+    public int getSelEndCol()          { return selEndCol; }
+
+    // ── Copy / Cut / Paste ───────────────────────────────────────────────────────
+
+    /** Copies notes in the current selection (current track only) to the clipboard. */
+    public void copySelection() {
+        if (!selectionActive) return;
+        int r1 = Math.min(selStartRow, selEndRow);
+        int r2 = Math.max(selStartRow, selEndRow);
+        int c1 = Math.min(selStartCol, selEndCol);
+        int c2 = Math.max(selStartCol, selEndCol);
+        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        int tr = this.mixer.getCurrentTrackId();
+        clipboard = new ArrayList<>();
+        for (int row = r1; row <= r2; row++) {
+            for (int col = c1; col <= c2; col++) {
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq == null || !sq.isSqVisible()) continue;
+                for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
+                    if (sub.getChannel() == ch && sub.getTrack() == tr) {
+                        clipboard.add(new ClipNote(row - r1, col - c1, sub.getVelocity(),
+                                sub.isVisible(), !sub.isAudible(), sub.isLinked(),
+                                this.mixer.getCurrentTrack().isDotted()));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /** Copies selection to clipboard, then erases it (undoable). */
+    public void cutSelection() {
+        if (!selectionActive) return;
+        copySelection();
+        if (clipboard == null || clipboard.isEmpty()) return;
+        int r1 = Math.min(selStartRow, selEndRow);
+        int r2 = Math.max(selStartRow, selEndRow);
+        int c1 = Math.min(selStartCol, selEndCol);
+        int c2 = Math.max(selStartCol, selEndCol);
+        mouseSequence = new MouseSequence(this);
+        for (int row = r1; row <= r2; row++) {
+            for (int col = c1; col <= c2; col++) {
+                removeNoteAtCell(row, col);
+            }
+        }
+        if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
+        mouseSequence = null;
+        this.needsSaving = true;
+    }
+
+    /** Shows track picker then activates PASTE drag mode on next mouse press. */
+    public void startPaste() {
+        if (clipboard == null || clipboard.isEmpty()) return;
+        int targetTr = showTrackPickerDialog();
+        this.pasteTr    = targetTr;
+        this.pasteCh    = this.mixer.getCurrentChannelOfTrack(targetTr);
+        this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
+        pendingPaste = true;
+        selectionActive = false;
+    }
+
+    /** Simple track picker using JOptionPane. Returns the chosen track index. */
+    private int showTrackPickerDialog() {
+        List<MyTrack> tracks = this.mixer.getTracks();
+        if (tracks.isEmpty()) return this.mixer.getCurrentTrackId();
+        String[] names = new String[tracks.size()];
+        for (int i = 0; i < tracks.size(); i++) names[i] = tracks.get(i).getName();
+        int curIdx = Math.max(0, this.mixer.getCurrentTrackId());
+        Object picked = JOptionPane.showInputDialog(
+                this.ui,
+                I18n.t("paste.trackPicker.message"),
+                I18n.t("paste.trackPicker.title"),
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                names,
+                names[curIdx < names.length ? curIdx : 0]);
+        if (picked == null) return this.mixer.getCurrentTrackId();
+        for (int i = 0; i < names.length; i++) {
+            if (names[i].equals(picked)) return i;
+        }
+        return this.mixer.getCurrentTrackId();
+    }
+
+    /** Place the paste ghost (temp) into the grid without track-count or undo recording. */
+    private void placePasteGhost(int anchorRow, int anchorCol) {
+        if (clipboard == null) return;
+        int gridRows = this.allPurposeScore.getGrid().length;
+        int gridCols = this.allPurposeScore.getGrid()[0].length;
+        for (ClipNote n : clipboard) {
+            int row = anchorRow + n.rowOffset;
+            int col = anchorCol + n.colOffset;
+            if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
+            MyGridSquare sq = this.allPurposeScore.addNoteToSquare(
+                    row, col, 1, Settings.getnRowsSquare(),
+                    (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
+                    pasteCh, pasteTr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
+            sq.updateState();
+        }
+    }
+
+    /** Remove the paste ghost from the grid. */
+    private void removePasteGhost(int anchorRow, int anchorCol) {
+        if (clipboard == null) return;
+        int gridRows = this.allPurposeScore.getGrid().length;
+        int gridCols = this.allPurposeScore.getGrid()[0].length;
+        for (int i = clipboard.size() - 1; i >= 0; i--) {
+            ClipNote n = clipboard.get(i);
+            int row = anchorRow + n.rowOffset;
+            int col = anchorCol + n.colOffset;
+            if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
+            this.allPurposeScore.removeNoteFromSquare(row, col, pasteCh, pasteTr);
+            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+            if (sq != null) sq.updateState();
+        }
+    }
+
+    /** Actually place notes at final anchor, track counts included, and create PasteEvent. */
+    private void finalizeHardPaste(int anchorRow, int anchorCol) {
+        if (clipboard == null || clipboard.isEmpty()) return;
+        MyTrack track = this.mixer.getTrackFromId(pasteTr);
+        int gridRows = this.allPurposeScore.getGrid().length;
+        int gridCols = this.allPurposeScore.getGrid()[0].length;
+        List<ClipNote> placed = new ArrayList<>();
+        for (ClipNote n : clipboard) {
+            int row = anchorRow + n.rowOffset;
+            int col = anchorCol + n.colOffset;
+            if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
+            track.oneNoteMore();
+            MyGridSquare sq = this.allPurposeScore.addNoteToSquare(
+                    row, col, 1, Settings.getnRowsSquare(),
+                    (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
+                    pasteCh, pasteTr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
+            sq.updateState();
+            if (col + 1 > this.allPurposeScore.getLastColWritten())
+                this.allPurposeScore.setLastColWritten(col + 1);
+            placed.add(n);
+        }
+        this.allPurposeScore.updateStopMarker();
+        if (!placed.isEmpty()) {
+            afegirEvent(new PasteEvent(this, placed, anchorRow, anchorCol, pasteCh, pasteTr));
+        }
+        this.needsSaving = true;
+    }
+
+    // ── END Copy / Cut / Paste ───────────────────────────────────────────────────
+
     /** Afegeix una nota al cell (row,col) del track actual i la registra al mouseSequence. */
     private void addNoteAtCell(int row, int col) {
         MyTrack tr = this.mixer.getCurrentTrack();
@@ -907,7 +1078,7 @@ public class MyController {
      * @param posY
      * @param shiftDown true if the Shift key is held (erase mode)
      */
-    public void onMousePressed(double posX, double posY, boolean shiftDown, boolean ctrlDown) {
+    public void onMousePressed(double posX, double posY, boolean shiftDown, boolean ctrlDown, boolean altDown) {
         /* Exit lyrics edit mode on any click (commits pending text) */
         if (this.myLyrics.isEditMode()) {
             this.myLyrics.exitEditMode();
@@ -999,6 +1170,29 @@ public class MyController {
             this.needsSaving = true;
             this.lastRowPressed = row;
             this.lastColPressed = col;
+
+            if (pendingPaste) {
+                dragMode = DragMode.PASTE;
+                pasteCurrentRow = row;
+                pasteCurrentCol = col;
+                placePasteGhost(pasteCurrentRow, pasteCurrentCol);
+                this.keyboard.getKey(row).doNotHighlight(false);
+                return;
+            }
+
+            if (altDown) {
+                dragMode = DragMode.SELECT;
+                selStartRow = row;
+                selStartCol = col;
+                selEndRow   = row;
+                selEndCol   = col;
+                selectionActive = true;
+                this.turningOn = false;
+                mouseSequence = null;
+                this.keyboard.getKey(row).doNotHighlight(false);
+                return;
+            }
+
             MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
             if (ctrlDown && shiftDown && sq != null && sq.isSqVisible()) {
                 // MOVE mode: capture the whole note and prepare for live drag
@@ -1089,6 +1283,23 @@ public class MyController {
         }
         /* MyGridSquare. */
         if (this.lastRowPressed != -1) {
+            if (dragMode == DragMode.SELECT) {
+                dragMode = DragMode.NONE;
+                this.lastRowPressed = -1;
+                this.lastColPressed = -1;
+                return;
+            }
+            if (dragMode == DragMode.PASTE) {
+                removePasteGhost(pasteCurrentRow, pasteCurrentCol);
+                finalizeHardPaste(pasteCurrentRow, pasteCurrentCol);
+                dragMode = DragMode.NONE;
+                pendingPaste = false;
+                pasteCurrentRow = -1;
+                pasteCurrentCol = -1;
+                this.lastRowPressed = -1;
+                this.lastColPressed = -1;
+                return;
+            }
             if (dragMode == DragMode.MOVE) {
                 int finalRow = moveCurrentRow;
                 int finalHeadCol = moveCurrentHeadCol;
@@ -1220,6 +1431,30 @@ public class MyController {
 //
     public void onMouseDragged(double posX, double posY) {
         if (dragMode == DragMode.NONE) return;
+
+        if (dragMode == DragMode.SELECT) {
+            int newRow = this.allPurposeScore.whichRow(posX, posY);
+            int newCol = this.allPurposeScore.whichCol();
+            if (newRow == -1 || newCol == -1) return;
+            selEndRow = newRow;
+            selEndCol = newCol;
+            this.drawFull(true);
+            return;
+        }
+
+        if (dragMode == DragMode.PASTE) {
+            int newRow = this.allPurposeScore.whichRow(posX, posY);
+            if (newRow == -1) newRow = pasteCurrentRow;
+            int newCol = this.allPurposeScore.whichCol();
+            if (newCol == -1) return;
+            if (newRow == pasteCurrentRow && newCol == pasteCurrentCol) return;
+            removePasteGhost(pasteCurrentRow, pasteCurrentCol);
+            pasteCurrentRow = newRow;
+            pasteCurrentCol = newCol;
+            placePasteGhost(pasteCurrentRow, pasteCurrentCol);
+            this.drawFull(true);
+            return;
+        }
 
         if (dragMode == DragMode.MOVE) {
             int newRow = this.allPurposeScore.whichRow(posX, posY);

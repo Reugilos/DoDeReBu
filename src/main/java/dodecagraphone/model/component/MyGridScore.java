@@ -12,8 +12,10 @@ import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Composite;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
@@ -1032,6 +1034,29 @@ public class MyGridScore extends MyComponent {
     //    }
     private int countDrawFull = 1;
 
+    /** Draws the semi-transparent selection rectangle onto g (offscreen coordinates). */
+    private void drawSelectionOverlay(Graphics2D g) {
+        if (controller == null || !controller.isSelectionActive()) return;
+        int r1 = Math.min(controller.getSelStartRow(), controller.getSelEndRow());
+        int r2 = Math.max(controller.getSelStartRow(), controller.getSelEndRow());
+        int c1 = Math.min(controller.getSelStartCol(), controller.getSelEndCol());
+        int c2 = Math.max(controller.getSelStartCol(), controller.getSelEndCol());
+        int sx = (int)(c1 * Settings.getColWidth());
+        int sy = (int)(r1 * Settings.getRowHeight() * Settings.getnRowsSquare());
+        int sw = (int)((c2 - c1 + 1) * Settings.getColWidth());
+        int sh = (int)((r2 - r1 + 1) * Settings.getRowHeight() * Settings.getnRowsSquare());
+        Composite oldComposite = g.getComposite();
+        Color oldColor = g.getColor();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
+        g.setColor(new Color(0, 100, 255));
+        g.fillRect(sx, sy, sw, sh);
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
+        g.setColor(new Color(0, 50, 200));
+        g.drawRect(sx, sy, sw - 1, sh - 1);
+        g.setComposite(oldComposite);
+        g.setColor(oldColor);
+    }
+
     /**
      * Draws the score: each visible grid square, the beat lines and the measure
      * lines.
@@ -1068,6 +1093,7 @@ public class MyGridScore extends MyComponent {
                 if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
             }
             if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
+            drawSelectionOverlay(offscreenGraphics);
             setGridColorsHaveChanged(false);
         }
     }
@@ -1142,6 +1168,7 @@ public class MyGridScore extends MyComponent {
                 if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
             }
             if (isMeasure[nCols]) drawMeasureLine(nCols, offscreenGraphics);
+            drawSelectionOverlay(offscreenGraphics);
             Utilities.printOutWithPriority(false, "MyGridScore::drawCurrentCamInOffscreen first, last = " + firstDrawCol + ", " + (lastDrawCol - 1) + ", countDrawFull = " + countDrawFull++);
         }
     }

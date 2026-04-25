@@ -245,11 +245,27 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             if (e.isShiftDown()) {
                 controller.redo();
             } else {
-//                System.out.println("Undo");
                 controller.undo();
             }
             controller.getAllPurposeScore().drawCurrentCamInOffscreen();
             this.repinta(true);
+            return;
+        }
+        if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_C) {
+            controller.copySelection();
+            return;
+        }
+        if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_X) {
+            controller.cutSelection();
+            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            this.repinta(true);
+            return;
+        }
+        if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_V) {
+            controller.startPaste();
+            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            this.repinta(true);
+            return;
         }
     }
 
@@ -307,7 +323,7 @@ class MyNewMouseAdapter extends MouseAdapter {
         double posY = e.getY();
         int pointer = e.getButton();
         if (pointer == 1) {
-            this.controller.onMousePressed(posX, posY, e.isShiftDown(), e.isControlDown());
+            this.controller.onMousePressed(posX, posY, e.isShiftDown(), e.isControlDown(), e.isAltDown());
         } else if (pointer == 3) {
             this.controller.onRightMousePressed(posX, posY);
         }
