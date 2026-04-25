@@ -984,7 +984,10 @@ public class MyController {
         /* MyGridSquare. */
         if (this.lastRowPressed != -1) {
             if (dragMode == DragMode.ADD && firstNote != null) {
-                unlinkNoteForUndo(firstNote);
+                // Unlink the leftmost note (head); when dragging left, lastNote is leftmost.
+                MyGridSquare head = (lastNote != null && lastNote.getScoreCol() < firstNote.getScoreCol())
+                        ? lastNote : firstNote;
+                unlinkNoteForUndo(head);
             } else if (dragMode == DragMode.EXTEND_LEFT && firstNote != null) {
                 // Only unlink firstNote if there's no note immediately to its left.
                 int prevCol = firstNote.getScoreCol() - 1;
