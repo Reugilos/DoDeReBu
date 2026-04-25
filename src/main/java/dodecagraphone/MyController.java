@@ -29,6 +29,7 @@ import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.teclesControl.Event;
 import dodecagraphone.teclesControl.MouseSequence;
+import dodecagraphone.teclesControl.MoveNoteEvent;
 import dodecagraphone.teclesControl.PilaEvents;
 import dodecagraphone.ui.AppConfig;
 import dodecagraphone.ui.I18n;
@@ -90,10 +91,24 @@ public class MyController {
     private int lastColPressed;
     private int lastButtonPressed;
     private boolean turningOn;
-    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT }
+    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT, MOVE }
     private DragMode dragMode = DragMode.NONE;
     private int extendStartRow = -1;
     private int extendStartCol = -1;
+    // MOVE mode state
+    private int moveNoteOrigRow = -1;
+    private int moveCurrentRow = -1;
+    private int moveNoteOrigHeadCol = -1;
+    private int moveNoteLength = 0;
+    private int moveCurrentHeadCol = -1;
+    private int moveClickOffset = 0;
+    private int moveCh = -1;
+    private int moveTr = -1;
+    private int[] moveVelocities;
+    private boolean[] moveVisibles;
+    private boolean[] moveMuteds;
+    private boolean[] moveLinkeds;
+    private boolean moveDotted;
     private MyExerciseList exerciseList;
     private Thread replicador;
     private MyGridSquare firstNote = null;
@@ -676,6 +691,79 @@ public class MyController {
         }
     }
 
+    // ── MOVE helpers ────────────────────────────────────────────────────────────
+
+    private int findNoteHeadCol(int row, int col) {
+        int h = col;
+        while (h > 0) {
+            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, h);
+            if (sq == null || !sq.isSqVisible() || !sq.isSq_is_linked()) break;
+            h--;
+        }
+        return h;
+    }
+
+    private int findNoteTailCol(int row, int col) {
+        int t = col;
+        while (true) {
+            MyGridSquare next = this.allPurposeScore.getGridSquare(row, t + 1);
+            if (next == null || !next.isSqVisible() || !next.isSq_is_linked()) break;
+            t++;
+        }
+        return t;
+    }
+
+    private void captureNoteData(int row, int headCol, int length, int ch, int tr) {
+        moveVelocities = new int[length];
+        moveVisibles   = new boolean[length];
+        moveMuteds     = new boolean[length];
+        moveLinkeds    = new boolean[length];
+        moveDotted = this.mixer.getCurrentTrack().isDotted();
+        for (int i = 0; i < length; i++) {
+            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, headCol + i);
+            if (sq != null) {
+                for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
+                    if (sub.getChannel() == ch && sub.getTrack() == tr) {
+                        moveVelocities[i] = sub.getVelocity();
+                        moveVisibles[i]   = sub.isVisible();
+                        moveMuteds[i]     = !sub.isAudible();
+                        moveLinkeds[i]    = sub.isLinked();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /** Remove the live (temp) note from the grid without recording in mouseSequence. */
+    private void removeTempNote(int row, int headCol) {
+        for (int i = moveNoteLength - 1; i >= 0; i--) {
+            this.allPurposeScore.removeNoteFromSquare(row, headCol + i, moveCh, moveTr);
+            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, headCol + i);
+            if (sq != null) sq.updateState();
+        }
+    }
+
+    /** Place the live (temp) note at the grid without recording in mouseSequence. */
+    private void placeTempNote(int row, int headCol) {
+        int gridWidth = this.allPurposeScore.getGrid()[row].length;
+        for (int i = 0; i < moveNoteLength; i++) {
+            int c = headCol + i;
+            if (c < 0 || c >= gridWidth) continue;
+            MyGridSquare sq = this.allPurposeScore.addNoteToSquare(
+                    row, c, 1, Settings.getnRowsSquare(),
+                    (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
+                    moveCh, moveTr, moveVelocities[i], moveVisibles[i], moveMuteds[i], moveLinkeds[i], moveDotted);
+            sq.updateState();
+        }
+        int lastC = headCol + moveNoteLength - 1;
+        if (lastC + 1 > this.allPurposeScore.getLastColWritten())
+            this.allPurposeScore.setLastColWritten(lastC + 1);
+        this.allPurposeScore.updateStopMarker();
+    }
+
+    // ── END MOVE helpers ─────────────────────────────────────────────────────────
+
     /** Afegeix una nota al cell (row,col) del track actual i la registra al mouseSequence. */
     private void addNoteAtCell(int row, int col) {
         MyTrack tr = this.mixer.getCurrentTrack();
@@ -819,7 +907,7 @@ public class MyController {
      * @param posY
      * @param shiftDown true if the Shift key is held (erase mode)
      */
-    public void onMousePressed(double posX, double posY, boolean shiftDown) {
+    public void onMousePressed(double posX, double posY, boolean shiftDown, boolean ctrlDown) {
         /* Exit lyrics edit mode on any click (commits pending text) */
         if (this.myLyrics.isEditMode()) {
             this.myLyrics.exitEditMode();
@@ -907,28 +995,46 @@ public class MyController {
         /* Check MyGridSquare. */
         int row = this.allPurposeScore.whichRow(posX, posY);
         if (row != -1) {
-            mouseSequence = new MouseSequence(this);
             int col = this.allPurposeScore.whichCol();
             this.needsSaving = true;
             this.lastRowPressed = row;
             this.lastColPressed = col;
             MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-            if (shiftDown) {
-                dragMode = DragMode.ERASE;
+            if (ctrlDown && shiftDown && sq != null && sq.isSqVisible()) {
+                // MOVE mode: capture the whole note and prepare for live drag
+                int headCol = findNoteHeadCol(row, col);
+                int tailCol = findNoteTailCol(row, col);
+                moveNoteOrigRow = row;
+                moveCurrentRow = row;
+                moveNoteOrigHeadCol = headCol;
+                moveNoteLength = tailCol - headCol + 1;
+                moveCurrentHeadCol = headCol;
+                moveClickOffset = col - headCol;
+                moveCh = this.mixer.getCurrentChannelOfCurrentTrack();
+                moveTr = this.mixer.getCurrentTrackId();
+                captureNoteData(row, headCol, moveNoteLength, moveCh, moveTr);
+                dragMode = DragMode.MOVE;
+                mouseSequence = null;
                 this.turningOn = false;
-                removeNoteAtCell(row, col);
-            } else if (sq != null && sq.isSqVisible()) {
-                dragMode = DragMode.EXTEND_PENDING;
-                this.turningOn = false;
-                extendStartRow = row;
-                extendStartCol = col;
             } else {
-                dragMode = DragMode.ADD;
-                this.turningOn = true;
-                addNoteAtCell(row, col);
-                firstNote = this.allPurposeScore.getGrid()[row][col];
-                lastNote = firstNote;
-                this.keyboard.play(row);
+                mouseSequence = new MouseSequence(this);
+                if (shiftDown) {
+                    dragMode = DragMode.ERASE;
+                    this.turningOn = false;
+                    removeNoteAtCell(row, col);
+                } else if (sq != null && sq.isSqVisible()) {
+                    dragMode = DragMode.EXTEND_PENDING;
+                    this.turningOn = false;
+                    extendStartRow = row;
+                    extendStartCol = col;
+                } else {
+                    dragMode = DragMode.ADD;
+                    this.turningOn = true;
+                    addNoteAtCell(row, col);
+                    firstNote = this.allPurposeScore.getGrid()[row][col];
+                    lastNote = firstNote;
+                    this.keyboard.play(row);
+                }
             }
             this.keyboard.getKey(row).doNotHighlight(false);
         }
@@ -983,6 +1089,31 @@ public class MyController {
         }
         /* MyGridSquare. */
         if (this.lastRowPressed != -1) {
+            if (dragMode == DragMode.MOVE) {
+                int finalRow = moveCurrentRow;
+                int finalHeadCol = moveCurrentHeadCol;
+                if (finalRow != moveNoteOrigRow || finalHeadCol != moveNoteOrigHeadCol) {
+                    MoveNoteEvent event = new MoveNoteEvent(
+                            this, moveNoteOrigRow, finalRow, moveNoteOrigHeadCol, finalHeadCol, moveNoteLength,
+                            moveCh, moveTr, moveVelocities, moveVisibles, moveMuteds, moveLinkeds, moveDotted);
+                    afegirEvent(event);
+                }
+                dragMode = DragMode.NONE;
+                moveNoteOrigRow = -1;
+                moveCurrentRow = -1;
+                moveNoteOrigHeadCol = -1;
+                moveNoteLength = 0;
+                moveCurrentHeadCol = -1;
+                moveCh = -1;
+                moveTr = -1;
+                moveVelocities = null;
+                moveVisibles = null;
+                moveMuteds = null;
+                moveLinkeds = null;
+                this.lastRowPressed = -1;
+                this.lastColPressed = -1;
+                return;
+            }
             if (dragMode == DragMode.ADD && firstNote != null) {
                 // Unlink the leftmost note (head); when dragging left, lastNote is leftmost.
                 MyGridSquare head = (lastNote != null && lastNote.getScoreCol() < firstNote.getScoreCol())
@@ -1089,6 +1220,24 @@ public class MyController {
 //
     public void onMouseDragged(double posX, double posY) {
         if (dragMode == DragMode.NONE) return;
+
+        if (dragMode == DragMode.MOVE) {
+            int newRow = this.allPurposeScore.whichRow(posX, posY);
+            if (newRow == -1) newRow = moveCurrentRow; // clamp to current if outside grid rows
+            int col = this.allPurposeScore.whichCol();
+            if (col == -1) return;
+            int newHeadCol = col - moveClickOffset;
+            newHeadCol = Math.max(0, newHeadCol);
+            int gridWidth = this.allPurposeScore.getGrid()[newRow].length;
+            newHeadCol = Math.min(newHeadCol, gridWidth - moveNoteLength);
+            if (newRow == moveCurrentRow && newHeadCol == moveCurrentHeadCol) return;
+            removeTempNote(moveCurrentRow, moveCurrentHeadCol);
+            placeTempNote(newRow, newHeadCol);
+            moveCurrentRow = newRow;
+            moveCurrentHeadCol = newHeadCol;
+            this.drawFull(true);
+            return;
+        }
 
         /* Check MyGridSquare. */
         int row = this.allPurposeScore.whichRow(posX, posY);

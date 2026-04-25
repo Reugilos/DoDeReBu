@@ -307,7 +307,7 @@ class MyNewMouseAdapter extends MouseAdapter {
         double posY = e.getY();
         int pointer = e.getButton();
         if (pointer == 1) {
-            this.controller.onMousePressed(posX, posY, e.isShiftDown());
+            this.controller.onMousePressed(posX, posY, e.isShiftDown(), e.isControlDown());
         } else if (pointer == 3) {
             this.controller.onRightMousePressed(posX, posY);
         }
