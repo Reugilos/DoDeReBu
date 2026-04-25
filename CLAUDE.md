@@ -65,11 +65,22 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 - `nRows` = nombre de files de la franja (chord line = 3 files, lyrics = 2 files aprox.).
 - `nKeys` = nombre de tecles (files) de la graella de notes.
 
+## Durada de l'últim acord (`updateStopMarker`)
+
+`MyPatternScore.updateStopMarker()` recalcula la durada de l'últim acord del `chordSymbolLine` perquè arribi fins a `endOfScore` (= final de l'última nota, no del compàs). Distincions clau:
+
+- `endOfScore` = `max(noteEnd, playCol + 1)` — on acaba el contingut musical
+- `stopCol` = final del compàs que conté `endOfScore` — fins on avança la reproducció en silenci
+- L'últim acord s'estén fins a `endOfScore`, **no** fins a `stopCol`
+
+**Important**: `updateStopMarker` s'ha de cridar tant quan s'afegeix una nota com quan s'esborra. A `MyController`, quan s'afegeix una nota (clic o arrossegament), cal actualitzar `lastColWritten` primer i després cridar `updateStopMarker()`. **No** usar `expandStopIfNeeded` en rutes d'afegir notes si hi ha acords a la partitura, perquè `expandStopIfNeeded` actualitza `stopCol` però no la durada de l'acord.
+
 ## Historial de canvis recents (commits rellevants)
+- **b7dc0d9** Fix últim acord no s'aguantava fins al final: substituït `expandStopIfNeeded` per `updateStopMarker` a les rutes d'afegir notes a MyController.
+- **7b5da1b** Stop marker, chord formats, dynamic font sizing, fixed layout.
 - **4c70217** Fix navegació (botó single-click actualitza tempo/to), restauració de valors en tornar enrere, línies divisòries obsoletes, prefix ♩= eliminat de la marca de tempo.
 - **dfb2726** Tecla Enter col·loca el canvi pendent al playbar.
 - **c15c6f1** Marques de canvi (tempo/to) a la chord symbol line; beat col offset per a acords; text d'acords sense solapament.
-- Commits anteriors: fix config.properties (tipsVisible), fix buttons penjats en col·locar marca.
 
 ## Build
 Maven (`pom.xml`). Java 16. Maven no és al PATH; cal obrir-lo des de NetBeans o des del BAT:
