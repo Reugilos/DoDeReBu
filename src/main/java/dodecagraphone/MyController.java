@@ -271,6 +271,12 @@ public class MyController {
         drawFull(true);
     }
 
+    public void showClipboardTip() {
+        double tipX = Settings.getScreenWidth() / 2.0;
+        double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
+        this.buttons.showCustomTip(I18n.t("clipboard.full.tip"), tipX, tipY);
+    }
+
     public boolean isNeedsDrawing() {
         return needsDrawing;
     }
@@ -523,7 +529,7 @@ public class MyController {
         int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
         int btnH = lineH + 2 * btnPad;
         int btnX = margin;
-        int btnY = acordsY + fm.getDescent() + 3;
+        int btnY = acordsY + fm.getDescent() + lineH + 3;
         g.setColor(new Color(220, 230, 255));
         g.fillRoundRect(btnX, btnY, btnW, btnH, 4, 4);
         g.setColor(Color.BLACK);
@@ -823,6 +829,7 @@ public class MyController {
                 }
             }
         }
+        selectionActive = false;
     }
 
     /** Copies selection to clipboard, then erases it (undoable). */

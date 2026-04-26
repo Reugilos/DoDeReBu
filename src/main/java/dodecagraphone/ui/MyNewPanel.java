@@ -249,18 +249,22 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             } else {
                 controller.undo();
             }
-            controller.getAllPurposeScore().drawFullGridinOffscreen();
+            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
             controller.redrawChordLine();
             this.repinta(true);
             return;
         }
         if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_C) {
             controller.copySelection();
+            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            controller.showClipboardTip();
+            this.repinta(true);
             return;
         }
         if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_X) {
             controller.cutSelection();
             controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            controller.showClipboardTip();
             this.repinta(true);
             return;
         }
