@@ -75,12 +75,36 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 
 **Important**: `updateStopMarker` s'ha de cridar tant quan s'afegeix una nota com quan s'esborra. A `MyController`, quan s'afegeix una nota (clic o arrossegament), cal actualitzar `lastColWritten` primer i després cridar `updateStopMarker()`. **No** usar `expandStopIfNeeded` en rutes d'afegir notes si hi ha acords a la partitura, perquè `expandStopIfNeeded` actualitza `stopCol` però no la durada de l'acord.
 
+## Selecció, porta-retalls i undo/redo
+
+### Selecció
+- `selectionActive`, `selStartRow/Col`, `selEndRow/Col` a `MyController`.
+- Clicar sense Alt esborra la selecció (`selectionActive = false` a `onMousePressed`).
+- Ctrl+C i Ctrl+X desactiven la selecció i mostren un tip localitzat (`clipboard.full.tip`).
+
+### Sistema undo/redo
+`PilaEvents` amb subclasses d'`Event` (`refer()`/`desfer()`):
+- `MouseSequence` — seqüència d'accions de ratolí (notes).
+- `ChordEvent` (`teclesControl/ChordEvent.java`) — col·locar/esborrar un acord; crida `placeChordSymbol`/`removeChordSymbol` + `redrawChordLine()`.
+- `PasteEvent` — enganxar notes; `desfer()` té null guard si la nota ja no existeix.
+
+### Autocorrect en drag ADD
+`processDragCell` i `onMousePressed` comproven si el track **actual** té una nota a la cel·la (stream sobre `sq.getPoliNotes()`), **no** `isSqVisible()` (que és global i bloquejaria l'autocorrect sobre cel·les amb notes d'altres tracks).
+
+### Tip del porta-retalls
+`MyController.showClipboardTip()` mostra el tip via `buttons.showCustomTip(I18n.t("clipboard.full.tip"), ...)`. Respecta `Settings.isTipsVisible()` automàticament.
+
+### Rendiment Ctrl+Z
+Ctrl+Z usa `drawCurrentCamInOffscreen()` (ràpid). **No** usar `drawFullGridinOffscreen()` aquí: és molt lent per partitures grans.
+
 ## Historial de canvis recents (commits rellevants)
-- **b7dc0d9** Fix últim acord no s'aguantava fins al final: substituït `expandStopIfNeeded` per `updateStopMarker` a les rutes d'afegir notes a MyController.
+- **2c3d145** Tip porta-retalls (Ctrl+C/X), Ctrl+Z ràpid, botó format d'acord més avall.
+- **1aec21e** Desfer selecció en clicar sense Alt.
+- **61b6314** Undo/redo per a acords (`ChordEvent`) i millores de paste.
+- **9269965** Fix paste undo, autocorrect sobre cel·les polinfòniques, eliminar CSV no usat.
 - **7b5da1b** Stop marker, chord formats, dynamic font sizing, fixed layout.
-- **4c70217** Fix navegació (botó single-click actualitza tempo/to), restauració de valors en tornar enrere, línies divisòries obsoletes, prefix ♩= eliminat de la marca de tempo.
+- **4c70217** Fix navegació, restauració de valors, línies divisòries, prefix tempo.
 - **dfb2726** Tecla Enter col·loca el canvi pendent al playbar.
-- **c15c6f1** Marques de canvi (tempo/to) a la chord symbol line; beat col offset per a acords; text d'acords sense solapament.
 
 ## Build
 Maven (`pom.xml`). Java 16. Maven no és al PATH; cal obrir-lo des de NetBeans o des del BAT:
