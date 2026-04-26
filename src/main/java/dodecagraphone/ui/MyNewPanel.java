@@ -242,12 +242,15 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
-            if (e.isShiftDown()) {
+            if (controller.isPendingPaste()) {
+                controller.cancelPaste();
+            } else if (e.isShiftDown()) {
                 controller.redo();
             } else {
                 controller.undo();
             }
             controller.getAllPurposeScore().drawFullGridinOffscreen();
+            controller.redrawChordLine();
             this.repinta(true);
             return;
         }

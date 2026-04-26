@@ -27,6 +27,7 @@ import dodecagraphone.model.mixer.MyMixer;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
+import dodecagraphone.teclesControl.ChordEvent;
 import dodecagraphone.teclesControl.ClipNote;
 import dodecagraphone.teclesControl.Event;
 import dodecagraphone.teclesControl.MouseSequence;
@@ -263,6 +264,11 @@ public class MyController {
 
     public void afegirEvent(Event e) {
         pilaEvents.afegirEvent(e);
+    }
+
+    public void redrawChordLine() {
+        myChordSymbolLine.drawFullChordLineInOffscreen();
+        drawFull(true);
     }
 
     public boolean isNeedsDrawing() {
@@ -850,6 +856,15 @@ public class MyController {
         selectionActive = false;
     }
 
+    public boolean isPendingPaste() { return pendingPaste; }
+
+    public void cancelPaste() {
+        pendingPaste = false;
+        dragMode = DragMode.NONE;
+        pasteCurrentRow = -1;
+        pasteCurrentCol = -1;
+    }
+
     /** Simple track picker using JOptionPane. Returns the chosen track index. */
     private int showTrackPickerDialog() {
         List<MyTrack> tracks = this.mixer.getTracks();
@@ -1127,18 +1142,17 @@ public class MyController {
 
             if (chord != null && chord != oldchord) { // chord != oldchord means not cancelled
                 if (chord.isValidChord()) {
-                    this.allPurposeScore.placeChordSymbol(chord, chordCol); // crea el chordTrack si no existeix
+                    this.allPurposeScore.placeChordSymbol(chord, chordCol);
+                    afegirEvent(new ChordEvent(this, chordCol, oldchord, chord));
                     this.needsSaving = true;
                     this.myChordSymbolLine.drawFullChordLineInOffscreen();
-                    //this.getMixer().refreshMixer();
                 }
             } else if (chord == null && oldchord != null) { // empty input = delete
                 this.allPurposeScore.removeChordSymbol(chordCol);
+                afegirEvent(new ChordEvent(this, chordCol, oldchord, null));
                 this.needsSaving = true;
                 this.myChordSymbolLine.drawFullChordLineInOffscreen();
-                //this.getMixer().refreshMixer();
             }
-//            this.myChordSymbolLine.thisAndAncestorsNeedDrawing();
             this.drawFull(true);
             return;
         }
