@@ -1009,7 +1009,11 @@ public class MyController {
         switch (dragMode) {
             case ADD: {
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-                if (sq != null && sq.isSqVisible()) {
+                int curCh = this.mixer.getCurrentChannelOfCurrentTrack();
+                int curTr = this.mixer.getCurrentTrackId();
+                boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == curCh && n.getTrack() == curTr && n.isVisible());
+                if (currentTrackHasNote) {
                     if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
                 } else {
                     addNoteAtCell(row, col);
@@ -1212,11 +1216,15 @@ public class MyController {
                 this.turningOn = false;
             } else {
                 mouseSequence = new MouseSequence(this);
+                int curCh = this.mixer.getCurrentChannelOfCurrentTrack();
+                int curTr = this.mixer.getCurrentTrackId();
+                boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == curCh && n.getTrack() == curTr && n.isVisible());
                 if (shiftDown) {
                     dragMode = DragMode.ERASE;
                     this.turningOn = false;
                     removeNoteAtCell(row, col);
-                } else if (sq != null && sq.isSqVisible()) {
+                } else if (currentTrackHasNote) {
                     dragMode = DragMode.EXTEND_PENDING;
                     this.turningOn = false;
                     extendStartRow = row;

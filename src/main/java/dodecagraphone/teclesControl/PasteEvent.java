@@ -60,7 +60,8 @@ public class PasteEvent extends Event {
             int row = anchorRow + n.rowOffset;
             int col = anchorCol + n.colOffset;
             if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
-            score.removeNoteFromSquare(row, col, targetCh, targetTr);
+            MyGridSquare.SubSquare removed = score.removeNoteFromSquare(row, col, targetCh, targetTr);
+            if (removed == null) continue;
             track.oneNoteLess();
             MyGridSquare sq = score.getGridSquare(row, col);
             if (sq != null) sq.updateState();

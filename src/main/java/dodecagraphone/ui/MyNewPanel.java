@@ -247,7 +247,7 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             } else {
                 controller.undo();
             }
-            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            controller.getAllPurposeScore().drawFullGridinOffscreen();
             this.repinta(true);
             return;
         }
