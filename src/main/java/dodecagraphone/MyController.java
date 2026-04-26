@@ -1104,6 +1104,11 @@ public class MyController {
             this.needsSaving = true;
         }
 
+        /* Qualsevol clic sense Alt deselecciona la selecció activa */
+        if (!altDown && selectionActive) {
+            selectionActive = false;
+        }
+
         /* Check MyButton PRIMER — els botons han de funcionar sempre, fins i tot
            quan hi ha un canvi pendent. */
         int button = this.buttons.whichButton(posX, posY);
