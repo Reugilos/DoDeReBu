@@ -1133,6 +1133,9 @@ public class MyController {
      * @param shiftDown true if the Shift key is held (erase mode)
      */
     public void onMousePressed(double posX, double posY, boolean shiftDown, boolean ctrlDown, boolean altDown) {
+        this.buttons.hideTip();
+        lastTipButton = -1;
+        lastTipKeyRow = -1;
         /* Exit lyrics edit mode on any click (commits pending text) */
         if (this.myLyrics.isEditMode()) {
             this.myLyrics.exitEditMode();
