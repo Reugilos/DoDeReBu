@@ -2420,6 +2420,10 @@ public class MyController {
     }
 
     public void detectAnacrusis() {
+        if (this.allPurposeScore.getLastColWritten() == 0) {
+            Settings.setHasAnacrusis(false);
+            return;
+        }
         int beatCols = Settings.getnColsBeat();
         int nKeys = this.allPurposeScore.getnKeys();
         java.util.List<dodecagraphone.model.component.MyGridSquare.SubSquare> firstBeat =
@@ -2793,6 +2797,7 @@ public class MyController {
     private void newScore() {
         allPurposeScore.resetAllPurposeScore(); //new MyAllPurposeScore(this);
         this.allPurposeScore.clearScore();  // buida notes, acords i missatges
+        Settings.setHasAnacrusis(false);
         this.myLyrics.clear();
         this.stop();
         this.buttons.stopPlayButton();
