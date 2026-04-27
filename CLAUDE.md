@@ -88,8 +88,8 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 - `ChordEvent` (`teclesControl/ChordEvent.java`) — col·locar/esborrar un acord; crida `placeChordSymbol`/`removeChordSymbol` + `redrawChordLine()`.
 - `PasteEvent` — enganxar notes; `desfer()` té null guard si la nota ja no existeix.
 
-### Autocorrect en drag ADD
-`processDragCell` i `onMousePressed` comproven si el track **actual** té una nota a la cel·la (stream sobre `sq.getPoliNotes()`), **no** `isSqVisible()` (que és global i bloquejaria l'autocorrect sobre cel·les amb notes d'altres tracks).
+### Autocorrect en drag ADD i EXTEND
+`processDragCell` i `onMousePressed` comproven si el track **actual** té una nota a la cel·la (stream sobre `sq.getPoliNotes()`), **no** `isSqVisible()` (global). Afecta els modes ADD, EXTEND_PENDING, EXTEND_RIGHT i EXTEND_LEFT. Si el `mouseReleased` és fora del grid (`whichCol == -1`), l'autocorrect usa `lastColPressed` com a posició final.
 
 ### Tip del porta-retalls
 `MyController.showClipboardTip()` mostra el tip via `buttons.showCustomTip(I18n.t("clipboard.full.tip"), ...)`. Respecta `Settings.isTipsVisible()` automàticament.
@@ -97,14 +97,43 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 ### Rendiment Ctrl+Z
 Ctrl+Z usa `drawCurrentCamInOffscreen()` (ràpid). **No** usar `drawFullGridinOffscreen()` aquí: és molt lent per partitures grans.
 
+## Anacrusa (`hasAnacrusis`)
+
+### Detecció
+`MyController.detectAnacrusis()` comprova si `lastColWritten == 0` (sense notes → `false`) o si el primer beat (cols 0..beatCols-1) és buit → `hasAnacrusis = true`. S'executa automàticament a:
+- `updateTextOfButtons()` — cada cop que es navega o carrega
+- `undo()` / `redo()` — via `refreshAnacrusis()`
+- `onMouseReleased` — al final del drag (ADD/ERASE/EXTEND/PASTE), via `refreshAnacrusis()`
+- `newScore()` — força `hasAnacrusis = false` directament
+
+**No** cridar `refreshAnacrusis()` des de `addNoteAtCell`/`removeNoteAtCell`: canviaria `hasAnacrusis` a mig drag i desajustaria `getCol()` respecte la vista visual.
+
+### Numeració de compassos
+`getMeasureAndBeatAt` comença en compàs `0` si `hasAnacrusis`, en `1` si no. Independentment del flag `fitAnacrusis`.
+
+### Fit anacrusis (botó Encabir/Fit)
+`Settings.fitAnacrusis` **no es persisteix** al config; sempre arrenca com a `false`.
+Quan `fitAnacrusis && hasAnacrusis` a la primera pàgina, `draw()` estén `lastColToDraw` en un compàs extra (`nBeatsMeasure * nColsBeat`) → Java2D escala la imatge més ampla al mateix ample → columnes visuals més estretes.
+
+`MyGridScore.getCol()` compensa aquesta compressió: si `fitAnacrusis && hasAnacrusis && firstColToDraw == 0` (keyboard esquerre), usa:
+```java
+col = (int)(relX * lastColToDraw / (colWidth * nColsCam));
+```
+en lloc del càlcul estàndard `relX / colWidth`.
+
+### Paginació fit (`MyCamera`)
+`nextPage`/`prevPage` usen `getBaseColsPerMeasure()` per calcular la mida de la primera pàgina ampliada quan `fitAnacrusis && hasAnacrusis`.
+
 ## Historial de canvis recents (commits rellevants)
-- **2c3d145** Tip porta-retalls (Ctrl+C/X), Ctrl+Z ràpid, botó format d'acord més avall.
-- **1aec21e** Desfer selecció en clicar sense Alt.
-- **61b6314** Undo/redo per a acords (`ChordEvent`) i millores de paste.
-- **9269965** Fix paste undo, autocorrect sobre cel·les polinfòniques, eliminar CSV no usat.
-- **7b5da1b** Stop marker, chord formats, dynamic font sizing, fixed layout.
-- **4c70217** Fix navegació, restauració de valors, línies divisòries, prefix tempo.
-- **dfb2726** Tecla Enter col·loca el canvi pendent al playbar.
+- **bf25337** fitAnacrusis sempre false a l'inici; getCol compensa compressió fit.
+- **0067383** Autocorrect quan mouseReleased és fora del grid.
+- **8d07e52** Fix desajust drag: refreshAnacrusis diferit a onMouseReleased.
+- **da2d294** refreshAnacrusis després de undo/redo.
+- **936067e** Detecció anacrusa en temps real en introduir/esborrar notes.
+- **853a706** detectAnacrusis: sense notes → compàs 1; new/load correctes.
+- **46aaf08** Autocorrect en drag des de cel·la ocupada (EXTEND mode).
+- **5466cc5** Anacrusa automàtica, cursor d'espera i paginació fit.
+- **65c8085** Botó Fit anacrusis + fixes alineació chord/lyrics i drawMeasureLine.
 
 ## Build
 Maven (`pom.xml`). Java 16. Maven no és al PATH; cal obrir-lo des de NetBeans o des del BAT:
