@@ -38,3 +38,4 @@ Id;Name;IsToggle;Row;Col;TextOn;TextOff;TipText;IsActive
 30;MixerButton;T;13;3;buttonLayout.MixerButton.textOn;buttonLayout.MixerButton.textOff;buttonLayout.MixerButton.tipText;On
 37;ChordSymbolsButton;B;14;1;buttonLayout.ChordSymbolsButton.textOn;;buttonLayout.ChordSymbolsButton.tipText;On
 38;HelpButton;B;14;2;buttonLayout.HelpButton.textOn;;buttonLayout.HelpButton.tipText;On
+40;TipsButton;T;14;3;buttonLayout.TipsButton.textOn;buttonLayout.TipsButton.textOff;buttonLayout.TipsButton.tipText;On

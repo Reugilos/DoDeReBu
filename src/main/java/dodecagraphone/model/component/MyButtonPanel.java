@@ -75,6 +75,7 @@ public class MyButtonPanel extends MyComponent {
     private int id_DescriptionButton = 36;
     private int id_ChordSymbolsButton = 37;
     private int id_FitAnacrusisButton = 39;
+    private int id_TipsButton = 40;
     /**
      * True if the button panel has been modified and needs to be repaint.
      */
@@ -527,8 +528,15 @@ public class MyButtonPanel extends MyComponent {
         this.setLeftVsRightButton(this.controller.getAllPurposeScore().isUseScreenKeyboardRight());
         this.setNamesVsHideButton(this.controller.getAllPurposeScore().isShowNoteNames());
         this.setMobileDoVsAbsoluteButton(ToneRange.isMovileDo());
+        this.setTipsButton(Settings.isTipsVisible());
 //        MyToggle tog = (MyToggle) this.buttons.get(this.id_NamesVsHideButton);
 //        System.out.println("MyButtonPanl::setToggleButtonsToProgramValues: isPressed(" + tog.getId() + ") = " + tog.isPressed() + ", showNames = " + this.controller.getScore().isShowNoteNames());
+    }
+
+    public void setTipsButton(boolean tipsOn) {
+        this.setModified(true);
+        MyToggle tog = (MyToggle) this.buttons.get(this.id_TipsButton);
+        if (tog != null) tog.setPressed(!tipsOn);
     }
 
     /**

@@ -175,15 +175,15 @@ public class MyXiloKey extends MyComponent {
         g.setColor(this.color);
         int h = (int) Math.ceil(height);
         g.fillRect((int) screenPosX,(int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height));
-        g.setColor(ColorSets.getGridSquareFontColor(this.midi));
-        String text = " " + this.midi + " " + this.noteName;
-        if (ToneRange.isDodecaphone()) text = " " + this.noteName.substring(0,2);
+        String nameOnly = this.noteName.replaceAll("[0-9]+$", "");
+        String text = " " + nameOnly;
         if (!ToneRange.isDodecaphone()) {
             if (this.midi == ToneRange.getHighestSaxo()
                     || this.midi == ToneRange.getLowestSaxo()) {
                 text += ">";
             }
         }
+        g.setColor(activeChannels.isEmpty() ? ColorSets.getGridSquareFontColor(this.midi) : java.awt.Color.BLACK);
         g.drawString(text, (float) (screenPosX), posY);
         this.slide.draw(g);
     }
@@ -345,6 +345,10 @@ public class MyXiloKey extends MyComponent {
      */
     public int getMidi() {
         return midi;
+    }
+
+    public String getNoteName() {
+        return noteName;
     }
 
     /**

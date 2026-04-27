@@ -1139,8 +1139,8 @@ public class MyController {
             this.needsSaving = true;
         }
 
-        /* Qualsevol clic sense Alt deselecciona la selecció activa */
-        if (!altDown && selectionActive) {
+        /* Qualsevol clic sense Ctrl deselecciona la selecció activa */
+        if (!ctrlDown && selectionActive) {
             selectionActive = false;
         }
 
@@ -1238,7 +1238,7 @@ public class MyController {
                 return;
             }
 
-            if (altDown) {
+            if (ctrlDown && !shiftDown) {
                 dragMode = DragMode.SELECT;
                 selStartRow = row;
                 selStartCol = col;
@@ -1550,10 +1550,17 @@ public class MyController {
         if (row == lastRowPressed && col == lastColPressed) return;
 
         // Interpolate gaps between last and current position
+        int lastIntermediateRow = this.lastRowPressed != -1 ? this.lastRowPressed : row;
         if (this.lastRowPressed != -1) {
             if (lastRowPressed != row || lastColPressed != col) {
-                interpolateCells(lastRowPressed, lastColPressed, row, col);
+                lastIntermediateRow = interpolateCells(lastRowPressed, lastColPressed, row, col);
             }
+        }
+
+        boolean right = this.allPurposeScore.isUseScreenKeyboardRight();
+        if (lastIntermediateRow != row) {
+            this.keyboard.stop(lastIntermediateRow);
+            this.keyboard.getKey(lastIntermediateRow).doNotHighlight(right);
         }
 
         this.lastRowPressed = row;
@@ -1604,6 +1611,7 @@ public class MyController {
     }
     
     private int lastTipButton = -1;
+    private int lastTipKeyRow = -1;
 
     public void onMouseMoved(double posX, double posY) {
         int button = this.buttons.whichButton(posX, posY);
@@ -1612,29 +1620,67 @@ public class MyController {
                 this.buttons.hideTip();
                 this.buttons.showTip(button, posX, posY);
                 lastTipButton = button;
+                lastTipKeyRow = -1;
             }
         } else if (isChordFormatButtonClick(posX, posY)) {
             if (lastTipButton != -2) {
                 this.buttons.hideTip();
                 this.buttons.showCustomTip(I18n.t("myChordSymbolLine.formatBtn.tip"), posX, posY);
                 lastTipButton = -2;
+                lastTipKeyRow = -1;
             }
         } else if (myChordSymbolLine.whichCol(posX, posY) != -1) {
             if (lastTipButton != -3) {
                 this.buttons.hideTip();
                 this.buttons.showCustomTip(I18n.t("myChordSymbolLine.chord.tip"), posX, posY);
                 lastTipButton = -3;
+                lastTipKeyRow = -1;
             }
         } else {
-            if (lastTipButton != -1) {
-                this.buttons.hideTip();
-                lastTipButton = -1;
+            int keyRow = this.keyboard.whichKey(posX, posY);
+            if (keyRow != -1) {
+                if (lastTipButton != -4 || lastTipKeyRow != keyRow) {
+                    MyXiloKey key = this.keyboard.getKey(keyRow);
+                    this.buttons.hideTip();
+                    this.buttons.showCustomTip(key.getNoteName() + " " + key.getMidi(), posX, posY);
+                    lastTipButton = -4;
+                    lastTipKeyRow = keyRow;
+                }
+            } else if (this.keyboard.whichSlideKey(posX, posY) != -1) {
+                if (lastTipButton != -5) {
+                    this.buttons.hideTip();
+                    this.buttons.showCustomTip(I18n.t("myXiloKey.slide.tip"), posX, posY);
+                    lastTipButton = -5;
+                    lastTipKeyRow = -1;
+                }
+            } else if (this.myLyrics != null && this.myLyrics.contains(posX, posY)) {
+                if (lastTipButton != -6) {
+                    this.buttons.hideTip();
+                    this.buttons.showCustomTip(I18n.t("myLyrics.tip"), posX, posY);
+                    lastTipButton = -6;
+                    lastTipKeyRow = -1;
+                }
+            } else if (this.allPurposeScore.whichRow(posX, posY) != -1) {
+                if (lastTipButton != -7) {
+                    this.buttons.hideTip();
+                    this.buttons.showCustomTip(I18n.t("myGridScore.tip"), posX, posY);
+                    lastTipButton = -7;
+                    lastTipKeyRow = -1;
+                }
+            } else {
+                if (lastTipButton != -1) {
+                    this.buttons.hideTip();
+                    lastTipButton = -1;
+                    lastTipKeyRow = -1;
+                }
             }
         }
         this.drawFull(true);
     }
     
-    private void interpolateCells(int startRow, int startCol, int endRow, int endCol) {
+    /** Returns the last intermediate row processed (or startRow if none). */
+    private int interpolateCells(int startRow, int startCol, int endRow, int endCol) {
+        boolean right = this.allPurposeScore.isUseScreenKeyboardRight();
         int stepCount = Math.max(Math.abs(endRow - startRow), Math.abs(endCol - startCol));
         int intermediateRow = startRow;
         int intermediateCol = startCol;
@@ -1645,9 +1691,11 @@ public class MyController {
             intermediateCol = startCol + i * (endCol - startCol) / stepCount;
             if (intermediateRow != prevRow) {
                 this.keyboard.stop(prevRow);
+                this.keyboard.getKey(prevRow).doNotHighlight(right);
             }
             processDragCell(intermediateRow, intermediateCol);
         }
+        return intermediateRow;
     }
 
     public void onDemoButtonPressed() {
@@ -1863,6 +1911,13 @@ public class MyController {
     public void onHelpButtonPressed(MyButton togg){
         MyDialogs.mostraMissatge(I18n.t("MyController.help.text"), I18n.t("MyController.btn.help.title"));
         if (togg!=null) togg.setPressed(false);
+    }
+
+    public void onTipsButtonPressed(MyButton togg) {
+        Settings.setTipsVisible(!togg.isPressed());
+        if (togg.isPressed()) {
+            this.buttons.hideTip();
+        }
     }
     
     public void onChordSymbolsButtonPressed(MyButton togg) {
