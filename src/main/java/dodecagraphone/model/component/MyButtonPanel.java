@@ -74,6 +74,7 @@ public class MyButtonPanel extends MyComponent {
     private int id_VolumeButton = 35;
     private int id_DescriptionButton = 36;
     private int id_ChordSymbolsButton = 37;
+    private int id_FitAnacrusisButton = 39;
     /**
      * True if the button panel has been modified and needs to be repaint.
      */

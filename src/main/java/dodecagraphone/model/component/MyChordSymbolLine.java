@@ -478,15 +478,6 @@ public class MyChordSymbolLine extends MyComponent {
             boolean[] isMeasure = new boolean[numCols + 1];
             score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
 
-            // Línia final (columna numCols)
-            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
-
-            // Línies de beat i compàs
-            for (int col = numCols - 1; col >= 0; col--) {
-                if (isBeat[col])    drawBeatLine(col, offscreenGraphics, true);
-                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics, true);
-            }
-
             // Marques de canvi de tempo i to (excloent col 0, que és la marca inicial).
             // Les marques s'apilen verticalment de baix cap amunt.
             // Per a cada columna guardem l'amplada màxima de les marques (per desplaçar l'acord).
@@ -524,8 +515,7 @@ public class MyChordSymbolLine extends MyComponent {
                 }
             }
 
-            // Acords per sobre de les línies i les marques;
-            // el text comença desplaçat per l'amplada màxima de les marques.
+            // Acords (el text comença desplaçat per l'amplada màxima de les marques).
             for (int col = 0; col < numCols; col++) {
                 Chord chord = chords.get(col);
                 if (chord != null) {
@@ -533,6 +523,14 @@ public class MyChordSymbolLine extends MyComponent {
                     drawChordSymbol(chord, col, offscreenGraphics, true, xOff);
                 }
             }
+
+            // Línies de beat i compàs DESPRÉS dels acords perquè no quedin tapades.
+            for (int col = numCols - 1; col >= 0; col--) {
+                if (isBeat[col])    drawBeatLine(col, offscreenGraphics, true);
+                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics, true);
+            }
+            // Línia final (columna numCols)
+            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
         }
     }
 
@@ -603,6 +601,10 @@ public class MyChordSymbolLine extends MyComponent {
                 h  = (int) Math.ceil(height);
                 firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
                 int lastColToDraw = ccol;
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
+                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             } else {
@@ -614,6 +616,10 @@ public class MyChordSymbolLine extends MyComponent {
                 h  = (int) Math.ceil(height);
                 firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
                 int lastColToDraw = ccol;
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
+                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             }

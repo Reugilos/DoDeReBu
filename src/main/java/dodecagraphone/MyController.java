@@ -522,14 +522,14 @@ public class MyController {
         int acordsY = chordY + margin + fm.getAscent();
         g.drawString(I18n.t("myChordSymbolLine.label"), margin, acordsY);
 
-        // Format button below the "Acords" label
+        // Format button 2 rows below the "Acords" label (row-height units so it always fits)
         String fmtLabel = dodecagraphone.model.chord.ChordSymbols.formatLabel(
                 myChordSymbolLine.getDisplayFormat());
-        int btnPad = 4;
+        int btnPad = 2;
         int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
         int btnH = lineH + 2 * btnPad;
         int btnX = margin;
-        int btnY = acordsY + fm.getDescent() + lineH + 3;
+        int btnY = (int) Math.round(chordY + 2 * rowH);
         g.setColor(new Color(220, 230, 255));
         g.fillRoundRect(btnX, btnY, btnW, btnH, 4, 4);
         g.setColor(Color.BLACK);
@@ -2381,6 +2381,24 @@ public class MyController {
         } else {
             this.mixer.closeMixerWindow();
         }
+    }
+
+    public void onFitAnacrusisButtonPressed(MyButton togg) {
+        if (togg.isPressed()) {
+            detectAnacrusis();
+        }
+        Settings.setFitAnacrusis(togg.isPressed());
+        this.allPurposeScore.drawFullGridinOffscreen();
+        this.myChordSymbolLine.drawFullChordLineInOffscreen();
+        this.drawFull(true);
+    }
+
+    public void detectAnacrusis() {
+        int beatCols = Settings.getnColsBeat();
+        int nKeys = this.allPurposeScore.getnKeys();
+        java.util.List<dodecagraphone.model.component.MyGridSquare.SubSquare> firstBeat =
+            this.allPurposeScore.getNotesOfRegion(0, 0, nKeys - 1, beatCols - 1);
+        Settings.setHasAnacrusis(firstBeat.isEmpty());
     }
 
     private MeterData inputMeterDialog(MeterData defaultValue) {

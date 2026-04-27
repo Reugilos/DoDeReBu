@@ -716,6 +716,10 @@ public class MyLyrics extends MyComponent {
                 h  = (int) Math.ceil(height);
                 int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
                 int lastColToDraw  = ccol;
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
+                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             } else {
@@ -727,6 +731,10 @@ public class MyLyrics extends MyComponent {
                 h  = (int) Math.ceil(height);
                 int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
                 int lastColToDraw  = ccol;
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
+                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             }

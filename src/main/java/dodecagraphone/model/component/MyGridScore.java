@@ -1155,15 +1155,13 @@ public class MyGridScore extends MyComponent {
             boolean[] isMeasure = new boolean[nCols + 1];
             computeBeatMeasureLines(nCols + 1, isBeat, isMeasure);
 
-            if (isBeat[lastDrawCol])    drawBeatLine(lastDrawCol, offscreenGraphics);
-            if (isMeasure[lastDrawCol]) drawMeasureLine(lastDrawCol, offscreenGraphics);
-
             for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
                 for (int row = 0; row < nKeys; row++) {
                     this.drawSquare(row, col, offscreenGraphics);
                 }
             }
-            for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
+            // Línies DESPRÉS dels squares (inclou lastDrawCol) perquè no quedin tapades.
+            for (int col = lastDrawCol; col >= firstDrawCol; col--) {
                 if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
                 if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
             }
@@ -1448,6 +1446,10 @@ public class MyGridScore extends MyComponent {
                 h = (int) Math.ceil(nKeys * Settings.getRowHeight() * Settings.getnRowsSquare());
                 firstColToDraw = (int) Math.max(0, ccol - Settings.getnColsCam());
                 lastColToDraw = ccol;
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, nCols);
+                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             } else {

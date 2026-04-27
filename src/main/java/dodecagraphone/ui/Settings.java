@@ -146,6 +146,8 @@ public class Settings {
     private static boolean showMutted;
     private static double screenWidthRatio;
     private static double screenHeightRatio;
+    private static boolean fitAnacrusis;
+    private static boolean hasAnacrusis;
 
 //
 //    private static int playBarCol; // column of the play bar 
@@ -208,6 +210,8 @@ public class Settings {
 
         screenWidthRatio = Double.parseDouble(AppConfig.get().get("screenWidthRatio", "" + DEFAULT_SCREEN_WIDTH_RATIO));
         screenHeightRatio = Double.parseDouble(AppConfig.get().get("screenHeightRatio", "" + DEFAULT_SCREEN_HEIGHT_RATIO));
+        fitAnacrusis = AppConfig.get().getBool("fitAnacrusis", false);
+        hasAnacrusis = false;
 
 //        int n = getnColsScore();
 //        n = getnColsSquare(); // 
@@ -328,6 +332,23 @@ public class Settings {
 
     public static void setScreenHeightRatio(double screenHeightRatio) {
         Settings.screenHeightRatio = screenHeightRatio;
+    }
+
+    public static boolean isFitAnacrusis() {
+        return fitAnacrusis;
+    }
+
+    public static void setFitAnacrusis(boolean v) {
+        fitAnacrusis = v;
+        AppConfig.get().set("fitAnacrusis", String.valueOf(v));
+    }
+
+    public static boolean isHasAnacrusis() {
+        return hasAnacrusis;
+    }
+
+    public static void setHasAnacrusis(boolean v) {
+        hasAnacrusis = v;
     }
 
     /**
