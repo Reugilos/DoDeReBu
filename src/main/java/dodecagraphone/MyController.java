@@ -1417,6 +1417,10 @@ public class MyController {
             if (Settings.isAutoCorrect() && wasDragMode == DragMode.ADD && wasFirstNote != null) {
                 int acRow = this.allPurposeScore.whichRow(posX, posY);
                 int acCol = this.allPurposeScore.whichCol();
+                if (acCol == -1 && this.lastColPressed != -1) {
+                    acCol = this.lastColPressed;
+                    acRow = this.lastRowPressed;
+                }
                 if (acCol != -1) {
                     int fcol = wasFirstNote.getScoreCol();
                     int frow = wasFirstNote.getScoreRow();
