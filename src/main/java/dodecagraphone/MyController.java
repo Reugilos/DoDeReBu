@@ -1047,6 +1047,8 @@ public class MyController {
                 removeNoteAtCell(row, col);
                 break;
             case EXTEND_PENDING: {
+                int curCh2 = this.mixer.getCurrentChannelOfCurrentTrack();
+                int curTr2 = this.mixer.getCurrentTrackId();
                 if (col > extendStartCol) {
                     dragMode = DragMode.EXTEND_RIGHT;
                     // Link start note to its left neighbour if one exists (join notes).
@@ -1058,20 +1060,40 @@ public class MyController {
                             linkNoteAtCell(startSq);
                         }
                     }
-                    addNoteAtCell(row, col);
+                    MyGridSquare nextSq = this.allPurposeScore.getGridSquare(row, col);
+                    boolean nextHasNote = nextSq != null && nextSq.getPoliNotes().stream()
+                        .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
+                    if (nextHasNote) {
+                        if (!nextSq.isSq_is_linked()) linkNoteAtCell(nextSq);
+                        lastNote = nextSq;
+                    } else {
+                        addNoteAtCell(row, col);
+                    }
                 } else if (col < extendStartCol) {
                     dragMode = DragMode.EXTEND_LEFT;
                     MyGridSquare startSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol);
                     if (startSq != null && startSq.isSqVisible() && !startSq.isSq_is_linked())
                         linkNoteAtCell(startSq);
-                    addNoteAtCell(row, col);
-                    firstNote = this.allPurposeScore.getGrid()[row][col];
+                    MyGridSquare nextSq = this.allPurposeScore.getGridSquare(row, col);
+                    boolean nextHasNote = nextSq != null && nextSq.getPoliNotes().stream()
+                        .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
+                    if (nextHasNote) {
+                        if (!nextSq.isSq_is_linked()) linkNoteAtCell(nextSq);
+                        if (firstNote == null || col < firstNote.getScoreCol()) firstNote = nextSq;
+                    } else {
+                        addNoteAtCell(row, col);
+                        firstNote = this.allPurposeScore.getGrid()[row][col];
+                    }
                 }
                 break;
             }
             case EXTEND_RIGHT: {
+                int curCh2 = this.mixer.getCurrentChannelOfCurrentTrack();
+                int curTr2 = this.mixer.getCurrentTrackId();
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-                if (sq != null && sq.isSqVisible()) {
+                boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
+                if (currentTrackHasNote) {
                     if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
                     lastNote = sq;
                 } else {
@@ -1080,8 +1102,12 @@ public class MyController {
                 break;
             }
             case EXTEND_LEFT: {
+                int curCh2 = this.mixer.getCurrentChannelOfCurrentTrack();
+                int curTr2 = this.mixer.getCurrentTrackId();
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-                if (sq != null && sq.isSqVisible()) {
+                boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
+                if (currentTrackHasNote) {
                     if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
                     if (firstNote == null || col < firstNote.getScoreCol()) firstNote = sq;
                 } else {
