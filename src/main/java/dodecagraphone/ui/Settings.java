@@ -210,7 +210,7 @@ public class Settings {
 
         screenWidthRatio = Double.parseDouble(AppConfig.get().get("screenWidthRatio", "" + DEFAULT_SCREEN_WIDTH_RATIO));
         screenHeightRatio = Double.parseDouble(AppConfig.get().get("screenHeightRatio", "" + DEFAULT_SCREEN_HEIGHT_RATIO));
-        fitAnacrusis = AppConfig.get().getBool("fitAnacrusis", false);
+        fitAnacrusis = false; // no es persisteix; sempre comença desactivat
         hasAnacrusis = false;
 
 //        int n = getnColsScore();

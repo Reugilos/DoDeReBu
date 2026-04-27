@@ -1515,6 +1515,19 @@ public class MyGridScore extends MyComponent {
      */
     @Override
     public int getCol(double screenX) {
+        // Quan fit+anacrusis comprimeix la primera pàgina (keyboard esquerre),
+        // la relació píxel→columna és diferent de colWidth estàndard.
+        if (!isUseScreenKeyboardRight() && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
+            int cc = getCurrentCol();
+            int firstColToDraw = (int) Math.max(0, cc - Settings.getnColsCam());
+            if (firstColToDraw == 0) {
+                int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                int lastColToDraw = Math.min(cc + extraCols, nCols);
+                double relX = screenX - cam.getScreenPosX();
+                int col = (int)(relX * lastColToDraw / (Settings.getColWidth() * Settings.getnColsCam()));
+                return Math.max(0, Math.min(col, nCols - 1));
+            }
+        }
         int col = (int) ((screenX - cam.getScreenPosX()) / Settings.getColWidth());
         return getScoreCol(col);
     }
