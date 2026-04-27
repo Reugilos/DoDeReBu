@@ -254,11 +254,13 @@ public class MyController {
 
     public void undo() {
         pilaEvents.undo();
+        refreshAnacrusis();
         this.drawFull(true);
     }
 
     public void redo() {
         pilaEvents.redo();
+        refreshAnacrusis();
         this.drawFull(true);
     }
 
