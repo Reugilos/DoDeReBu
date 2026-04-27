@@ -201,18 +201,24 @@ public class MyButtonPanel extends MyComponent {
             toolTip.setTipText(tipText);
             this.popUp.add(toolTip); // tipText text pot ser html: "<html><b>Funció del botó:</b><br>Aquest botó executa X acció.</html>"
             popUp.pack();
-            popUp.show(this.controller.getUi().getPanel(), (int) posX - 10, (int) posY - 10);
+            popUp.show(this.controller.getUi().getPanel(),
+                    (int)(posX + 2 * Settings.getColWidth()),
+                    (int)(posY + 2 * Settings.getRowHeight()));
         }
     }
 
     public void showCustomTip(String text, double posX, double posY) {
+        showCustomTip(text, (int) posX - 10, (int) posY - 10);
+    }
+
+    public void showCustomTip(String text, int screenX, int screenY) {
         if (Settings.isTipsVisible() && !popUp.isVisible()) {
             this.popUp.removeAll();
             JToolTip toolTip = new JToolTip();
             toolTip.setTipText(text);
             this.popUp.add(toolTip);
             popUp.pack();
-            popUp.show(this.controller.getUi().getPanel(), (int) posX - 10, (int) posY - 10);
+            popUp.show(this.controller.getUi().getPanel(), screenX, screenY);
         }
     }
 

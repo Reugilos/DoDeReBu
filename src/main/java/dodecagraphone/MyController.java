@@ -1628,7 +1628,9 @@ public class MyController {
         } else if (isChordFormatButtonClick(posX, posY)) {
             if (lastTipButton != -2) {
                 this.buttons.hideTip();
-                this.buttons.showCustomTip(I18n.t("myChordSymbolLine.formatBtn.tip"), posX, posY);
+                this.buttons.showCustomTip(I18n.t("myChordSymbolLine.formatBtn.tip"),
+                        (int) posX + 5,
+                        (int)(posY + Settings.getRowHeight()));
                 lastTipButton = -2;
                 lastTipKeyRow = -1;
             }
@@ -1645,28 +1647,32 @@ public class MyController {
                 if (lastTipButton != -4 || lastTipKeyRow != keyRow) {
                     MyXiloKey key = this.keyboard.getKey(keyRow);
                     this.buttons.hideTip();
-                    this.buttons.showCustomTip(key.getNoteName() + " " + key.getMidi(), posX, posY);
+                    this.buttons.showCustomTip(key.getNoteName() + " " + key.getMidi(),
+                            (int)(posX + 2 * Settings.getColWidth()), (int) posY);
                     lastTipButton = -4;
                     lastTipKeyRow = keyRow;
                 }
             } else if (this.keyboard.whichSlideKey(posX, posY) != -1) {
                 if (lastTipButton != -5) {
                     this.buttons.hideTip();
-                    this.buttons.showCustomTip(I18n.t("myXiloKey.slide.tip"), posX, posY);
+                    this.buttons.showCustomTip(I18n.t("myXiloKey.slide.tip"),
+                            (int)(posX + 2 * Settings.getColWidth()), (int) posY);
                     lastTipButton = -5;
                     lastTipKeyRow = -1;
                 }
             } else if (this.myLyrics != null && this.myLyrics.contains(posX, posY)) {
                 if (lastTipButton != -6) {
                     this.buttons.hideTip();
-                    this.buttons.showCustomTip(I18n.t("myLyrics.tip"), posX, posY);
+                    int lyricsBottom = (int)(this.myLyrics.getScreenPosY() + this.myLyrics.getHeight()) + 3;
+                    this.buttons.showCustomTip(I18n.t("myLyrics.tip"), (int) posX, lyricsBottom);
                     lastTipButton = -6;
                     lastTipKeyRow = -1;
                 }
             } else if (this.allPurposeScore.whichRow(posX, posY) != -1) {
                 if (lastTipButton != -7) {
                     this.buttons.hideTip();
-                    this.buttons.showCustomTip(I18n.t("myGridScore.tip"), posX, posY);
+                    int gridBottom = (int)(this.allPurposeScore.getScreenPosY() + this.allPurposeScore.getHeight()) + 3;
+                    this.buttons.showCustomTip(I18n.t("myGridScore.tip"), (int) posX, gridBottom);
                     lastTipButton = -7;
                     lastTipKeyRow = -1;
                 }
@@ -1680,7 +1686,7 @@ public class MyController {
         }
         this.drawFull(true);
     }
-    
+
     /** Returns the last intermediate row processed (or startRow if none). */
     private int interpolateCells(int startRow, int startCol, int endRow, int endCol) {
         boolean right = this.allPurposeScore.isUseScreenKeyboardRight();
