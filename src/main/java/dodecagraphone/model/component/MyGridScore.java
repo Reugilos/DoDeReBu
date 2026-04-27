@@ -16,6 +16,7 @@ import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
+import java.awt.Cursor;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
@@ -1064,6 +1065,10 @@ public class MyGridScore extends MyComponent {
      * @param g
      */
     public void drawFullGridinOffscreen() {
+        java.awt.Component panel = (controller != null && controller.getUi() != null)
+                ? controller.getUi().getPanel() : null;
+        if (panel != null) panel.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        try {
         synchronized (offscreenGraphics) {
             // Esborrem el buffer sencer per eliminar línies divisòries antigues
             // (les línies de compàs poden deixar píxels residuals si el compàs ha canviat).
@@ -1095,6 +1100,9 @@ public class MyGridScore extends MyComponent {
             if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
             drawSelectionOverlay(offscreenGraphics);
             setGridColorsHaveChanged(false);
+        }
+        } finally {
+            if (panel != null) panel.setCursor(Cursor.getDefaultCursor());
         }
     }
 
@@ -1856,6 +1864,13 @@ public class MyGridScore extends MyComponent {
     public int getBaseNBeatsMeasure() { return baseNBeatsMeasure; }
     public int getBaseBeatFigure()    { return (baseBeatFigure > 0) ? baseBeatFigure : beatFigure; }
 
+    public int getBaseColsPerMeasure() {
+        int colsBeat     = (baseNColsBeat     > 0) ? baseNColsBeat     : Settings.getnColsBeat();
+        int beatsMeasure = (baseNBeatsMeasure > 0) ? baseNBeatsMeasure : numBeatsMeasure;
+        int cols = colsBeat * beatsMeasure;
+        return cols > 0 ? cols : 1;
+    }
+
     /**
      * Retorna el nombre de columnes per pàgina congelat en la inicialització.
      * Si encara no s'ha calculat, usa getNumColsPage() com a fallback.
@@ -2225,7 +2240,7 @@ public class MyGridScore extends MyComponent {
         int curNBeatsMeasure = (baseNBeatsMeasure  > 0) ? baseNBeatsMeasure  : getNumBeatsMeasure();
         int colInBeat        = 0;
         int beatInMeasure    = 0;
-        int measure          = 1;  // 1-based
+        int measure          = Settings.isHasAnacrusis() ? 0 : 1;
         int beat             = 1;  // 1-based
 
         for (int c = 0; c <= col; c++) {

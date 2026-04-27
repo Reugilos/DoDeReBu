@@ -154,11 +154,23 @@ public class MyCamera extends MyComponent {
     }
     
     /**
-     * Moves the score forward by exactly one page (fixedColsPerPage columns).
+     * Moves the score forward by exactly one page.
+     * With fit anacrusis active, the first page spans one extra measure.
      */
     public void nextPage() {
-        int cols = score.getFixedColsPerPage();
-        int newCol = score.getCurrentCol() + cols;
+        boolean left = !this.controller.getAllPurposeScore().isUseScreenKeyboardRight();
+        int minCol     = Settings.getInitialCurrentCol(left, score);
+        int normalCols = score.getFixedColsPerPage();
+        int currentCol = score.getCurrentCol();
+
+        int jump;
+        if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
+            int fitPageCols = normalCols + score.getBaseColsPerMeasure();
+            jump = (currentCol < minCol + fitPageCols) ? fitPageCols : normalCols;
+        } else {
+            jump = normalCols;
+        }
+        int newCol = currentCol + jump;
         if (newCol <= Settings.getnColsScore()) {
             score.setCurrentCol(newCol);
         }
@@ -167,14 +179,27 @@ public class MyCamera extends MyComponent {
     }
 
     /**
-     * Moves the score backward by exactly one page (fixedColsPerPage columns).
+     * Moves the score backward by exactly one page.
+     * With fit anacrusis active, going back from the second page returns to the start.
      */
     public void prevPage() {
-        int cols = score.getFixedColsPerPage();
         boolean left = !this.controller.getAllPurposeScore().isUseScreenKeyboardRight();
-        int minCol = Settings.getInitialCurrentCol(left, score);
-        int newCol = score.getCurrentCol() - cols;
-        score.setCurrentCol(Math.max(minCol, newCol));
+        int normalCols = score.getFixedColsPerPage();
+        int minCol     = Settings.getInitialCurrentCol(left, score);
+        int currentCol = score.getCurrentCol();
+
+        int newCol;
+        if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
+            int fitPageCols = normalCols + score.getBaseColsPerMeasure();
+            if (currentCol <= minCol + fitPageCols) {
+                newCol = minCol;
+            } else {
+                newCol = Math.max(minCol + fitPageCols, currentCol - normalCols);
+            }
+        } else {
+            newCol = Math.max(minCol, currentCol - normalCols);
+        }
+        score.setCurrentCol(newCol);
         updateCurrentPage();
         this.playing = false;
     }

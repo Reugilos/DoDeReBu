@@ -2484,7 +2484,10 @@ public class MyController {
         // Aplica els canvis de paràmetres registrats a la columna actual
         applyChangesAt(getEditingCol());
 
-        // Mostra el número de compàs i el beat actual (1-based), tenint en
+        // Detecta anacrusa automàticament (primer beat buit → compàs 0)
+        if (allPurposeScore != null) detectAnacrusis();
+
+        // Mostra el número de compàs i el beat actual, tenint en
         // compte els canvis de compàs registrats al changeMap.
         int editCol = getEditingCol();
         int[] mb = allPurposeScore.getMeasureAndBeatAt(editCol);
