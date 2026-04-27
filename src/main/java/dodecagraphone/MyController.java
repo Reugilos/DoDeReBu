@@ -961,7 +961,6 @@ public class MyController {
 
     /** Afegeix una nota al cell (row,col) del track actual i la registra al mouseSequence. */
     private void addNoteAtCell(int row, int col) {
-        boolean wasEmpty = (this.allPurposeScore.getLastColWritten() == 0);
         MyTrack tr = this.mixer.getCurrentTrack();
         tr.oneNoteMore();
         MyGridSquare sq = this.allPurposeScore.addNoteToSquare(row, col, 1, Settings.getnRowsSquare(),
@@ -978,7 +977,6 @@ public class MyController {
         if (col + 1 > this.allPurposeScore.getLastColWritten())
             this.allPurposeScore.setLastColWritten(col + 1);
         this.allPurposeScore.updateStopMarker();
-        if (col < Settings.getnColsBeat() || wasEmpty) refreshAnacrusis();
     }
 
     /** Elimina la nota al cell (row,col) del track actual i la registra al mouseSequence. */
@@ -990,7 +988,6 @@ public class MyController {
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId());
         if (note == null) return;
         this.allPurposeScore.updateStopMarker();
-        if (col < Settings.getnColsBeat()) refreshAnacrusis();
         mouseSequence.addChange(square, false,
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
                 note.getVelocity(), note.isVisible(), !note.isAudible(), note.isLinked(),
@@ -1363,6 +1360,7 @@ public class MyController {
                 pasteCurrentCol = -1;
                 this.lastRowPressed = -1;
                 this.lastColPressed = -1;
+                refreshAnacrusis();
                 return;
             }
             if (dragMode == DragMode.MOVE) {
@@ -1446,6 +1444,7 @@ public class MyController {
             dragMode = DragMode.NONE;
             extendStartRow = -1;
             extendStartCol = -1;
+            refreshAnacrusis();
 
             this.keyboard.stop(lastRowPressed);
             this.keyboard.getKey(this.lastRowPressed).doNotHighlight(this.allPurposeScore.isUseScreenKeyboardRight());
