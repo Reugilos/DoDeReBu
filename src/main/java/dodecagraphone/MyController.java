@@ -1,4 +1,4 @@
-﻿package dodecagraphone;
+package dodecagraphone;
 
 import dodecagraphone.model.MyChoice;
 import dodecagraphone.model.MyKeyCircles;
