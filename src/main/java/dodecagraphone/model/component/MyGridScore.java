@@ -1485,8 +1485,21 @@ public class MyGridScore extends MyComponent {
 //                    null);
             
             drawImageClamped(g, this.getOffscreenImage(),
-                    x1, y1, x1 + w, y1 + h, // destí (pantalla) 
+                    x1, y1, x1 + w, y1 + h, // destí (pantalla)
                     x2, 0, x2 + w2, h);
+
+            // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
+            int stopC = this.controller.getAllPurposeScore().getStopCol();
+            if (stopC > 0) {
+                int sx = (int) Math.floor(this.getScreenX(stopC));
+                Stroke saved = g.getStroke();
+                g.setColor(Color.BLACK);
+                g.setStroke(new BasicStroke(3));
+                g.drawLine(sx, y1, sx, y1 + h);
+                g.setStroke(new BasicStroke(2));
+                g.drawLine(sx + 4, y1, sx + 4, y1 + h);
+                g.setStroke(saved);
+            }
 
         }
     }
