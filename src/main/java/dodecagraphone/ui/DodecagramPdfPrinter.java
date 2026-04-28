@@ -22,7 +22,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
-public class DodecagraPdfPrinter {
+public class DodecagramPdfPrinter {
 
     private final MyController controller;
     private static final float PAGE_W  = PDRectangle.A4.getWidth();
@@ -36,7 +36,7 @@ public class DodecagraPdfPrinter {
     private static final float DOUBLE_BAR_GAP = 3f;
     private static final int   TARGET_ROWS    = 4;
 
-    public DodecagraPdfPrinter(MyController controller) {
+    public DodecagramPdfPrinter(MyController controller) {
         this.controller = controller;
     }
 
