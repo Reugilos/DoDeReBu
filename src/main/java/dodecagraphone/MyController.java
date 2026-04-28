@@ -1966,7 +1966,7 @@ public class MyController {
         System.out.println("MyController::onPrintButtonPressed()");
         String defaultName = allPurposeScore.getTitle();
         if (defaultName == null || defaultName.isBlank()) defaultName = "partitura";
-        defaultName = defaultName.trim().replaceAll("[^\\w\\-.]", "_") + ".pdf";
+        defaultName = defaultName.trim().replaceAll("[^\\w\\-.]", "_") + ".ddcgr.pdf";
         String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
         if (fitxer == null || fitxer.isBlank()) {
             if (togg != null) togg.setPressed(false);
