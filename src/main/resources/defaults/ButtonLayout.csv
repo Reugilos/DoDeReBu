@@ -36,6 +36,7 @@ Id;Name;IsToggle;Row;Col;TextOn;TextOff;TipText;IsActive
 28;NamesVsHideButton;T;13;1;buttonLayout.NamesVsHideButton.textOn;buttonLayout.NamesVsHideButton.textOff;buttonLayout.NamesVsHideButton.tipText;On
 29;AbsoluteVsMobileDoButton;T;13;2;buttonLayout.AbsoluteVsMobileDoButton.textOn;buttonLayout.AbsoluteVsMobileDoButton.textOff;buttonLayout.AbsoluteVsMobileDoButton.tipText;On
 30;MixerButton;T;13;3;buttonLayout.MixerButton.textOn;buttonLayout.MixerButton.textOff;buttonLayout.MixerButton.tipText;On
-37;ChordSymbolsButton;B;14;1;buttonLayout.ChordSymbolsButton.textOn;;buttonLayout.ChordSymbolsButton.tipText;On
+37;ExportButton;B;14;1;buttonLayout.ExportButton.textOn;;buttonLayout.ExportButton.tipText;On
 38;HelpButton;B;14;2;buttonLayout.HelpButton.textOn;;buttonLayout.HelpButton.tipText;On
 40;TipsButton;T;14;3;buttonLayout.TipsButton.textOn;buttonLayout.TipsButton.textOff;buttonLayout.TipsButton.tipText;On
+41;PrintButton;B;15;1;buttonLayout.PrintButton.textOn;;buttonLayout.PrintButton.tipText;On

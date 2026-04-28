@@ -40,6 +40,7 @@ import dodecagraphone.ui.MeterDialog;
 import dodecagraphone.ui.MeterDialog.MeterData;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.MyUserInterface;
+import dodecagraphone.ui.ScorePdfPrinter;
 import dodecagraphone.ui.SVGandPDF;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
@@ -637,6 +638,10 @@ public class MyController {
 
     public MyLyrics getMyLyrics() {
         return myLyrics;
+    }
+
+    public MyChordSymbolLine getMyChordSymbolLine() {
+        return myChordSymbolLine;
     }
 
     public MyButtonPanel getButtons() {
@@ -1929,8 +1934,8 @@ public class MyController {
         }
     }
     
-    public void onChordSymbolsButtonPressed(MyButton togg) {
-        System.out.println("MyController::onChordSymbolsButtonPressed()");
+    public void onExportButtonPressed(MyButton togg) {
+        System.out.println("MyController::onExportButtonPressed()");
         SVGandPDF svg = new SVGandPDF(this);
         try {
             String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, "export.svg", "svg");
@@ -1956,7 +1961,41 @@ public class MyController {
         }
         if (togg!=null) togg.setPressed(false);
     }
-    
+
+    public void onPrintButtonPressed(MyButton togg) {
+        System.out.println("MyController::onPrintButtonPressed()");
+        String defaultName = allPurposeScore.getTitle();
+        if (defaultName == null || defaultName.isBlank()) defaultName = "partitura";
+        defaultName = defaultName.trim().replaceAll("[^\\w\\-.]", "_") + ".pdf";
+        String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
+        if (fitxer == null || fitxer.isBlank()) {
+            if (togg != null) togg.setPressed(false);
+            return;
+        }
+        File file = new File(fitxer);
+        if (file.exists()) {
+            int resposta = JOptionPane.showConfirmDialog(
+                    null,
+                    I18n.t("file.overwrite"),
+                    I18n.t("MyController.dialog.confirm.title"),
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (resposta == JOptionPane.NO_OPTION) {
+                if (togg != null) togg.setPressed(false);
+                return;
+            }
+        }
+        try {
+            new ScorePdfPrinter(this).print(file);
+        } catch (Exception ex) {
+            MyDialogs.mostraError(
+                    I18n.f("print.error", ex.getMessage()),
+                    I18n.t("MyController.dialog.error.title"));
+            System.err.println("PDF error: " + ex.getMessage());
+        }
+        if (togg != null) togg.setPressed(false);
+    }
+
     public void onPlayButtonPressed(MyButton togg) {
 //        System.out.println("MyController::onPlayButtonPressed()");
         if (togg.isPressed()) {
@@ -2365,16 +2404,6 @@ public class MyController {
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
     }
 
-    public static final String[] SymbolOptions =
-    new String[] { "Interval", "Docecanotes", "Symbol", "Position", "Notes" };
-
-    public static int which = 0;
-    
-    public void onChordSymbolsButtonPressed_future(MyButton togg) { // Should change MyButton for CircularButton.
-        togg.setText(SymbolOptions[which]);
-        which = (which + 1) % SymbolOptions.length; 
-    }
-
     public void onTransposeDownButtonPressed(MyButton togg) {
         if (cam.isPlaying()) { togg.setPressed(false); return; }
         this.transpose(-1);
@@ -2718,9 +2747,7 @@ public class MyController {
         }
         needsSaving = true;
         // Redibuixa les franges que tenen línies de beat/compàs depenents del changeMap
-        this.allPurposeScore.drawFullGridinOffscreen();
-        this.myChordSymbolLine.drawFullChordLineInOffscreen();
-        this.myLyrics.drawFullLyricsInOffscreen();
+        this.cam.drawFullCamInOffscreen();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
         this.updateTextOfButtons();
         this.drawFull(true);

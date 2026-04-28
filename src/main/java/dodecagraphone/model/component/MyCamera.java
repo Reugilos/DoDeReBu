@@ -286,8 +286,17 @@ public class MyCamera extends MyComponent {
     }
 
     /**
+     * Redraws all three full offscreen buffers (grid, chord line, lyrics).
+     */
+    public void drawFullCamInOffscreen() {
+        score.drawFullGridinOffscreen();
+        chordSymbolLine.drawFullChordLineInOffscreen();
+        lyrics.drawFullLyricsInOffscreen();
+    }
+
+    /**
      * Draws the playbar, a thin vertical rectangle.
-     * @param g 
+     * @param g
      */
     public void drawPlayBar(Graphics2D g){
         double rh = Settings.getRowHeight();

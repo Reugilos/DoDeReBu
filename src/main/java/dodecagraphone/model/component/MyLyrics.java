@@ -54,6 +54,7 @@ public class MyLyrics extends MyComponent {
     private int          editCursorCharPos = 0;
     /** Row (0/1/2) currently assigned to the text being typed. */
     private int          previewRow        = 1;
+    private volatile boolean needsDrawing  = true;
 
     /**
      * @param firstCol  col within parent (camera)
@@ -137,6 +138,7 @@ public class MyLyrics extends MyComponent {
         int w   = computeWidthCols(text);
         int row = assignRow(col, w, segs);
         segs.add(new LyricSegment(col, track, text, row, w));
+        needsDrawing = true;
     }
 
     /**
@@ -146,6 +148,7 @@ public class MyLyrics extends MyComponent {
         List<LyricSegment> segs = lyricsByTrack.get(track);
         if (segs != null) {
             segs.removeIf(s -> s.col == col);
+            needsDrawing = true;
         }
     }
 
@@ -161,7 +164,7 @@ public class MyLyrics extends MyComponent {
         }
         lyricsByTrack.clear();
         displayTrackId = 0;
-        if (offscreenGraphics != null) drawFullLyricsInOffscreen();
+        if (offscreenGraphics != null) { needsDrawing = true; drawFullLyricsInOffscreen(); }
     }
 
     /**
@@ -174,6 +177,7 @@ public class MyLyrics extends MyComponent {
         if (this.displayTrackId != trackId) {
             this.displayTrackId = trackId;
             if (offscreenGraphics != null) {
+                needsDrawing = true;
                 drawFullLyricsInOffscreen();
             }
         }
@@ -283,6 +287,9 @@ public class MyLyrics extends MyComponent {
     /** Returns true while the lyrics strip is in inline edit mode. */
     public boolean isEditMode() { return editMode; }
 
+    public boolean isNeedsDrawing() { return needsDrawing; }
+    public void setNeedsDrawing(boolean needsDrawing) { this.needsDrawing = needsDrawing; }
+
     /**
      * Enters inline edit mode at {@code col} for {@code track}.
      * If a committed segment already exists at that position its text is loaded
@@ -319,7 +326,7 @@ public class MyLyrics extends MyComponent {
             editCursorCharPos = 0;
         }
         updatePreviewRow();
-        if (offscreenGraphics != null) drawFullLyricsInOffscreen();
+        if (offscreenGraphics != null) { needsDrawing = true; drawFullLyricsInOffscreen(); }
     }
 
     /**
@@ -329,7 +336,7 @@ public class MyLyrics extends MyComponent {
     public void exitEditMode() {
         commitCurrentWord();
         editMode = false;
-        if (offscreenGraphics != null) drawFullLyricsInOffscreen();
+        if (offscreenGraphics != null) { needsDrawing = true; drawFullLyricsInOffscreen(); }
     }
 
     /**
@@ -345,12 +352,12 @@ public class MyLyrics extends MyComponent {
         } else if (code == KeyEvent.VK_LEFT) {
             if (editCursorCharPos > 0) {
                 editCursorCharPos--;
-                drawFullLyricsInOffscreen();
+                needsDrawing = true; drawFullLyricsInOffscreen();
             }
         } else if (code == KeyEvent.VK_RIGHT) {
             if (editCursorCharPos < editBuffer.length()) {
                 editCursorCharPos++;
-                drawFullLyricsInOffscreen();
+                needsDrawing = true; drawFullLyricsInOffscreen();
             }
         } else if (code == KeyEvent.VK_BACK_SPACE) {
             if (editCursorCharPos > 0) {
@@ -358,7 +365,7 @@ public class MyLyrics extends MyComponent {
                 editBuffer.deleteCharAt(editCursorCharPos - 1);
                 editCursorCharPos--;
                 updatePreviewRow();
-                drawFullLyricsInOffscreen();
+                needsDrawing = true; drawFullLyricsInOffscreen();
             } else if (editBuffer.length() == 0) {
                 // Buffer buit: torna al segment anterior i carrega'l per editar
                 List<LyricSegment> segs = lyricsByTrack.get(editTrack);
@@ -376,7 +383,7 @@ public class MyLyrics extends MyComponent {
                         editCursorCharPos = editBuffer.length(); // cursor al final
                         segs.remove(prev);
                         updatePreviewRow();
-                        drawFullLyricsInOffscreen();
+                        needsDrawing = true; drawFullLyricsInOffscreen();
                     }
                 }
             }
@@ -394,7 +401,7 @@ public class MyLyrics extends MyComponent {
             }
             editCursorCharPos = 0;  // cursor al principi
             updatePreviewRow();
-            drawFullLyricsInOffscreen();
+            needsDrawing = true; drawFullLyricsInOffscreen();
         } else if (code == KeyEvent.VK_SPACE) {
             commitCurrentWord();  // reseteja editBuffer i editCursorCharPos
             // Advance to next note column (or next beat if no note found)
@@ -408,7 +415,7 @@ public class MyLyrics extends MyComponent {
             }
             editCursorCharPos = 0;  // cursor al principi del segment (nou o existent)
             updatePreviewRow();
-            drawFullLyricsInOffscreen();
+            needsDrawing = true; drawFullLyricsInOffscreen();
         }
         return true; // consume all key events while in edit mode
     }
@@ -441,14 +448,14 @@ public class MyLyrics extends MyComponent {
             }
             editCursorCharPos = 0;  // cursor al principi del segment nou
             updatePreviewRow();
-            drawFullLyricsInOffscreen();
+            needsDrawing = true; drawFullLyricsInOffscreen();
             return true;
         }
         // Normal character: insert at cursor position and advance
         editBuffer.insert(editCursorCharPos, c);
         editCursorCharPos++;
         updatePreviewRow();
-        drawFullLyricsInOffscreen();
+        needsDrawing = true; drawFullLyricsInOffscreen();
         return true;
     }
 
@@ -562,6 +569,10 @@ public class MyLyrics extends MyComponent {
      * into it. Call this whenever the score layout changes (mirrors
      * MyChordSymbolLine.initOffscreen()).
      */
+    public java.awt.image.BufferedImage getOffscreenImage() {
+        return offscreenImage;
+    }
+
     public void initOffscreen() {
         if (offscreenGraphics != null) {
             offscreenGraphics.dispose();
@@ -574,6 +585,7 @@ public class MyLyrics extends MyComponent {
                 RenderingHints.VALUE_ANTIALIAS_ON);
         Utilities.printOutWithPriority(false,
                 "MyLyrics::initOffscreen: w=" + w + ", h=" + h);
+        needsDrawing = true;
         drawFullLyricsInOffscreen();
     }
 
@@ -584,6 +596,7 @@ public class MyLyrics extends MyComponent {
      */
     public void drawFullLyricsInOffscreen() {
         synchronized (offscreenGraphics) {
+            if (!needsDrawing) return;
             // Clear background
             offscreenGraphics.setColor(Color.WHITE);
             offscreenGraphics.fillRect(0, 0,
@@ -622,6 +635,7 @@ public class MyLyrics extends MyComponent {
                         editBuffer.toString(), previewRow, 0);
                 drawSegment(preview, offscreenGraphics);
             }
+            needsDrawing = false;
         }
     }
 
@@ -705,6 +719,7 @@ public class MyLyrics extends MyComponent {
                     "MyLyrics::draw: drawing " + this.getClass());
         }
         if (offscreenImage != null) {
+            if (needsDrawing) drawFullLyricsInOffscreen();
             boolean left = !score.isUseScreenKeyboardRight();
             int ccol = score.getCurrentCol();
 

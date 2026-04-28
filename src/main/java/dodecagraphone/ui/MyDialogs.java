@@ -197,12 +197,15 @@ public class MyDialogs {
 
     public static final String CONFIG_KEY_LAST_DIR = "lastDirectory";
     public static final String CONFIG_KEY_LAST_DIR_SVG = "lastDirectorySvg";
+    public static final String CONFIG_KEY_LAST_DIR_PDF = "lastDirectoryPdf";
     public static File lastDirectory = null;
     public static File lastDirectorySvg = null;
+    public static File lastDirectoryPdf = null;
 
     public static void initDialogs() {
         lastDirectory = getLastDirectoryFromConfig();
         lastDirectorySvg = getLastDirectorySvgFromConfig();
+        lastDirectoryPdf = getLastDirectoryPdfFromConfig();
     }
 
     private static File getLastDirectoryFromConfig() {
@@ -218,6 +221,17 @@ public class MyDialogs {
 
     private static File getLastDirectorySvgFromConfig() {
         String path = AppConfig.get().get(CONFIG_KEY_LAST_DIR_SVG, null);
+        if (path != null) {
+            File dir = new File(path);
+            if (dir.exists() && dir.isDirectory()) {
+                return dir;
+            }
+        }
+        return new File(System.getProperty("user.dir"));
+    }
+
+    private static File getLastDirectoryPdfFromConfig() {
+        String path = AppConfig.get().get(CONFIG_KEY_LAST_DIR_PDF, null);
         if (path != null) {
             File dir = new File(path);
             if (dir.exists() && dir.isDirectory()) {
@@ -286,34 +300,24 @@ public class MyDialogs {
      * cancel·la.
      */
     public static String seleccionaFitxerEscriptura(Component parent, String defaultFile, String fileType) {
-        File lastDir = lastDirectory;
         boolean isSvg = "svg".equalsIgnoreCase(fileType);
-        if (isSvg) {
-            lastDir = lastDirectorySvg;
-        }
+        boolean isPdf = "pdf".equalsIgnoreCase(fileType);
 
-//        try {
-//            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-//        } catch (Exception ignored) {
-//        }
-//
+        File lastDir = lastDirectory;
+        if (isSvg) lastDir = lastDirectorySvg;
+        else if (isPdf) lastDir = lastDirectoryPdf;
+
         File cwd = new File(System.getProperty("user.dir"));
         File startDir = (lastDir != null && lastDir.exists()) ? lastDir : cwd;
 
+        final String ext = isSvg ? "svg" : isPdf ? "pdf" : "mid";
         JFileChooser chooser = new JFileChooser(startDir) {
             @Override
             public void approveSelection() {
                 File f = getSelectedFile();
-                if (f == null) {
-                    super.approveSelection();
-                    return;
-                }
-
-                File fixed = ensureExtensionOnce(f, isSvg ? "svg" : "mid");
-                if (!fixed.equals(f)) {
-                    setSelectedFile(fixed);
-                }
-
+                if (f == null) { super.approveSelection(); return; }
+                File fixed = ensureExtensionOnce(f, ext);
+                if (!fixed.equals(f)) setSelectedFile(fixed);
                 super.approveSelection();
             }
         };
@@ -323,6 +327,8 @@ public class MyDialogs {
 
         if (isSvg) {
             chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(I18n.t("dialogs.fileFilter.svg"), "svg"));
+        } else if (isPdf) {
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(I18n.t("print.pdfFilter"), "pdf"));
         } else {
             chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(I18n.t("dialogs.fileFilter.midi"), "mid", "midi"));
         }
@@ -330,28 +336,20 @@ public class MyDialogs {
         if (defaultFile != null && !defaultFile.trim().isEmpty()) {
             String df = defaultFile.trim();
             File suggested = new File(df);
-            if (!suggested.isAbsolute()) {
-                suggested = new File(startDir, df);
-            }
+            if (!suggested.isAbsolute()) suggested = new File(startDir, df);
             chooser.setSelectedFile(suggested);
         }
 
         int result = chooser.showSaveDialog(parent);
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return null;
-        }
+        if (result != JFileChooser.APPROVE_OPTION) return null;
 
         File selected = chooser.getSelectedFile();
-        if (selected == null) {
-            return null;
-        }
+        if (selected == null) return null;
 
-        lastDir = selected.getParentFile();
-        if (isSvg) {
-            lastDirectorySvg = lastDir;
-        } else {
-            lastDirectory = lastDir;
-        }
+        File parentDir = selected.getParentFile();
+        if (isSvg) lastDirectorySvg = parentDir;
+        else if (isPdf) lastDirectoryPdf = parentDir;
+        else lastDirectory = parentDir;
 
         return selected.getAbsolutePath();
     }
@@ -359,17 +357,8 @@ public class MyDialogs {
     private static File ensureExtensionOnce(File f, String ext) {
         String path = f.getAbsolutePath();
         String lower = path.toLowerCase();
-
-        if ("svg".equals(ext)) {
-            if (lower.endsWith(".svg")) {
-                return f;
-            }
-            return new File(path + ".svg");
-        }
-
-        if (lower.endsWith(".mid") || lower.endsWith(".midi")) {
-            return f;
-        }
-        return new File(path + ".mid");
+        if (lower.endsWith("." + ext)) return f;
+        if ("mid".equals(ext) && lower.endsWith(".midi")) return f;
+        return new File(path + "." + ext);
     }
 }

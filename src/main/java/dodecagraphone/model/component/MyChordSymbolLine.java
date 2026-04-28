@@ -44,7 +44,11 @@ public class MyChordSymbolLine extends MyComponent {
 
     public void cycleDisplayFormat() {
         displayFormatIdx = (displayFormatIdx + 1) % ChordSymbols.DISPLAY_FORMATS.length;
+        needsDrawing = true;
     }
+
+    public boolean isNeedsDrawing() { return needsDrawing; }
+    public void setNeedsDrawing(boolean needsDrawing) { this.needsDrawing = needsDrawing; }
 
     /** Background colour for tempo change markers (white text on blue). */
     private static final Color COLOR_TEMPO_BG = new Color(0, 90, 190);
@@ -55,6 +59,7 @@ public class MyChordSymbolLine extends MyComponent {
     /** Cached chord font and the row height it was computed for. */
     private Font   cachedChordFont   = null;
     private double cachedChordRowH   = 0;
+    private volatile boolean needsDrawing = true;
 
     /** Line gap in pixels between chord text lines (tighter than font leading). */
     private static final int LINE_GAP = 1;
@@ -447,6 +452,25 @@ public class MyChordSymbolLine extends MyComponent {
      * draws the full content into it.  Call this whenever the score layout or
      * chord data changes (mirrors MyGridScore.initOffscreen()).
      */
+    public BufferedImage getOffscreenImage() {
+        return offscreenImage;
+    }
+
+    public void drawInitialMarkersAt(Graphics2D g, int tempo, int midiKey, char scaleMode) {
+        int yOff = 0;
+        if (tempo > 0) yOff += drawTempoMark(0, tempo, g, true, yOff);
+        if (midiKey >= 0) yOff += drawKeyMark(0, midiKey, scaleMode, g, true, yOff);
+    }
+
+    /** Draws the col-0 marks (tempo/key) from the changeMap, with fallback defaults. */
+    public void drawInitialMarkersAt(Graphics2D g) {
+        MyGridScore.ScoreChange sc0 = score.getChangeMap().get(0);
+        int tempo     = (sc0 != null && sc0.tempo     != null) ? sc0.tempo     : Settings.DEFAULT_TEMPO;
+        int midiKey   = (sc0 != null && sc0.midiKey   != null) ? sc0.midiKey   : ToneRange.getDefaultKey();
+        char scaleMode = (sc0 != null && sc0.scaleMode != null) ? sc0.scaleMode : ToneRange.getDefaultMode();
+        drawInitialMarkersAt(g, tempo, midiKey, scaleMode);
+    }
+
     public void initOffscreen() {
         if (offscreenGraphics != null) {
             offscreenGraphics.dispose();
@@ -457,6 +481,7 @@ public class MyChordSymbolLine extends MyComponent {
         offscreenGraphics = offscreenImage.createGraphics();
         offscreenGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         Utilities.printOutWithPriority(false, "MyChordSymbolLine::initOffscreen: w=" + w + ", h=" + h);
+        needsDrawing = true;
         drawFullChordLineInOffscreen();
     }
 
@@ -466,6 +491,7 @@ public class MyChordSymbolLine extends MyComponent {
      */
     public void drawFullChordLineInOffscreen() {
         synchronized (offscreenGraphics) {
+            if (!needsDrawing) return;
             // Clear background
             offscreenGraphics.setColor(Color.WHITE);
             offscreenGraphics.fillRect(0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
@@ -531,6 +557,7 @@ public class MyChordSymbolLine extends MyComponent {
             }
             // Línia final (columna numCols)
             if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
+            needsDrawing = false;
         }
     }
 
@@ -589,6 +616,7 @@ public class MyChordSymbolLine extends MyComponent {
         g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
 
         if (offscreenImage != null) {
+            if (needsDrawing) drawFullChordLineInOffscreen();
             // ---- Offscreen path: extract visible slice ----
             boolean left = !score.isUseScreenKeyboardRight();
             int ccol = score.getCurrentCol();
