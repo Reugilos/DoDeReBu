@@ -25,13 +25,15 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 public class ScorePdfPrinter {
 
     private final MyController controller;
-    private static final float PAGE_W = PDRectangle.A4.getWidth();
-    private static final float PAGE_H = PDRectangle.A4.getHeight();
-    private static final float MARGIN = 18f;
+    private static final float PAGE_W  = PDRectangle.A4.getWidth();
+    private static final float PAGE_H  = PDRectangle.A4.getHeight();
+    private static final float MARGIN         = 18f;
     private static final float FIRST_HEADER_H = 44f;
     private static final float SHORT_HEADER_H = 18f;
-    private static final float ROW_GAP = 6f;
+    private static final float ROW_GAP        = 6f;
     private static final float MEASURE_LABEL_H = 10f;
+    private static final float BORDER_W       = 2f;
+    private static final float DOUBLE_BAR_GAP = 3f;
 
     public ScorePdfPrinter(MyController controller) {
         this.controller = controller;
@@ -43,7 +45,7 @@ public class ScorePdfPrinter {
         MyLyrics lyrics = controller.getMyLyrics();
         controller.getCam().drawFullCamInOffscreen();
 
-        BufferedImage gridImg = score.getOffscreenImage();
+        BufferedImage gridImg  = score.getOffscreenImage();
         BufferedImage chordImg = chordLine.getOffscreenImage();
         BufferedImage lyricsImg = lyrics.getOffscreenImage();
 
@@ -52,46 +54,40 @@ public class ScorePdfPrinter {
         int stopCol = score.getStopCol();
         if (stopCol <= 0) return;
 
-        int colWidthPx = (int) Math.max(1, Math.ceil(Settings.getColWidth()));
+        int colWidthPx    = (int) Math.max(1, Math.ceil(Settings.getColWidth()));
+        int colsPerMeasure = score.getBaseColsPerMeasure();
+        if (colsPerMeasure <= 0) colsPerMeasure = 1;
+
+        // fixedCols = columnes per fila, arrodonit a múltiple de colsPerMeasure
         int fixedCols = score.getFixedColsPerPage();
-        if (fixedCols <= 0) fixedCols = 1;
+        if (fixedCols <= 0) fixedCols = colsPerMeasure;
+        fixedCols = Math.max(colsPerMeasure, (fixedCols / colsPerMeasure) * colsPerMeasure);
 
-        boolean hasFitAnacrusis = Settings.isFitAnacrusis() && Settings.isHasAnacrusis();
-        int firstPageCols = fixedCols + (hasFitAnacrusis ? score.getBaseColsPerMeasure() : 0);
-
-        int totalCols = Math.min(score.getNumCols(), stopCol + fixedCols);
-        boolean[] isMeasure = new boolean[totalCols];
-        score.computeBeatMeasureLines(totalCols, null, isMeasure);
-
-        List<int[]> scorePages = new ArrayList<>();
-        int col = 0;
-        boolean firstPage = true;
-        while (col < stopCol) {
-            int pageCols = firstPage ? firstPageCols : fixedCols;
-            int endCol = Math.min(col + pageCols, stopCol);
-            if (endCol <= col) break;
-            scorePages.add(new int[]{col, endCol});
-            col = endCol;
-            firstPage = false;
+        // Cada fila comença en un múltiple de fixedCols i té exactament fixedCols columnes.
+        // La última fila pot tenir espai buit si stopCol no és múltiple de fixedCols.
+        List<int[]> rows = new ArrayList<>();
+        for (int c = 0; c < stopCol; c += fixedCols) {
+            rows.add(new int[]{c, c + fixedCols});
         }
-        if (scorePages.isEmpty()) return;
+        if (rows.isEmpty()) return;
 
-        int chordH = chordImg.getHeight();
-        int gridH = gridImg.getHeight();
+        int chordH  = chordImg.getHeight();
+        int gridH   = gridImg.getHeight();
         int lyricsH = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
         int scoreRowH = chordH + gridH + lyricsH;
         if (scoreRowH <= 0) return;
 
-        BufferedImage keyImg = renderNarrowKeyboard(colWidthPx, gridH);
-        int keyWidthPx = 4 * colWidthPx;
-        int scoreSliceW = fixedCols * colWidthPx;
-        float pdfUsableW = PAGE_W - 2 * MARGIN;
-        float scale = pdfUsableW / (keyWidthPx + scoreSliceW);
-        float rowPdfH = scoreRowH * scale + MEASURE_LABEL_H;
-        float keyPdfW = keyWidthPx * scale;
+        BufferedImage keyImg  = renderNarrowKeyboard(colWidthPx, gridH);
+        int keyWidthPx        = 4 * colWidthPx;
+        int fullSlicePx       = fixedCols * colWidthPx;
+        float pdfUsableW      = PAGE_W - 2 * MARGIN;
+        float scale           = pdfUsableW / (keyWidthPx + fullSlicePx);
+        float keyPdfW         = keyWidthPx * scale;
+        float rowImgPdfH      = scoreRowH * scale;
+        float rowTotalH       = MEASURE_LABEL_H + rowImgPdfH;
 
-        int rowsPerFirst = Math.max(1, (int) ((PAGE_H - 2 * MARGIN - FIRST_HEADER_H) / (rowPdfH + ROW_GAP)));
-        int rowsPerOther = Math.max(1, (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H) / (rowPdfH + ROW_GAP)));
+        int rowsPerFirst = Math.max(1, (int) ((PAGE_H - 2 * MARGIN - FIRST_HEADER_H) / (rowTotalH + ROW_GAP)));
+        int rowsPerOther = Math.max(1, (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H) / (rowTotalH + ROW_GAP)));
 
         PDFont fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
         PDFont fontNorm = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
@@ -100,13 +96,12 @@ public class ScorePdfPrinter {
             PDPage pdfPage = null;
             PDPageContentStream cs = null;
             int pdfPageNum = 0;
-            int rowOnPage = 0;
+            int rowOnPage  = 0;
             float yPos = 0;
 
-            for (int i = 0; i < scorePages.size(); i++) {
-                int[] range = scorePages.get(i);
-                int startCol = range[0];
-                int endCol = range[1];
+            for (int i = 0; i < rows.size(); i++) {
+                int startCol = rows.get(i)[0];
+                int endCol   = rows.get(i)[1];
 
                 boolean needNewPage = (pdfPage == null)
                         || (pdfPageNum == 1 && rowOnPage >= rowsPerFirst)
@@ -135,14 +130,16 @@ public class ScorePdfPrinter {
                     }
                 }
 
-                int startPx = startCol * colWidthPx;
-                int endPx = Math.min(endCol * colWidthPx, gridImg.getWidth());
-                int sliceW = endPx - startPx;
-                if (sliceW <= 0) continue;
+                // Píxels de la porció de partitura disponibles al buffer
+                int startPx  = startCol * colWidthPx;
+                int endPx    = Math.min(endCol * colWidthPx, gridImg.getWidth());
+                int sliceW   = Math.max(0, endPx - startPx);
 
+                // Imatge de la fila (sempre fullSlicePx d'amplada a la part de partitura)
                 BufferedImage rowImg = composeRow(keyImg, chordImg, gridImg, lyricsImg,
-                        keyWidthPx, startPx, sliceW, scoreRowH, chordH, gridH, lyricsH);
+                        keyWidthPx, startPx, sliceW, fullSlicePx, scoreRowH, chordH, gridH, lyricsH);
 
+                // Marques inicials (col 0) a la primera fila
                 if (startCol == 0) {
                     Graphics2D g2 = rowImg.createGraphics();
                     g2.translate(keyWidthPx, 0);
@@ -150,16 +147,30 @@ public class ScorePdfPrinter {
                     g2.dispose();
                 }
 
-                float thisRowPdfW = keyPdfW + sliceW * scale;
-                float rowPdfH_actual = scoreRowH * scale;
-                float yBottom = yPos - MEASURE_LABEL_H - rowPdfH_actual;
+                float yImgBottom = yPos - rowTotalH;
 
-                drawMeasureLabels(cs, fontNorm, score, isMeasure, startCol, endCol, colWidthPx,
-                        MARGIN + keyPdfW, yPos - MEASURE_LABEL_H + 2, scale);
+                // Número de compàs al principi de la fila (sobre la chord band)
+                drawRowStartLabel(cs, fontNorm, score, startCol,
+                        MARGIN + keyPdfW, yPos - MEASURE_LABEL_H + 2);
 
-                PDImageXObject pdImg = PDImageXObject.createFromByteArray(doc, toBytes(rowImg), "row" + i);
-                cs.drawImage(pdImg, MARGIN, yBottom, thisRowPdfW, rowPdfH_actual);
-                yPos = yBottom - ROW_GAP;
+                // Imatge rasteritzada de la fila
+                PDImageXObject pdImg = PDImageXObject.createFromByteArray(
+                        doc, toBytes(rowImg), "row" + i);
+                cs.drawImage(pdImg, MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
+
+                // Requadre de la fila (inclou l'àrea de l'etiqueta de compàs)
+                cs.setLineWidth(BORDER_W);
+                cs.setStrokingColor(Color.BLACK);
+                cs.addRect(MARGIN, yImgBottom, pdfUsableW, rowTotalH);
+                cs.stroke();
+
+                // Doble barra al stopCol si cau dins d'aquesta fila
+                if (startCol < stopCol && stopCol <= endCol) {
+                    float stopXPdf = MARGIN + keyPdfW + (stopCol - startCol) * colWidthPx * scale;
+                    drawDoubleBar(cs, stopXPdf, yImgBottom, rowImgPdfH);
+                }
+
+                yPos = yImgBottom - ROW_GAP;
                 rowOnPage++;
             }
 
@@ -168,10 +179,15 @@ public class ScorePdfPrinter {
         }
     }
 
+    // -----------------------------------------------------------------------
+    //  Composició de la imatge de fila
+    // -----------------------------------------------------------------------
+
     private BufferedImage composeRow(BufferedImage keyImg, BufferedImage chordImg,
             BufferedImage gridImg, BufferedImage lyricsImg,
-            int keyW, int startPx, int sliceW, int totalH, int chordH, int gridH, int lyricsH) {
-        int rowImgW = keyW + sliceW;
+            int keyW, int startPx, int sliceW, int fullSliceW,
+            int totalH, int chordH, int gridH, int lyricsH) {
+        int rowImgW = keyW + fullSliceW;
         BufferedImage row = new BufferedImage(rowImgW, totalH, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = row.createGraphics();
         g.setColor(Color.WHITE);
@@ -179,49 +195,64 @@ public class ScorePdfPrinter {
 
         if (keyImg != null && keyW > 0) {
             int keyH = Math.min(keyImg.getHeight(), gridH);
-            g.drawImage(keyImg, 0, chordH, keyW, chordH + keyH, 0, 0, keyImg.getWidth(), keyH, null);
+            g.drawImage(keyImg, 0, chordH, keyW, chordH + keyH,
+                        0, 0, keyImg.getWidth(), keyH, null);
         }
 
-        int chordSliceH = Math.min(chordH, chordImg.getHeight());
-        int chordSliceW = Math.min(sliceW, chordImg.getWidth() - startPx);
-        if (chordSliceW > 0 && chordSliceH > 0)
-            g.drawImage(chordImg, keyW, 0, keyW + chordSliceW, chordSliceH,
-                    startPx, 0, startPx + chordSliceW, chordSliceH, null);
+        if (sliceW > 0) {
+            int chordSliceH = Math.min(chordH, chordImg.getHeight());
+            int chordSliceW = Math.min(sliceW, chordImg.getWidth() - startPx);
+            if (chordSliceW > 0 && chordSliceH > 0)
+                g.drawImage(chordImg, keyW, 0, keyW + chordSliceW, chordSliceH,
+                        startPx, 0, startPx + chordSliceW, chordSliceH, null);
 
-        int gridSliceH = Math.min(gridH, gridImg.getHeight());
-        int gridSliceW = Math.min(sliceW, gridImg.getWidth() - startPx);
-        if (gridSliceW > 0 && gridSliceH > 0)
-            g.drawImage(gridImg, keyW, chordH, keyW + gridSliceW, chordH + gridSliceH,
-                    startPx, 0, startPx + gridSliceW, gridSliceH, null);
+            int gridSliceH = Math.min(gridH, gridImg.getHeight());
+            int gridSliceW = Math.min(sliceW, gridImg.getWidth() - startPx);
+            if (gridSliceW > 0 && gridSliceH > 0)
+                g.drawImage(gridImg, keyW, chordH, keyW + gridSliceW, chordH + gridSliceH,
+                        startPx, 0, startPx + gridSliceW, gridSliceH, null);
 
-        if (lyricsImg != null && lyricsH > 0) {
-            int lyricSliceH = Math.min(lyricsH, lyricsImg.getHeight());
-            int lyricSliceW = Math.min(sliceW, lyricsImg.getWidth() - startPx);
-            if (lyricSliceW > 0 && lyricSliceH > 0)
-                g.drawImage(lyricsImg, keyW, chordH + gridH, keyW + lyricSliceW, chordH + gridH + lyricSliceH,
-                        startPx, 0, startPx + lyricSliceW, lyricSliceH, null);
+            if (lyricsImg != null && lyricsH > 0) {
+                int lyricSliceH = Math.min(lyricsH, lyricsImg.getHeight());
+                int lyricSliceW = Math.min(sliceW, lyricsImg.getWidth() - startPx);
+                if (lyricSliceW > 0 && lyricSliceH > 0)
+                    g.drawImage(lyricsImg, keyW, chordH + gridH,
+                            keyW + lyricSliceW, chordH + gridH + lyricSliceH,
+                            startPx, 0, startPx + lyricSliceW, lyricSliceH, null);
+            }
         }
 
         g.dispose();
         return row;
     }
 
-    private void drawMeasureLabels(PDPageContentStream cs, PDFont font,
-            MyAllPurposeScore score, boolean[] isMeasure, int startCol, int endCol,
-            int colWidthPx, float xOffset, float y, float scale) throws IOException {
+    // -----------------------------------------------------------------------
+    //  Helpers de dibuix PDF
+    // -----------------------------------------------------------------------
+
+    private void drawRowStartLabel(PDPageContentStream cs, PDFont font,
+            MyAllPurposeScore score, int startCol, float x, float y) throws IOException {
+        int measure = score.getMeasureAndBeatAt(startCol)[0];
         cs.setFont(font, 7);
         cs.setNonStrokingColor(Color.DARK_GRAY);
-        for (int c = startCol; c < endCol; c++) {
-            if (c < isMeasure.length && isMeasure[c]) {
-                int measure = score.getMeasureAndBeatAt(c)[0];
-                float xPdf = xOffset + (c - startCol) * colWidthPx * scale;
-                cs.beginText();
-                cs.newLineAtOffset(xPdf, y);
-                cs.showText(String.valueOf(measure));
-                cs.endText();
-            }
-        }
+        cs.beginText();
+        cs.newLineAtOffset(x, y);
+        cs.showText(String.valueOf(measure));
+        cs.endText();
         cs.setNonStrokingColor(Color.BLACK);
+    }
+
+    private void drawDoubleBar(PDPageContentStream cs,
+            float x, float yBottom, float h) throws IOException {
+        cs.setStrokingColor(Color.BLACK);
+        cs.setLineWidth(2.5f);
+        cs.moveTo(x, yBottom);
+        cs.lineTo(x, yBottom + h);
+        cs.stroke();
+        cs.setLineWidth(1f);
+        cs.moveTo(x + DOUBLE_BAR_GAP, yBottom);
+        cs.lineTo(x + DOUBLE_BAR_GAP, yBottom + h);
+        cs.stroke();
     }
 
     private BufferedImage renderNarrowKeyboard(int colWidthPx, int gridH) {

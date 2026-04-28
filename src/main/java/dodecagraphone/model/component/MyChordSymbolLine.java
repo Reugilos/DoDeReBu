@@ -557,6 +557,19 @@ public class MyChordSymbolLine extends MyComponent {
             }
             // Línia final (columna numCols)
             if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
+
+            // Doble barra a stopCol
+            int stopC = contr.getAllPurposeScore().getStopCol();
+            if (stopC > 0 && stopC <= numCols) {
+                drawMeasureLine(stopC, offscreenGraphics, true);
+                int x2 = (int) Math.floor(stopC * Settings.getColWidth()) + 4;
+                int y2 = (int) Math.round(nRows * Settings.getRowHeight());
+                Stroke saved = offscreenGraphics.getStroke();
+                offscreenGraphics.setStroke(new BasicStroke(2));
+                offscreenGraphics.setColor(Color.BLACK);
+                offscreenGraphics.drawLine(x2, 0, x2, y2);
+                offscreenGraphics.setStroke(saved);
+            }
             needsDrawing = false;
         }
     }
