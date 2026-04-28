@@ -1491,7 +1491,7 @@ public class MyGridScore extends MyComponent {
             // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
             int stopC = this.controller.getAllPurposeScore().getStopCol();
             if (stopC > 0) {
-                int sx = (int) Math.floor(this.getScreenX(stopC));
+                int sx = (int) Math.floor(this.getScreenX(stopC)) - 1;
                 Stroke saved = g.getStroke();
                 g.setColor(Color.BLACK);
                 g.setStroke(new BasicStroke(3));

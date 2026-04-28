@@ -661,14 +661,15 @@ public class MyChordSymbolLine extends MyComponent {
             // Doble barra al stopCol — dibuixada sobre la vista (sempre actualitzada)
             int stopC = contr.getAllPurposeScore().getStopCol();
             if (stopC > 0) {
-                drawMeasureLine(stopC, g, false);
-                int sx = (int) Math.floor(score.getScreenX(stopC)) + 4;
+                int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
                 int sy1 = (int) Math.round(score.getScreenY(-nRows));
                 int sy2 = sy1 + (int) Math.round(nRows * Settings.getRowHeight());
                 Stroke saved = g.getStroke();
-                g.setStroke(new BasicStroke(2));
                 g.setColor(Color.BLACK);
+                g.setStroke(new BasicStroke(3));
                 g.drawLine(sx, sy1, sx, sy2);
+                g.setStroke(new BasicStroke(2));
+                g.drawLine(sx + 4, sy1, sx + 4, sy2);
                 g.setStroke(saved);
             }
 

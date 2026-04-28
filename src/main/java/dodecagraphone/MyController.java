@@ -270,6 +270,7 @@ public class MyController {
     }
 
     public void redrawChordLine() {
+        myChordSymbolLine.setNeedsDrawing(true);
         myChordSymbolLine.drawFullChordLineInOffscreen();
         drawFull(true);
     }
@@ -1208,6 +1209,10 @@ public class MyController {
         /* Check lyrics strip: enter inline edit mode */
         int lyricsCol = this.myLyrics.whichCol(posX, posY);
         if (lyricsCol != -1) {
+            if (this.allPurposeScore.getLastColWritten() == 0) {
+                MyDialogs.mostraMissatge(I18n.t("myLyrics.noNotes.warning"), I18n.t("myLyrics.label"));
+                return;
+            }
             int trackId = this.getMixer().getCurrentTrackId();
             this.myLyrics.startEdit(lyricsCol, trackId, posX);
             this.drawFull(true);
@@ -2982,6 +2987,7 @@ public class MyController {
         }
         AppConfig.get().set(MyDialogs.CONFIG_KEY_LAST_DIR, MyDialogs.lastDirectory.getAbsolutePath());
         AppConfig.get().set(MyDialogs.CONFIG_KEY_LAST_DIR_SVG, MyDialogs.lastDirectorySvg.getAbsolutePath());
+        AppConfig.get().set(MyDialogs.CONFIG_KEY_LAST_DIR_PDF, MyDialogs.lastDirectoryPdf.getAbsolutePath());
     }
 
     public boolean onExitCheckNSave() {
