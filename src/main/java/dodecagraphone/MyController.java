@@ -2819,7 +2819,10 @@ public class MyController {
 
     public void saveScore(String fitxer) {
         if ("".equals(fitxer)) {
-            fitxer = MyDialogs.seleccionaFitxerEscriptura(null, "provaSave.mid", "mid");
+            String defMidi = allPurposeScore.getTitle();
+            if (defMidi == null || defMidi.isBlank()) defMidi = "partitura";
+            defMidi = defMidi.trim().replaceAll("[^\\w\\-.]", "_") + ".ddcgr.mid";
+            fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
         }
         if (fitxer == null || "".equals(fitxer)) {
             this.updateTextOfButtons();

@@ -311,7 +311,7 @@ public class MyDialogs {
         File startDir = (lastDir != null && lastDir.exists()) ? lastDir : cwd;
 
         final String ext       = isSvg ? "svg" : isPdf ? "pdf"        : "mid";
-        final String fullExt   = isSvg ? "svg" : isPdf ? "ddcgr.pdf"  : "mid";
+        final String fullExt   = isSvg ? "svg" : isPdf ? "ddcgr.pdf"  : "ddcgr.mid";
         JFileChooser chooser = new JFileChooser(startDir) {
             @Override
             public void approveSelection() {
@@ -360,15 +360,19 @@ public class MyDialogs {
         String lower = path.toLowerCase();
         String dotExt = "." + ext.toLowerCase();
         if (lower.endsWith(dotExt)) return f;
-        if ("mid".equals(ext) && lower.endsWith(".midi")) return f;
-        // Si l'extensió és composta (ex. "ddcgr.pdf") i l'usuari ha posat
-        // la part final (ex. ".pdf"), substituïm en lloc d'afegir.
+        // Si l'extensió és composta (ex. "ddcgr.pdf", "ddcgr.mid") i l'usuari ha posat
+        // la part final (ex. ".pdf", ".mid", ".midi"), substituïm en lloc d'afegir.
         int dotIdx = ext.lastIndexOf('.');
         if (dotIdx > 0) {
             String simpleSuffix = "." + ext.substring(dotIdx + 1).toLowerCase();
             if (lower.endsWith(simpleSuffix)) {
                 return new File(path.substring(0, path.length() - simpleSuffix.length()) + dotExt);
             }
+            if (simpleSuffix.equals(".mid") && lower.endsWith(".midi")) {
+                return new File(path.substring(0, path.length() - 5) + dotExt);
+            }
+        } else if ("mid".equals(ext) && lower.endsWith(".midi")) {
+            return f;
         }
         return new File(path + dotExt);
     }
