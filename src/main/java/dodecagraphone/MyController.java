@@ -40,7 +40,7 @@ import dodecagraphone.ui.MeterDialog;
 import dodecagraphone.ui.MeterDialog.MeterData;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.MyUserInterface;
-import dodecagraphone.ui.ScorePdfPrinter;
+import dodecagraphone.ui.DodecagraPdfPrinter;
 import dodecagraphone.ui.SVGandPDF;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
@@ -1986,7 +1986,7 @@ public class MyController {
             }
         }
         try {
-            new ScorePdfPrinter(this).print(file);
+            new DodecagraPdfPrinter(this).print(file);
         } catch (Exception ex) {
             MyDialogs.mostraError(
                     I18n.f("print.error", ex.getMessage()),

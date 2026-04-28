@@ -22,7 +22,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
-public class ScorePdfPrinter {
+public class DodecagraPdfPrinter {
 
     private final MyController controller;
     private static final float PAGE_W  = PDRectangle.A4.getWidth();
@@ -34,8 +34,9 @@ public class ScorePdfPrinter {
     private static final float MEASURE_LABEL_H = 10f;
     private static final float BORDER_W       = 2f;
     private static final float DOUBLE_BAR_GAP = 3f;
+    private static final int   TARGET_ROWS    = 4;
 
-    public ScorePdfPrinter(MyController controller) {
+    public DodecagraPdfPrinter(MyController controller) {
         this.controller = controller;
     }
 
@@ -81,13 +82,19 @@ public class ScorePdfPrinter {
         int keyWidthPx        = 4 * colWidthPx;
         int fullSlicePx       = fixedCols * colWidthPx;
         float pdfUsableW      = PAGE_W - 2 * MARGIN;
-        float scale           = pdfUsableW / (keyWidthPx + fullSlicePx);
-        float keyPdfW         = keyWidthPx * scale;
-        float rowImgPdfH      = scoreRowH * scale;
+        // scaleX omple l'ample de pàgina; scaleY comprimeix l'alçada per a TARGET_ROWS per pàgina
+        float scaleX          = pdfUsableW / (keyWidthPx + fullSlicePx);
+        float availFirst      = PAGE_H - 2 * MARGIN - FIRST_HEADER_H;
+        float maxRowImgH      = (availFirst + ROW_GAP) / TARGET_ROWS - ROW_GAP - MEASURE_LABEL_H;
+        float scaleY          = (scoreRowH > 0 && maxRowImgH > 0)
+                                ? Math.min(scaleX, maxRowImgH / scoreRowH) : scaleX;
+        float keyPdfW         = keyWidthPx * scaleX;
+        float rowImgPdfH      = scoreRowH * scaleY;
         float rowTotalH       = MEASURE_LABEL_H + rowImgPdfH;
 
-        int rowsPerFirst = Math.max(1, (int) ((PAGE_H - 2 * MARGIN - FIRST_HEADER_H) / (rowTotalH + ROW_GAP)));
-        int rowsPerOther = Math.max(1, (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H) / (rowTotalH + ROW_GAP)));
+        int rowsPerFirst = TARGET_ROWS;
+        int rowsPerOther = Math.max(TARGET_ROWS,
+                (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H + ROW_GAP) / (rowTotalH + ROW_GAP)));
 
         PDFont fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
         PDFont fontNorm = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
@@ -118,10 +125,10 @@ public class ScorePdfPrinter {
 
                     if (pdfPageNum == 1) {
                         drawText(cs, fontBold, 16, MARGIN, yPos - 16, nullSafe(score.getTitle()));
-                        String sub = nullSafe(score.getAuthor());
+                        drawText(cs, fontNorm, 10, MARGIN, yPos - 30, nullSafe(score.getAuthor()));
                         String desc = nullSafe(score.getDescription());
-                        if (!desc.isEmpty()) sub += "  —  " + desc;
-                        drawText(cs, fontNorm, 10, MARGIN, yPos - 30, sub);
+                        if (!desc.isEmpty())
+                            drawText(cs, fontNorm, 9, MARGIN, yPos - 42, desc);
                         yPos -= FIRST_HEADER_H;
                     } else {
                         drawTextRight(cs, fontBold, 10, PAGE_W - MARGIN, yPos - 12,
@@ -267,8 +274,8 @@ public class ScorePdfPrinter {
         List<Integer> choiceList = score.getChoice().getChoiceList();
         boolean isPenta = score.isShowPentagramaStrips();
         double rowH = (double) gridH / nKeys;
-        double barW = w * (1.0 - Settings.KEY_WIDTH_REDUCTION);
-        double indentX = w * Settings.KEY_WIDTH_REDUCTION;
+        double barW    = w * 0.5;
+        double indentX = w * 0.5;
         for (int keyId = 0; keyId < nKeys; keyId++) {
             int midi = ToneRange.keyIdToMidi(keyId);
             boolean inChoice = choiceList.contains(midi);
