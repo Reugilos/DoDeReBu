@@ -1,4 +1,4 @@
-package dodecagraphone;
+﻿package dodecagraphone;
 
 import dodecagraphone.model.MyChoice;
 import dodecagraphone.model.MyKeyCircles;
@@ -1966,7 +1966,7 @@ public class MyController {
         System.out.println("MyController::onPrintButtonPressed()");
         String defaultName = allPurposeScore.getTitle();
         if (defaultName == null || defaultName.isBlank()) defaultName = "partitura";
-        defaultName = defaultName.trim().replaceAll("[^\\w\\-.]", "_") + ".ddcgr.pdf";
+        defaultName = defaultName.trim().replaceAll("[^\\p{L}\\p{N}\\-._]", "_") + ".ddcgr.pdf";
         String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
         if (fitxer == null || fitxer.isBlank()) {
             if (togg != null) togg.setPressed(false);
@@ -2821,7 +2821,7 @@ public class MyController {
         if ("".equals(fitxer)) {
             String defMidi = allPurposeScore.getTitle();
             if (defMidi == null || defMidi.isBlank()) defMidi = "partitura";
-            defMidi = defMidi.trim().replaceAll("[^\\w\\-.]", "_") + ".ddcgr.mid";
+            defMidi = defMidi.trim().replaceAll("[^\\p{L}\\p{N}\\-._]", "_") + ".ddcgr.mid";
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
         }
         if (fitxer == null || "".equals(fitxer)) {

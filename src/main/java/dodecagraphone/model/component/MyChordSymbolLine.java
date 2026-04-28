@@ -557,19 +557,6 @@ public class MyChordSymbolLine extends MyComponent {
             }
             // Línia final (columna numCols)
             if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
-
-            // Doble barra a stopCol
-            int stopC = contr.getAllPurposeScore().getStopCol();
-            if (stopC > 0 && stopC <= numCols) {
-                drawMeasureLine(stopC, offscreenGraphics, true);
-                int x2 = (int) Math.floor(stopC * Settings.getColWidth()) + 4;
-                int y2 = (int) Math.round(nRows * Settings.getRowHeight());
-                Stroke saved = offscreenGraphics.getStroke();
-                offscreenGraphics.setStroke(new BasicStroke(2));
-                offscreenGraphics.setColor(Color.BLACK);
-                offscreenGraphics.drawLine(x2, 0, x2, y2);
-                offscreenGraphics.setStroke(saved);
-            }
             needsDrawing = false;
         }
     }
@@ -670,6 +657,20 @@ public class MyChordSymbolLine extends MyComponent {
             drawImageClamped(g, offscreenImage,
                     x1, y1, x1 + w, y1 + h,
                     x2, 0, x2 + w2, h);
+
+            // Doble barra al stopCol — dibuixada sobre la vista (sempre actualitzada)
+            int stopC = contr.getAllPurposeScore().getStopCol();
+            if (stopC > 0) {
+                drawMeasureLine(stopC, g, false);
+                int sx = (int) Math.floor(score.getScreenX(stopC)) + 4;
+                int sy1 = (int) Math.round(score.getScreenY(-nRows));
+                int sy2 = sy1 + (int) Math.round(nRows * Settings.getRowHeight());
+                Stroke saved = g.getStroke();
+                g.setStroke(new BasicStroke(2));
+                g.setColor(Color.BLACK);
+                g.drawLine(sx, sy1, sx, sy2);
+                g.setStroke(saved);
+            }
 
         } else {
             // ---- Live (fallback) path ----

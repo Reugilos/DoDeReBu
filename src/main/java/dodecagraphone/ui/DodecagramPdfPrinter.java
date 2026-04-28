@@ -173,7 +173,7 @@ public class DodecagramPdfPrinter {
 
                 // Doble barra al stopCol si cau dins d'aquesta fila
                 if (startCol < stopCol && stopCol <= endCol) {
-                    float stopXPdf = MARGIN + keyPdfW + (stopCol - startCol) * colWidthPx * scale;
+                    float stopXPdf = MARGIN + keyPdfW + (stopCol - startCol) * colWidthPx * scaleX;
                     drawDoubleBar(cs, stopXPdf, yImgBottom, rowImgPdfH);
                 }
 
