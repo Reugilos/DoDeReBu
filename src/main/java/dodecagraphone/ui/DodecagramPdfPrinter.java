@@ -25,15 +25,15 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 public class DodecagramPdfPrinter {
 
     private final MyController controller;
-    private static final float PAGE_W  = PDRectangle.A4.getWidth();
-    private static final float PAGE_H  = PDRectangle.A4.getHeight();
+    private static final float PAGE_W         = PDRectangle.A4.getWidth();
+    private static final float PAGE_H         = PDRectangle.A4.getHeight();
     private static final float MARGIN         = 18f;
     private static final float FIRST_HEADER_H = 44f;
     private static final float SHORT_HEADER_H = 18f;
     private static final float ROW_GAP        = 6f;
     private static final float MEASURE_LABEL_H = 10f;
-    private static final float BORDER_W       = 2f;
-    private static final float DOUBLE_BAR_GAP = 3f;
+    private static final float BORDER_W       = 0.3f;
+    private static final float DOUBLE_BAR_GAP = 1f;
     private static final int   TARGET_ROWS    = 4;
 
     public DodecagramPdfPrinter(MyController controller) {
@@ -46,8 +46,8 @@ public class DodecagramPdfPrinter {
         MyLyrics lyrics = controller.getMyLyrics();
         controller.getCam().drawFullCamInOffscreen();
 
-        BufferedImage gridImg  = score.getOffscreenImage();
-        BufferedImage chordImg = chordLine.getOffscreenImage();
+        BufferedImage gridImg   = score.getOffscreenImage();
+        BufferedImage chordImg  = chordLine.getOffscreenImage();
         BufferedImage lyricsImg = lyrics.getOffscreenImage();
 
         if (gridImg == null || chordImg == null) return;
@@ -55,46 +55,49 @@ public class DodecagramPdfPrinter {
         int stopCol = score.getStopCol();
         if (stopCol <= 0) return;
 
-        int colWidthPx    = (int) Math.max(1, Math.ceil(Settings.getColWidth()));
+        // Use floating-point column width to avoid pixel drift across rows
+        double colWidthF   = Settings.getColWidth();
+        int colWidthPx     = (int) Math.max(1, Math.round(colWidthF));
         int colsPerMeasure = score.getBaseColsPerMeasure();
         if (colsPerMeasure <= 0) colsPerMeasure = 1;
 
-        // fixedCols = columnes per fila, arrodonit a múltiple de colsPerMeasure
+        // fixedCols = exact number of score columns per PDF row (multiple of colsPerMeasure)
         int fixedCols = score.getFixedColsPerPage();
         if (fixedCols <= 0) fixedCols = colsPerMeasure;
         fixedCols = Math.max(colsPerMeasure, (fixedCols / colsPerMeasure) * colsPerMeasure);
 
-        // Cada fila comença en un múltiple de fixedCols i té exactament fixedCols columnes.
-        // La última fila pot tenir espai buit si stopCol no és múltiple de fixedCols.
+        // Pixel width of one row slice (using float to stay aligned with offscreen rendering)
+        int fixedSlicePx = (int) Math.round(fixedCols * colWidthF);
+        int keyWidthPx   = 4 * colWidthPx;
+
+        // PDF layout
+        float pdfUsableW = PAGE_W - 2 * MARGIN;
+        float scaleX     = pdfUsableW / (keyWidthPx + fixedSlicePx);
+        float availFirst = PAGE_H - 2 * MARGIN - FIRST_HEADER_H;
+        int   chordH     = chordImg.getHeight();
+        int   gridH      = gridImg.getHeight();
+        int   lyricsH    = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
+        int   scoreRowH  = chordH + gridH + lyricsH;
+        if (scoreRowH <= 0) return;
+
+        float maxRowImgH = (availFirst + ROW_GAP) / TARGET_ROWS - ROW_GAP - MEASURE_LABEL_H;
+        float scaleY     = (maxRowImgH > 0) ? Math.min(scaleX, maxRowImgH / scoreRowH) : scaleX;
+        float keyPdfW    = keyWidthPx * scaleX;
+        float rowImgPdfH = scoreRowH * scaleY;
+        float rowTotalH  = MEASURE_LABEL_H + rowImgPdfH;
+
+        int rowsPerFirst = TARGET_ROWS;
+        int rowsPerOther = Math.max(TARGET_ROWS,
+                (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H + ROW_GAP) / (rowTotalH + ROW_GAP)));
+
+        // Row boundaries: each row covers exactly fixedCols score columns
         List<int[]> rows = new ArrayList<>();
         for (int c = 0; c < stopCol; c += fixedCols) {
             rows.add(new int[]{c, c + fixedCols});
         }
         if (rows.isEmpty()) return;
 
-        int chordH  = chordImg.getHeight();
-        int gridH   = gridImg.getHeight();
-        int lyricsH = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
-        int scoreRowH = chordH + gridH + lyricsH;
-        if (scoreRowH <= 0) return;
-
-        BufferedImage keyImg  = renderNarrowKeyboard(colWidthPx, gridH);
-        int keyWidthPx        = 4 * colWidthPx;
-        int fullSlicePx       = fixedCols * colWidthPx;
-        float pdfUsableW      = PAGE_W - 2 * MARGIN;
-        // scaleX omple l'ample de pàgina; scaleY comprimeix l'alçada per a TARGET_ROWS per pàgina
-        float scaleX          = pdfUsableW / (keyWidthPx + fullSlicePx);
-        float availFirst      = PAGE_H - 2 * MARGIN - FIRST_HEADER_H;
-        float maxRowImgH      = (availFirst + ROW_GAP) / TARGET_ROWS - ROW_GAP - MEASURE_LABEL_H;
-        float scaleY          = (scoreRowH > 0 && maxRowImgH > 0)
-                                ? Math.min(scaleX, maxRowImgH / scoreRowH) : scaleX;
-        float keyPdfW         = keyWidthPx * scaleX;
-        float rowImgPdfH      = scoreRowH * scaleY;
-        float rowTotalH       = MEASURE_LABEL_H + rowImgPdfH;
-
-        int rowsPerFirst = TARGET_ROWS;
-        int rowsPerOther = Math.max(TARGET_ROWS,
-                (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H + ROW_GAP) / (rowTotalH + ROW_GAP)));
+        BufferedImage keyImg = renderNarrowKeyboard(colWidthPx, gridH);
 
         PDFont fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
         PDFont fontNorm = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
@@ -104,7 +107,7 @@ public class DodecagramPdfPrinter {
             PDPageContentStream cs = null;
             int pdfPageNum = 0;
             int rowOnPage  = 0;
-            float yPos = 0;
+            float yPos     = 0;
 
             for (int i = 0; i < rows.size(); i++) {
                 int startCol = rows.get(i)[0];
@@ -112,7 +115,7 @@ public class DodecagramPdfPrinter {
 
                 boolean needNewPage = (pdfPage == null)
                         || (pdfPageNum == 1 && rowOnPage >= rowsPerFirst)
-                        || (pdfPageNum > 1 && rowOnPage >= rowsPerOther);
+                        || (pdfPageNum > 1  && rowOnPage >= rowsPerOther);
 
                 if (needNewPage) {
                     if (cs != null) cs.close();
@@ -137,16 +140,15 @@ public class DodecagramPdfPrinter {
                     }
                 }
 
-                // Píxels de la porció de partitura disponibles al buffer
-                int startPx  = startCol * colWidthPx;
-                int endPx    = Math.min(endCol * colWidthPx, gridImg.getWidth());
-                int sliceW   = Math.max(0, endPx - startPx);
+                // Pixel slice from offscreen (float-aligned to avoid measure drift)
+                int startPx = (int) Math.round(startCol * colWidthF);
+                int endPx   = Math.min(startPx + fixedSlicePx, gridImg.getWidth());
+                int sliceW  = Math.max(0, endPx - startPx);
 
-                // Imatge de la fila (sempre fullSlicePx d'amplada a la part de partitura)
                 BufferedImage rowImg = composeRow(keyImg, chordImg, gridImg, lyricsImg,
-                        keyWidthPx, startPx, sliceW, fullSlicePx, scoreRowH, chordH, gridH, lyricsH);
+                        keyWidthPx, startPx, sliceW, fixedSlicePx, scoreRowH, chordH, gridH, lyricsH);
 
-                // Marques inicials (col 0) a la primera fila
+                // Overlay col-0 initial markers on the first row
                 if (startCol == 0) {
                     Graphics2D g2 = rowImg.createGraphics();
                     g2.translate(keyWidthPx, 0);
@@ -155,25 +157,26 @@ public class DodecagramPdfPrinter {
                 }
 
                 float yImgBottom = yPos - rowTotalH;
+                float yImgTop    = yImgBottom + rowImgPdfH;   // = yPos - MEASURE_LABEL_H
 
-                // Número de compàs al principi de la fila (sobre la chord band)
+                // Measure number label (above the chord band, below the border top)
                 drawRowStartLabel(cs, fontNorm, score, startCol,
-                        MARGIN + keyPdfW, yPos - MEASURE_LABEL_H + 2);
+                        MARGIN + keyPdfW, yImgTop + 2);
 
-                // Imatge rasteritzada de la fila
+                // Rasterised row image
                 PDImageXObject pdImg = PDImageXObject.createFromByteArray(
                         doc, toBytes(rowImg), "row" + i);
                 cs.drawImage(pdImg, MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
 
-                // Requadre de la fila (inclou l'àrea de l'etiqueta de compàs)
+                // Thin border that wraps only the image content (not the label area)
                 cs.setLineWidth(BORDER_W);
                 cs.setStrokingColor(Color.BLACK);
-                cs.addRect(MARGIN, yImgBottom, pdfUsableW, rowTotalH);
+                cs.addRect(MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
                 cs.stroke();
 
-                // Doble barra al stopCol si cau dins d'aquesta fila
+                // Double bar at stopCol if it falls within this row
                 if (startCol < stopCol && stopCol <= endCol) {
-                    float stopXPdf = MARGIN + keyPdfW + (stopCol - startCol) * colWidthPx * scaleX;
+                    float stopXPdf = MARGIN + (float)((keyWidthPx + (stopCol - startCol) * colWidthF) * scaleX);
                     drawDoubleBar(cs, stopXPdf, yImgBottom, rowImgPdfH);
                 }
 
@@ -187,7 +190,7 @@ public class DodecagramPdfPrinter {
     }
 
     // -----------------------------------------------------------------------
-    //  Composició de la imatge de fila
+    //  Row image composition
     // -----------------------------------------------------------------------
 
     private BufferedImage composeRow(BufferedImage keyImg, BufferedImage chordImg,
@@ -200,6 +203,7 @@ public class DodecagramPdfPrinter {
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, rowImgW, totalH);
 
+        // Narrow keyboard (covers only the grid rows, not chord/lyrics)
         if (keyImg != null && keyW > 0) {
             int keyH = Math.min(keyImg.getHeight(), gridH);
             g.drawImage(keyImg, 0, chordH, keyW, chordH + keyH,
@@ -207,34 +211,44 @@ public class DodecagramPdfPrinter {
         }
 
         if (sliceW > 0) {
-            int chordSliceH = Math.min(chordH, chordImg.getHeight());
-            int chordSliceW = Math.min(sliceW, chordImg.getWidth() - startPx);
-            if (chordSliceW > 0 && chordSliceH > 0)
-                g.drawImage(chordImg, keyW, 0, keyW + chordSliceW, chordSliceH,
-                        startPx, 0, startPx + chordSliceW, chordSliceH, null);
+            // Chord band
+            int cSrcW = Math.min(sliceW, Math.max(0, chordImg.getWidth() - startPx));
+            int cSrcH = Math.min(chordH, chordImg.getHeight());
+            if (cSrcW > 0 && cSrcH > 0)
+                g.drawImage(chordImg, keyW, 0, keyW + cSrcW, cSrcH,
+                        startPx, 0, startPx + cSrcW, cSrcH, null);
 
-            int gridSliceH = Math.min(gridH, gridImg.getHeight());
-            int gridSliceW = Math.min(sliceW, gridImg.getWidth() - startPx);
-            if (gridSliceW > 0 && gridSliceH > 0)
-                g.drawImage(gridImg, keyW, chordH, keyW + gridSliceW, chordH + gridSliceH,
-                        startPx, 0, startPx + gridSliceW, gridSliceH, null);
+            // Grid band
+            int gSrcW = Math.min(sliceW, Math.max(0, gridImg.getWidth() - startPx));
+            int gSrcH = Math.min(gridH, gridImg.getHeight());
+            if (gSrcW > 0 && gSrcH > 0)
+                g.drawImage(gridImg, keyW, chordH, keyW + gSrcW, chordH + gSrcH,
+                        startPx, 0, startPx + gSrcW, gSrcH, null);
 
+            // Lyrics band
             if (lyricsImg != null && lyricsH > 0) {
-                int lyricSliceH = Math.min(lyricsH, lyricsImg.getHeight());
-                int lyricSliceW = Math.min(sliceW, lyricsImg.getWidth() - startPx);
-                if (lyricSliceW > 0 && lyricSliceH > 0)
+                int lSrcW = Math.min(sliceW, Math.max(0, lyricsImg.getWidth() - startPx));
+                int lSrcH = Math.min(lyricsH, lyricsImg.getHeight());
+                if (lSrcW > 0 && lSrcH > 0)
                     g.drawImage(lyricsImg, keyW, chordH + gridH,
-                            keyW + lyricSliceW, chordH + gridH + lyricSliceH,
-                            startPx, 0, startPx + lyricSliceW, lyricSliceH, null);
+                            keyW + lSrcW, chordH + gridH + lSrcH,
+                            startPx, 0, startPx + lSrcW, lSrcH, null);
             }
         }
+
+        // Thin horizontal separators between bands
+        g.setColor(Color.BLACK);
+        if (chordH > 0 && gridH > 0)
+            g.drawLine(0, chordH, rowImgW - 1, chordH);
+        if (lyricsH > 0)
+            g.drawLine(0, chordH + gridH, rowImgW - 1, chordH + gridH);
 
         g.dispose();
         return row;
     }
 
     // -----------------------------------------------------------------------
-    //  Helpers de dibuix PDF
+    //  PDF drawing helpers
     // -----------------------------------------------------------------------
 
     private void drawRowStartLabel(PDPageContentStream cs, PDFont font,
@@ -249,19 +263,21 @@ public class DodecagramPdfPrinter {
         cs.setNonStrokingColor(Color.BLACK);
     }
 
+    /** Double bar: thin line + 1pt gap + normal measure-line weight. */
     private void drawDoubleBar(PDPageContentStream cs,
             float x, float yBottom, float h) throws IOException {
         cs.setStrokingColor(Color.BLACK);
-        cs.setLineWidth(2.5f);
+        cs.setLineWidth(0.75f);
         cs.moveTo(x, yBottom);
         cs.lineTo(x, yBottom + h);
         cs.stroke();
-        cs.setLineWidth(1f);
+        cs.setLineWidth(1.5f);
         cs.moveTo(x + DOUBLE_BAR_GAP, yBottom);
         cs.lineTo(x + DOUBLE_BAR_GAP, yBottom + h);
         cs.stroke();
     }
 
+    /** Narrow keyboard strip: shows note-row colors using the same palette as the UI. */
     private BufferedImage renderNarrowKeyboard(int colWidthPx, int gridH) {
         MyAllPurposeScore score = controller.getAllPurposeScore();
         int nKeys = score.getnKeys();
@@ -271,25 +287,18 @@ public class DodecagramPdfPrinter {
         Graphics2D g = img.createGraphics();
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, w, gridH);
-        List<Integer> choiceList = score.getChoice().getChoiceList();
-        boolean isPenta = score.isShowPentagramaStrips();
         double rowH = (double) gridH / nKeys;
-        double barW    = w * 0.5;
-        double indentX = w * 0.5;
         for (int keyId = 0; keyId < nKeys; keyId++) {
             int midi = ToneRange.keyIdToMidi(keyId);
-            boolean inChoice = choiceList.contains(midi);
-            Color c = isPenta ? ColorSets.getPentagramaColor(midi)
-                              : ColorSets.getChoiceColor(midi, choiceList);
+            Color c = ColorSets.getEncesColor(midi % 12);
             if (c == null) c = Color.LIGHT_GRAY;
-            int y = (int)(keyId * rowH);
-            int h = Math.max(1, (int) Math.ceil(rowH) - 1);
-            int x = inChoice ? (int) indentX : 0;
+            int y     = (int) Math.round(keyId * rowH);
+            int nextY = (int) Math.round((keyId + 1) * rowH);
+            int h     = Math.max(1, nextY - y - 1);
             g.setColor(c);
-            g.fillRect(x, y, (int) Math.ceil(barW), h);
-            g.setColor(Color.GRAY);
-            g.drawLine(0, y + h, w - 1, y + h);
+            g.fillRect(0, y, w, h);
         }
+        // Right-edge separator
         g.setColor(Color.BLACK);
         g.drawLine(w - 1, 0, w - 1, gridH - 1);
         g.dispose();
