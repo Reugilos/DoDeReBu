@@ -1683,14 +1683,14 @@ public class MyGridScore extends MyComponent {
      */
     private void drawMeasureLine(int col, Graphics2D g) {
         Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke((float) 3));
+        g.setStroke(new BasicStroke(1.5f));
         int camX1;
         int camY1;
         if (this.controller.isPrinting()){
             camX1 = (int) Math.floor(getScreenX(col));
             camY1 = (int) Math.round(getScreenY(0));
         } else {
-            camX1 = (int) Math.floor(getOffScreenScreenX(col));
+            camX1 = (int) Math.floor(getOffScreenScreenX(col)) - 1;
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
         int camX2 = camX1;
@@ -1717,7 +1717,7 @@ public class MyGridScore extends MyComponent {
             camX1 = (int) Math.floor(getScreenX(col));
             camY1 = (int) Math.round(getScreenY(0));
         } else {
-            camX1 = (int) Math.floor(getOffScreenScreenX(col));
+            camX1 = (int) Math.floor(getOffScreenScreenX(col)) - 1;
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
         int camX2 = camX1;

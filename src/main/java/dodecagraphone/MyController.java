@@ -1194,12 +1194,14 @@ public class MyController {
                     this.allPurposeScore.placeChordSymbol(chord, chordCol);
                     afegirEvent(new ChordEvent(this, chordCol, oldchord, chord));
                     this.needsSaving = true;
+                    this.myChordSymbolLine.setNeedsDrawing(true);
                     this.myChordSymbolLine.drawFullChordLineInOffscreen();
                 }
             } else if (chord == null && oldchord != null) { // empty input = delete
                 this.allPurposeScore.removeChordSymbol(chordCol);
                 afegirEvent(new ChordEvent(this, chordCol, oldchord, null));
                 this.needsSaving = true;
+                this.myChordSymbolLine.setNeedsDrawing(true);
                 this.myChordSymbolLine.drawFullChordLineInOffscreen();
             }
             this.drawFull(true);

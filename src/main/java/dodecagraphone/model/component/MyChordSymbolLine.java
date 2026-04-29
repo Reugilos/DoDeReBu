@@ -246,9 +246,9 @@ public class MyChordSymbolLine extends MyComponent {
     private void drawMeasureLine(int col, Graphics2D g, boolean offscreen) {
         //if (Settings.IS_BU) return;
         Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke((float) 3));
+        g.setStroke(new BasicStroke(1.5f));
         int camX1 = offscreen
-                ? (int) Math.floor(col * Settings.getColWidth())
+                ? (int) Math.floor(col * Settings.getColWidth()) - 1
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camX2 = camX1;
@@ -271,7 +271,7 @@ public class MyChordSymbolLine extends MyComponent {
         Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
         g.setStroke(dashed);
         int camX1 = offscreen
-                ? (int) Math.floor(col * Settings.getColWidth())
+                ? (int) Math.floor(col * Settings.getColWidth()) - 1
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camX2 = camX1;

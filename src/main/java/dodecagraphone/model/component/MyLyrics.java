@@ -275,7 +275,7 @@ public class MyLyrics extends MyComponent {
     private void drawSegment(LyricSegment seg, Graphics2D g) {
         FontMetrics fm = g.getFontMetrics();
         double rowH = Settings.getRowHeight();
-        int x     = (int) Math.floor(seg.col * Settings.getColWidth()) + 2;
+        int x     = (int) Math.round(seg.col * Settings.getColWidth()) + 2;
         int textY = (int) (seg.row * rowH + (rowH + fm.getAscent() - fm.getDescent()) / 2.0);
         g.drawString(seg.text, x, textY);
     }
@@ -297,32 +297,31 @@ public class MyLyrics extends MyComponent {
      * committed store (it will be re-added on commit).
      */
     public void startEdit(int col, int track, double clickScreenX) {
+        // Snap to the nearest note start at or before the clicked column
+        int noteCol = findNoteAtOrBefore(col, track);
+        if (noteCol < 0) {
+            MyDialogs.mostraMissatge(
+                    I18n.t("myLyrics.noNotesBefore.warning"),
+                    I18n.t("myLyrics.label"));
+            return;
+        }
         editMode       = true;
-        editCursorCol  = col;
+        editCursorCol  = noteCol;
         editTrack      = track;
-        displayTrackId = track;   // assegura que el preview es mostra per al track correcte
+        displayTrackId = track;
         editBuffer.setLength(0);
-        // Search for an existing segment that the user clicked on.
-        // We look in displayTrackId (what is currently visible on screen) so that
-        // clicking on any visible text always loads the right segment, regardless
-        // of which track is currently selected in the mixer.
-        LyricSegment existing = findSegmentAt(col, displayTrackId);
+        // If a committed segment exists at the snapped column, load it for editing.
+        LyricSegment existing = findSegmentAt(noteCol, displayTrackId);
         if (existing != null) {
-            // Edit the segment that is visually under the click
             editCursorCol  = existing.col;
             editTrack      = existing.track;
-            // displayTrackId stays the same (already correct)
             editBuffer.append(existing.text);
             List<LyricSegment> segs = lyricsByTrack.get(existing.track);
             if (segs != null) segs.remove(existing);
-            // Place the char cursor at the click position within the text
             int textStartX = colToScreenX(existing.col) + 2;
             editCursorCharPos = charPositionFromPixel(
                     existing.text, (int)(clickScreenX - textStartX));
         } else {
-            // No existing segment: start a fresh edit for the requested track
-            editTrack         = track;
-            displayTrackId    = track;
             editCursorCharPos = 0;
         }
         updatePreviewRow();
@@ -490,6 +489,29 @@ public class MyLyrics extends MyComponent {
      * least one note belonging to {@code editTrack}. Falls back to the next
      * beat boundary if no such column is found before the end of the score.
      */
+    /**
+     * Returns the score column of the nearest note start (visible, not linked)
+     * belonging to {@code track} at or before {@code col}, or -1 if none exists.
+     */
+    private int findNoteAtOrBefore(int col, int track) {
+        int nKeys = score.getnKeys();
+        for (int c = col; c >= 0; c--) {
+            for (int key = 0; key < nKeys; key++) {
+                MyGridSquare sq = score.getGridSquare(key, c);
+                if (sq != null) {
+                    for (MyGridSquare.SubSquare note : sq.getPoliNotes()) {
+                        if (note.getTrack() == track
+                                && note.isVisible()
+                                && !note.isLinked()) {
+                            return c;
+                        }
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
     private int findNextCol(int fromCol) {
         int nKeys = score.getnKeys();
         int nCols = score.getNumCols();
@@ -645,8 +667,8 @@ public class MyLyrics extends MyComponent {
 
     private void drawMeasureLine(int col, Graphics2D g) {
         Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke(3f));
-        int x = (int) Math.floor(col * Settings.getColWidth());
+        g.setStroke(new BasicStroke(1.5f));
+        int x = (int) Math.floor(col * Settings.getColWidth()) - 1;
         int h = (int) (nRows * Settings.getRowHeight());
         g.setColor(Color.BLACK);
         g.drawLine(x, 0, x, h);
@@ -658,7 +680,7 @@ public class MyLyrics extends MyComponent {
         Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
                 BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
         g.setStroke(dashed);
-        int x = (int) Math.floor(col * Settings.getColWidth());
+        int x = (int) Math.floor(col * Settings.getColWidth()) - 1;
         int h = (int) (nRows * Settings.getRowHeight());
         g.setColor(Color.BLACK);
         g.drawLine(x, 0, x, h);
