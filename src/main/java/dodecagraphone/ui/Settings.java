@@ -47,7 +47,7 @@ public class Settings {
 
     // Various
     public static final boolean COLORS_BU = true;
-    public static final boolean IS_BU = false;
+    public static final boolean IS_BU = true;
     public static final int REFRESH_PERIOD = 30; // 30ms -> ~33fps
     /** Retard inicial (ms) abans de començar a replicar quan es manté apretat un botó. */
     public static final int BUTTON_REPEAT_INITIAL_DELAY_MS = 600;
