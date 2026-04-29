@@ -19,6 +19,7 @@ import java.awt.Composite;
 import java.awt.Cursor;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -1084,20 +1085,12 @@ public class MyGridScore extends MyComponent {
             boolean[] isMeasure = new boolean[numCols + 1];
             computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
 
-            if (isBeat[numCols])    drawBeatLine(numCols, offscreenGraphics);
-            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
-
             Utilities.printOutWithPriority(false, "MyGridScore::drawFullGridInOffscreen first, last = " + firstDrawCol + ", " + (lastDrawCol - 1) + ", countDrawFull = " + countDrawFull++);
             for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
                 for (int row = 0; row < nKeys; row++) {
                     this.drawSquare(row, col, offscreenGraphics);
                 }
             }
-            for (int col = lastDrawCol - 1; col >= firstDrawCol; col--) {
-                if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
-                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
-            }
-            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
             drawSelectionOverlay(offscreenGraphics);
             setGridColorsHaveChanged(false);
         }
@@ -1168,12 +1161,6 @@ public class MyGridScore extends MyComponent {
                     this.drawSquare(row, col, offscreenGraphics);
                 }
             }
-            // Línies DESPRÉS dels squares (inclou lastDrawCol) perquè no quedin tapades.
-            for (int col = lastDrawCol; col >= firstDrawCol; col--) {
-                if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
-                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
-            }
-            if (isMeasure[nCols]) drawMeasureLine(nCols, offscreenGraphics);
             drawSelectionOverlay(offscreenGraphics);
             Utilities.printOutWithPriority(false, "MyGridScore::drawCurrentCamInOffscreen first, last = " + firstDrawCol + ", " + (lastDrawCol - 1) + ", countDrawFull = " + countDrawFull++);
         }
@@ -1488,10 +1475,40 @@ public class MyGridScore extends MyComponent {
                     x1, y1, x1 + w, y1 + h, // destí (pantalla)
                     x2, 0, x2 + w2, h);
 
+            // Línies de beat i compàs en screen-space per evitar desaparicions amb fit
+            {
+                int numCols = this.getnCols();
+                boolean[] isBeat    = new boolean[numCols + 1];
+                boolean[] isMeasure = new boolean[numCols + 1];
+                computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+                double scaleX = w2 > 0 ? (double) w / w2 : 1.0;
+                Shape oldClip = g.getClip();
+                g.clipRect(x1, y1, w, h);
+                Stroke saved = g.getStroke();
+                g.setColor(Color.BLACK);
+                for (int col = 0; col <= numCols; col++) {
+                    if (!isBeat[col] && !isMeasure[col]) continue;
+                    int offX = (int) Math.floor(col * Settings.getColWidth());
+                    int sx = x1 + (int) Math.round((offX - x2) * scaleX);
+                    if (isMeasure[col]) {
+                        g.setStroke(new BasicStroke(1.5f));
+                        g.drawLine(sx, y1 + 1, sx, y1 + h - 2);
+                    } else {
+                        g.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT,
+                                BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0));
+                        g.drawLine(sx, y1 + 1, sx, y1 + h - 2);
+                    }
+                }
+                g.setStroke(saved);
+                g.setClip(oldClip);
+            }
+
             // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
             int stopC = this.controller.getAllPurposeScore().getStopCol();
             if (stopC > 0) {
                 int sx = (int) Math.floor(this.getScreenX(stopC)) - 1;
+                Shape oldClip = g.getClip();
+                g.clipRect(x1, y1, w, h);
                 Stroke saved = g.getStroke();
                 g.setColor(Color.BLACK);
                 g.setStroke(new BasicStroke(3));
@@ -1499,6 +1516,7 @@ public class MyGridScore extends MyComponent {
                 g.setStroke(new BasicStroke(2));
                 g.drawLine(sx + 4, y1, sx + 4, y1 + h);
                 g.setStroke(saved);
+                g.setClip(oldClip);
             }
 
         }
@@ -1690,7 +1708,7 @@ public class MyGridScore extends MyComponent {
             camX1 = (int) Math.floor(getScreenX(col));
             camY1 = (int) Math.round(getScreenY(0));
         } else {
-            camX1 = (int) Math.floor(getOffScreenScreenX(col)) - 1;
+            camX1 = (int) Math.floor(getOffScreenScreenX(col));
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
         int camX2 = camX1;
@@ -1717,7 +1735,7 @@ public class MyGridScore extends MyComponent {
             camX1 = (int) Math.floor(getScreenX(col));
             camY1 = (int) Math.round(getScreenY(0));
         } else {
-            camX1 = (int) Math.floor(getOffScreenScreenX(col)) - 1;
+            camX1 = (int) Math.floor(getOffScreenScreenX(col));
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
         int camX2 = camX1;

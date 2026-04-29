@@ -14,6 +14,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.image.BufferedImage;
 import java.util.List;
@@ -248,7 +249,7 @@ public class MyChordSymbolLine extends MyComponent {
         Stroke stroke = g.getStroke();
         g.setStroke(new BasicStroke(1.5f));
         int camX1 = offscreen
-                ? (int) Math.floor(col * Settings.getColWidth()) - 1
+                ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camX2 = camX1;
@@ -271,7 +272,7 @@ public class MyChordSymbolLine extends MyComponent {
         Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
         g.setStroke(dashed);
         int camX1 = offscreen
-                ? (int) Math.floor(col * Settings.getColWidth()) - 1
+                ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camX2 = camX1;
@@ -550,13 +551,6 @@ public class MyChordSymbolLine extends MyComponent {
                 }
             }
 
-            // Línies de beat i compàs DESPRÉS dels acords perquè no quedin tapades.
-            for (int col = numCols - 1; col >= 0; col--) {
-                if (isBeat[col])    drawBeatLine(col, offscreenGraphics, true);
-                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics, true);
-            }
-            // Línia final (columna numCols)
-            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics, true);
             needsDrawing = false;
         }
     }
@@ -658,12 +652,46 @@ public class MyChordSymbolLine extends MyComponent {
                     x1, y1, x1 + w, y1 + h,
                     x2, 0, x2 + w2, h);
 
+            // Línies de beat i compàs en screen-space (no a l'offscreen) per evitar
+            // que desapareguin en escalar amb fit-anacrusis.
+            {
+                int numCols = score.getNumCols();
+                boolean[] isBeat    = new boolean[numCols + 1];
+                boolean[] isMeasure = new boolean[numCols + 1];
+                score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+                double scaleX = w2 > 0 ? (double) w / w2 : 1.0;
+                int sy1 = y1;
+                int sy2 = y1 + h;
+                Shape oldClip = g.getClip();
+                g.clipRect(x1, y1, w, h);
+                Stroke saved = g.getStroke();
+                g.setColor(Color.BLACK);
+                for (int col = 0; col <= numCols; col++) {
+                    if (!isBeat[col] && !isMeasure[col]) continue;
+                    int offX = (int) Math.floor(col * Settings.getColWidth());
+                    int sx = x1 + (int) Math.round((offX - x2) * scaleX);
+                    if (isMeasure[col]) {
+                        g.setStroke(new BasicStroke(1.5f));
+                        g.drawLine(sx, sy1, sx, sy2);
+                    } else {
+                        Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
+                                BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
+                        g.setStroke(dashed);
+                        g.drawLine(sx, sy1, sx, sy2);
+                    }
+                }
+                g.setStroke(saved);
+                g.setClip(oldClip);
+            }
+
             // Doble barra al stopCol — dibuixada sobre la vista (sempre actualitzada)
             int stopC = contr.getAllPurposeScore().getStopCol();
             if (stopC > 0) {
                 int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
                 int sy1 = (int) Math.round(score.getScreenY(-nRows));
                 int sy2 = sy1 + (int) Math.round(nRows * Settings.getRowHeight());
+                Shape oldClip = g.getClip();
+                g.clipRect(x1, y1, w, h);
                 Stroke saved = g.getStroke();
                 g.setColor(Color.BLACK);
                 g.setStroke(new BasicStroke(3));
@@ -671,6 +699,7 @@ public class MyChordSymbolLine extends MyComponent {
                 g.setStroke(new BasicStroke(2));
                 g.drawLine(sx + 4, sy1, sx + 4, sy2);
                 g.setStroke(saved);
+                g.setClip(oldClip);
             }
 
         } else {

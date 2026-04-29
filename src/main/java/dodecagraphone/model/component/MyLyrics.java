@@ -10,6 +10,7 @@ import java.awt.Color;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
@@ -626,19 +627,6 @@ public class MyLyrics extends MyComponent {
 
             int numCols = score.getNumCols();
 
-            // Calcula les línies de beat i compàs considerant canvis de compàs mid-score
-            boolean[] isBeat    = new boolean[numCols + 1];
-            boolean[] isMeasure = new boolean[numCols + 1];
-            score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
-
-            // Línia final
-            if (isMeasure[numCols]) drawMeasureLine(numCols, offscreenGraphics);
-            // Totes les columnes cap enrere
-            for (int col = numCols - 1; col >= 0; col--) {
-                if (isBeat[col])    drawBeatLine(col, offscreenGraphics);
-                if (isMeasure[col]) drawMeasureLine(col, offscreenGraphics);
-            }
-
             // Committed lyrics for the current display track
             List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
             if (segs != null && !segs.isEmpty()) {
@@ -668,7 +656,7 @@ public class MyLyrics extends MyComponent {
     private void drawMeasureLine(int col, Graphics2D g) {
         Stroke stroke = g.getStroke();
         g.setStroke(new BasicStroke(1.5f));
-        int x = (int) Math.floor(col * Settings.getColWidth()) - 1;
+        int x = (int) Math.floor(col * Settings.getColWidth());
         int h = (int) (nRows * Settings.getRowHeight());
         g.setColor(Color.BLACK);
         g.drawLine(x, 0, x, h);
@@ -680,7 +668,7 @@ public class MyLyrics extends MyComponent {
         Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
                 BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
         g.setStroke(dashed);
-        int x = (int) Math.floor(col * Settings.getColWidth()) - 1;
+        int x = (int) Math.floor(col * Settings.getColWidth());
         int h = (int) (nRows * Settings.getRowHeight());
         g.setColor(Color.BLACK);
         g.drawLine(x, 0, x, h);
@@ -784,10 +772,43 @@ public class MyLyrics extends MyComponent {
                     x1, y1, x1 + w, y1 + h,
                     x2, 0, x2 + w2, h);
 
+            // Línies de beat i compàs en screen-space per evitar que desapareguin
+            // quan l'imatge s'escala amb fit-anacrusis.
+            {
+                int numCols = score.getNumCols();
+                boolean[] isBeat    = new boolean[numCols + 1];
+                boolean[] isMeasure = new boolean[numCols + 1];
+                score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+                double scaleX = w2 > 0 ? (double) w / w2 : 1.0;
+                Shape oldClip = g.getClip();
+                g.clipRect(x1, y1, w, h);
+                Stroke saved = g.getStroke();
+                g.setColor(java.awt.Color.BLACK);
+                for (int col = 0; col <= numCols; col++) {
+                    if (!isBeat[col] && !isMeasure[col]) continue;
+                    int offX = (int) Math.floor(col * Settings.getColWidth());
+                    int sx = x1 + (int) Math.round((offX - x2) * scaleX);
+                    if (isMeasure[col]) {
+                        g.setStroke(new java.awt.BasicStroke(1.5f));
+                        g.drawLine(sx, y1, sx, y1 + h);
+                    } else {
+                        java.awt.Stroke dashed = new java.awt.BasicStroke(1,
+                                java.awt.BasicStroke.CAP_BUTT, java.awt.BasicStroke.JOIN_BEVEL,
+                                0, new float[]{15, 3}, 0);
+                        g.setStroke(dashed);
+                        g.drawLine(sx, y1, sx, y1 + h);
+                    }
+                }
+                g.setStroke(saved);
+                g.setClip(oldClip);
+            }
+
             // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
             int stopC = controller.getAllPurposeScore().getStopCol();
             if (stopC > 0) {
                 int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
+                Shape oldClip = g.getClip();
+                g.clipRect(x1, y1, w, h);
                 Stroke saved = g.getStroke();
                 g.setColor(java.awt.Color.BLACK);
                 g.setStroke(new java.awt.BasicStroke(3));
@@ -795,6 +816,7 @@ public class MyLyrics extends MyComponent {
                 g.setStroke(new java.awt.BasicStroke(2));
                 g.drawLine(sx + 4, y1, sx + 4, y1 + h);
                 g.setStroke(saved);
+                g.setClip(oldClip);
             }
         }
 

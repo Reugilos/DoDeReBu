@@ -69,10 +69,23 @@ public class DodecagramPdfPrinter {
         int fixedSlicePx = (int) Math.round(fixedCols * colWidthF);
         int keyWidthPx   = 4 * colWidthPx;
 
+        // Amb fit-anacrusis, la primera fila mostra un compàs extra (anacrusis comprimida)
+        boolean fitFirstRow = Settings.isFitAnacrusis() && Settings.isHasAnacrusis();
+        int firstRowExtraCols = fitFirstRow ? colsPerMeasure : 0;
+        int firstRowCols   = fixedCols + firstRowExtraCols;
+        int firstSlicePx   = (int) Math.round(firstRowCols * colWidthF);
+
         // Compute rows first so total count drives the row-height calculation
         List<int[]> rows = new ArrayList<>();
-        for (int c = 0; c < stopCol; c += fixedCols) {
-            rows.add(new int[]{c, c + fixedCols});
+        if (fitFirstRow) {
+            rows.add(new int[]{0, firstRowCols});
+            for (int c = firstRowCols; c < stopCol; c += fixedCols) {
+                rows.add(new int[]{c, c + fixedCols});
+            }
+        } else {
+            for (int c = 0; c < stopCol; c += fixedCols) {
+                rows.add(new int[]{c, c + fixedCols});
+            }
         }
         if (rows.isEmpty()) return;
         int totalRows = rows.size();
@@ -144,8 +157,10 @@ public class DodecagramPdfPrinter {
                     }
                 }
 
+                int rowSlicePx  = (i == 0) ? firstSlicePx : fixedSlicePx;
+                float rowScaleX = pdfUsableW / (keyWidthPx + rowSlicePx);
                 int startPx = (int) Math.round(startCol * colWidthF);
-                int endPx   = Math.min(startPx + fixedSlicePx, gridImg.getWidth());
+                int endPx   = Math.min(startPx + rowSlicePx, gridImg.getWidth());
                 int sliceW  = Math.max(0, endPx - startPx);
 
                 // Only draw score content up to stopCol; blank the rest.
@@ -154,7 +169,7 @@ public class DodecagramPdfPrinter {
                 int drawSliceW  = Math.max(0, Math.min(sliceW, contentPx));
 
                 BufferedImage rowImg = composeRow(keyImg, chordImg, gridImg, lyricsImg,
-                        keyWidthPx, startPx, drawSliceW, fixedSlicePx, scoreRowH, chordH, gridH, lyricsH);
+                        keyWidthPx, startPx, drawSliceW, rowSlicePx, scoreRowH, chordH, gridH, lyricsH);
 
                 if (startCol == 0) {
                     Graphics2D g2 = rowImg.createGraphics();
@@ -200,7 +215,7 @@ public class DodecagramPdfPrinter {
 
                 // Double bar at stopCol
                 if (startCol < stopCol && stopCol <= endCol) {
-                    float stopXPdf = MARGIN + (float) ((keyWidthPx + (stopCol - startCol) * colWidthF) * scaleX);
+                    float stopXPdf = MARGIN + (float) ((keyWidthPx + (stopCol - startCol) * colWidthF) * rowScaleX);
                     drawDoubleBar(cs, stopXPdf, yImgBottom, rowImgPdfH);
                 }
 
