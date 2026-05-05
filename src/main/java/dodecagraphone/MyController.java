@@ -207,6 +207,7 @@ public class MyController {
         this.screen.add(buttons);
         this.screen.add(cam);
         this.allPurposeScore.placeChromaticDescendingScore();
+        this.allPurposeScore.updateStopMarker();
         int tempo = Settings.getDefaultTempo();
         MyTempo.setTempo(tempo);
 //        MyTempo.checkTempo();
@@ -1863,6 +1864,8 @@ public class MyController {
     public void transpose(int step) {
         this.allPurposeScore.transpose(step);
         this.updateTextOfButtons();
+        this.myChordSymbolLine.setNeedsDrawing(true);
+        this.myChordSymbolLine.drawFullChordLineInOffscreen();
         this.allPurposeScore.drawCurrentCamInOffscreen();
         this.getUi().getPanel().repinta(true);
     }
@@ -2077,8 +2080,13 @@ public class MyController {
             String to = MyDialogs.mostraInputDialog(I18n.t("keyButton.prompt"), I18n.t("keyButton.title"));
             if (to == null || to.isBlank()) return;
             char mode = ToneRange.getScaleMode(to);
-            if (mode == ' ') return;
             int newMidiKey = ToneRange.getMidiKey(to);
+            if (mode == ' ' || newMidiKey < 0) {
+                MyDialogs.mostraError(
+                    I18n.f("keyButton.invalidInput", to),
+                    I18n.t("MyController.dialog.error.title"));
+                return;
+            }
             int oldMidiKey = allPurposeScore.getMidiKey();
             int step = newMidiKey - oldMidiKey;
             MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
@@ -2744,6 +2752,11 @@ public class MyController {
         // tempo, compàs i to només té sentit aplicar-los a l'inici d'un compàs.
         col = allPurposeScore.getFirstColOfCurrentMeasure(col);
         allPurposeScore.setScoreChange(col, pendingChange);
+        // Reseteja playbackTempo només si la marca és a la posició actual o abans;
+        // si és posterior al playbar el tempo en viu no canvia fins que s'hi arriba.
+        if (pendingChange.tempo != null && col <= getEditingCol()) {
+            MyTempo.setTempo(pendingChange.tempo);
+        }
         pendingChange = null;
         // Si el canvi és a la columna 0 actualitzem també la base de timing
         if (col == 0) allPurposeScore.freezeBaseTimingParams();
@@ -2753,7 +2766,9 @@ public class MyController {
             pendingChangeDialog = null;
         }
         needsSaving = true;
-        // Redibuixa les franges que tenen línies de beat/compàs depenents del changeMap
+        // Redibuixa la franja d'acords (nova marca) i la graella (línies de beat/compàs)
+        this.myChordSymbolLine.setNeedsDrawing(true);
+        this.myChordSymbolLine.drawFullChordLineInOffscreen();
         this.cam.drawFullCamInOffscreen();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
         this.updateTextOfButtons();
@@ -2794,9 +2809,15 @@ public class MyController {
         MyGridScore.ScoreChange sc = allPurposeScore.getEffectiveChange(col);
         // Apliquem sempre un valor (el del canvi o el per defecte), igual que fem amb
         // el compàs, perquè tornar enrere restauri els valors anteriors a la marca.
-        MyTempo.setTempo(sc.tempo != null
-                ? sc.tempo
-                : Settings.DEFAULT_TEMPO);
+        // Durant la reproducció: si hi ha una marca explícita, reseteja també playbackTempo
+        // (setTempo) perquè getNanosPerSquareGrid() l'usi. Fora de reproducció o sense marca,
+        // setScoreTempo preserva l'ajust Speed+/Speed-.
+        int resolvedTempo = sc.tempo != null ? sc.tempo : Settings.DEFAULT_TEMPO;
+        if (sc.tempo != null && cam.isPlaying()) {
+            MyTempo.setTempo(resolvedTempo);
+        } else {
+            MyTempo.setScoreTempo(resolvedTempo);
+        }
         allPurposeScore.setMidiKey(sc.midiKey != null
                 ? sc.midiKey
                 : ToneRange.getDefaultKey());

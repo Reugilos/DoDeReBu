@@ -505,7 +505,7 @@ public class MyChordSymbolLine extends MyComponent {
             boolean[] isMeasure = new boolean[numCols + 1];
             score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
 
-            // Marques de canvi de tempo i to (excloent col 0, que és la marca inicial).
+            // Marques de canvi de tempo i to (excloent col 0, que no es mostra a la UI).
             // Les marques s'apilen verticalment de baix cap amunt.
             // Per a cada columna guardem l'amplada màxima de les marques (per desplaçar l'acord).
             TreeMap<Integer, Integer> markerMaxWidths = new TreeMap<>();

@@ -5,11 +5,11 @@ import dodecagraphone.ui.Settings;
 /**
  * Manages two tempo values:
  *  - scoreTempo: the tempo that is in the score (from changeMap marks). This is
- *    what the tempo button displays and what gets saved. Only changed via
- *    setTempo() (called from applyChangesAt when a mark is hit).
+ *    what the tempo button displays and what gets saved. Changed via setTempo()
+ *    (resets both) or setScoreTempo() (only scoreTempo, keeps playbackTempo).
  *  - playbackTempo: the live playback speed. Starts equal to scoreTempo but can
- *    be adjusted with faster()/slower() without placing a mark. Resets to
- *    scoreTempo whenever setTempo() is called (i.e. when a mark is applied).
+ *    be adjusted with faster()/slower() without placing a mark. Only reset to
+ *    scoreTempo by setTempo() (called when loading/creating a score).
  */
 public class MyTempo {
     /** The score tempo — from changeMap marks, shown on the button. */
@@ -32,6 +32,21 @@ public class MyTempo {
             scoreTempo = tpo;
         // Reset live speed to score speed
         playbackTempo = scoreTempo;
+        return scoreTempo;
+    }
+
+    /**
+     * Updates only scoreTempo (the value shown on the button and used for
+     * saving). Does NOT touch playbackTempo. Called from applyChangesAt so
+     * that Spd+/Spd- adjustments survive navigation.
+     */
+    public static int setScoreTempo(int tpo) {
+        if (tpo > Settings.MAX_BPM)
+            scoreTempo = Settings.MAX_BPM;
+        else if (tpo < 0)
+            scoreTempo = 0;
+        else
+            scoreTempo = tpo;
         return scoreTempo;
     }
 

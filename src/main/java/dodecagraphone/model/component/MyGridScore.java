@@ -1793,6 +1793,11 @@ public class MyGridScore extends MyComponent {
                 while (sc.midiKey < ToneRange.getLowestMidi()) sc.midiKey += 12;
             }
         }
+        // Garanteix que col-0 del changeMap reflecteix la tonalitat base transposada.
+        // applyChangesAt llegeix sempre un valor d'aquí i tornaria al default si no hi ha entrada.
+        ScoreChange sc0 = changeMap.computeIfAbsent(0, k -> new ScoreChange());
+        if (sc0.midiKey == null)   sc0.midiKey   = this.midiKey;
+        if (sc0.scaleMode == null) sc0.scaleMode = this.scaleMode;
         this.grid = newgrid;
         this.transposeChordSymbolLine(step);
         this.transposeBackgroundChordLine(step);

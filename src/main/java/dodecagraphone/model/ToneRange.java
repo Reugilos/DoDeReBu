@@ -335,6 +335,7 @@ public class ToneRange {
     }
 
     public static int getMidiKey(String keyName){
+        if (keyName == null || !nameNotes.containsKey(keyName)) return -1;
         int midiKey = getMidi(keyName);
         while (midiKey > ToneRange.getHighestMidi()) {
             midiKey -= 12;
