@@ -6,6 +6,7 @@ import dodecagraphone.model.component.MyButtonPanel;
 import dodecagraphone.model.component.MyGridSquare;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.teclesControl.DeleteTrackSequence;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.Utilities;
 
 import javax.swing.*;
@@ -21,7 +22,7 @@ public class MyMixer {
     private int chordTrackId = 1003;
     private int drumsTrackId = 1005;
     private String chordTrackName = "ChordTrack";
-    private String drumsTrackName = "Drums";
+    private String drumsTrackName = "DrumsTrack";
     
     private List<MyTrack> tracks;
     private MyTrack chordTrack;
@@ -241,13 +242,13 @@ public class MyMixer {
 
         contentPanel.removeAll();
         if (this.chordTrack != null) {
-            addTrackToDialog(this.chordTrackId);
+            addTrackToDialog(this.chordTrackId, true);
         }
         for (int i = 0; i < tracks.size(); i++) {
-            addTrackToDialog(i);
+            addTrackToDialog(i, false);
         }
         if (this.drumsTrack != null) {
-            addTrackToDialog(this.drumsTrackId);
+            addTrackToDialog(this.drumsTrackId, true);
         }
 
         JPanel mainPanel = new JPanel();
@@ -421,9 +422,10 @@ public class MyMixer {
         mixerVisible = true;
     }
 
-    private void addTrackToDialog(int index) {
+    private void addTrackToDialog(int index, boolean alwaysShow) {
         MyTrack track = getTrackFromId(index);
-        if (track == null || track.isDeleted() || (track.getnNotes()<=0 && !track.isIsNew()) ) return; // || track.getnNotes()<=0
+        if (track == null || track.isDeleted()) return;
+        if (!alwaysShow && track.getnNotes() <= 0 && !track.isIsNew()) return;
         this.modified = true;
 
         JPanel panelPista = new JPanel(new BorderLayout(10, 10));
@@ -455,7 +457,11 @@ public class MyMixer {
         //selectButton.setPreferredSize(fixedSize);
         //dottedButton.setPreferredSize(fixedSize);
         String prefix = track.isSelected() ? ">> " : "";
-        JLabel labelInfo = new JLabel(prefix + track.getName() + " ("+track.getId()+"): "  
+        String displayName;
+        if (index == chordTrackId) displayName = I18n.t("mixer.chordTrack");
+        else if (index == drumsTrackId) displayName = I18n.t("mixer.drumsTrack");
+        else displayName = track.getName();
+        JLabel labelInfo = new JLabel(prefix + displayName + " (" + track.getId() + "): "
                 + track.toStringCanalsInstruments() + ", " + track.getVelocity() + ", " + track.getnNotes());
         labelInfo.setBorder(new EmptyBorder(0, 10, 0, 0));
 
