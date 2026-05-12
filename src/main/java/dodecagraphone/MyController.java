@@ -142,6 +142,7 @@ public class MyController {
     private boolean needsSaving = false;
     private boolean drumsMode = false;
     private int lastMelodyTrackId = 0;
+    private java.util.Map<Integer, Boolean> savedAudibleBeforeDrums = new java.util.HashMap<>();
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
 
@@ -1911,8 +1912,24 @@ public class MyController {
         this.drumsMode = drumsOn;
         if (drumsOn) {
             lastMelodyTrackId = mixer.getCurrentTrackId();
+            // Save audible state and mute all non-drums tracks
+            savedAudibleBeforeDrums.clear();
+            for (MyTrack t : mixer.getTracks()) {
+                if (!t.isDeleted()) {
+                    savedAudibleBeforeDrums.put(t.getId(), t.isAudible());
+                    t.setAudible(false);
+                }
+            }
             mixer.setCurrentTrack(mixer.getDrumsTrackId());
         } else {
+            // Restore audible states
+            for (MyTrack t : mixer.getTracks()) {
+                if (!t.isDeleted()) {
+                    Boolean prev = savedAudibleBeforeDrums.get(t.getId());
+                    if (prev != null) t.setAudible(prev);
+                }
+            }
+            savedAudibleBeforeDrums.clear();
             mixer.setCurrentTrack(lastMelodyTrackId);
         }
         this.allPurposeScore.drawCurrentCamInOffscreen();
