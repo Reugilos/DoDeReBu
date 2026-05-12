@@ -671,7 +671,7 @@ public class MyChordSymbolLine extends MyComponent {
                     int offX = (int) Math.floor(col * Settings.getColWidth());
                     int sx = x1 + (int) Math.round((offX - x2) * scaleX);
                     if (isMeasure[col]) {
-                        g.setStroke(new BasicStroke(1.5f));
+                        g.setStroke(new BasicStroke(2f));
                         g.drawLine(sx, sy1, sx, sy2);
                     } else {
                         Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,

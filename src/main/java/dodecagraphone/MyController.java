@@ -2923,6 +2923,8 @@ public class MyController {
             this.mixer = new MyMixer(this);
             allPurposeScore.readMidiScore(fitxer);
             allPurposeScore.updateStopMarker();
+            allPurposeScore.freezeBaseTimingParams();
+            this.allPurposeScore.initOffscreen();
             this.myChordSymbolLine.initOffscreen();
             this.myLyrics.initOffscreen();
             //this.myChordSymbolLine.setScore(allPurposeScore);
@@ -2952,6 +2954,7 @@ public class MyController {
         defaultMarks.scaleMode = 'M'; // per defecte Major
         this.allPurposeScore.setScoreChange(0, defaultMarks);
         MyTempo.setTempo(Settings.getDefaultTempo());
+        allPurposeScore.freezeBaseTimingParams();
         // allPurposeScore.resetAllPurposeScore();
         //this.myChordSymbolLine.setScore(allPurposeScore);
         //this.cam.setScore(allPurposeScore);

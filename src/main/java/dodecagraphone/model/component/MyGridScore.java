@@ -1491,7 +1491,7 @@ public class MyGridScore extends MyComponent {
                     int offX = (int) Math.floor(col * Settings.getColWidth());
                     int sx = x1 + (int) Math.round((offX - x2) * scaleX);
                     if (isMeasure[col]) {
-                        g.setStroke(new BasicStroke(1.5f));
+                        g.setStroke(new BasicStroke(2f));
                         g.drawLine(sx, y1 + 1, sx, y1 + h - 2);
                     } else {
                         g.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT,

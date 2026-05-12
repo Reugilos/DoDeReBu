@@ -789,7 +789,7 @@ public class MyLyrics extends MyComponent {
                     int offX = (int) Math.floor(col * Settings.getColWidth());
                     int sx = x1 + (int) Math.round((offX - x2) * scaleX);
                     if (isMeasure[col]) {
-                        g.setStroke(new java.awt.BasicStroke(1.5f));
+                        g.setStroke(new java.awt.BasicStroke(2f));
                         g.drawLine(sx, y1, sx, y1 + h);
                     } else {
                         java.awt.Stroke dashed = new java.awt.BasicStroke(1,
