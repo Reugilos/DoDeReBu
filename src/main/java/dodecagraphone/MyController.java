@@ -873,16 +873,22 @@ public class MyController {
         mouseSequence = new MouseSequence(this);
         if (!toEnd) {
             pasteSelectionCopy(r1, r2, c1, c2, c2 + 1, c2 + selWidth);
-            if (selEndCol >= selStartCol) selEndCol = c2 + selWidth;
-            else selStartCol = c2 + selWidth;
+            // Selection moves to the new copy only
+            selStartCol = c2 + 1;
+            selEndCol   = c2 + selWidth;
         } else {
             int endOfScore = this.allPurposeScore.getLastColWritten() - 1;
             int destStart = c2 + 1;
+            int lastDestEnd = c2;
             while (destStart <= endOfScore) {
                 int destEnd = Math.min(destStart + selWidth - 1, endOfScore);
                 pasteSelectionCopy(r1, r2, c1, c2, destStart, destEnd);
+                lastDestEnd = destEnd;
                 destStart += selWidth;
             }
+            // Selection covers the whole replicated area
+            selStartCol = c2 + 1;
+            selEndCol   = lastDestEnd;
         }
         if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
         mouseSequence = null;
