@@ -137,6 +137,8 @@ public class MyController {
     private Thread replicador;
     private MyGridSquare firstNote = null;
     private MyGridSquare lastNote = null;
+    /** True if firstNote was already linked before the EXTEND_LEFT drag touched it. */
+    private boolean firstNoteWasLinkedBeforeDrag = false;
     private boolean needsSaving = false;
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
@@ -841,7 +843,7 @@ public class MyController {
                 }
             }
         }
-        selectionActive = false;
+        // selectionActive stays true — deactivated on paste or click elsewhere
     }
 
     /** Copies selection to clipboard, then erases it (undoable). */
@@ -861,18 +863,23 @@ public class MyController {
         }
         if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
         mouseSequence = null;
+        selectionActive = false;
         this.needsSaving = true;
     }
 
     /** Shows track picker then activates PASTE drag mode on next mouse press. */
     public void startPaste() {
         if (clipboard == null || clipboard.isEmpty()) return;
+        selectionActive = false;
+        pendingPaste = true;  // inhibit editing immediately, before the dialog
         int targetTr = showTrackPickerDialog();
+        if (targetTr == -1) {
+            pendingPaste = false;
+            return;
+        }
         this.pasteTr    = targetTr;
         this.pasteCh    = this.mixer.getCurrentChannelOfTrack(targetTr);
         this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
-        pendingPaste = true;
-        selectionActive = false;
     }
 
     public boolean isPendingPaste() { return pendingPaste; }
@@ -900,7 +907,7 @@ public class MyController {
                 null,
                 names,
                 names[curIdx < names.length ? curIdx : 0]);
-        if (picked == null) return this.mixer.getCurrentTrackId();
+        if (picked == null) return -1;
         for (int i = 0; i < names.length; i++) {
             if (names[i].equals(picked)) return i;
         }
@@ -1092,11 +1099,16 @@ public class MyController {
                     boolean nextHasNote = nextSq != null && nextSq.getPoliNotes().stream()
                         .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                     if (nextHasNote) {
-                        if (!nextSq.isSq_is_linked()) linkNoteAtCell(nextSq);
-                        if (firstNote == null || col < firstNote.getScoreCol()) firstNote = nextSq;
+                        boolean wasLinked = nextSq.isSq_is_linked();
+                        if (!wasLinked) linkNoteAtCell(nextSq);
+                        if (firstNote == null || col < firstNote.getScoreCol()) {
+                            firstNote = nextSq;
+                            firstNoteWasLinkedBeforeDrag = wasLinked;
+                        }
                     } else {
                         addNoteAtCell(row, col);
                         firstNote = this.allPurposeScore.getGrid()[row][col];
+                        firstNoteWasLinkedBeforeDrag = false;
                     }
                 }
                 break;
@@ -1122,12 +1134,19 @@ public class MyController {
                 boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
                     .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                 if (currentTrackHasNote) {
-                    if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
-                    if (firstNote == null || col < firstNote.getScoreCol()) firstNote = sq;
+                    boolean wasLinked = sq.isSq_is_linked();
+                    if (!wasLinked) linkNoteAtCell(sq);
+                    if (firstNote == null || col < firstNote.getScoreCol()) {
+                        firstNote = sq;
+                        firstNoteWasLinkedBeforeDrag = wasLinked;
+                    }
                 } else {
                     addNoteAtCell(row, col);
                     MyGridSquare added = this.allPurposeScore.getGrid()[row][col];
-                    if (firstNote == null || col < firstNote.getScoreCol()) firstNote = added;
+                    if (firstNote == null || col < firstNote.getScoreCol()) {
+                        firstNote = added;
+                        firstNoteWasLinkedBeforeDrag = false;
+                    }
                 }
                 break;
             }
@@ -1154,8 +1173,11 @@ public class MyController {
             this.needsSaving = true;
         }
 
-        /* Qualsevol clic sense Ctrl deselecciona la selecció activa */
-        if (!ctrlDown && selectionActive) {
+        /* Qualsevol clic sense Ctrl deselecciona la selecció activa.
+           Guardem si érem en selecció per consumir el clic a la graella
+           sense afegir nota. */
+        boolean wasDeselecting = !ctrlDown && selectionActive;
+        if (wasDeselecting) {
             selectionActive = false;
         }
 
@@ -1245,6 +1267,8 @@ public class MyController {
         /* Check MyGridSquare. */
         int row = this.allPurposeScore.whichRow(posX, posY);
         if (row != -1) {
+            if (wasDeselecting) return;  // clic consumit per deseleccionar; no afegir nota
+
             int col = this.allPurposeScore.whichCol();
             this.needsSaving = true;
             this.lastRowPressed = row;
@@ -1418,11 +1442,9 @@ public class MyController {
                         ? lastNote : firstNote;
                 unlinkNoteForUndo(head);
             } else if (dragMode == DragMode.EXTEND_LEFT && firstNote != null) {
-                // Only unlink firstNote if there's no note immediately to its left.
-                int prevCol = firstNote.getScoreCol() - 1;
-                int frow = firstNote.getScoreRow();
-                MyGridSquare prevSq = prevCol >= 0 ? this.allPurposeScore.getGridSquare(frow, prevCol) : null;
-                if (prevSq == null || !prevSq.isSqVisible()) {
+                // Unlink firstNote only if it wasn't already linked before the drag started.
+                // If it was already linked (part of a pre-existing chain), keep it linked.
+                if (!firstNoteWasLinkedBeforeDrag) {
                     unlinkNoteForUndo(firstNote);
                 }
             }
@@ -1431,6 +1453,7 @@ public class MyController {
             DragMode wasDragMode = dragMode;
             firstNote = null;
             lastNote = null;
+            firstNoteWasLinkedBeforeDrag = false;
 
             if (mouseSequence != null && !mouseSequence.isEmpty()) {
                 this.afegirEvent(mouseSequence);
