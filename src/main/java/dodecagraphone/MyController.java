@@ -1903,7 +1903,9 @@ public class MyController {
         this.getUi().getPanel().repinta(true);
     }
 
-    public boolean isDrumsMode() { return drumsMode; }
+    public boolean isDrumsMode() {
+        return drumsMode || mixer.getCurrentChannelOfCurrentTrack() == 9;
+    }
 
     public void setDrums(boolean drumsOn) {
         this.drumsMode = drumsOn;
