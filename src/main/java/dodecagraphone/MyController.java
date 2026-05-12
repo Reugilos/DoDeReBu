@@ -2258,6 +2258,24 @@ public class MyController {
     }
 
     public void onPageNumButtonPressed(MyButton togg) {
+        String input = (String) javax.swing.JOptionPane.showInputDialog(
+                this.getUi(),
+                I18n.t("goto.measure.prompt"),
+                I18n.t("goto.measure.title"),
+                javax.swing.JOptionPane.QUESTION_MESSAGE,
+                null, null, null);
+        if (input == null) return;
+        try {
+            int targetMeasure = Integer.parseInt(input.trim());
+            int col = allPurposeScore.getFirstColOfMeasure(targetMeasure);
+            if (col >= 0) {
+                navigateToScoreCol(col);
+                allPurposeScore.drawCurrentCamInOffscreen();
+                getUi().getPanel().repinta(true);
+            }
+        } catch (NumberFormatException ex) {
+            // entrada invàlida, ignorem
+        }
     }
 
     public void onVolumeButtonPressed(MyButton togg) {

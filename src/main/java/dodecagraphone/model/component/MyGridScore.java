@@ -2360,6 +2360,37 @@ public class MyGridScore extends MyComponent {
         return new int[]{measure, beat};
     }
 
+    /** Returns the first score column of the given measure number, or -1 if out of range. */
+    public int getFirstColOfMeasure(int targetMeasure) {
+        int curNColsBeat     = (baseNColsBeat     > 0) ? baseNColsBeat     : Settings.getnColsBeat();
+        int curNBeatsMeasure = (baseNBeatsMeasure > 0) ? baseNBeatsMeasure : getNumBeatsMeasure();
+        int colInBeat        = 0;
+        int beatInMeasure    = 0;
+        int measure          = Settings.isHasAnacrusis() ? 0 : 1;
+        int limit = Math.min(getLastColWritten() + curNColsBeat * curNBeatsMeasure * 2, getNumCols() - 1);
+        if (targetMeasure < measure) return -1;
+        for (int c = 0; c <= limit; c++) {
+            ScoreChange sc = changeMap.get(c);
+            if (sc != null) {
+                if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
+                if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
+                colInBeat = 0; beatInMeasure = 0;
+            }
+            if (colInBeat == 0 && beatInMeasure == 0) {
+                if (c > 0) measure++;
+                if (measure == targetMeasure) return c;
+                if (measure > targetMeasure) return -1;
+            }
+            colInBeat++;
+            if (colInBeat >= curNColsBeat) {
+                colInBeat = 0;
+                beatInMeasure++;
+                if (beatInMeasure >= curNBeatsMeasure) beatInMeasure = 0;
+            }
+        }
+        return -1;
+    }
+
     public void computeBeatMeasureLines(int numCols, boolean[] isBeat, boolean[] isMeasure) {
         // Usa els valors de base (col 0), no els valors globals de Settings que
         // applyChangesAt pot haver modificat per a la posició del playbar.
