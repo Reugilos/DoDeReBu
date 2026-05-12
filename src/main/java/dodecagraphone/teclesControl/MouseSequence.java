@@ -136,7 +136,7 @@ public class MouseSequence extends Event {
                 }
                 continue;
             }
-            MyTrack track = this.controller.getMixer().getTracks().get(c.trackId);
+            MyTrack track = this.controller.getMixer().getTrackFromId(c.trackId);
             if (c.added) {
                 track.oneNoteMore();
                 c.square = this.controller.getAllPurposeScore().addNoteToSquare(
@@ -181,7 +181,7 @@ public class MouseSequence extends Event {
                 c.square.updateState();
                 continue;
             }
-            MyTrack track = this.controller.getMixer().getTracks().get(c.trackId);
+            MyTrack track = this.controller.getMixer().getTrackFromId(c.trackId);
             if (c.added) {
                 track.oneNoteLess();
                 this.controller.getAllPurposeScore().removeNoteFromSquare(

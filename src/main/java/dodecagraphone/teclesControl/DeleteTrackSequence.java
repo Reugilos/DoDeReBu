@@ -73,7 +73,7 @@ public class DeleteTrackSequence extends Event {
         Change firstChange = null;
         Change lastChange = null;
         for (Change c : changes) {
-            MyTrack track = this.controller.getMixer().getTracks().get(c.trackId);
+            MyTrack track = this.controller.getMixer().getTrackFromId(c.trackId);
             if (c.added) {
                 if (firstTime){
                     firstChange = c;
@@ -120,11 +120,11 @@ public class DeleteTrackSequence extends Event {
 
     @Override
     public void desfer() {
-        this.controller.getMixer().getTracks().get(trackId).setDeleted(false);
+        this.controller.getMixer().getTrackFromId(trackId).setDeleted(false);
         // Recorre en ordre invers
         for (int i = changes.size() - 1; i >= 0; i--) {
             Change c = changes.get(i);
-            MyTrack track = this.controller.getMixer().getTracks().get(c.trackId);
+            MyTrack track = this.controller.getMixer().getTrackFromId(c.trackId);
             if (c.added) {
                 track.oneNoteLess();
                 this.controller.getAllPurposeScore().removeNoteFromSquare(c.square.getScoreRow(),c.square.getScoreCol(),c.channel, c.trackId);
