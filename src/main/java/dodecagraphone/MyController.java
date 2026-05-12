@@ -348,18 +348,15 @@ public class MyController {
 
     public final void setDefaultTrack() {
         this.mixer = new MyMixer(this);
+        SoundWithMidi.resetChannels();
+        MyTrack chordTr = new MyTrack(this.mixer.getChordTrackId(), this.mixer.getChordTrackName());
+        this.addChordTrackAndInstrumentToMixer(chordTr);
         MyTrack track = new MyTrack(0, "Track 1");
         track.setIsNew(true);
-        SoundWithMidi.resetChannels();
         this.addTrackAndInstrumentToMixer(track, SoundWithMidi.getLeadInstrument());
-//        MyTrack bkgr = new MyTrack(1, "ChordTrack");
-//        bkgr.setVelocity(31);
-//        //this.mixer.addTrack(1, bkgr, false, true, true);
-//        bkgr.afegirCanal(14);
-//        bkgr.setCurrentChannel(14);
-//        SoundWithMidi.assignInstToChannel(14, 19); // ReedOrgan per defecte
-//        SoundWithMidi.runProgramChange(14, 19);
-//        this.mixer.setCurrentTrack(0);
+        MyTrack drumsTr = new MyTrack(this.mixer.getDrumsTrackId(), this.mixer.getDrumsTrackName());
+        this.addDrumsTrackAndInstrumentToMixer(drumsTr);
+        this.mixer.setCurrentTrack(0);
     }
 
     public final void setScreenKeyboardRight(boolean right) { // false, left
