@@ -896,6 +896,18 @@ public class MyController {
         this.needsSaving = true;
         this.allPurposeScore.updateStopMarker();
         refreshAnacrusis();
+        navigateToScoreCol(Math.max(selStartCol, selEndCol));
+    }
+
+    /** Navega perquè targetScoreCol quedi al playBar. */
+    private void navigateToScoreCol(int targetScoreCol) {
+        int camPBar      = cam.getPlayBar();
+        int firstParent  = allPurposeScore.getFirstParentCol();
+        int nColsCam     = cam.getnCols();
+        int delay        = allPurposeScore.getDelay(!allPurposeScore.isUseScreenKeyboardRight());
+        int newCurrentCol = targetScoreCol - camPBar + firstParent + nColsCam - delay;
+        newCurrentCol = Math.max(0, newCurrentCol);
+        allPurposeScore.setCurrentCol(newCurrentCol);
     }
 
     private void pasteSelectionCopy(int r1, int r2, int srcC1, int srcC2, int destStart, int destEnd) {
