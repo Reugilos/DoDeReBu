@@ -100,6 +100,10 @@ public class MyMixer {
         return chordTrack;
     }
 
+    public MyTrack getDrumsTrack() {
+        return drumsTrack;
+    }
+
     public int louder() {
         MyTrack tr = this.getCurrentTrack();
         int velocity = tr.getVelocity();
@@ -499,7 +503,7 @@ public class MyMixer {
         if (index == this.getChordTrackId()){
             track = this.getChordTrack();
         } else if (index == this.getDrumsTrackId()){
-            track = this.getChordTrack();
+            track = this.getDrumsTrack();
         } else { 
             track = tracks.get(index);
         }
@@ -516,7 +520,7 @@ public class MyMixer {
             tracks.get(i).setSelected(i == id);
         }
         if (chordTrack != null) chordTrack.setSelected(id == this.getChordTrackId());
-        if (drumsTrack != null) drumsTrack.setSelected(id == this.getChordTrackId());
+        if (drumsTrack != null) drumsTrack.setSelected(id == this.getDrumsTrackId());
     }
 
     public MyTrack getCurrentTrack() {
