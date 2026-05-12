@@ -194,7 +194,7 @@ public class MyMixer {
     }
 
     public void showMixer() {
-        Utilities.printOutWithPriority(true, "MyMixer::showMixer():");
+        Utilities.printOutWithPriority(false, "MyMixer::showMixer():");
         if (dialog != null) {
             dialog.dispose();
             dialog = null;
