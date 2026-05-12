@@ -1932,6 +1932,7 @@ public class MyController {
             savedAudibleBeforeDrums.clear();
             mixer.setCurrentTrack(lastMelodyTrackId);
         }
+        updateTextOfButtons();
         this.allPurposeScore.drawCurrentCamInOffscreen();
         this.getUi().getPanel().repinta(true);
     }
@@ -2733,7 +2734,9 @@ public class MyController {
         if (track != null) {
             name = track.getName();
             channel = track.getCurrentChannel();
-            instr = SoundWithMidi.getInstrumentMnemonic(SoundWithMidi.getInstrumentInChannel(channel));
+            instr = (channel == 9)
+                    ? I18n.t("mixer.drumsTrack")
+                    : SoundWithMidi.getInstrumentMnemonic(SoundWithMidi.getInstrumentInChannel(channel));
         }
 //        this.buttons.updateTrackButton(name);
 //        this.buttons.updateChannelButton("" + channel);
