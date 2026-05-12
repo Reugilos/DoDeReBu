@@ -2920,13 +2920,11 @@ public class MyController {
         }
     }
 
-    /** Expandeix el buffer de totes les capes si col s'apropa a endOfBuffer. */
+    /** Expandeix el buffer si col és a l'última pàgina (buffer = endOfScore + 2 pàgines). */
     private void expandBufferIfNeeded(int col) {
-        int colsPerMeasure = allPurposeScore.getBaseColsPerMeasure();
-        if (col + colsPerMeasure < allPurposeScore.getNColsBuffer()) return;
         int colsPerPage = allPurposeScore.getFixedColsPerPage();
-        int newNCols = col + 2 * colsPerPage;
-        // resizeOffscreen actualitza nColsBuffer internament; no cridar setNColsBuffer abans
+        if (col + colsPerPage < allPurposeScore.getNColsBuffer()) return;
+        int newNCols = Math.max(col, allPurposeScore.getStopCol()) + 2 * colsPerPage;
         allPurposeScore.resizeOffscreen(newNCols);
         myChordSymbolLine.resizeOffscreen(newNCols);
         myLyrics.resizeOffscreen(newNCols);
