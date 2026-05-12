@@ -233,6 +233,7 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             this.repinta(true);
             return;
         }
+        controller.getButtons().hideTip();
         // Enter: col·loca el canvi pendent a la columna del playBar
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             if (controller.placePendingChangeAtPlayBar()) {
@@ -354,6 +355,7 @@ class MyNewMouseAdapter extends MouseAdapter {
         //this.panel.paintImmediately(0, 0, panel.getWidth(), panel.getHeight());
         controller.getAllPurposeScore().drawCurrentCamInOffscreen();
         this.panel.repinta(true);
+        this.panel.requestFocusInWindow();
     }
 
     @Override

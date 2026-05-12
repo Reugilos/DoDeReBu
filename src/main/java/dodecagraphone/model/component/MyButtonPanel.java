@@ -99,6 +99,7 @@ public class MyButtonPanel extends MyComponent {
         this.modified = false;
 //        this.setNeedsDrawing(true);
         this.popUp = new JPopupMenu();
+        this.popUp.setFocusable(false);
     }
 
     // Mètode per carregar el disseny dels botons des del fitxer CSV
