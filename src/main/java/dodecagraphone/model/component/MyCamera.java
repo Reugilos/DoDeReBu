@@ -171,7 +171,7 @@ public class MyCamera extends MyComponent {
             jump = normalCols;
         }
         int newCol = currentCol + jump;
-        if (newCol <= Settings.getnColsScore()) {
+        if (newCol <= score.getNColsBuffer()) {
             score.setCurrentCol(newCol);
         }
         updateCurrentPage();

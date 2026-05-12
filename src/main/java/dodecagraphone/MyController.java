@@ -2172,7 +2172,7 @@ public class MyController {
     }
 
     public void onPrevColButtonPressed(MyButton togg) {
-        if (allPurposeScore.getCurrentCol() < allPurposeScore.getStopCol()) {
+        if (allPurposeScore.getCurrentCol() < allPurposeScore.getNColsBuffer()) {
             allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
             updateTextOfButtons();
         }
@@ -2192,7 +2192,7 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    if (allPurposeScore.getCurrentCol() < allPurposeScore.getStopCol()) {
+                    if (allPurposeScore.getCurrentCol() < allPurposeScore.getNColsBuffer()) {
                         allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
                         updateTextOfButtons();
                         allPurposeScore.drawCurrentCamInOffscreen();
