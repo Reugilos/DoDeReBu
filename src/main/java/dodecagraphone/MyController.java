@@ -2901,6 +2901,14 @@ public class MyController {
         }
     }
 
+    /** Retorna la mida inicial del buffer: max(initialCurrentCol, endOfContent) + 2 pàgines. */
+    private int computeInitialBufferSize(int endOfContent) {
+        boolean left = !allPurposeScore.isUseScreenKeyboardRight();
+        int initCol = Math.max(0, Settings.getInitialCurrentCol(left, allPurposeScore));
+        int colsPerPage = allPurposeScore.getFixedColsPerPage();
+        return Math.max(initCol, endOfContent) + 2 * colsPerPage;
+    }
+
     /** Estima l'última columna de la partitura llegint només la capçalera MIDI.
      *  Retorna -1 si el fitxer no es pot llegir. */
     private int estimateLastColFromMidi(String fitxer) {
@@ -2956,11 +2964,7 @@ public class MyController {
             allPurposeScore.resetAllPurposeScore();
             this.mixer = new MyMixer(this);
             int estimatedCols = estimateLastColFromMidi(fitxer);
-            int colsPerPage = allPurposeScore.getFixedColsPerPage();
-            int initialBuffer = estimatedCols > 0
-                    ? estimatedCols + 2 * colsPerPage
-                    : 2 * colsPerPage;
-            allPurposeScore.setNColsBuffer(initialBuffer);
+            allPurposeScore.setNColsBuffer(computeInitialBufferSize(Math.max(0, estimatedCols)));
             allPurposeScore.readMidiScore(fitxer);
             allPurposeScore.updateStopMarker();
             allPurposeScore.freezeBaseTimingParams();
@@ -2995,7 +2999,7 @@ public class MyController {
         this.allPurposeScore.setScoreChange(0, defaultMarks);
         MyTempo.setTempo(Settings.getDefaultTempo());
         allPurposeScore.freezeBaseTimingParams();
-        allPurposeScore.setNColsBuffer(2 * allPurposeScore.getFixedColsPerPage());
+        allPurposeScore.setNColsBuffer(computeInitialBufferSize(0));
         // allPurposeScore.resetAllPurposeScore();
         //this.myChordSymbolLine.setScore(allPurposeScore);
         //this.cam.setScore(allPurposeScore);
