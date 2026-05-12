@@ -127,8 +127,13 @@ public class MouseSequence extends Event {
 
         for (Change c : changes) {
             if (c.isLinkChange) {
-                applyLinkState(c.square, c.channel, c.trackId, c.velocity, c.visible, c.muted, c.dotted, c.linkedAfter);
-                c.square.updateState();
+                // Busca el quadrat actual: addNoteToSquare pot haver creat un nou objecte
+                MyGridSquare actual = controller.getAllPurposeScore()
+                        .getGridSquare(c.square.getScoreRow(), c.square.getScoreCol());
+                if (actual != null) {
+                    applyLinkState(actual, c.channel, c.trackId, c.velocity, c.visible, c.muted, c.dotted, c.linkedAfter);
+                    actual.updateState();
+                }
                 continue;
             }
             MyTrack track = this.controller.getMixer().getTracks().get(c.trackId);

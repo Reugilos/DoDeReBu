@@ -878,6 +878,7 @@ public class MyController {
     public boolean isPendingPaste() { return pendingPaste; }
 
     public void cancelPaste() {
+        if (pasteCurrentRow >= 0) removePasteGhost(pasteCurrentRow, pasteCurrentCol);
         pendingPaste = false;
         dragMode = DragMode.NONE;
         pasteCurrentRow = -1;
