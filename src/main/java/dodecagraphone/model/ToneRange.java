@@ -463,4 +463,66 @@ public class ToneRange {
 //            filenames.put(86, "BflatClarinet_re5.wav");
 //        }
 //    }
+
+    // GM drum map: index = midi note, [0] = short label (≤5 chars), [1] = full name
+    private static final String[][] DRUM_NAMES = new String[128][2];
+    static {
+        DRUM_NAMES[35] = new String[]{"BsDr2", "Bass Drum 2"};
+        DRUM_NAMES[36] = new String[]{"BsDr1", "Bass Drum 1"};
+        DRUM_NAMES[37] = new String[]{"SdStk", "Side Stick"};
+        DRUM_NAMES[38] = new String[]{"AcSnr", "Acoustic Snare"};
+        DRUM_NAMES[39] = new String[]{"Clap",  "Hand Clap"};
+        DRUM_NAMES[40] = new String[]{"ElSnr", "Electric Snare"};
+        DRUM_NAMES[41] = new String[]{"LFTom", "Low Floor Tom"};
+        DRUM_NAMES[42] = new String[]{"ClHH",  "Closed Hi-Hat"};
+        DRUM_NAMES[43] = new String[]{"HFTom", "High Floor Tom"};
+        DRUM_NAMES[44] = new String[]{"PdHH",  "Pedal Hi-Hat"};
+        DRUM_NAMES[45] = new String[]{"LoTom", "Low Tom"};
+        DRUM_NAMES[46] = new String[]{"OpHH",  "Open Hi-Hat"};
+        DRUM_NAMES[47] = new String[]{"LMTom", "Low-Mid Tom"};
+        DRUM_NAMES[48] = new String[]{"HMTom", "Hi-Mid Tom"};
+        DRUM_NAMES[49] = new String[]{"Crsh1", "Crash Cymbal 1"};
+        DRUM_NAMES[50] = new String[]{"HiTom", "High Tom"};
+        DRUM_NAMES[51] = new String[]{"Ride1", "Ride Cymbal 1"};
+        DRUM_NAMES[52] = new String[]{"China", "Chinese Cymbal"};
+        DRUM_NAMES[53] = new String[]{"RdBel", "Ride Bell"};
+        DRUM_NAMES[54] = new String[]{"Tamb",  "Tambourine"};
+        DRUM_NAMES[55] = new String[]{"Splsh", "Splash Cymbal"};
+        DRUM_NAMES[56] = new String[]{"Cowbl", "Cowbell"};
+        DRUM_NAMES[57] = new String[]{"Crsh2", "Crash Cymbal 2"};
+        DRUM_NAMES[58] = new String[]{"Vibsl", "Vibraslap"};
+        DRUM_NAMES[59] = new String[]{"Ride2", "Ride Cymbal 2"};
+        DRUM_NAMES[60] = new String[]{"HiBng", "Hi Bongo"};
+        DRUM_NAMES[61] = new String[]{"LoBng", "Lo Bongo"};
+        DRUM_NAMES[62] = new String[]{"MuCng", "Mute Hi Conga"};
+        DRUM_NAMES[63] = new String[]{"OpCng", "Open Hi Conga"};
+        DRUM_NAMES[64] = new String[]{"LoCng", "Lo Conga"};
+        DRUM_NAMES[65] = new String[]{"HiTmb", "Hi Timbale"};
+        DRUM_NAMES[66] = new String[]{"LoTmb", "Lo Timbale"};
+        DRUM_NAMES[67] = new String[]{"HiAgo", "Hi Agogo"};
+        DRUM_NAMES[68] = new String[]{"LoAgo", "Lo Agogo"};
+        DRUM_NAMES[69] = new String[]{"Cabas", "Cabasa"};
+        DRUM_NAMES[70] = new String[]{"Marcs", "Maracas"};
+        DRUM_NAMES[71] = new String[]{"ShWhi", "Short Whistle"};
+        DRUM_NAMES[72] = new String[]{"LgWhi", "Long Whistle"};
+        DRUM_NAMES[73] = new String[]{"ShGur", "Short Guiro"};
+        DRUM_NAMES[74] = new String[]{"LgGur", "Long Guiro"};
+        DRUM_NAMES[75] = new String[]{"Clvs",  "Claves"};
+        DRUM_NAMES[76] = new String[]{"HiWd",  "Hi Wood Block"};
+        DRUM_NAMES[77] = new String[]{"LoWd",  "Lo Wood Block"};
+        DRUM_NAMES[78] = new String[]{"MuCui", "Mute Cuica"};
+        DRUM_NAMES[79] = new String[]{"OpCui", "Open Cuica"};
+        DRUM_NAMES[80] = new String[]{"MuTri", "Mute Triangle"};
+        DRUM_NAMES[81] = new String[]{"OpTri", "Open Triangle"};
+    }
+
+    public static String getDrumShortName(int midi) {
+        if (midi < 35 || midi > 81 || DRUM_NAMES[midi] == null) return "?";
+        return DRUM_NAMES[midi][0];
+    }
+
+    public static String getDrumFullName(int midi) {
+        if (midi < 35 || midi > 81 || DRUM_NAMES[midi] == null) return "?";
+        return DRUM_NAMES[midi][1];
+    }
 }

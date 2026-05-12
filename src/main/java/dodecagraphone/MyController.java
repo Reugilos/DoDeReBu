@@ -140,6 +140,8 @@ public class MyController {
     /** True if firstNote was already linked before the EXTEND_LEFT drag touched it. */
     private boolean firstNoteWasLinkedBeforeDrag = false;
     private boolean needsSaving = false;
+    private boolean drumsMode = false;
+    private int lastMelodyTrackId = 0;
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
 
@@ -1688,7 +1690,10 @@ public class MyController {
                 if (lastTipButton != -4 || lastTipKeyRow != keyRow) {
                     MyXiloKey key = this.keyboard.getKey(keyRow);
                     this.buttons.hideTip();
-                    this.buttons.showCustomTip(key.getNoteName() + " " + key.getMidi(),
+                    String keyTip = drumsMode
+                            ? ToneRange.getDrumFullName(key.getMidi())
+                            : key.getNoteName() + " " + key.getMidi();
+                    this.buttons.showCustomTip(keyTip,
                             (int)(posX + 2 * Settings.getColWidth()), (int) posY);
                     lastTipButton = -4;
                     lastTipKeyRow = keyRow;
@@ -1898,8 +1903,18 @@ public class MyController {
         this.getUi().getPanel().repinta(true);
     }
 
+    public boolean isDrumsMode() { return drumsMode; }
+
     public void setDrums(boolean drumsOn) {
-        System.out.println("Controller::setDrums: " + drumsOn);
+        this.drumsMode = drumsOn;
+        if (drumsOn) {
+            lastMelodyTrackId = mixer.getCurrentTrackId();
+            mixer.setCurrentTrack(mixer.getDrumsTrackId());
+        } else {
+            mixer.setCurrentTrack(lastMelodyTrackId);
+        }
+        this.allPurposeScore.drawCurrentCamInOffscreen();
+        this.getUi().getPanel().repinta(true);
     }
 
     public void setStrips(boolean penta) {
