@@ -240,13 +240,13 @@ public class MyMixer {
         });
 
         contentPanel.removeAll();
+        if (this.chordTrack != null) {
+            addTrackToDialog(this.chordTrackId);
+        }
         for (int i = 0; i < tracks.size(); i++) {
             addTrackToDialog(i);
         }
-        if (this.chordTrack!=null){
-            addTrackToDialog(this.chordTrackId);
-        }
-        if (this.drumsTrack!=null){
+        if (this.drumsTrack != null) {
             addTrackToDialog(this.drumsTrackId);
         }
 
