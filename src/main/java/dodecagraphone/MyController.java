@@ -322,18 +322,13 @@ public class MyController {
     }
 
     public void addDrumsTrackAndInstrumentToMixer(MyTrack track) {
-        // MyTrack track = new MyTrack(this.mixer.getDrumsTrackId(),this.mixer.getChordTrackName());
         track.setVelocity(63);
         int canal = 9;
         track.afegirCanal(canal);
         track.setCurrentChannel(canal);
         track.setVisible(true);
         track.setAudible(true);
-        for (MyTrack tr : this.mixer.getTracks()) {
-            tr.setVisible(false);
-        }
         this.mixer.setDrumsTrack(track);
-        this.mixer.setCurrentTrack(track.getId());
     }
 
     public void addTrackAndInstrumentToMixer(MyTrack track, int instr) {

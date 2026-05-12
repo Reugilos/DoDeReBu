@@ -446,16 +446,6 @@ public class MyMixer {
             updateButtonState(playButton, index, false);
         });
 
-        String selectLabel = track.isSelected() ? "Selected" : "Select";
-        JButton selectButton = new JButton(selectLabel);
-        selectButton.addActionListener(e -> {
-            setCurrentTrack(index);  // marca aquesta pista com seleccionada
-            refreshMixer();          // refresca per actualitzar la UI
-        });
-
-        //Dimension fixedSize = new Dimension(105, 25); // ajusta si cal
-        //selectButton.setPreferredSize(fixedSize);
-        //dottedButton.setPreferredSize(fixedSize);
         String prefix = track.isSelected() ? ">> " : "";
         String displayName;
         if (index == chordTrackId) displayName = I18n.t("mixer.chordTrack");
@@ -465,20 +455,22 @@ public class MyMixer {
                 + track.toStringCanalsInstruments() + ", " + track.getVelocity() + ", " + track.getnNotes());
         labelInfo.setBorder(new EmptyBorder(0, 10, 0, 0));
 
-        JPanel rightButtons = new JPanel();
-        rightButtons.setLayout(new BoxLayout(rightButtons, BoxLayout.X_AXIS));
-        rightButtons.add(selectButton);
-        rightButtons.add(Box.createRigidArea(new Dimension(5, 0)));
-
 // Panell esquerra: show, play, label
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         leftPanel.add(showButton);
         leftPanel.add(playButton);
         leftPanel.add(labelInfo);
 
-// Panell dreta: select, dotted
+// Panell dreta: select (no per drums)
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-        rightPanel.add(selectButton);
+        if (index != drumsTrackId) {
+            JButton selectButton = new JButton(track.isSelected() ? "Selected" : "Select");
+            selectButton.addActionListener(e -> {
+                setCurrentTrack(index);
+                refreshMixer();
+            });
+            rightPanel.add(selectButton);
+        }
 
 // Panell combinat amb BorderLayout
         JPanel filaCompleta = new JPanel(new BorderLayout());
