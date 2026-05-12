@@ -53,6 +53,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.sound.midi.MetaMessage;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Sequence;
+import javax.sound.midi.Track;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -968,6 +971,7 @@ public class MyController {
 
     /** Afegeix una nota al cell (row,col) del track actual i la registra al mouseSequence. */
     private void addNoteAtCell(int row, int col) {
+        expandBufferIfNeeded(col);
         MyTrack tr = this.mixer.getCurrentTrack();
         tr.oneNoteMore();
         MyGridSquare sq = this.allPurposeScore.addNoteToSquare(row, col, 1, Settings.getnRowsSquare(),
@@ -2896,6 +2900,37 @@ public class MyController {
         }
     }
 
+    /** Estima l'última columna de la partitura llegint només la capçalera MIDI.
+     *  Retorna -1 si el fitxer no es pot llegir. */
+    private int estimateLastColFromMidi(String fitxer) {
+        try {
+            Sequence seq = MidiSystem.getSequence(new File(fitxer));
+            long lastTick = 0;
+            for (Track t : seq.getTracks()) {
+                if (t.size() > 0) lastTick = Math.max(lastTick, t.get(t.size() - 1).getTick());
+            }
+            long tpq = seq.getResolution(); // ticks per quarter
+            int nColsBeat = Settings.getnColsBeat();
+            // beatFigure desconegut abans de llegir el MIDI; assumim 4 (negra)
+            long ticksPerCol = Math.max(1, tpq / nColsBeat);
+            return (int) (lastTick / ticksPerCol);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /** Expandeix el buffer de totes les capes si col s'apropa a endOfBuffer. */
+    private void expandBufferIfNeeded(int col) {
+        int colsPerMeasure = allPurposeScore.getBaseColsPerMeasure();
+        if (col + colsPerMeasure < allPurposeScore.getNColsBuffer()) return;
+        int colsPerPage = allPurposeScore.getFixedColsPerPage();
+        int newNCols = col + 2 * colsPerPage;
+        // resizeOffscreen actualitza nColsBuffer internament; no cridar setNColsBuffer abans
+        allPurposeScore.resizeOffscreen(newNCols);
+        myChordSymbolLine.resizeOffscreen(newNCols);
+        myLyrics.resizeOffscreen(newNCols);
+    }
+
     public void loadScore(String fitxer) {
 //        this.newScore();
 //        if ("".equals(fitxer)) fitxer = JOptionPane.showInputDialog("Fitxer?", "prova.mid");
@@ -2921,6 +2956,12 @@ public class MyController {
             this.exercisesOn = false;
             allPurposeScore.resetAllPurposeScore();
             this.mixer = new MyMixer(this);
+            int estimatedCols = estimateLastColFromMidi(fitxer);
+            int colsPerPage = allPurposeScore.getFixedColsPerPage();
+            int initialBuffer = estimatedCols > 0
+                    ? estimatedCols + 2 * colsPerPage
+                    : 2 * colsPerPage;
+            allPurposeScore.setNColsBuffer(initialBuffer);
             allPurposeScore.readMidiScore(fitxer);
             allPurposeScore.updateStopMarker();
             allPurposeScore.freezeBaseTimingParams();
@@ -2955,6 +2996,7 @@ public class MyController {
         this.allPurposeScore.setScoreChange(0, defaultMarks);
         MyTempo.setTempo(Settings.getDefaultTempo());
         allPurposeScore.freezeBaseTimingParams();
+        allPurposeScore.setNColsBuffer(2 * allPurposeScore.getFixedColsPerPage());
         // allPurposeScore.resetAllPurposeScore();
         //this.myChordSymbolLine.setScore(allPurposeScore);
         //this.cam.setScore(allPurposeScore);

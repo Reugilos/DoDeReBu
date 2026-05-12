@@ -91,6 +91,8 @@ public class MyGridScore extends MyComponent {
     private int baseBeatFigure    = 0; // 0 = no inicialitzat
     /** Nombre de columnes per pàgina, calculat una sola vegada a freezeBaseTimingParams(). */
     private int fixedColsPerPage  = 0;
+    /** Mida del buffer offscreen en columnes. 0 = usa nCols (mida màxima). */
+    private int nColsBuffer = 0;
     protected String label = "";
     protected String title = "Cançó";
     protected String author = "Tradicional";
@@ -800,7 +802,7 @@ public class MyGridScore extends MyComponent {
         if (offscreenGraphics != null) {
             offscreenGraphics.dispose();
         }
-        int w = (int) (this.getnCols() * Settings.getColWidth());
+        int w = (int) (this.getNColsBuffer() * Settings.getColWidth());
         int h = (int) (this.getnKeys() * Settings.getRowHeight() * Settings.getnRowsSquare());
         offscreenImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         offscreenGraphics = offscreenImage.createGraphics();
@@ -1077,7 +1079,7 @@ public class MyGridScore extends MyComponent {
             offscreenGraphics.fillRect(0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
 
             int firstDrawCol = 0;
-            int lastDrawCol  = this.getnCols();
+            int lastDrawCol  = this.getNColsBuffer();
             int numCols      = lastDrawCol;
 
             // Calcula línies de beat/compàs tenint en compte canvis mid-score
@@ -1918,6 +1920,40 @@ public class MyGridScore extends MyComponent {
         int beatsMeasure = (baseNBeatsMeasure > 0) ? baseNBeatsMeasure : numBeatsMeasure;
         int cols = colsBeat * beatsMeasure;
         return cols > 0 ? cols : 1;
+    }
+
+    public int getNColsBuffer() { return nColsBuffer > 0 ? nColsBuffer : nCols; }
+
+    public void setNColsBuffer(int n) {
+        this.nColsBuffer = Math.max(1, Math.min(n, nCols));
+    }
+
+    public int getEndOfBuffer() { return getNColsBuffer() - 1; }
+
+    public void resizeOffscreen(int newNColsBuffer) {
+        newNColsBuffer = Math.min(newNColsBuffer, nCols);
+        if (newNColsBuffer <= getNColsBuffer() || offscreenImage == null) return;
+        synchronized (offscreenGraphics) {
+            int oldW = offscreenImage.getWidth();
+            int newW = (int) (newNColsBuffer * Settings.getColWidth());
+            int h    = offscreenImage.getHeight();
+            java.awt.image.BufferedImage newImg = new java.awt.image.BufferedImage(newW, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D newG = newImg.createGraphics();
+            newG.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            newG.drawImage(offscreenImage, 0, 0, null);
+            newG.setColor(java.awt.Color.WHITE);
+            newG.fillRect(oldW, 0, newW - oldW, h);
+            int oldNCols = getNColsBuffer();
+            nColsBuffer = newNColsBuffer;
+            offscreenGraphics.dispose();
+            offscreenImage = newImg;
+            offscreenGraphics = newG;
+            for (int col = oldNCols; col < nColsBuffer; col++) {
+                for (int row = 0; row < nKeys; row++) {
+                    drawSquare(row, col, offscreenGraphics);
+                }
+            }
+        }
     }
 
     /**

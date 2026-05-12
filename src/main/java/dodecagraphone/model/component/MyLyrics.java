@@ -600,7 +600,7 @@ public class MyLyrics extends MyComponent {
         if (offscreenGraphics != null) {
             offscreenGraphics.dispose();
         }
-        int w = (int) (score.getNumCols() * Settings.getColWidth());
+        int w = (int) (score.getNColsBuffer() * Settings.getColWidth());
         int h = (int) (nRows * Settings.getRowHeight());
         offscreenImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         offscreenGraphics = offscreenImage.createGraphics();
@@ -610,6 +610,23 @@ public class MyLyrics extends MyComponent {
                 "MyLyrics::initOffscreen: w=" + w + ", h=" + h);
         needsDrawing = true;
         drawFullLyricsInOffscreen();
+    }
+
+    public void resizeOffscreen(int newNCols) {
+        if (offscreenImage == null) { initOffscreen(); return; }
+        int newW = (int) (newNCols * Settings.getColWidth());
+        int oldW = offscreenImage.getWidth();
+        if (newW <= oldW) return;
+        int h = offscreenImage.getHeight();
+        BufferedImage newImg = new BufferedImage(newW, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D newG = newImg.createGraphics();
+        newG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        newG.drawImage(offscreenImage, 0, 0, null);
+        newG.setColor(Color.WHITE);
+        newG.fillRect(oldW, 0, newW - oldW, h);
+        offscreenGraphics.dispose();
+        offscreenImage = newImg;
+        offscreenGraphics = newG;
     }
 
     /**
