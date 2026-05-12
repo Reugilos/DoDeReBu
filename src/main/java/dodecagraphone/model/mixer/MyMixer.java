@@ -461,16 +461,14 @@ public class MyMixer {
         leftPanel.add(playButton);
         leftPanel.add(labelInfo);
 
-// Panell dreta: select (no per drums)
+// Panell dreta: select
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-        if (index != drumsTrackId) {
-            JButton selectButton = new JButton(track.isSelected() ? "Selected" : "Select");
-            selectButton.addActionListener(e -> {
-                setCurrentTrack(index);
-                refreshMixer();
-            });
-            rightPanel.add(selectButton);
-        }
+        JButton selectButton = new JButton(track.isSelected() ? "Selected" : "Select");
+        selectButton.addActionListener(e -> {
+            setCurrentTrack(index);
+            refreshMixer();
+        });
+        rightPanel.add(selectButton);
 
 // Panell combinat amb BorderLayout
         JPanel filaCompleta = new JPanel(new BorderLayout());

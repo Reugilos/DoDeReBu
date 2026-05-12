@@ -1312,12 +1312,16 @@ public class MyGridScore extends MyComponent {
                     g.drawString("X", (int) screenX, (int) (screenY + hght));
                 }
                 if (!sq.isSq_is_linked()) {
-                    String name = "✔";
-
-                    if (this.isShowNoteNames()) {
+                    boolean hasDrumsNote = sq.getPoliNotes().stream()
+                            .anyMatch(n -> n.isVisible() && n.getChannel() == 9);
+                    String name;
+                    if (this.isShowNoteNames() && !hasDrumsNote) {
                         name = ToneRange.getNoteName(midi, this.getMidiKey());
                         name = name.substring(0, name.length() - 1);
+                    } else {
+                        name = "✔";
                     }
+
                     g.setColor(sq.getColor());
                     g.fillRect((int) screenX, (int) screenY, (int) wdth, (int) hght);
 
@@ -1331,15 +1335,19 @@ public class MyGridScore extends MyComponent {
 
                 }
                 if (sq.isSqDotted() && !sq.isSq_is_linked()) {
+                    boolean hasDrumsNoteDot = sq.getPoliNotes().stream()
+                            .anyMatch(n -> n.isVisible() && n.getChannel() == 9);
                     g.setColor(Color.BLACK);
                     g.fillRect((int) screenX, (int) screenY, (int) hght, (int) hght);
-                    if (this.isShowNoteNames()) {
-                        String name;
-                        name = ToneRange.getNoteName(midi, this.getMidiKey());
-                        name = name.substring(0, name.length() - 1);
-                        g.setColor(Color.WHITE);
-                        g.drawString(name, (int) (screenX + width / 3), (int) (screenY + hght));
+                    g.setColor(Color.WHITE);
+                    String dotName;
+                    if (this.isShowNoteNames() && !hasDrumsNoteDot) {
+                        dotName = ToneRange.getNoteName(midi, this.getMidiKey());
+                        dotName = dotName.substring(0, dotName.length() - 1);
+                    } else {
+                        dotName = "✔";
                     }
+                    g.drawString(dotName, (int) (screenX + width / 3), (int) (screenY + hght));
                 }
             }
         }
@@ -2312,14 +2320,15 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
-     * Retorna el número de compàs (1-based) i el beat dins del compàs (1-based)
-     * a la columna {@code col}, tenint en compte els canvis de compàs del changeMap.
+     * Retorna el número de compàs (1-based), el beat dins del compàs (1-based)
+     * i la columna dins del beat (0-based) a la columna {@code col},
+     * tenint en compte els canvis de compàs del changeMap.
      *
      * @param col columna (0-based)
-     * @return array de dos elements: [measureNumber, beatNumber], ambdós 1-based
+     * @return array de tres elements: [measureNumber, beatNumber, colInBeat], els dos primers 1-based
      */
     public int[] getMeasureAndBeatAt(int col) {
-        if (col < 0) return new int[]{1, 1};
+        if (col < 0) return new int[]{1, 1, 0};
 
         int curNColsBeat     = (baseNColsBeat     > 0) ? baseNColsBeat     : Settings.getnColsBeat();
         int curNBeatsMeasure = (baseNBeatsMeasure  > 0) ? baseNBeatsMeasure  : getNumBeatsMeasure();
@@ -2327,6 +2336,7 @@ public class MyGridScore extends MyComponent {
         int beatInMeasure    = 0;
         int measure          = Settings.isHasAnacrusis() ? 0 : 1;
         int beat             = 1;  // 1-based
+        int beatCol          = 0;  // 0-based col within beat at `col`
 
         for (int c = 0; c <= col; c++) {
             // Aplica canvis de compàs registrats exactament en aquesta columna
@@ -2349,6 +2359,7 @@ public class MyGridScore extends MyComponent {
                 }
             }
 
+            beatCol = colInBeat;  // posició 0-based dins del beat per a `c`
             colInBeat++;
             if (colInBeat >= curNColsBeat) {
                 colInBeat = 0;
@@ -2357,7 +2368,7 @@ public class MyGridScore extends MyComponent {
             }
         }
 
-        return new int[]{measure, beat};
+        return new int[]{measure, beat, beatCol};
     }
 
     /** Returns the first score column of the given measure number, or -1 if out of range. */

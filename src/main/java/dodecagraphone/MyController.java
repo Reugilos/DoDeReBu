@@ -142,7 +142,6 @@ public class MyController {
     private boolean needsSaving = false;
     private boolean drumsMode = false;
     private int lastMelodyTrackId = 0;
-    private java.util.Map<Integer, Boolean> savedAudibleBeforeDrums = new java.util.HashMap<>();
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
 
@@ -896,7 +895,11 @@ public class MyController {
         this.needsSaving = true;
         this.allPurposeScore.updateStopMarker();
         refreshAnacrusis();
-        navigateToScoreCol(Math.max(selStartCol, selEndCol));
+        int newSelStart = Math.min(selStartCol, selEndCol);
+        if (newSelStart >= allPurposeScore.getCurrentCol()) {
+            navigateToScoreCol(newSelStart);
+        }
+        updateTextOfButtons();
     }
 
     /** Navega perquè targetScoreCol quedi al playBar. */
@@ -923,9 +926,9 @@ public class MyController {
                         .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
                 if (!hasNote) continue;
                 addNoteAtCell(row, destCol);
-                if (sq.isSq_is_linked()) {
+                if (!sq.isSq_is_linked()) {
                     MyGridSquare dest = this.allPurposeScore.getGridSquare(row, destCol);
-                    if (dest != null) linkNoteAtCell(dest);
+                    if (dest != null) unlinkNoteForUndo(dest);
                 }
             }
         }
@@ -1360,6 +1363,7 @@ public class MyController {
                 return;
             }
 
+            showBeatColTip(col, posX, posY);
             MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
             if (ctrlDown && shiftDown && sq != null && sq.isSqVisible()) {
                 // MOVE mode: capture the whole note and prepare for live drag
@@ -1565,6 +1569,9 @@ public class MyController {
             this.keyboard.getKey(this.lastRowPressed).doNotHighlight(this.allPurposeScore.isUseScreenKeyboardRight());
             this.lastRowPressed = -1;
             this.lastColPressed = -1;
+            this.buttons.hideTip();
+            lastTipGridBeatCol = -1;
+            lastTipButton = -1;
             return;
         }
         /* MyButton. */
@@ -1615,6 +1622,7 @@ public class MyController {
             int newRow = this.allPurposeScore.whichRow(posX, posY);
             int newCol = this.allPurposeScore.whichCol();
             if (newRow == -1 || newCol == -1) return;
+            showBeatColTip(newCol, posX, posY);
             selEndRow = newRow;
             selEndCol = newCol;
             this.drawFull(true);
@@ -1626,6 +1634,7 @@ public class MyController {
             if (newRow == -1) newRow = pasteCurrentRow;
             int newCol = this.allPurposeScore.whichCol();
             if (newCol == -1) return;
+            showBeatColTip(newCol, posX, posY);
             if (newRow == pasteCurrentRow && newCol == pasteCurrentCol) return;
             removePasteGhost(pasteCurrentRow, pasteCurrentCol);
             pasteCurrentRow = newRow;
@@ -1640,6 +1649,7 @@ public class MyController {
             if (newRow == -1) newRow = moveCurrentRow; // clamp to current if outside grid rows
             int col = this.allPurposeScore.whichCol();
             if (col == -1) return;
+            showBeatColTip(col, posX, posY);
             int newHeadCol = col - moveClickOffset;
             newHeadCol = Math.max(0, newHeadCol);
             int gridWidth = this.allPurposeScore.getGrid()[newRow].length;
@@ -1658,6 +1668,7 @@ public class MyController {
         int col = this.allPurposeScore.whichCol();
 
         if (row == -1 || col == -1) return;
+        showBeatColTip(col, posX, posY);
         if (row == lastRowPressed && col == lastColPressed) return;
 
         // Interpolate gaps between last and current position
@@ -1723,6 +1734,7 @@ public class MyController {
     
     private int lastTipButton = -1;
     private int lastTipKeyRow = -1;
+    private int lastTipGridBeatCol = -1;
 
     public void onMouseMoved(double posX, double posY) {
         int button = this.buttons.whichButton(posX, posY);
@@ -1786,12 +1798,14 @@ public class MyController {
                     this.buttons.showCustomTip(I18n.t("myGridScore.tip"), (int) posX, gridBottom);
                     lastTipButton = -7;
                     lastTipKeyRow = -1;
+                    lastTipGridBeatCol = -1;
                 }
             } else {
                 if (lastTipButton != -1) {
                     this.buttons.hideTip();
                     lastTipButton = -1;
                     lastTipKeyRow = -1;
+                    lastTipGridBeatCol = -1;
                 }
             }
         }
@@ -1976,29 +1990,29 @@ public class MyController {
         this.drumsMode = drumsOn;
         if (drumsOn) {
             lastMelodyTrackId = mixer.getCurrentTrackId();
-            // Save audible state and mute all non-drums tracks
-            savedAudibleBeforeDrums.clear();
-            for (MyTrack t : mixer.getTracks()) {
-                if (!t.isDeleted()) {
-                    savedAudibleBeforeDrums.put(t.getId(), t.isAudible());
-                    t.setAudible(false);
-                }
-            }
             mixer.setCurrentTrack(mixer.getDrumsTrackId());
         } else {
-            // Restore audible states
-            for (MyTrack t : mixer.getTracks()) {
-                if (!t.isDeleted()) {
-                    Boolean prev = savedAudibleBeforeDrums.get(t.getId());
-                    if (prev != null) t.setAudible(prev);
-                }
-            }
-            savedAudibleBeforeDrums.clear();
             mixer.setCurrentTrack(lastMelodyTrackId);
         }
+        mixer.refreshMixer();
         updateTextOfButtons();
         this.allPurposeScore.drawCurrentCamInOffscreen();
         this.getUi().getPanel().repinta(true);
+    }
+
+    private void showBeatColTip(int scoreCol, double posX, double posY) {
+        int[] mbc = this.allPurposeScore.getMeasureAndBeatAt(scoreCol);
+        int beatCol = mbc[2] + 1;
+        if (lastTipGridBeatCol != beatCol) {
+            this.buttons.hideTip();
+            this.buttons.showCustomTip(I18n.f("grid.cursor.beatCol", beatCol),
+                    (int)(posX + 15), (int)(posY - 10));
+            lastTipGridBeatCol = beatCol;
+        }
+    }
+
+    private void resetDrumsMode() {
+        drumsMode = false;
     }
 
     public void setStrips(boolean penta) {
@@ -3108,6 +3122,10 @@ public class MyController {
             int estimatedCols = estimateLastColFromMidi(fitxer);
             allPurposeScore.setNColsBuffer(computeInitialBufferSize(Math.max(0, estimatedCols)));
             allPurposeScore.readMidiScore(fitxer);
+            resetDrumsMode();
+            for (MyTrack t : this.mixer.getTracks()) {
+                if (!t.isDeleted()) t.setAudible(true);
+            }
             allPurposeScore.updateStopMarker();
             allPurposeScore.freezeBaseTimingParams();
             this.allPurposeScore.initOffscreen();
@@ -3151,6 +3169,7 @@ public class MyController {
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
         this.buttons.setToggleButtonsToProgramValues();
         this.currentMidiFile = "";
+        resetDrumsMode();
         this.setDefaultTrack();
         this.allPurposeScore.initOffscreen();
         this.myChordSymbolLine.initOffscreen();
