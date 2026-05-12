@@ -236,6 +236,7 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
         controller.getButtons().hideTip();
         // Enter: col·loca el canvi pendent a la columna del playBar
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+            controller.clearSelection();
             if (controller.placePendingChangeAtPlayBar()) {
                 controller.getAllPurposeScore().drawCurrentCamInOffscreen();
                 this.repinta(true);
@@ -243,6 +244,7 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
+            controller.clearSelection();
             if (controller.isPendingPaste()) {
                 controller.cancelPaste();
             } else if (e.isShiftDown()) {

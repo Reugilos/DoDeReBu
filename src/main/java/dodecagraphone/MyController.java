@@ -807,6 +807,7 @@ public class MyController {
     // ── Selection overlay getters (read by MyGridScore) ──────────────────────────
 
     public boolean isSelectionActive() { return selectionActive; }
+    public void clearSelection() { selectionActive = false; }
     public int getSelStartRow()        { return selStartRow; }
     public int getSelStartCol()        { return selStartCol; }
     public int getSelEndRow()          { return selEndRow; }
