@@ -862,6 +862,56 @@ public class MyController {
         this.needsSaving = true;
     }
 
+    /** Replicate selection to the right. toEnd=false: one copy; toEnd=true: fill to endOfScore. */
+    public void replicateSelection(boolean toEnd) {
+        if (!selectionActive) return;
+        int r1 = Math.min(selStartRow, selEndRow);
+        int r2 = Math.max(selStartRow, selEndRow);
+        int c1 = Math.min(selStartCol, selEndCol);
+        int c2 = Math.max(selStartCol, selEndCol);
+        int selWidth = c2 - c1 + 1;
+        mouseSequence = new MouseSequence(this);
+        if (!toEnd) {
+            pasteSelectionCopy(r1, r2, c1, c2, c2 + 1, c2 + selWidth);
+            if (selEndCol >= selStartCol) selEndCol = c2 + selWidth;
+            else selStartCol = c2 + selWidth;
+        } else {
+            int endOfScore = this.allPurposeScore.getLastColWritten() - 1;
+            int destStart = c2 + 1;
+            while (destStart <= endOfScore) {
+                int destEnd = Math.min(destStart + selWidth - 1, endOfScore);
+                pasteSelectionCopy(r1, r2, c1, c2, destStart, destEnd);
+                destStart += selWidth;
+            }
+        }
+        if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
+        mouseSequence = null;
+        this.needsSaving = true;
+        this.allPurposeScore.updateStopMarker();
+        refreshAnacrusis();
+    }
+
+    private void pasteSelectionCopy(int r1, int r2, int srcC1, int srcC2, int destStart, int destEnd) {
+        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        int tr = this.mixer.getCurrentTrackId();
+        for (int row = r1; row <= r2; row++) {
+            for (int col = srcC1; col <= srcC2; col++) {
+                int destCol = destStart + (col - srcC1);
+                if (destCol > destEnd) break;
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq == null) continue;
+                boolean hasNote = sq.getPoliNotes().stream()
+                        .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
+                if (!hasNote) continue;
+                addNoteAtCell(row, destCol);
+                if (sq.isSq_is_linked()) {
+                    MyGridSquare dest = this.allPurposeScore.getGridSquare(row, destCol);
+                    if (dest != null) linkNoteAtCell(dest);
+                }
+            }
+        }
+    }
+
     /** Shows track picker then activates PASTE drag mode on next mouse press. */
     public void startPaste() {
         if (clipboard == null || clipboard.isEmpty()) return;

@@ -278,6 +278,13 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             this.repinta(true);
             return;
         }
+        if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_R) {
+            boolean toEnd = e.isShiftDown();
+            controller.replicateSelection(toEnd);
+            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            this.repinta(true);
+            return;
+        }
     }
 
     @Override
