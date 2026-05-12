@@ -1370,6 +1370,9 @@ public class MyController {
                 dragMode = DragMode.NONE;
                 this.lastRowPressed = -1;
                 this.lastColPressed = -1;
+                double tipX = Settings.getScreenWidth() / 2.0;
+                double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
+                this.buttons.showCustomTip(I18n.t("selection.made.tip"), tipX, tipY);
                 return;
             }
             if (dragMode == DragMode.PASTE) {

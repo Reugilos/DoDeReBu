@@ -269,6 +269,9 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_V) {
+            if (controller.isSelectionActive()) {
+                controller.copySelection();
+            }
             controller.startPaste();
             controller.getAllPurposeScore().drawCurrentCamInOffscreen();
             this.repinta(true);
