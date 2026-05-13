@@ -39,6 +39,7 @@ import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MeterDialog;
 import dodecagraphone.ui.MeterDialog.MeterData;
 import dodecagraphone.ui.MyDialogs;
+import dodecagraphone.ui.MyNewPanel;
 import dodecagraphone.ui.MyUserInterface;
 import dodecagraphone.ui.DodecagramPdfPrinter;
 import dodecagraphone.ui.SVGandPDF;
@@ -263,6 +264,7 @@ public class MyController {
 
     public void undo() {
         pilaEvents.undo();
+        if (pilaEvents.isUndoEmpty()) needsSaving = false;
         refreshAnacrusis();
         this.drawFull(true);
     }
@@ -838,7 +840,7 @@ public class MyController {
                 }
             }
         }
-        // selectionActive stays true — deactivated on paste or click elsewhere
+        selectionActive = false;
     }
 
     /** Copies selection to clipboard, then erases it (undoable). */
@@ -877,27 +879,25 @@ public class MyController {
             selStartCol = c2 + 1;
             selEndCol   = c2 + selWidth;
         } else {
-            int endOfScore = this.allPurposeScore.getLastColWritten() - 1;
+            int bufferEnd = allPurposeScore.getNColsBuffer() - 1;
             int destStart = c2 + 1;
-            int lastDestEnd = c2;
-            while (destStart <= endOfScore) {
-                int destEnd = Math.min(destStart + selWidth - 1, endOfScore);
+            while (destStart <= bufferEnd) {
+                int destEnd = Math.min(destStart + selWidth - 1, bufferEnd);
                 pasteSelectionCopy(r1, r2, c1, c2, destStart, destEnd);
-                lastDestEnd = destEnd;
                 destStart += selWidth;
             }
-            // Selection covers the whole replicated area
-            selStartCol = c2 + 1;
-            selEndCol   = lastDestEnd;
+            selectionActive = false;
         }
         if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
         mouseSequence = null;
         this.needsSaving = true;
         this.allPurposeScore.updateStopMarker();
         refreshAnacrusis();
-        int newSelStart = Math.min(selStartCol, selEndCol);
-        if (newSelStart >= allPurposeScore.getCurrentCol()) {
-            navigateToScoreCol(newSelStart);
+        if (selectionActive) {
+            int newSelStart = Math.min(selStartCol, selEndCol);
+            if (newSelStart >= allPurposeScore.getCurrentCol()) {
+                navigateToScoreCol(newSelStart);
+            }
         }
         updateTextOfButtons();
     }
@@ -959,13 +959,35 @@ public class MyController {
         pasteCurrentCol = -1;
     }
 
-    /** Simple track picker using JOptionPane. Returns the chosen track index. */
+    /** Simple track picker using JOptionPane. Returns the chosen track ID, or -1 if cancelled. */
     private int showTrackPickerDialog() {
+        int curId = this.mixer.getCurrentTrackId();
+        // Skip dialog if current track is drums
+        if (curId == this.mixer.getDrumsTrackId()) return curId;
+
+        List<String> nameList = new ArrayList<>();
+        List<Integer> idList  = new ArrayList<>();
         List<MyTrack> tracks = this.mixer.getTracks();
-        if (tracks.isEmpty()) return this.mixer.getCurrentTrackId();
-        String[] names = new String[tracks.size()];
-        for (int i = 0; i < tracks.size(); i++) names[i] = tracks.get(i).getName();
-        int curIdx = Math.max(0, this.mixer.getCurrentTrackId());
+        for (int i = 0; i < tracks.size(); i++) {
+            nameList.add(tracks.get(i).getName());
+            idList.add(i);
+        }
+        MyTrack chordTrack = this.mixer.getChordTrack();
+        if (chordTrack != null && this.allPurposeScore.hasAnyChords()) {
+            nameList.add(chordTrack.getName());
+            idList.add(this.mixer.getChordTrackId());
+        }
+        MyTrack drumsTrack = this.mixer.getDrumsTrack();
+        if (drumsTrack != null && drumsTrack.getnNotes() > 0) {
+            nameList.add(drumsTrack.getName());
+            idList.add(this.mixer.getDrumsTrackId());
+        }
+        // Skip dialog if only one track
+        if (nameList.size() <= 1) return curId;
+
+        String[] names = nameList.toArray(new String[0]);
+        int defaultIdx = idList.indexOf(curId);
+        if (defaultIdx < 0) defaultIdx = 0;
         Object picked = JOptionPane.showInputDialog(
                 this.ui,
                 I18n.t("paste.trackPicker.message"),
@@ -973,12 +995,12 @@ public class MyController {
                 JOptionPane.PLAIN_MESSAGE,
                 null,
                 names,
-                names[curIdx < names.length ? curIdx : 0]);
+                names[defaultIdx]);
         if (picked == null) return -1;
         for (int i = 0; i < names.length; i++) {
-            if (names[i].equals(picked)) return i;
+            if (names[i].equals(picked)) return idList.get(i);
         }
-        return this.mixer.getCurrentTrackId();
+        return curId;
     }
 
     /** Place the paste ghost (temp) into the grid without track-count or undo recording. */
@@ -1246,6 +1268,11 @@ public class MyController {
         boolean wasDeselecting = !ctrlDown && selectionActive;
         if (wasDeselecting) {
             selectionActive = false;
+            // Redibui immediatament perquè el sombrejat desaparegui abans
+            // que qualsevol diàleg (acords, lyrics) s'obri per sobre
+            this.allPurposeScore.drawCurrentCamInOffscreen();
+            MyNewPanel panel = this.ui.getPanel();
+            panel.paintImmediately(0, 0, panel.getWidth(), panel.getHeight());
         }
 
         /* Check MyButton PRIMER — els botons han de funcionar sempre, fins i tot

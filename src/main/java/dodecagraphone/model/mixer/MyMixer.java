@@ -241,13 +241,13 @@ public class MyMixer {
         });
 
         contentPanel.removeAll();
-        if (this.chordTrack != null) {
+        if (this.chordTrack != null && contr.getAllPurposeScore().hasAnyChords()) {
             addTrackToDialog(this.chordTrackId, true);
         }
         for (int i = 0; i < tracks.size(); i++) {
             addTrackToDialog(i, false);
         }
-        if (this.drumsTrack != null) {
+        if (this.drumsTrack != null && this.drumsTrack.getnNotes() > 0) {
             addTrackToDialog(this.drumsTrackId, true);
         }
 

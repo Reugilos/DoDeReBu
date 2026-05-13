@@ -461,6 +461,10 @@ public class MyPatternScore extends MyGridScore {
         return chord;
     }
 
+    public boolean hasAnyChords() {
+        return chordSymbolLine.values().stream().anyMatch(c -> c != null && c.isValidChord());
+    }
+
     public void placeChordSymbol(Chord chord) {
         placeChordSymbol(chord,currentWriteCol);
     }

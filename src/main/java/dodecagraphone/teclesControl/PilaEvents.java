@@ -33,6 +33,10 @@ public class PilaEvents {
         }
     }
 
+    public boolean isUndoEmpty() {
+        return pilaUndo.isEmpty();
+    }
+
     public void buidar() {
         pilaUndo.clear();
         pilaRedo.clear();
