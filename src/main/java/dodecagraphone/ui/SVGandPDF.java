@@ -1,9 +1,6 @@
 package dodecagraphone.ui;
 
 import dodecagraphone.MyController;
-import dodecagraphone.model.component.MyCamera;
-import dodecagraphone.model.component.MyGridScore;
-import dodecagraphone.model.component.MyXiloKeyboard;
 import java.awt.Dimension;
 import java.awt.RenderingHints;
 import java.awt.Shape;
@@ -72,31 +69,16 @@ public class SVGandPDF {
 		svgG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		svgG.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-		// Si vols fons blanc:
-		// svgG.setPaint(Color.WHITE);
-		// svgG.fillRect(0, 0, widthPx, heightPx);
-
-		MyGridScore score = controller.getAllPurposeScore();
-		MyXiloKeyboard keyb = controller.getKeyboard();
-		MyCamera cam = controller.getCam();
-
 		boolean useCSS = true;
-
 		Shape oldClip = svgG.getClip();
 		controller.setPrinting(true);
 		try {
-			// CLIP A TOT EL CANVAS (això talla qualsevol cosa que surti fora)
 			svgG.setClip(0, 0, widthPx, heightPx);
-
-			score.draw(svgG);
-			keyb.draw(svgG);
-			cam.drawPlayBar(svgG);
-
+			controller.getScreen().draw(svgG);
 			try (Writer out = new OutputStreamWriter(new FileOutputStream(outSvg), StandardCharsets.UTF_8)) {
 				svgG.stream(out, useCSS);
 			}
 		} finally {
-			// neteja estat
 			svgG.setClip(oldClip);
 			controller.setPrinting(false);
 		}

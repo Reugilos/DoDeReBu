@@ -159,7 +159,12 @@ public class MyButtonPanel extends MyComponent {
 
         for (ButtonInfo buttonInfo : buttonLayout.values()) {
             int xPosition = firstCol + (buttonInfo.col - 1) * sepCols;
-            int yPosition = firstRow + buttonInfo.row * sepRows;
+            int extraGap = (int) Math.round(sepRows * 0.5);
+            int cumExtra = 0;
+            if (buttonInfo.row > 8) cumExtra += extraGap;
+            if (buttonInfo.row > 11) cumExtra += extraGap;
+            if (buttonInfo.row > 12) cumExtra += extraGap;
+            int yPosition = firstRow + buttonInfo.row * sepRows + cumExtra;
 
             switch (buttonInfo.type) {
                 case 'T':
@@ -556,7 +561,7 @@ public class MyButtonPanel extends MyComponent {
     public void setPentaVsChoiceButton(boolean penta) {
         this.setModified(true);
         MyToggle tog = (MyToggle) this.buttons.get(this.id_PentaVsChoiceButton);
-        tog.setPressed(!penta);
+        if (tog != null) tog.setPressed(!penta);
     }
 
     /**
@@ -580,7 +585,7 @@ public class MyButtonPanel extends MyComponent {
     public void setNamesVsHideButton(boolean names) {
         this.setModified(true);
         MyToggle tog = (MyToggle) this.buttons.get(this.id_NamesVsHideButton);
-        tog.setPressed(!names);
+        if (tog != null) tog.setPressed(!names);
     }
     
     /**
