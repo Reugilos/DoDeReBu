@@ -446,9 +446,6 @@ public class MyMidiScore extends MyExercise {
                                 int offset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
                                 mixerTrack.setDisplayOffset(offset);
                                 loadChannelDisplayOffset[channel] = offset;
-                            } else {
-                                loadChannelDisplayOffset[channel] = mixerTrack.getDisplayOffset();
-                            }
                             break;
                         default:
                             if (LOCAL_VERBOSE) {
@@ -586,9 +583,13 @@ public class MyMidiScore extends MyExercise {
                                 || text.startsWith("showNoteNames=")
                                 || text.startsWith("useMobileDo=")
                                 || text.startsWith("useScreenKeyboardRight=")
+                                || text.startsWith("description=")
                                 || text.startsWith("showMutted=")
                                 || text.startsWith("delay=")
-                                || text.startsWith("chordTrack="))) {
+                                || text.startsWith("chordTrack=")
+                                || text.startsWith("nMeasuresCam=")
+                                || text.startsWith("nColsQuarter=")
+                                || text.startsWith("instruments"))) {
 
                             // Només entra aquí si el text no comença amb cap d’aquests prefixos
                             long tick = event.getTick();
@@ -1029,7 +1030,9 @@ public class MyMidiScore extends MyExercise {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-                        if (text.startsWith("choice=")) {
+                        if (text.startsWith("description=")) {
+                            this.setDescription(text.substring(12));
+                        } else if (text.startsWith("choice=")) {
                             String raw = text.substring(7).replaceAll("[\\[\\] ]", "");
                             String[] tokens = raw.split(",");
                             Integer[] ch = Arrays.stream(tokens)
@@ -1188,6 +1191,13 @@ public class MyMidiScore extends MyExercise {
             }
 
             metaTrack.add(new MidiEvent(titleMsg, 0));
+        }
+
+        String descr = this.getDescription();
+        if (descr != null && !descr.isEmpty()) {
+            try {
+                addTextMeta(metaTrack, "description=" + descr);
+            } catch (Exception e) { e.printStackTrace(); }
         }
 
         String autor = this.getAuthor();

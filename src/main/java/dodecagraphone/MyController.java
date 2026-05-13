@@ -2819,6 +2819,7 @@ public class MyController {
             }
         }
         this.mixer.refreshMixer();
+        this.updateTextOfButtons();
     }
 
     public void changeCurrentChannelOfCurrentTrack() {
