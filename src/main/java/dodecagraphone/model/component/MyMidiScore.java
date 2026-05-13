@@ -498,6 +498,19 @@ public class MyMidiScore extends MyExercise {
                             // placeAppendMidiMessage(message);
                             break;
 
+                        case 0x05: {
+                            // Lyric Event (standard MIDI)
+                            MyLyrics lyr = controller.getMyLyrics();
+                            if (lyr != null) {
+                                String lyricText;
+                                try { lyricText = new String(metaMessage.getData(), "UTF-8"); }
+                                catch (Exception ex) { lyricText = new String(metaMessage.getData()); }
+                                int lyricCol = (int)(tick / getTicksPerCol());
+                                lyr.setLyric(lyricCol, tr - first, lyricText);
+                            }
+                            break;
+                        }
+
                         case 0x03:
                             // Track name
                             byte[] data = metaMessage.getData();
@@ -559,7 +572,24 @@ public class MyMidiScore extends MyExercise {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                    if (text.startsWith("CHORD:")) {
+                    if (text.startsWith("LYRIC:")) {
+                        // LYRIC:track=N::col=C::text=TEXT  (format propi DoDeReBu)
+                        try {
+                            String body = text.substring(6);
+                            String[] parts = body.split("::");
+                            int lTrack = -1, lCol = -1;
+                            String lText = null;
+                            for (String p : parts) {
+                                if (p.startsWith("track=")) lTrack = Integer.parseInt(p.substring(6));
+                                else if (p.startsWith("col=")) lCol = Integer.parseInt(p.substring(4));
+                                else if (p.startsWith("text=")) lText = p.substring(5);
+                            }
+                            if (lTrack >= 0 && lCol >= 0 && lText != null) {
+                                MyLyrics lyr = controller.getMyLyrics();
+                                if (lyr != null) lyr.setLyric(lCol, lTrack, lText);
+                            }
+                        } catch (Exception e) { e.printStackTrace(); }
+                    } else if (text.startsWith("CHORD:")) {
                         String[] parts = text.split("::");
                         int ncols = Integer.parseInt(parts[1]);
                         String chordData = parts[0].substring(6).trim(); // Elimina el prefix
@@ -884,6 +914,32 @@ public class MyMidiScore extends MyExercise {
                     e.printStackTrace();
                 }
                 metaTrack.add(new MidiEvent(textMsg, tick));
+            }
+        }
+
+        // Desar lyrics
+        MyLyrics lyrics = controller.getMyLyrics();
+        if (lyrics != null) {
+            for (Map.Entry<Integer, List<MyLyrics.LyricSegment>> entry : lyrics.getLyricsByTrack().entrySet()) {
+                int lTrackId = entry.getKey();
+                for (MyLyrics.LyricSegment seg : entry.getValue()) {
+                    if (seg.text == null || seg.text.isEmpty()) continue;
+                    long tick = (long) seg.col * ticksPerCol;
+                    // Standard Lyric Event (0xFF 0x05) al track MIDI corresponent
+                    Track lMidiTrack = trackMap.get(lTrackId);
+                    if (lMidiTrack != null) {
+                        MetaMessage lyricMsg = new MetaMessage();
+                        byte[] ld = seg.text.getBytes(StandardCharsets.UTF_8);
+                        try { lyricMsg.setMessage(0x05, ld, ld.length); lMidiTrack.add(new MidiEvent(lyricMsg, tick)); }
+                        catch (InvalidMidiDataException e) { e.printStackTrace(); }
+                    }
+                    // Format propi (0x7F) al metaTrack per reload fidel
+                    String lyricMeta = "LYRIC:track=" + lTrackId + "::col=" + seg.col + "::text=" + seg.text;
+                    MetaMessage lyricMetaMsg = new MetaMessage();
+                    byte[] lmd = lyricMeta.getBytes(StandardCharsets.UTF_8);
+                    try { lyricMetaMsg.setMessage(0x7F, lmd, lmd.length); metaTrack.add(new MidiEvent(lyricMetaMsg, tick)); }
+                    catch (InvalidMidiDataException e) { e.printStackTrace(); }
+                }
             }
         }
 

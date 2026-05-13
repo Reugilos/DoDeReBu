@@ -117,6 +117,9 @@ public class MyLyrics extends MyComponent {
     // Public lyrics API
     // -------------------------------------------------------------------------
 
+    /** Returns the full lyrics map (track → segments). Used for MIDI save. */
+    public Map<Integer, List<LyricSegment>> getLyricsByTrack() { return lyricsByTrack; }
+
     /**
      * Returns the lyric text at {@code col} for {@code track}, or null if none.
      */
