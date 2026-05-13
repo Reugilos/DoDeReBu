@@ -12,7 +12,7 @@ public class ToneRange {
     public static final int DEFAULT_HIGHEST_MIDI = 84;
     public static final int DEFAULT_LOWEST_MIDI = 36;
     public static final int DEFAULT_OCTAVES_UP = 0;
-    public static final boolean DEFAULT_DODECAPHONE = true;
+    public static final boolean DEFAULT_IS_METALLOPHONE = true;
     public static final int MAX_NKEYS = 50;
     public static final int MIDDLE_C; // = 60;
     public static final int DEFAULT_KEY;
@@ -20,7 +20,7 @@ public class ToneRange {
     private static int lowestMidi; //= 55;
     private static int highestMidi;// = 79;
     private static int octavesUp; // = 0; = 2;
-    private static boolean dodecaphone; 
+    private static boolean isMetallophone;
 //    private static int lowestMidi = MIDDLE_C - 24; = 36
 //    private static int highestMidi = MIDDLE_C + 24; = 84
     private static int lowestPau = 40;
@@ -54,8 +54,8 @@ public class ToneRange {
         lowestMidi = Integer.parseInt(AppConfig.get().get("lowestMidi", ""+DEFAULT_LOWEST_MIDI));    
         highestMidi = Integer.parseInt(AppConfig.get().get("highestMidi", ""+DEFAULT_HIGHEST_MIDI));  
         octavesUp  = DEFAULT_OCTAVES_UP;
-        dodecaphone = Boolean.parseBoolean(AppConfig.get().get("dodecaphone",""+DEFAULT_DODECAPHONE));
-        if (isDodecaphone()){
+        isMetallophone = Boolean.parseBoolean(AppConfig.get().get("isMetallophone", "" + DEFAULT_IS_METALLOPHONE));
+        if (isMetallophone()){
             lowestMidi = 79;
             highestMidi = 103;
             octavesUp = 2;
@@ -80,12 +80,12 @@ public class ToneRange {
     }
 
 
-    public static boolean isDodecaphone() {
-        return dodecaphone;
+    public static boolean isMetallophone() {
+        return isMetallophone;
     }
 
-    public static void setDodecaphone(boolean dodecaphone) {
-        ToneRange.dodecaphone = dodecaphone;
+    public static void setMetallophone(boolean v) {
+        ToneRange.isMetallophone = v;
     }
 
     public static int getMaxNKeys(){

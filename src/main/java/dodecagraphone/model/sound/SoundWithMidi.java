@@ -176,7 +176,7 @@ public class SoundWithMidi {
         for (int i=0;i<16;i++){
             SoundWithMidi.ntimesChannelIsUsed[i]=0;
         }
-        if (ToneRange.isDodecaphone()){
+        if (ToneRange.isMetallophone()){
             leadInstrument = Integer.parseInt(AppConfig.get().get("leadInstrument", "" + GLOCKENSPIEL));
         } else {
             leadInstrument = Integer.parseInt(AppConfig.get().get("leadInstrument", "" + DEFAULT_LEAD_INSTRUMENT));

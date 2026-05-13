@@ -181,7 +181,7 @@ public class MyXiloKey extends MyComponent {
         } else {
             String nameOnly = this.noteName.replaceAll("[0-9]+$", "");
             text = " " + nameOnly;
-            if (!ToneRange.isDodecaphone()) {
+            if (!ToneRange.isMetallophone()) {
                 if (this.midi == ToneRange.getHighestSaxo()
                         || this.midi == ToneRange.getLowestSaxo()) {
                     text += ">";

@@ -3231,16 +3231,16 @@ public class MyController {
         // The user sets them by editing config.properties while the app is closed.
         // Saving them here would overwrite manual edits made between runs.
         AppConfig.get().set("autoCorrect", "" + Settings.isAutoCorrect());
-        AppConfig.get().set("showMutted", "" + Settings.isShowMutted());
         AppConfig.get().set("nMeasuresCam", "" + Settings.getnMeasuresCam());
-        AppConfig.get().set("nBeatsMeasure", "" + Settings.getnBeatsMeasure());
-        AppConfig.get().set("nColsBeat", "" + Settings.getnColsBeat());
+        AppConfig.get().set("nColsQuarter", "" + Settings.getnColsQuarter());
         AppConfig.get().set("nColsScore", "" + Settings.getnColsScore());
-        AppConfig.get().set("dodecaphone", "" + ToneRange.isDodecaphone());
-        if (!ToneRange.isDodecaphone()) {
+        AppConfig.get().set("isMetallophone", "" + ToneRange.isMetallophone());
+        if (ToneRange.isMetallophone()) {
+            AppConfig.get().set("lowestMidi", "" + ToneRange.DEFAULT_LOWEST_MIDI);
+            AppConfig.get().set("highestMidi", "" + ToneRange.DEFAULT_HIGHEST_MIDI);
+        } else {
             AppConfig.get().set("lowestMidi", "" + ToneRange.getLowestMidi());
             AppConfig.get().set("highestMidi", "" + ToneRange.getHighestMidi());
-            AppConfig.get().set("octavesUP", "" + ToneRange.getOctavesUp());
             AppConfig.get().set("leadInstrument", "" + SoundWithMidi.getLeadInstrument());
             AppConfig.get().set("chordInstrument", "" + SoundWithMidi.getChordInstrument());
         }

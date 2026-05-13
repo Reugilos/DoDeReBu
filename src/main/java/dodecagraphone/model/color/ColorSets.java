@@ -275,7 +275,7 @@ public class ColorSets {
         linies.add(71+octavaAlta);
         linies.add(74+octavaAlta);
         linies.add(77+octavaAlta);
-        if (!ToneRange.isDodecaphone()){
+        if (!ToneRange.isMetallophone()){
             linies.add(57+octavaAlta);
             linies.add(53+octavaAlta);
             linies.add(50+octavaAlta);

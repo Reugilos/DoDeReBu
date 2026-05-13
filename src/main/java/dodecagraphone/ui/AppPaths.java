@@ -1,8 +1,8 @@
 package dodecagraphone.ui;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.Objects;
 import java.util.Optional;
@@ -83,20 +83,35 @@ public final class AppPaths {
         return getConfigDir().resolve("config.properties");
     }
 
-    public static void installUserConfigIfMissing() throws IOException {
+    /**
+     * Copia el config per defecte si no existeix, filtrant els marcadors #i18n:
+     * (els comentaris localitzats s'escriuen al primer save, quan I18n ja està carregat).
+     *
+     * @return true si s'ha creat el fitxer, false si ja existia
+     */
+    public static boolean installUserConfigIfMissing() throws IOException {
         Path cfgDir = getConfigDir();
         Files.createDirectories(cfgDir);
 
         Path target = getUserConfigPath();
         if (Files.exists(target)) {
-            return;
+            return false;
         }
 
-        try ( InputStream in = Objects.requireNonNull(
+        try (InputStream in = Objects.requireNonNull(
                 AppPaths.class.getResourceAsStream(DEFAULT_CONFIG_RESOURCE),
-                "Missing resource: " + DEFAULT_CONFIG_RESOURCE)) {
+                "Missing resource: " + DEFAULT_CONFIG_RESOURCE);
+             BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
 
-            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            List<String> lines = new ArrayList<>();
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (!line.stripLeading().startsWith("#i18n:")) {
+                    lines.add(line);
+                }
+            }
+            Files.write(target, lines, StandardCharsets.UTF_8);
         }
+        return true;
     }
 }

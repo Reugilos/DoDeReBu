@@ -197,7 +197,7 @@ public class Settings {
         // Independent parameters
         autoCorrect = Boolean.parseBoolean(AppConfig.get().get("autoCorrect", "" + DEFAULT_AUTO_CORRECT));
         tipsVisible = Boolean.parseBoolean(AppConfig.get().get("tipsVisible", "" + DEFAULT_TIPS_VISIBLE));
-        showMutted = Boolean.parseBoolean(AppConfig.get().get("showMutted", "" + DEFAULT_SHOW_MUTTED));
+        showMutted = DEFAULT_SHOW_MUTTED;
 
         nMeasuresCam = Integer.parseInt(AppConfig.get().get("nMeasuresCam", "" + DEFAULT_NMEASURES_CAM));
 //        nMeasuresCam = DEFAULT_NMEASURES_CAM;
@@ -340,7 +340,6 @@ public class Settings {
 
     public static void setFitAnacrusis(boolean v) {
         fitAnacrusis = v;
-        AppConfig.get().set("fitAnacrusis", String.valueOf(v));
     }
 
     public static boolean isHasAnacrusis() {
