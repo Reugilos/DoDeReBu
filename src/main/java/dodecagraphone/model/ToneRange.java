@@ -525,4 +525,10 @@ public class ToneRange {
         if (midi < 35 || midi > 81 || DRUM_NAMES[midi] == null) return "?";
         return DRUM_NAMES[midi][1];
     }
+
+    /** Retorna el MIDI de drum per a keyId 0..46 (81 → 35); -1 si fora de rang. */
+    public static int getDrumMidi(int keyId) {
+        int midi = 81 - keyId;
+        return (midi >= 35) ? midi : -1;
+    }
 }

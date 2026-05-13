@@ -617,6 +617,22 @@ public class MyPatternScore extends MyGridScore {
      * @param mutted
      * @param channel
      */
+    /** Col·loca una nota a una fila específica del grid (no usa midiToKeyId). Per drums. */
+    public void placeNoteAtRow(int row, int ncols, boolean linked, int channel, int trackId, int velocity) {
+        int col = currentWriteCol;
+        if (row < 0 || row >= nKeys) return;
+        for (int i = 0; i < ncols; i++) {
+            boolean lnkd = (i > 0) || linked;
+            MyTrack tr = this.controller.getMixer().getTrackFromId(trackId);
+            tr.oneNoteMore();
+            this.addNoteToSquare(row, col, 1, Settings.getnRowsSquare(), (MyComponent) this, this.controller, this, this.controller.getCam(),
+                    channel, trackId, velocity, true, false, lnkd, tr.isDotted());
+            col++;
+        }
+        this.currentWriteCol = col;
+        if (currentWriteCol > lastColWritten) lastColWritten = currentWriteCol;
+    }
+
     public void placeNote(int midi, int ncols, boolean mutted, boolean linked, int channel, int trackId, int velocity) {
         int col = currentWriteCol;
         int keyId = ToneRange.midiToKeyId(midi);

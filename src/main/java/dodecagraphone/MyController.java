@@ -128,6 +128,7 @@ public class MyController {
     private boolean selectionActive = false;
     // Clipboard
     private List<ClipNote> clipboard = null;
+    private boolean clipboardMultiTrack = false;
     // PASTE mode state
     private boolean pendingPaste = false;
     private int pasteCurrentRow = -1;
@@ -155,6 +156,7 @@ public class MyController {
      * Quan és no-null, el pròxim clic al grid col·loca el canvi a aquella columna.
      */
     private MyGridScore.ScoreChange pendingChange = null;
+    private int pendingTransposeStep = 0;
 
     private SampleOrMidi instrument;
 //    private int numBeatsMeasure;
@@ -819,26 +821,44 @@ public class MyController {
 
     // ── Copy / Cut / Paste ───────────────────────────────────────────────────────
 
-    /** Copies notes in the current selection (current track only) to the clipboard. */
+    /** Copies notes in the current selection to the clipboard. Asks if all tracks or current only. */
     public void copySelection() {
         if (!selectionActive) return;
         int r1 = Math.min(selStartRow, selEndRow);
         int r2 = Math.max(selStartRow, selEndRow);
         int c1 = Math.min(selStartCol, selEndCol);
         int c2 = Math.max(selStartCol, selEndCol);
-        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
-        int tr = this.mixer.getCurrentTrackId();
+        int res = MyDialogs.demanaConfirmacio(
+                I18n.t("copy.allTracks.confirm"), I18n.t("copy.allTracks.title"));
+        clipboardMultiTrack = (res == javax.swing.JOptionPane.YES_OPTION);
         clipboard = new ArrayList<>();
-        for (int row = r1; row <= r2; row++) {
-            for (int col = c1; col <= c2; col++) {
-                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-                if (sq == null || !sq.isSqVisible()) continue;
-                for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
-                    if (sub.getChannel() == ch && sub.getTrack() == tr) {
+        if (clipboardMultiTrack) {
+            for (int row = r1; row <= r2; row++) {
+                for (int col = c1; col <= c2; col++) {
+                    MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                    if (sq == null || !sq.isSqVisible()) continue;
+                    for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
+                        MyTrack t = this.mixer.getTrackFromId(sub.getTrack());
                         clipboard.add(new ClipNote(row - r1, col - c1, sub.getVelocity(),
                                 sub.isVisible(), !sub.isAudible(), sub.isLinked(),
-                                this.mixer.getCurrentTrack().isDotted()));
-                        break;
+                                t != null && t.isDotted(), sub.getTrack(), sub.getChannel()));
+                    }
+                }
+            }
+        } else {
+            int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+            int tr = this.mixer.getCurrentTrackId();
+            for (int row = r1; row <= r2; row++) {
+                for (int col = c1; col <= c2; col++) {
+                    MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                    if (sq == null || !sq.isSqVisible()) continue;
+                    for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
+                        if (sub.getChannel() == ch && sub.getTrack() == tr) {
+                            clipboard.add(new ClipNote(row - r1, col - c1, sub.getVelocity(),
+                                    sub.isVisible(), !sub.isAudible(), sub.isLinked(),
+                                    this.mixer.getCurrentTrack().isDotted(), tr, ch));
+                            break;
+                        }
                     }
                 }
             }
@@ -849,21 +869,37 @@ public class MyController {
     /** Copies selection to clipboard, then erases it (undoable). */
     public void cutSelection() {
         if (!selectionActive) return;
-        copySelection();
-        if (clipboard == null || clipboard.isEmpty()) return;
         int r1 = Math.min(selStartRow, selEndRow);
         int r2 = Math.max(selStartRow, selEndRow);
         int c1 = Math.min(selStartCol, selEndCol);
         int c2 = Math.max(selStartCol, selEndCol);
+        copySelection(); // sets clipboardMultiTrack and fills clipboard; clears selectionActive
+        if (clipboard == null || clipboard.isEmpty()) return;
         mouseSequence = new MouseSequence(this);
-        for (int row = r1; row <= r2; row++) {
-            for (int col = c1; col <= c2; col++) {
-                removeNoteAtCell(row, col);
+        if (clipboardMultiTrack) {
+            // Esborra notes de tots els tracks a la zona seleccionada
+            for (int row = r1; row <= r2; row++) {
+                for (int col = c1; col <= c2; col++) {
+                    MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                    if (sq == null) continue;
+                    for (MyGridSquare.SubSquare sub : new ArrayList<>(sq.getPoliNotes())) {
+                        int savedTr = this.mixer.getCurrentTrackId();
+                        int savedCh = this.mixer.getCurrentChannelOfCurrentTrack();
+                        this.mixer.setCurrentTrackById(sub.getTrack());
+                        removeNoteAtCell(row, col);
+                        this.mixer.setCurrentTrackById(savedTr);
+                    }
+                }
+            }
+        } else {
+            for (int row = r1; row <= r2; row++) {
+                for (int col = c1; col <= c2; col++) {
+                    removeNoteAtCell(row, col);
+                }
             }
         }
         if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
         mouseSequence = null;
-        selectionActive = false;
         this.needsSaving = true;
     }
 
@@ -875,10 +911,12 @@ public class MyController {
         int c1 = Math.min(selStartCol, selEndCol);
         int c2 = Math.max(selStartCol, selEndCol);
         int selWidth = c2 - c1 + 1;
+        int res = MyDialogs.demanaConfirmacio(
+                I18n.t("copy.allTracks.confirm"), I18n.t("copy.allTracks.title"));
+        boolean allTracks = (res == javax.swing.JOptionPane.YES_OPTION);
         mouseSequence = new MouseSequence(this);
         if (!toEnd) {
-            pasteSelectionCopy(r1, r2, c1, c2, c2 + 1, c2 + selWidth);
-            // Selection moves to the new copy only
+            pasteSelectionCopy(r1, r2, c1, c2, c2 + 1, c2 + selWidth, allTracks);
             selStartCol = c2 + 1;
             selEndCol   = c2 + selWidth;
         } else {
@@ -886,7 +924,7 @@ public class MyController {
             int destStart = c2 + 1;
             while (destStart <= bufferEnd) {
                 int destEnd = Math.min(destStart + selWidth - 1, bufferEnd);
-                pasteSelectionCopy(r1, r2, c1, c2, destStart, destEnd);
+                pasteSelectionCopy(r1, r2, c1, c2, destStart, destEnd, allTracks);
                 destStart += selWidth;
             }
             selectionActive = false;
@@ -916,22 +954,32 @@ public class MyController {
         allPurposeScore.setCurrentCol(newCurrentCol);
     }
 
-    private void pasteSelectionCopy(int r1, int r2, int srcC1, int srcC2, int destStart, int destEnd) {
-        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
-        int tr = this.mixer.getCurrentTrackId();
+    private void pasteSelectionCopy(int r1, int r2, int srcC1, int srcC2, int destStart, int destEnd, boolean allTracks) {
         for (int row = r1; row <= r2; row++) {
             for (int col = srcC1; col <= srcC2; col++) {
                 int destCol = destStart + (col - srcC1);
                 if (destCol > destEnd) break;
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
                 if (sq == null) continue;
-                boolean hasNote = sq.getPoliNotes().stream()
-                        .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
-                if (!hasNote) continue;
-                addNoteAtCell(row, destCol);
-                if (!sq.isSq_is_linked()) {
-                    MyGridSquare dest = this.allPurposeScore.getGridSquare(row, destCol);
-                    if (dest != null) unlinkNoteForUndo(dest);
+                if (allTracks) {
+                    for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
+                        if (!sub.isVisible()) continue;
+                        int savedTr = this.mixer.getCurrentTrackId();
+                        this.mixer.setCurrentTrackById(sub.getTrack());
+                        addNoteAtCell(row, destCol);
+                        this.mixer.setCurrentTrackById(savedTr);
+                    }
+                } else {
+                    int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+                    int tr = this.mixer.getCurrentTrackId();
+                    boolean hasNote = sq.getPoliNotes().stream()
+                            .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
+                    if (!hasNote) continue;
+                    addNoteAtCell(row, destCol);
+                    if (sq.isSq_is_linked()) {
+                        MyGridSquare dest = this.allPurposeScore.getGridSquare(row, destCol);
+                        if (dest != null) linkNoteAtCell(dest);
+                    }
                 }
             }
         }
@@ -941,15 +989,22 @@ public class MyController {
     public void startPaste() {
         if (clipboard == null || clipboard.isEmpty()) return;
         selectionActive = false;
-        pendingPaste = true;  // inhibit editing immediately, before the dialog
-        int targetTr = showTrackPickerDialog();
-        if (targetTr == -1) {
-            pendingPaste = false;
-            return;
+        pendingPaste = true;
+        if (clipboardMultiTrack) {
+            // Multi-track: cada nota va al seu track original; no cal triar destí
+            this.pasteTr     = -1;
+            this.pasteCh     = -1;
+            this.pasteDotted = false;
+        } else {
+            int targetTr = showTrackPickerDialog();
+            if (targetTr == -1) {
+                pendingPaste = false;
+                return;
+            }
+            this.pasteTr     = targetTr;
+            this.pasteCh     = this.mixer.getCurrentChannelOfTrack(targetTr);
+            this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
         }
-        this.pasteTr    = targetTr;
-        this.pasteCh    = this.mixer.getCurrentChannelOfTrack(targetTr);
-        this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
     }
 
     public boolean isPendingPaste() { return pendingPaste; }
@@ -1009,16 +1064,18 @@ public class MyController {
     /** Place the paste ghost (temp) into the grid without track-count or undo recording. */
     private void placePasteGhost(int anchorRow, int anchorCol) {
         if (clipboard == null) return;
-        int gridRows = this.allPurposeScore.getGrid().length;
-        int gridCols = this.allPurposeScore.getGrid()[0].length;
+        int nKeys = this.allPurposeScore.getnKeys();
+        int nCols = this.allPurposeScore.getNumCols();
         for (ClipNote n : clipboard) {
             int row = anchorRow + n.rowOffset;
             int col = anchorCol + n.colOffset;
-            if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
+            if (row < 0 || row >= nKeys || col < 0 || col >= nCols) continue;
+            int ch = clipboardMultiTrack ? n.channel : pasteCh;
+            int tr = clipboardMultiTrack ? n.trackId : pasteTr;
             MyGridSquare sq = this.allPurposeScore.addNoteToSquare(
                     row, col, 1, Settings.getnRowsSquare(),
                     (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
-                    pasteCh, pasteTr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
+                    ch, tr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
             sq.updateState();
         }
     }
@@ -1026,14 +1083,16 @@ public class MyController {
     /** Remove the paste ghost from the grid. */
     private void removePasteGhost(int anchorRow, int anchorCol) {
         if (clipboard == null) return;
-        int gridRows = this.allPurposeScore.getGrid().length;
-        int gridCols = this.allPurposeScore.getGrid()[0].length;
+        int nKeys = this.allPurposeScore.getnKeys();
+        int nCols = this.allPurposeScore.getNumCols();
         for (int i = clipboard.size() - 1; i >= 0; i--) {
             ClipNote n = clipboard.get(i);
             int row = anchorRow + n.rowOffset;
             int col = anchorCol + n.colOffset;
-            if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
-            this.allPurposeScore.removeNoteFromSquare(row, col, pasteCh, pasteTr);
+            if (row < 0 || row >= nKeys || col < 0 || col >= nCols) continue;
+            int ch = clipboardMultiTrack ? n.channel : pasteCh;
+            int tr = clipboardMultiTrack ? n.trackId : pasteTr;
+            this.allPurposeScore.removeNoteFromSquare(row, col, ch, tr);
             MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
             if (sq != null) sq.updateState();
         }
@@ -1042,19 +1101,22 @@ public class MyController {
     /** Actually place notes at final anchor, track counts included, and create PasteEvent. */
     private void finalizeHardPaste(int anchorRow, int anchorCol) {
         if (clipboard == null || clipboard.isEmpty()) return;
-        MyTrack track = this.mixer.getTrackFromId(pasteTr);
-        int gridRows = this.allPurposeScore.getGrid().length;
-        int gridCols = this.allPurposeScore.getGrid()[0].length;
+        int nKeys = this.allPurposeScore.getnKeys();
+        int nCols = this.allPurposeScore.getNumCols();
         List<ClipNote> placed = new ArrayList<>();
         for (ClipNote n : clipboard) {
             int row = anchorRow + n.rowOffset;
             int col = anchorCol + n.colOffset;
-            if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) continue;
+            if (row < 0 || row >= nKeys || col < 0 || col >= nCols) continue;
+            int ch = clipboardMultiTrack ? n.channel : pasteCh;
+            int tr = clipboardMultiTrack ? n.trackId : pasteTr;
+            MyTrack track = this.mixer.getTrackFromId(tr);
+            if (track == null) continue;
             track.oneNoteMore();
             MyGridSquare sq = this.allPurposeScore.addNoteToSquare(
                     row, col, 1, Settings.getnRowsSquare(),
                     (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
-                    pasteCh, pasteTr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
+                    ch, tr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
             sq.updateState();
             if (col + 1 > this.allPurposeScore.getLastColWritten())
                 this.allPurposeScore.setLastColWritten(col + 1);
@@ -1062,7 +1124,8 @@ public class MyController {
         }
         this.allPurposeScore.updateStopMarker();
         if (!placed.isEmpty()) {
-            afegirEvent(new PasteEvent(this, placed, anchorRow, anchorCol, pasteCh, pasteTr));
+            afegirEvent(new PasteEvent(this, placed, anchorRow, anchorCol,
+                    pasteCh, pasteTr, clipboardMultiTrack));
         }
         this.needsSaving = true;
     }
@@ -1077,9 +1140,9 @@ public class MyController {
         MyGridSquare sq = this.allPurposeScore.addNoteToSquare(row, col, 1, Settings.getnRowsSquare(),
                 (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
-                this.mixer.getCurrentTrack().getVelocity(), true, false, true,
+                this.mixer.getCurrentTrack().getVelocity(), true, false, false,
                 this.mixer.getCurrentTrack().isDotted());
-        lastNote = this.allPurposeScore.getGrid()[row][col];
+        lastNote = this.allPurposeScore.getGridSquare(row, col);
         mouseSequence.addChange(sq, true,
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
                 this.mixer.getCurrentTrack().getVelocity(),
@@ -1092,7 +1155,7 @@ public class MyController {
 
     /** Elimina la nota al cell (row,col) del track actual i la registra al mouseSequence. */
     private void removeNoteAtCell(int row, int col) {
-        MyGridSquare square = this.allPurposeScore.getGrid()[row][col];
+        MyGridSquare square = this.allPurposeScore.getGridSquare(row, col);
         if (square == null || !square.isSqVisible()) return;
         MyGridSquare nextSq = square.next();
         MyGridSquare.SubSquare note = this.allPurposeScore.removeNoteFromSquare(row, col,
@@ -1152,6 +1215,8 @@ public class MyController {
                     if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
                 } else {
                     addNoteAtCell(row, col);
+                    MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
+                    if (added != null) linkNoteAtCell(added);
                     this.keyboard.play(row);
                 }
                 break;
@@ -1181,6 +1246,8 @@ public class MyController {
                         lastNote = nextSq;
                     } else {
                         addNoteAtCell(row, col);
+                        MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
+                        if (added != null) linkNoteAtCell(added);
                     }
                 } else if (col < extendStartCol) {
                     dragMode = DragMode.EXTEND_LEFT;
@@ -1192,13 +1259,11 @@ public class MyController {
                         .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                     if (nextHasNote) {
                         boolean wasLinked = nextSq.isSq_is_linked();
-                        if (!wasLinked) linkNoteAtCell(nextSq);
-                        if (firstNote == null || col < firstNote.getScoreCol()) {
-                            firstNote = nextSq;
-                            firstNoteWasLinkedBeforeDrag = wasLinked;
-                        }
+                        if (wasLinked) unlinkNoteForUndo(nextSq);  // leftmost → inici de nota
+                        firstNote = nextSq;
+                        firstNoteWasLinkedBeforeDrag = wasLinked;
                     } else {
-                        addNoteAtCell(row, col);
+                        addNoteAtCell(row, col);  // crea unlinked ✓
                         firstNote = this.allPurposeScore.getGrid()[row][col];
                         firstNoteWasLinkedBeforeDrag = false;
                     }
@@ -1216,6 +1281,8 @@ public class MyController {
                     lastNote = sq;
                 } else {
                     addNoteAtCell(row, col);
+                    MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
+                    if (added != null) linkNoteAtCell(added);
                 }
                 break;
             }
@@ -1225,19 +1292,28 @@ public class MyController {
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
                 boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
                     .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
-                if (currentTrackHasNote) {
-                    boolean wasLinked = sq.isSq_is_linked();
-                    if (!wasLinked) linkNoteAtCell(sq);
-                    if (firstNote == null || col < firstNote.getScoreCol()) {
+                boolean isNewLeftmost = (firstNote == null || col < firstNote.getScoreCol());
+                if (isNewLeftmost) {
+                    // L'anterior firstNote passa a ser continuació (linked)
+                    if (firstNote != null && !firstNote.isSq_is_linked()) linkNoteAtCell(firstNote);
+                    if (currentTrackHasNote) {
+                        boolean wasLinked = sq.isSq_is_linked();
+                        if (wasLinked) unlinkNoteForUndo(sq);  // nou leftmost → inici de nota
                         firstNote = sq;
                         firstNoteWasLinkedBeforeDrag = wasLinked;
+                    } else {
+                        addNoteAtCell(row, col);  // crea unlinked ✓
+                        firstNote = this.allPurposeScore.getGrid()[row][col];
+                        firstNoteWasLinkedBeforeDrag = false;
                     }
                 } else {
-                    addNoteAtCell(row, col);
-                    MyGridSquare added = this.allPurposeScore.getGrid()[row][col];
-                    if (firstNote == null || col < firstNote.getScoreCol()) {
-                        firstNote = added;
-                        firstNoteWasLinkedBeforeDrag = false;
+                    // No és el nou leftmost → linked
+                    if (currentTrackHasNote) {
+                        if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                    } else {
+                        addNoteAtCell(row, col);
+                        MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
+                        if (added != null) linkNoteAtCell(added);
                     }
                 }
                 break;
@@ -1538,6 +1614,7 @@ public class MyController {
                 // Unlink the leftmost note (head); when dragging left, lastNote is leftmost.
                 MyGridSquare head = (lastNote != null && lastNote.getScoreCol() < firstNote.getScoreCol())
                         ? lastNote : firstNote;
+                if (head != firstNote) linkNoteAtCell(firstNote);  // firstNote no és el head → linked
                 unlinkNoteForUndo(head);
             } else if (dragMode == DragMode.EXTEND_LEFT && firstNote != null) {
                 // Unlink firstNote only if it wasn't already linked before the drag started.
@@ -1577,9 +1654,14 @@ public class MyController {
                     for (int c = fcol; c != acCol + step; c += step) {
                         addNoteAtCell(frow, c);
                         acLast = this.allPurposeScore.getGrid()[frow][c];
-                        if (acFirst == null) acFirst = acLast;
+                        if (acFirst == null) {
+                            acFirst = acLast;
+                        } else {
+                            linkNoteAtCell(acLast);
+                        }
                     }
                     MyGridSquare acHead = (step == 1) ? acFirst : acLast;
+                    if (step == -1 && acFirst != null && acFirst != acHead) linkNoteAtCell(acFirst);
                     if (acHead != null) unlinkNoteForUndo(acHead);
                     if (mouseSequence != null && !mouseSequence.isEmpty()) {
                         this.afegirEvent(mouseSequence);
@@ -1728,15 +1810,21 @@ public class MyController {
         int col = this.allPurposeScore.whichCol();
         if (row == -1 || col == -1) return;
         MyGridSquare sq = this.allPurposeScore.getGrid()[row][col];
-        if (sq == null || !sq.isSqVisible() || !sq.isSq_is_linked()) return;
-        // Split: unlink this note (makes it a new head)
+        if (sq == null) return;
+        int curCh = this.mixer.getCurrentChannelOfCurrentTrack();
+        int curTr = this.mixer.getCurrentTrackId();
+        boolean hasLinkedNote = sq.getPoliNotes().stream()
+            .anyMatch(n -> n.getChannel() == curCh && n.getTrack() == curTr && n.isVisible() && n.isLinked());
+        if (!hasLinkedNote) return;
+        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
+        boolean wasMuted = !sq.isSqAudible();
+        boolean wasDotted = this.mixer.getCurrentTrack().isDotted();
         mouseSequence = new MouseSequence(this);
-        unlinkNoteForUndo(sq);
-        if (!mouseSequence.isEmpty()) {
-            this.afegirEvent(mouseSequence);
-            this.needsSaving = true;
-        }
+        sq.unlinkNote(curCh, curTr, vel, true, wasMuted, false, wasDotted);
+        mouseSequence.addLinkChange(sq, curCh, curTr, vel, true, wasMuted, wasDotted, true, false);
+        afegirEvent(mouseSequence);
         mouseSequence = null;
+        this.needsSaving = true;
     }
     
     /**
@@ -1797,9 +1885,13 @@ public class MyController {
                 if (lastTipButton != -4 || lastTipKeyRow != keyRow) {
                     MyXiloKey key = this.keyboard.getKey(keyRow);
                     this.buttons.hideTip();
-                    String keyTip = drumsMode
-                            ? ToneRange.getDrumFullName(key.getMidi())
-                            : key.getNoteName() + " " + key.getMidi();
+                    String keyTip;
+                    if (isDrumsMode()) {
+                        int drumMidi = ToneRange.getDrumMidi(keyRow);
+                        keyTip = (drumMidi >= 0) ? ToneRange.getDrumFullName(drumMidi) : "";
+                    } else {
+                        keyTip = key.getNoteName() + " " + key.getMidi();
+                    }
                     this.buttons.showCustomTip(keyTip,
                             (int)(posX + 2 * Settings.getColWidth()), (int) posY);
                     lastTipButton = -4;
@@ -2263,20 +2355,8 @@ public class MyController {
             MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
             sc.midiKey   = newMidiKey;
             sc.scaleMode = mode;
-            setPendingChange(sc, I18n.t("scoreChange.key"), () -> {
-                // "A l'inici" escollit: preguntar si vol transportar la partitura
-                if (step != 0) {
-                    int res = MyDialogs.demanaConfirmacio(
-                            I18n.t("keyButton.transposeConfirm"),
-                            I18n.t("keyButton.transposeConfirm.title"));
-                    if (res == javax.swing.JOptionPane.YES_OPTION) {
-                        // Transposa primer (actualitza notes i marques de to),
-                        // llavors col·loca la marca a col 0 amb la to exacta demanada.
-                        allPurposeScore.transpose(step);
-                    }
-                }
-                placePendingChangeAt(0);
-            });
+            setPendingChange(sc, I18n.t("scoreChange.key"));
+            pendingTransposeStep = step;
         } else {
             int old_key = allPurposeScore.getMidiKey();
             int new_key = this.getRandKey();
@@ -2901,6 +2981,7 @@ public class MyController {
      */
     private void setPendingChange(MyGridScore.ScoreChange change, String description, Runnable onPlaceAtStart) {
         this.pendingChange = change;
+        this.pendingTransposeStep = 0;
         // Tanca qualsevol diàleg pendent anterior
         if (pendingChangeDialog != null) {
             pendingChangeDialog.dispose();
@@ -2948,6 +3029,17 @@ public class MyController {
         // Snap a la primera columna del compàs que conté col:
         // tempo, compàs i to només té sentit aplicar-los a l'inici d'un compàs.
         col = allPurposeScore.getFirstColOfCurrentMeasure(col);
+        // Si hi ha un canvi de to pendent, preguntar si cal transposar les notes.
+        if (pendingTransposeStep != 0) {
+            int step = pendingTransposeStep;
+            pendingTransposeStep = 0;
+            int res = MyDialogs.demanaConfirmacio(
+                    I18n.t("keyButton.transposeConfirm"),
+                    I18n.t("keyButton.transposeConfirm.title"));
+            if (res == javax.swing.JOptionPane.YES_OPTION) {
+                allPurposeScore.transpose(step);
+            }
+        }
         allPurposeScore.setScoreChange(col, pendingChange);
         // Reseteja playbackTempo només si la marca és a la posició actual o abans;
         // si és posterior al playbar el tempo en viu no canvia fins que s'hi arriba.

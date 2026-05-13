@@ -159,11 +159,12 @@ public class MyButtonPanel extends MyComponent {
 
         for (ButtonInfo buttonInfo : buttonLayout.values()) {
             int xPosition = firstCol + (buttonInfo.col - 1) * sepCols;
-            int extraGap = (int) Math.round(sepRows * 0.5);
+            int extraGap = nRowsB;
             int cumExtra = 0;
-            if (buttonInfo.row > 8) cumExtra += extraGap;
+            if (buttonInfo.row > 0) cumExtra += extraGap;
+            if (buttonInfo.row > 7) cumExtra += extraGap;
+            if (buttonInfo.row > 9) cumExtra += extraGap;
             if (buttonInfo.row > 11) cumExtra += extraGap;
-            if (buttonInfo.row > 12) cumExtra += extraGap;
             int yPosition = firstRow + buttonInfo.row * sepRows + cumExtra;
 
             switch (buttonInfo.type) {

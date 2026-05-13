@@ -178,7 +178,8 @@ public class MyXiloKey extends MyComponent {
         g.fillRect((int) screenPosX,(int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height));
         String text;
         if (this.controller.isDrumsMode()) {
-            text = " " + ToneRange.getDrumShortName(this.midi);
+            int drumMidi = ToneRange.getDrumMidi(this.keyId);
+            text = (drumMidi >= 0) ? " " + ToneRange.getDrumShortName(drumMidi) : "";
         } else {
             String nameOnly = this.noteName.replaceAll("[0-9]+$", "");
             text = " " + nameOnly;
@@ -214,9 +215,9 @@ public class MyXiloKey extends MyComponent {
         }
         if (!this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
-//                System.out.println(""+this.midi);
-//                SoundWithMidi.play(this.midi+12*ToneRange.getOctavesUp(), channel, velocity);
-                SoundWithMidi.play(this.midi, channel, velocity);
+                int midiToPlay = controller.isDrumsMode() ? ToneRange.getDrumMidi(this.keyId) : this.midi;
+                if (midiToPlay < 0) return;
+                SoundWithMidi.play(midiToPlay, channel, velocity);
 //                System.out.println("      MyChiloKey::play: channel = "+channel);
 //                System.out.flush();
             } else {

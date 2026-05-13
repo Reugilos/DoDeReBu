@@ -74,7 +74,8 @@ public class SVGandPDF {
 		controller.setPrinting(true);
 		try {
 			svgG.setClip(0, 0, widthPx, heightPx);
-			controller.getScreen().draw(svgG);
+			controller.setNeedsDrawing(true);
+			controller.redraw(svgG);
 			try (Writer out = new OutputStreamWriter(new FileOutputStream(outSvg), StandardCharsets.UTF_8)) {
 				svgG.stream(out, useCSS);
 			}

@@ -818,11 +818,15 @@ public class MyMidiScore extends MyExercise {
                                     track.add(new MidiEvent(pc, tickOn));
                                 }
                                 MyTrack trackObj = this.controller.getMixer().getTrackFromId(trackIndex);
-                                int dispOff = (trackObj != null) ? trackObj.getDisplayOffset() : 0;
-                                int realPitch = visualPitch - dispOff;
-                                int rectified = realPitch - 12 * ToneRange.getOctavesUp();
-                                if (Settings.IS_BU){
-                                    rectified = realPitch;
+                                int rectified;
+                                if (channel == 9) {
+                                    rectified = ToneRange.getDrumMidi(keyId);
+                                    if (rectified < 0) continue;
+                                } else {
+                                    int dispOff = (trackObj != null) ? trackObj.getDisplayOffset() : 0;
+                                    int realPitch = visualPitch - dispOff;
+                                    rectified = realPitch - 12 * ToneRange.getOctavesUp();
+                                    if (Settings.IS_BU) rectified = realPitch;
                                 }
                                 ShortMessage on = new ShortMessage();
                                 try {
@@ -1371,21 +1375,18 @@ public class MyMidiScore extends MyExercise {
         NoteInfo noteInfo = activeNotes.remove(key);
         if (noteInfo != null) {
             long duradaTicks = tick - noteInfo.getStartTick();
-            int ncols = tickLengthToNCols(duradaTicks);
+            int ncols = Math.max(1, tickLengthToNCols(duradaTicks));
             setCurrentWriteCol(tickToCol(noteInfo.getStartTick()));
             int chan = noteInfo.getChannel();
-            int offset = (chan >= 0 && chan < 16) ? loadChannelDisplayOffset[chan] : 0;
-            int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;
-            if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();
-            placeNote(
-                    rectifiedPitch,
-                    ncols,
-                    false,
-                    false,
-                    noteInfo.getChannel(),
-                    noteInfo.getTrack(),
-                    noteInfo.getVelocity()
-            );
+            if (chan == 9) {
+                int drumRow = 81 - noteInfo.getPitch();
+                placeNoteAtRow(drumRow, ncols, false, chan, noteInfo.getTrack(), noteInfo.getVelocity());
+            } else {
+                int offset = (chan >= 0 && chan < 16) ? loadChannelDisplayOffset[chan] : 0;
+                int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;
+                if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();
+                placeNote(rectifiedPitch, ncols, false, false, chan, noteInfo.getTrack(), noteInfo.getVelocity());
+            }
         }
     }
 

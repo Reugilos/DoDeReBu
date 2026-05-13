@@ -98,6 +98,8 @@ public class MyGridScore extends MyComponent {
     protected String author = "Tradicional";
     protected String description = "Descripció";
     protected int nKeys;
+    /** Files de buffer (2 octaves) per sobre i per sota del rang visible. */
+    protected static final int BUFFER = 24;
 
     /**
      * The midi note of the current key.
@@ -224,12 +226,10 @@ public class MyGridScore extends MyComponent {
         this.cam = cam;
 //        this.keyboard = keyboard;
         background = new BackgroundChordPlayer();
-        this.grid = new MyGridSquare[this.nKeys][this.nCols];
-        for (int row = 0; row < this.nKeys; row++) {
+        this.grid = new MyGridSquare[this.nKeys + 2 * BUFFER][this.nCols];
+        for (int row = 0; row < this.nKeys + 2 * BUFFER; row++) {
             for (int col = 0; col < this.nCols; col++) {
-                int nrsq = Settings.getnRowsSquare();
-                grid[row][col] = null; // new MyGridSquare(col, row, 1, nrsq, this, contr, this, cam);
-                // this.add(grid[row][col]);
+                grid[row][col] = null;
             }
         }
         boolean left = !this.isUseScreenKeyboardRight();
@@ -261,23 +261,23 @@ public class MyGridScore extends MyComponent {
     public MyGridSquare addNoteToSquare(
             int firstRow, int firstCol, int nCols, int nRows, MyComponent parent, MyController contr, MyGridScore score, MyCamera cam,
             int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
-        MyGridSquare sq = this.grid[firstRow][firstCol];
+        MyGridSquare sq = this.grid[firstRow + BUFFER][firstCol];
         if (sq == null) {
             sq = new MyGridSquare(firstCol, firstRow, nCols, nRows, parent, contr, score, cam);
         }
         sq.addNote(channel, track, volume, is_visible, is_mutted, is_linked, is_dotted);
-        this.grid[firstRow][firstCol] = sq;
+        this.grid[firstRow + BUFFER][firstCol] = sq;
         return sq;
     }
 
     public SubSquare removeNoteFromSquare(int row, int col, int channel, int track) {
-        MyGridSquare sq = this.grid[row][col];
+        MyGridSquare sq = this.grid[row + BUFFER][col];
         if (sq == null) {
             return null;
         }
         SubSquare sbsq = sq.removeNote(channel, track);
         if (sq.getPoliNotes().isEmpty()) {
-            this.grid[row][col] = null;
+            this.grid[row + BUFFER][col] = null;
         }
         return sbsq;
     }
@@ -331,12 +331,12 @@ public class MyGridScore extends MyComponent {
         for (int row = 0; row < nKeys; row++) {
             int midi = ToneRange.keyIdToMidi(row);
             for (int col = 0; col < nCols; col++) {
-                MyGridSquare sq = grid[row][col];
+                MyGridSquare sq = grid[row + BUFFER][col];
                 if (sq != null) {
                     if (pentagram) {
-                        grid[row][col].updateStrip(ColorSets.getPentagramaColor(midi));
+                        grid[row + BUFFER][col].updateStrip(ColorSets.getPentagramaColor(midi));
                     } else {
-                        grid[row][col].updateStrip(ColorSets.getChoiceColor(midi, choice.getChoiceList()));
+                        grid[row + BUFFER][col].updateStrip(ColorSets.getChoiceColor(midi, choice.getChoiceList()));
                     }
                 }
             }
@@ -689,7 +689,7 @@ public class MyGridScore extends MyComponent {
      */
     public void clearScore() {
         this.subComponents.clear();
-        this.grid = new MyGridSquare[this.nKeys][this.nCols];
+        this.grid = new MyGridSquare[this.nKeys + 2 * BUFFER][this.nCols];
 //        for (int row = 0; row < nKeys; row++) {
 //            for (int col = 0; col < nCols; col++) {
 //                grid[row][col] = new MyGridSquare(col, row, 1, Settings.getnRowsSquare(), this, this.controller, this, cam);
@@ -1285,7 +1285,7 @@ public class MyGridScore extends MyComponent {
         //int keyId = row/Settings.getnRowsSquare();
         int midi = ToneRange.keyIdToMidi(row);
 
-        MyGridSquare sq = this.grid[row][col];
+        MyGridSquare sq = this.grid[row + BUFFER][col];
         Color color;
         if (sq != null) {
             sq.updateState();
@@ -1637,10 +1637,10 @@ public class MyGridScore extends MyComponent {
      * @return
      */
     public boolean isNotNullAndVisible(int row, int col) {
-        if (this.grid[row][col] == null) {
+        if (this.grid[row + BUFFER][col] == null) {
             return false;
         }
-        return this.grid[row][col].isSqVisible();
+        return this.grid[row + BUFFER][col].isSqVisible();
     }
 
     public void setUseScreenKeyboardRight(boolean useScreenKeyboardRight) {
@@ -1659,7 +1659,7 @@ public class MyGridScore extends MyComponent {
      * @return
      */
     public MyGridSquare getGridSquare(int key, int col) {
-        return this.grid[key][col];
+        return this.grid[key + BUFFER][col];
     }
 
     /**
@@ -1687,7 +1687,7 @@ public class MyGridScore extends MyComponent {
      * @param col
      */
     public void stop(int row, int col) {
-        this.grid[row][col].stop();
+        this.grid[row + BUFFER][col].stop();
     }
 
     /**
@@ -1696,8 +1696,8 @@ public class MyGridScore extends MyComponent {
     public void stopAll() {
         for (int row = 0; row < nKeys; row++) {
             for (int col = 0; col < nCols; col++) {
-                if (this.grid[row][col] != null) {
-                    this.grid[row][col].stop();
+                if (this.grid[row + BUFFER][col] != null) {
+                    this.grid[row + BUFFER][col].stop();
                 }
             }
         }
@@ -1768,23 +1768,26 @@ public class MyGridScore extends MyComponent {
             this.stopAll();
         }
         this.subComponents.clear();
-        MyGridSquare[][] newgrid = new MyGridSquare[nKeys][nCols];
-        for (int row = 0; row < nKeys; row++) {
+        int totalRows = nKeys + 2 * BUFFER;
+        MyGridSquare[][] newgrid = new MyGridSquare[totalRows][nCols];
+        for (int iRow = 0; iRow < totalRows; iRow++) {
             for (int col = 0; col < nCols; col++) {
-                newgrid[row][col] = null;
+                newgrid[iRow][col] = null;
             }
         }
-        for (int row = 0; row < nKeys; row++) {
-            int rowDest = row - step;
-            if ((rowDest < nKeys) && rowDest >= 0) {
+        // iRow = índex intern (0..totalRows-1); fila visual = iRow - BUFFER
+        for (int iRow = 0; iRow < totalRows; iRow++) {
+            int iRowDest = iRow - step;
+            if (iRowDest >= 0 && iRowDest < totalRows) {
                 for (int col = 0; col < nCols; col++) {
-                    MyGridSquare sq = grid[row][col];
+                    MyGridSquare sq = grid[iRow][col];
                     if (sq != null) {
-                        newgrid[rowDest][col] = new MyGridSquare(
-                                col, rowDest, sq.nCols, sq.nRows, sq.parent, controller, this, this.cam);
-                        newgrid[rowDest][col].transposedSquare(sq, rowDest, col);
+                        int visualRowDest = iRowDest - BUFFER;
+                        newgrid[iRowDest][col] = new MyGridSquare(
+                                col, visualRowDest, sq.nCols, sq.nRows, sq.parent, controller, this, this.cam);
+                        newgrid[iRowDest][col].transposedSquare(sq, visualRowDest, col);
+                        this.add(newgrid[iRowDest][col]);
                     }
-                    this.add(newgrid[rowDest][col]);
                 }
             }
         }
@@ -2072,7 +2075,7 @@ public class MyGridScore extends MyComponent {
     }
 
     public void updateState(int row, int col) {
-        this.grid[row][col].updateState();
+        this.grid[row + BUFFER][col].updateState();
     }
 
     /**
@@ -2180,8 +2183,8 @@ public class MyGridScore extends MyComponent {
 
         for (int row = rMin; row <= rMax; row++) {
             for (int col = cMin; col <= cMax; col++) {
-                if (grid[row][col] != null) {
-                    notes.addAll(grid[row][col].getPoliNotes());
+                if (grid[row + BUFFER][col] != null) {
+                    notes.addAll(grid[row + BUFFER][col].getPoliNotes());
                 }
             }
         }
