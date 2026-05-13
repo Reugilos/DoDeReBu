@@ -2378,7 +2378,7 @@ public class MyGridScore extends MyComponent {
         int colInBeat        = 0;
         int beatInMeasure    = 0;
         int measure          = Settings.isHasAnacrusis() ? 0 : 1;
-        int limit = Math.min(getLastColWritten() + curNColsBeat * curNBeatsMeasure * 2, getNumCols() - 1);
+        int limit = Math.min(controller.getAllPurposeScore().getLastColWritten() + curNColsBeat * curNBeatsMeasure * 2, getNumCols() - 1);
         if (targetMeasure < measure) return -1;
         for (int c = 0; c <= limit; c++) {
             ScoreChange sc = changeMap.get(c);

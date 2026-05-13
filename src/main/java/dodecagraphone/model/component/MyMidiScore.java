@@ -446,6 +446,7 @@ public class MyMidiScore extends MyExercise {
                                 int offset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
                                 mixerTrack.setDisplayOffset(offset);
                                 loadChannelDisplayOffset[channel] = offset;
+                            }
                             break;
                         default:
                             if (LOCAL_VERBOSE) {
