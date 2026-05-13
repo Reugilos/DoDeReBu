@@ -20,6 +20,8 @@ public class MyTrack {
     private boolean visible;
     private boolean audible;
     private boolean isNew = false;
+    private int displayOffset = 0;
+    private boolean displayOffsetFromMetadata = false;
 
     public MyTrack(int id, String nomPista) {
         this.id = id;
@@ -182,4 +184,21 @@ public class MyTrack {
     public final void setCurrentChannel(int currentChannel) {
         this.currentChannel = currentChannel;
     }
-} 
+
+    public int getDisplayOffset() {
+        return displayOffset;
+    }
+
+    public void setDisplayOffset(int displayOffset) {
+        this.displayOffset = displayOffset;
+    }
+
+    public boolean isDisplayOffsetFromMetadata() {
+        return displayOffsetFromMetadata;
+    }
+
+    public void setDisplayOffsetFromMetadata(int displayOffset) {
+        this.displayOffset = displayOffset;
+        this.displayOffsetFromMetadata = true;
+    }
+}

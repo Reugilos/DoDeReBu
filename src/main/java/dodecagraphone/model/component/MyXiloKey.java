@@ -62,6 +62,7 @@ public class MyXiloKey extends MyComponent {
      * The channels that are currently playing.
      */
     private Set<Integer> activeChannels;
+    private final java.util.Map<Integer, Integer> channelRealMidi = new java.util.HashMap<>();
 //    private boolean selected = false;
 //    private boolean showChoice = false;
 //    private double fullWidth;
@@ -279,6 +280,21 @@ public class MyXiloKey extends MyComponent {
 //        }
 //    }
 //
+    public void playWithMidi(int realMidi, int channel, int velocity) {
+        if (!this.doNotHighlight) {
+            this.color = this.color_playing;
+        }
+        if (!this.isPlaying(channel)) {
+            if (SampleOrMidi.isMidi()) {
+                SoundWithMidi.play(realMidi, channel, velocity);
+            } else {
+                this.so.play();
+            }
+            this.channelRealMidi.put(channel, realMidi);
+            this.activeChannels.add(channel);
+        }
+    }
+
     /**
      * Change color and stop sound.
      *
@@ -287,8 +303,9 @@ public class MyXiloKey extends MyComponent {
     public void stop(int channel) {
         if (this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
-//                SoundWithMidi.stop(this.midi+12*ToneRange.getOctavesUp(), channel);
-                SoundWithMidi.stop(this.midi, channel);
+                int midiToStop = channelRealMidi.getOrDefault(channel, this.midi);
+                SoundWithMidi.stop(midiToStop, channel);
+                channelRealMidi.remove(channel);
 //                System.out.println("      MyChiloKey::stop: channel = "+channel);
 //                System.out.flush();
             } else {
@@ -312,7 +329,8 @@ public class MyXiloKey extends MyComponent {
         if (count==0) return 0;
         for (int channel:this.activeChannels) {
             if (SampleOrMidi.isMidi()) {
-                SoundWithMidi.stop(this.midi, channel);
+                int midiToStop = channelRealMidi.getOrDefault(channel, this.midi);
+                SoundWithMidi.stop(midiToStop, channel);
 //                System.out.println("        MyChiloKey::stopAllChannels: channel = "+channel);
 //                System.out.flush();
             } else {
@@ -320,6 +338,7 @@ public class MyXiloKey extends MyComponent {
             }
         }
         this.activeChannels.clear();
+        this.channelRealMidi.clear();
         this.color = this.color_silent;
         return count;
     }

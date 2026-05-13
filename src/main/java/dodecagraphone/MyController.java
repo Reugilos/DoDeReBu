@@ -4,6 +4,7 @@ import dodecagraphone.model.MyChoice;
 import dodecagraphone.model.MyKeyCircles;
 import dodecagraphone.model.component.MyExercise;
 import dodecagraphone.model.component.MyButtonPanel;
+import dodecagraphone.model.InstrumentRange;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.model.MyTempo;
@@ -341,6 +342,8 @@ public class MyController {
         SoundWithMidi.runProgramChange(canal, instr);
         track.setAudible(true);
         track.setVisible(true);
+        int offset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+        track.setDisplayOffset(offset);
         this.mixer.addTrack(track);
         this.mixer.setCurrentTrack(track.getId());
     }
@@ -2809,6 +2812,11 @@ public class MyController {
             int newInstr = Integer.parseInt(parts[0]);
             SoundWithMidi.assignInstToChannel(chan, newInstr);
             SoundWithMidi.runProgramChange(chan, newInstr);
+            MyTrack currentTrack = this.mixer.getCurrentTrack();
+            if (currentTrack != null) {
+                int offset = InstrumentRange.calcDisplayOffset(newInstr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                currentTrack.setDisplayOffset(offset);
+            }
         }
         this.mixer.refreshMixer();
     }

@@ -1,6 +1,7 @@
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
+import dodecagraphone.model.InstrumentRange;
 import dodecagraphone.model.MyKeyCircles;
 import dodecagraphone.model.MyTempo;
 import dodecagraphone.model.ToneRange;
@@ -34,6 +35,7 @@ public class MyMidiScore extends MyExercise {
     protected long firstTick = -1;
     // Mantindrem un mapa per seguir les notes actives (NOTE_ON) fins que es trobi el corresponent NOTE_OFF
     private Map<Long, NoteInfo> activeNotes = new HashMap<>();
+    private int[] loadChannelDisplayOffset = new int[16];
     //private MyMixer mixer;
 //    private Map<Integer, Boolean> activeChannels = new HashMap<>();
 
@@ -113,6 +115,8 @@ public class MyMidiScore extends MyExercise {
                     track.setDotted(Boolean.parseBoolean(text.substring(7)));
                 } else if (text.startsWith("velocity=")) {
                     track.setVelocity(Integer.parseInt(text.substring(9)));
+                } else if (text.startsWith("displayOffset=")) {
+                    track.setDisplayOffsetFromMetadata(Integer.parseInt(text.substring(14)));
                 } else if (text.startsWith("canals=")) {
                     List<Integer> canals = readCanals(text.substring(7));
                     for (int c : canals) {
@@ -328,6 +332,7 @@ public class MyMidiScore extends MyExercise {
             this.controller.updateTextOfButtons();
             return;
         }
+        Arrays.fill(loadChannelDisplayOffset, 0);
         boolean ok = this.analyzeMidiHeader(sequence);
         if (!ok) {
             this.controller.updateTextOfButtons();
@@ -350,6 +355,12 @@ public class MyMidiScore extends MyExercise {
             Track track = tracks[tr];
             MyTrack mixerTrack = new MyTrack(tr - first, "");
             int trId = readTrackData(mixerTrack, track);
+            if (mixerTrack.isDisplayOffsetFromMetadata()) {
+                int chan = mixerTrack.getCurrentChannel();
+                if (chan >= 0 && chan < 16) {
+                    loadChannelDisplayOffset[chan] = mixerTrack.getDisplayOffset();
+                }
+            }
             MyMixer mixer = this.controller.getMixer();
             int specialTracks = 0;
             if (trId == mixer.getChordTrackId()){
@@ -428,11 +439,16 @@ public class MyMidiScore extends MyExercise {
                                 System.out.println("PROGRAM_CHANGE al tick " + tick + ": Program " + pitch + " canal " + channel);
                             }
                             placeAppendMidiMessage(message);
-//                            if (!activeChannels.get(channel)) {
                             int instr = ((ShortMessage) message).getData1();
                             SoundWithMidi.assignInstToChannel(channel, instr);
                             SoundWithMidi.runProgramChange(channel, instr);
-//                            }
+                            if (!mixerTrack.isDisplayOffsetFromMetadata()) {
+                                int offset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                                mixerTrack.setDisplayOffset(offset);
+                                loadChannelDisplayOffset[channel] = offset;
+                            } else {
+                                loadChannelDisplayOffset[channel] = mixerTrack.getDisplayOffset();
+                            }
                             break;
                         default:
                             if (LOCAL_VERBOSE) {
@@ -645,6 +661,7 @@ public class MyMidiScore extends MyExercise {
             addTextMeta(midiTrack, "audible=" + track.isAudible());
             addTextMeta(midiTrack, "dotted=" + track.isDotted());
             addTextMeta(midiTrack, "velocity=" + track.getVelocity());
+            addTextMeta(midiTrack, "displayOffset=" + track.getDisplayOffset());
             addTextMeta(midiTrack, "canals=" + track.getCanals().toString());
 
         } catch (Exception e) {
@@ -720,7 +737,7 @@ public class MyMidiScore extends MyExercise {
                     break;
                 }
                 MyGridSquare square = this.grid[keyId][col];
-                int pitch = ToneRange.keyIdToMidi(keyId);
+                int visualPitch = ToneRange.keyIdToMidi(keyId);
 
                 if (square==null) continue;
                 List polinotes = new LinkedList<>(square.getPoliNotes());
@@ -768,9 +785,12 @@ public class MyMidiScore extends MyExercise {
                                     }
                                     track.add(new MidiEvent(pc, tickOn));
                                 }
-                                int rectified = pitch - 12 * ToneRange.getOctavesUp(); 
+                                MyTrack trackObj = this.controller.getMixer().getTrackFromId(trackIndex);
+                                int dispOff = (trackObj != null) ? trackObj.getDisplayOffset() : 0;
+                                int realPitch = visualPitch - dispOff;
+                                int rectified = realPitch - 12 * ToneRange.getOctavesUp();
                                 if (Settings.IS_BU){
-                                    rectified = pitch;
+                                    rectified = realPitch;
                                 }
                                 ShortMessage on = new ShortMessage();
                                 try {
@@ -1286,7 +1306,9 @@ public class MyMidiScore extends MyExercise {
             long duradaTicks = tick - noteInfo.getStartTick();
             int ncols = tickLengthToNCols(duradaTicks);
             setCurrentWriteCol(tickToCol(noteInfo.getStartTick()));
-            int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp();
+            int chan = noteInfo.getChannel();
+            int offset = (chan >= 0 && chan < 16) ? loadChannelDisplayOffset[chan] : 0;
+            int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;
             if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();
             placeNote(
                     rectifiedPitch,

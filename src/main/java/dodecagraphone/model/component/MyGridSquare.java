@@ -262,7 +262,9 @@ public class MyGridSquare extends MyComponent {
                     }
                     if (!xiloKey.isPlaying(chan)) {
 //                        System.out.println("   MyGridSquare::checkNPlay: play "+chan+" col "+this.parentFirstCol);
-                        xiloKey.play(chan, velocity);
+                        int displayOffset = tr.getDisplayOffset();
+                        int realMidi = ToneRange.keyIdToMidi(scoreRow) - displayOffset;
+                        xiloKey.playWithMidi(realMidi, chan, velocity);
 //                        System.out.println("MyGridSquare::checkNPlay():channel,instr "+chan+" "+SoundWithMidi.getInstrumentInChannel(chan));
                         this.are_playing++;
                     }
