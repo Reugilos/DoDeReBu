@@ -193,6 +193,18 @@ public class MyXiloKey extends MyComponent {
         g.setColor(activeChannels.isEmpty() ? ColorSets.getGridSquareFontColor(this.midi) : java.awt.Color.BLACK);
         g.drawString(text, (float) (screenPosX), posY);
         this.slide.draw(g);
+        if (!this.controller.isDrumsMode()) {
+            int midiKey = this.controller.getAllPurposeScore().getMidiKey();
+            if (this.midi % 12 == midiKey % 12) {
+                int triH = Math.max(4, (int)(height * 0.35));
+                int tip = (int)(screenPosX + width) - 2;
+                int cy = (int)(screenPosY + height / 2);
+                int[] xp = { tip - triH, tip - triH, tip };
+                int[] yp = { cy - triH / 2, cy + triH / 2, cy };
+                g.setColor(Color.BLACK);
+                g.fillPolygon(xp, yp, 3);
+            }
+        }
     }
 
     /**

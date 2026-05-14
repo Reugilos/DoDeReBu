@@ -144,6 +144,9 @@ public class MyController {
     private boolean firstNoteWasLinkedBeforeDrag = false;
     private boolean needsSaving = false;
     private boolean drumsMode = false;
+    private boolean tremoloActive = false;
+    private final java.util.Set<Long> tremoloLinkedCells = new java.util.HashSet<>();
+    private final java.util.Set<Long> tremoloPreNotes   = new java.util.HashSet<>();
     private int lastMelodyTrackId = 0;
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
@@ -1179,6 +1182,7 @@ public class MyController {
 
     /** Linka la nota d'un square i registra el canvi al mouseSequence per undo. */
     private void linkNoteAtCell(MyGridSquare sq) {
+        if (tremoloActive) return;
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
         int vel = SoundWithMidi.getCurrentKeyboardVelocity();
@@ -2808,6 +2812,76 @@ public class MyController {
         this.drawFull(true);
     }
 
+    public void onTremoloButtonPressed(MyButton togg) {
+        if (togg.isPressed()) {
+            activateTremolo();
+        } else {
+            deactivateTremolo();
+        }
+        this.allPurposeScore.drawFullGridinOffscreen();
+        this.drawFull(true);
+    }
+
+    private void activateTremolo() {
+        tremoloActive = true;
+        tremoloLinkedCells.clear();
+        tremoloPreNotes.clear();
+        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        int tr = this.mixer.getCurrentTrackId();
+        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
+        boolean dotted = this.mixer.getCurrentTrack().isDotted();
+        int nKeys = this.allPurposeScore.getnKeys();
+        int nCols = this.allPurposeScore.getLastColWritten();
+        for (int col = 0; col < nCols; col++) {
+            for (int row = 0; row < nKeys; row++) {
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq == null) continue;
+                final int fCh = ch, fTr = tr;
+                boolean hasNote = sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr);
+                if (!hasNote) continue;
+                long key = (long) row << 32 | (col & 0xFFFFFFFFL);
+                tremoloPreNotes.add(key);
+                boolean isLinked = sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr && n.isLinked());
+                if (isLinked) {
+                    tremoloLinkedCells.add(key);
+                    sq.unlinkNote(ch, tr, vel, true, false, false, dotted);
+                }
+            }
+        }
+    }
+
+    private void deactivateTremolo() {
+        tremoloActive = false;
+        int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        int tr = this.mixer.getCurrentTrackId();
+        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
+        boolean dotted = this.mixer.getCurrentTrack().isDotted();
+        for (long encoded : tremoloLinkedCells) {
+            int row = (int) (encoded >> 32);
+            int col = (int) (encoded & 0xFFFFFFFFL);
+            long nextKey = (long) row << 32 | ((col + 1) & 0xFFFFFFFFL);
+            if (!tremoloPreNotes.contains(nextKey)) continue;
+            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+            if (sq != null) {
+                sq.linkNote(ch, tr, vel, true, false, false, dotted);
+            }
+        }
+        tremoloLinkedCells.clear();
+        tremoloPreNotes.clear();
+    }
+
+    public boolean isTremoloActive() {
+        return tremoloActive;
+    }
+
+    private void resetTremolo() {
+        tremoloActive = false;
+        tremoloLinkedCells.clear();
+        tremoloPreNotes.clear();
+    }
+
     /** Detecta anacrusa i actualitza el botó de compàs si el resultat ha canviat. */
     private void refreshAnacrusis() {
         boolean before = Settings.isHasAnacrusis();
@@ -3255,6 +3329,7 @@ public class MyController {
             allPurposeScore.setNColsBuffer(computeInitialBufferSize(Math.max(0, estimatedCols)));
             allPurposeScore.readMidiScore(fitxer);
             resetDrumsMode();
+            resetTremolo();
             for (MyTrack t : this.mixer.getTracks()) {
                 if (!t.isDeleted()) t.setAudible(true);
             }
@@ -3302,6 +3377,7 @@ public class MyController {
         this.buttons.setToggleButtonsToProgramValues();
         this.currentMidiFile = "";
         resetDrumsMode();
+        resetTremolo();
         this.setDefaultTrack();
         this.allPurposeScore.initOffscreen();
         this.myChordSymbolLine.initOffscreen();

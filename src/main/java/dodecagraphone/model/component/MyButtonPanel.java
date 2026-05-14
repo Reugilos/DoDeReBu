@@ -77,6 +77,7 @@ public class MyButtonPanel extends MyComponent {
     private int id_FitAnacrusisButton = 39;
     private int id_TipsButton = 40;
     private int id_PrintButton = 41;
+    private int id_TremoloButton = 42;
     /**
      * True if the button panel has been modified and needs to be repaint.
      */
@@ -543,8 +544,15 @@ public class MyButtonPanel extends MyComponent {
         this.setNamesVsHideButton(this.controller.getAllPurposeScore().isShowNoteNames());
         this.setMobileDoVsAbsoluteButton(ToneRange.isMovileDo());
         this.setTipsButton(Settings.isTipsVisible());
+        this.setTremoloButton(this.controller.isTremoloActive());
 //        MyToggle tog = (MyToggle) this.buttons.get(this.id_NamesVsHideButton);
 //        System.out.println("MyButtonPanl::setToggleButtonsToProgramValues: isPressed(" + tog.getId() + ") = " + tog.isPressed() + ", showNames = " + this.controller.getScore().isShowNoteNames());
+    }
+
+    public void setTremoloButton(boolean active) {
+        this.setModified(true);
+        MyToggle tog = (MyToggle) this.buttons.get(this.id_TremoloButton);
+        if (tog != null && tog.isPressed() != active) tog.toggle();
     }
 
     public void setTipsButton(boolean tipsOn) {

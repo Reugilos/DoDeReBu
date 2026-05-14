@@ -1314,24 +1314,33 @@ public class MyGridScore extends MyComponent {
                 if (!sq.isSq_is_linked()) {
                     boolean hasDrumsNote = sq.getPoliNotes().stream()
                             .anyMatch(n -> n.isVisible() && n.getChannel() == 9);
+                    boolean isFirstInTremoloGroup = true;
+                    if (this.controller.isTremoloActive() && col > 0) {
+                        MyGridSquare prev = this.grid[row + BUFFER][col - 1];
+                        if (prev != null && prev.isSq_is_visible()) {
+                            isFirstInTremoloGroup = false;
+                        }
+                    }
                     String name;
-                    if (this.isShowNoteNames() && !hasDrumsNote) {
-                        name = ToneRange.getNoteName(midi, this.getMidiKey());
-                        name = name.substring(0, name.length() - 1);
+                    if (isFirstInTremoloGroup) {
+                        if (this.isShowNoteNames() && !hasDrumsNote) {
+                            name = ToneRange.getNoteName(midi, this.getMidiKey());
+                            name = name.substring(0, name.length() - 1);
+                        } else {
+                            name = "✔";
+                        }
                     } else {
-                        name = "✔";
+                        name = null;
                     }
 
                     g.setColor(sq.getColor());
                     g.fillRect((int) screenX, (int) screenY, (int) wdth, (int) hght);
 
-//                    name = "" + col;
-                    g.setColor(ColorSets.getGridSquareFontColor(midi));
-//                    System.out.println("MyGridSquare::draw() name = " + name);
-                    g.drawString(name, (int) (2 + screenX + wdth / 3), (int) (screenY + hght * 0.8));
-//                    g.drawLine(screenX + 1, screenY, screenX + 1, screenY + (int) height);
+                    if (name != null) {
+                        g.setColor(ColorSets.getGridSquareFontColor(midi));
+                        g.drawString(name, (int) (2 + screenX + wdth / 3), (int) (screenY + hght * 0.8));
+                    }
                     g.drawLine(screenX + 1, screenY, screenX + 1, screenY + hght-1);
-                    //g.drawString(name, (int) (screenX), (int) (screenY + hght * 0.8));
 
                 }
                 if (sq.isSqDotted() && !sq.isSq_is_linked()) {
