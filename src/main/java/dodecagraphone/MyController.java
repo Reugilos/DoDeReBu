@@ -885,9 +885,9 @@ public class MyController {
                     for (MyGridSquare.SubSquare sub : new ArrayList<>(sq.getPoliNotes())) {
                         int savedTr = this.mixer.getCurrentTrackId();
                         int savedCh = this.mixer.getCurrentChannelOfCurrentTrack();
-                        this.mixer.setCurrentTrackById(sub.getTrack());
+                        this.mixer.setCurrentTrack(sub.getTrack());
                         removeNoteAtCell(row, col);
-                        this.mixer.setCurrentTrackById(savedTr);
+                        this.mixer.setCurrentTrack(savedTr);
                     }
                 }
             }
@@ -965,9 +965,9 @@ public class MyController {
                     for (MyGridSquare.SubSquare sub : sq.getPoliNotes()) {
                         if (!sub.isVisible()) continue;
                         int savedTr = this.mixer.getCurrentTrackId();
-                        this.mixer.setCurrentTrackById(sub.getTrack());
+                        this.mixer.setCurrentTrack(sub.getTrack());
                         addNoteAtCell(row, destCol);
-                        this.mixer.setCurrentTrackById(savedTr);
+                        this.mixer.setCurrentTrack(savedTr);
                     }
                 } else {
                     int ch = this.mixer.getCurrentChannelOfCurrentTrack();
@@ -1258,13 +1258,14 @@ public class MyController {
                     boolean nextHasNote = nextSq != null && nextSq.getPoliNotes().stream()
                         .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                     if (nextHasNote) {
-                        boolean wasLinked = nextSq.isSq_is_linked();
-                        if (wasLinked) unlinkNoteForUndo(nextSq);  // leftmost → inici de nota
+                        boolean wasLinked = nextSq.getPoliNotes().stream()
+                            .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible() && n.isLinked());
+                        if (!wasLinked) linkNoteAtCell(nextSq);  // linka durant el drag; el cap es determina al release
                         firstNote = nextSq;
                         firstNoteWasLinkedBeforeDrag = wasLinked;
                     } else {
                         addNoteAtCell(row, col);  // crea unlinked ✓
-                        firstNote = this.allPurposeScore.getGrid()[row][col];
+                        firstNote = this.allPurposeScore.getGridSquare(row, col);
                         firstNoteWasLinkedBeforeDrag = false;
                     }
                 }
@@ -1297,19 +1298,22 @@ public class MyController {
                     // L'anterior firstNote passa a ser continuació (linked)
                     if (firstNote != null && !firstNote.isSq_is_linked()) linkNoteAtCell(firstNote);
                     if (currentTrackHasNote) {
-                        boolean wasLinked = sq.isSq_is_linked();
-                        if (wasLinked) unlinkNoteForUndo(sq);  // nou leftmost → inici de nota
+                        boolean wasLinked = sq.getPoliNotes().stream()
+                            .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible() && n.isLinked());
+                        if (!wasLinked) linkNoteAtCell(sq);  // linka durant el drag; el cap es determina al release
                         firstNote = sq;
                         firstNoteWasLinkedBeforeDrag = wasLinked;
                     } else {
                         addNoteAtCell(row, col);  // crea unlinked ✓
-                        firstNote = this.allPurposeScore.getGrid()[row][col];
+                        firstNote = this.allPurposeScore.getGridSquare(row, col);
                         firstNoteWasLinkedBeforeDrag = false;
                     }
                 } else {
                     // No és el nou leftmost → linked
                     if (currentTrackHasNote) {
-                        if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                        boolean isLinked = sq.getPoliNotes().stream()
+                            .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible() && n.isLinked());
+                        if (!isLinked) linkNoteAtCell(sq);
                     } else {
                         addNoteAtCell(row, col);
                         MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
@@ -1506,7 +1510,7 @@ public class MyController {
                     dragMode = DragMode.ADD;
                     this.turningOn = true;
                     addNoteAtCell(row, col);
-                    firstNote = this.allPurposeScore.getGrid()[row][col];
+                    firstNote = this.allPurposeScore.getGridSquare(row, col);
                     lastNote = firstNote;
                     this.keyboard.play(row);
                 }
@@ -1653,7 +1657,7 @@ public class MyController {
                     MyGridSquare acLast = null;
                     for (int c = fcol; c != acCol + step; c += step) {
                         addNoteAtCell(frow, c);
-                        acLast = this.allPurposeScore.getGrid()[frow][c];
+                        acLast = this.allPurposeScore.getGridSquare(frow, c);
                         if (acFirst == null) {
                             acFirst = acLast;
                         } else {
@@ -1809,7 +1813,7 @@ public class MyController {
         int row = this.allPurposeScore.whichRow(posX, posY);
         int col = this.allPurposeScore.whichCol();
         if (row == -1 || col == -1) return;
-        MyGridSquare sq = this.allPurposeScore.getGrid()[row][col];
+        MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
         if (sq == null) return;
         int curCh = this.mixer.getCurrentChannelOfCurrentTrack();
         int curTr = this.mixer.getCurrentTrackId();
