@@ -3641,7 +3641,9 @@ public class MyController {
         }
         allPurposeScore.drawFullGridinOffscreen();
         redrawChordLine();
-        drawFull(true);
+        if (this.getUi() != null && this.getUi().getPanel() != null) {
+            this.getUi().getPanel().repinta(true);
+        }
     }
 
     /** Opens a non-modal dialog and waits for the user to click the target column. */
