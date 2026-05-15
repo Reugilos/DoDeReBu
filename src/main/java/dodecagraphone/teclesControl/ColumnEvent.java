@@ -11,10 +11,10 @@ import java.util.Map;
 import javax.sound.midi.MidiMessage;
 
 /**
- * Undo/redo event for inserting or deleting a column in the score.
+ * Undo/redo event for inserting or deleting N columns in the score.
  *
- * For insert: undo = delete the same column.
- * For delete: the column contents are saved before deletion so undo can restore them.
+ * For insert: undo = delete the same N columns.
+ * For delete: column contents are saved before deletion so undo can restore them.
  */
 public class ColumnEvent extends Event {
 
@@ -34,41 +34,46 @@ public class ColumnEvent extends Event {
 
     private final MyController controller;
     private final int col;
+    private final int n;
     private final boolean insert;
-    private final ColSnapshot snapshot; // non-null only for delete events
+    private final List<ColSnapshot> snapshots; // non-null only for delete events
 
-    /** Constructor for INSERT event (undo = delete). */
-    public ColumnEvent(MyController controller, int col) {
+    /** Constructor for INSERT event (undo = delete N columns). */
+    public ColumnEvent(MyController controller, int col, int n) {
         this.controller = controller;
         this.col        = col;
+        this.n          = n;
         this.insert     = true;
-        this.snapshot   = null;
+        this.snapshots  = null;
     }
 
-    /** Constructor for DELETE event (undo = insert + restore snapshot). */
-    public ColumnEvent(MyController controller, int col, ColSnapshot snapshot) {
+    /** Constructor for DELETE event (undo = insert N empty + restore snapshots). */
+    public ColumnEvent(MyController controller, int col, int n, List<ColSnapshot> snapshots) {
         this.controller = controller;
         this.col        = col;
+        this.n          = n;
         this.insert     = false;
-        this.snapshot   = snapshot;
+        this.snapshots  = snapshots;
     }
 
     @Override
     public void refer() {
         if (insert) {
-            controller.insertColumnAt(col);
+            controller.insertNColumnsAt(col, n);
         } else {
-            controller.deleteColumnAt(col);
+            controller.deleteNColumnsAt(col, n);
         }
     }
 
     @Override
     public void desfer() {
         if (insert) {
-            controller.deleteColumnAt(col);
+            controller.deleteNColumnsAt(col, n);
         } else {
-            controller.insertEmptyColumnAt(col);
-            controller.restoreColumnAt(col, snapshot);
+            controller.insertNEmptyColumnsAt(col, n);
+            for (int i = 0; i < n; i++) {
+                controller.restoreColumnAt(col + i, snapshots.get(i));
+            }
         }
     }
 }
