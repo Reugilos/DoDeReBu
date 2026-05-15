@@ -163,6 +163,10 @@ public class MyController {
     private MyGridScore.ScoreChange pendingChange = null;
     private int pendingTransposeStep = 0;
 
+    /** "insert" o "delete" mentre l'usuari tria columna; null si no hi ha op pendent. */
+    private String pendingColumnOp = null;
+    private javax.swing.JDialog pendingColumnDialog = null;
+
     private SampleOrMidi instrument;
 //    private int numBeatsMeasure;
 //    private int beatFigure;
@@ -1383,6 +1387,15 @@ public class MyController {
                 placePendingChangeAt(col);
             }
             return; // el clic queda consumit pel canvi pendent
+        }
+
+        /* Operació de columna pendent (insert/delete): el clic tria la columna. */
+        if (pendingColumnOp != null) {
+            int col = this.allPurposeScore.getCol(posX);
+            if (col >= 0) {
+                executePendingColumnOpAt(col);
+            }
+            return;
         }
 
         /* Check chord format button (left keyboard-column area of the chord strip) */
@@ -3180,6 +3193,9 @@ public class MyController {
         return Math.max(0, col);
     }
 
+    /** Public accessor for the current playbar editing column (used by MyNewPanel). */
+    public int getEditingColPublic() { return getEditingCol(); }
+
     /**
      * Aplica els canvis de paràmetres globals efectius a la columna indicada.
      * No fa res si el changeMap és buit (tots els camps null).
@@ -3588,19 +3604,77 @@ public class MyController {
         allPurposeScore.updateStopMarker();
     }
 
-    /** Invoked by Ctrl+I: inserts a column at the editing position and registers the undo event. */
+    /** Invoked by Ctrl+I: opens the pending-click dialog to choose insertion column. */
     public void handleInsertColumn() {
-        int col = getEditingCol();
-        insertColumnAt(col);
-        afegirEvent(new ColumnEvent(this, col));
+        startPendingColumnOp("insert");
     }
 
-    /** Invoked by Ctrl+D: deletes the column at the editing position and registers the undo event. */
+    /** Invoked by Ctrl+D: opens the pending-click dialog to choose deletion column. */
     public void handleDeleteColumn() {
-        int col = getEditingCol();
-        ColumnEvent.ColSnapshot snap = buildColumnSnapshot(col);
-        deleteColumnAt(col);
-        afegirEvent(new ColumnEvent(this, col, snap));
+        startPendingColumnOp("delete");
+    }
+
+    /** Returns true if there is a column insert/delete waiting for a click. */
+    public boolean isPendingColumnOp() { return pendingColumnOp != null; }
+
+    /** Cancels any pending column operation and closes the dialog. */
+    public void cancelPendingColumnOp() {
+        pendingColumnOp = null;
+        if (pendingColumnDialog != null) {
+            pendingColumnDialog.dispose();
+            pendingColumnDialog = null;
+        }
+    }
+
+    /** Executes the pending column op at col and clears the pending state. */
+    public void executePendingColumnOpAt(int col) {
+        if (pendingColumnOp == null) return;
+        String op = pendingColumnOp;
+        cancelPendingColumnOp();
+        if ("insert".equals(op)) {
+            insertColumnAt(col);
+            afegirEvent(new ColumnEvent(this, col));
+        } else {
+            ColumnEvent.ColSnapshot snap = buildColumnSnapshot(col);
+            deleteColumnAt(col);
+            afegirEvent(new ColumnEvent(this, col, snap));
+        }
+        allPurposeScore.drawFullGridinOffscreen();
+        redrawChordLine();
+        drawFull(true);
+    }
+
+    /** Opens a non-modal dialog and waits for the user to click the target column. */
+    private void startPendingColumnOp(String op) {
+        // Cancel any existing pending state
+        if (pendingChange != null) return; // don't overlap with change pending
+        cancelPendingColumnOp();
+        pendingColumnOp = op;
+        String title   = I18n.t("column." + op + ".dialog.title");
+        String message = I18n.t("column." + op + ".dialog.message");
+        javax.swing.JDialog dlg = new javax.swing.JDialog(this.getUi(), title, false);
+        dlg.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+        dlg.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosed(java.awt.event.WindowEvent e) {
+                pendingColumnOp = null;
+                pendingColumnDialog = null;
+            }
+        });
+        javax.swing.JLabel label = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 24, 8, 24));
+        javax.swing.JButton btnPlaybar = new javax.swing.JButton(I18n.t("column.op.atPlaybar"));
+        btnPlaybar.addActionListener(ev -> executePendingColumnOpAt(getEditingCol()));
+        javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 24, 16, 24));
+        panel.add(label, java.awt.BorderLayout.CENTER);
+        panel.add(btnPlaybar, java.awt.BorderLayout.SOUTH);
+        dlg.add(panel);
+        dlg.getRootPane().setDefaultButton(btnPlaybar);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this.getUi());
+        dlg.setVisible(true);
+        pendingColumnDialog = dlg;
+        drawFull(true);
     }
 
     /** Captures a snapshot of column col before it is deleted. */
