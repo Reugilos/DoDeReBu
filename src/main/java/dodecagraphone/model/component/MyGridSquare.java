@@ -47,6 +47,10 @@ public class MyGridSquare extends MyComponent {
             return is_linked;
         }
 
+        public boolean isDotted() { return is_dotted; }
+        public boolean isStoredVisible() { return is_visible; }
+        public boolean isStoredMuted() { return !is_audible; }
+
         public boolean isAudible() {
             return is_audible && controller.getMixer().isTrackAudible(track);
         }

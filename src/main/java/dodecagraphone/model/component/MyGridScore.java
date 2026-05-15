@@ -24,6 +24,7 @@ import java.awt.Stroke;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -2499,4 +2500,155 @@ public class MyGridScore extends MyComponent {
 //    public void setIsPlaying(boolean isPlaying) {
 //        this.isPlaying = isPlaying;
 //    }
+
+    // =========================================================================
+    // Column insert / delete
+    // =========================================================================
+
+    /** Shifts all Map entries with key >= fromCol right by +1. */
+    private <V> void shiftMapEntriesRight(Map<Integer, V> map, int fromCol) {
+        List<Integer> keys = new ArrayList<>();
+        for (Integer k : map.keySet()) {
+            if (k >= fromCol) keys.add(k);
+        }
+        keys.sort(Collections.reverseOrder());
+        for (Integer k : keys) {
+            V val = map.remove(k);
+            map.put(k + 1, val);
+        }
+    }
+
+    /** Removes the entry at col and shifts all entries with key > col left by 1. */
+    private <V> void shiftMapEntriesLeft(Map<Integer, V> map, int col) {
+        map.remove(col);
+        List<Integer> keys = new ArrayList<>();
+        for (Integer k : map.keySet()) {
+            if (k > col) keys.add(k);
+        }
+        Collections.sort(keys);
+        for (Integer k : keys) {
+            V val = map.remove(k);
+            map.put(k - 1, val);
+        }
+    }
+
+    /**
+     * Inserts an empty column at position col, shifting everything to the right.
+     * If extendLinked is true, notes spanning across the insertion point
+     * (linked continuations at col) are extended with a linked copy at the new col.
+     */
+    public void insertColumn(int col, boolean extendLinked) {
+        if (col < 0 || col >= nCols) return;
+        int totalRows = nKeys + 2 * BUFFER;
+
+        // Collect linked sub-square data at col before shifting
+        // [gridRow, channel, track, velocity, isVisible, isMuted, isDotted]
+        List<int[]> linkedToInsert = new ArrayList<>();
+        if (extendLinked) {
+            for (int r = 0; r < totalRows; r++) {
+                MyGridSquare sq = grid[r][col];
+                if (sq != null) {
+                    for (MyGridSquare.SubSquare ss : sq.getPoliNotes()) {
+                        if (ss.isLinked()) {
+                            linkedToInsert.add(new int[]{
+                                r,
+                                ss.getChannel(), ss.getTrack(), ss.getVelocity(),
+                                ss.isStoredVisible() ? 1 : 0,
+                                ss.isStoredMuted()   ? 1 : 0,
+                                ss.isDotted()        ? 1 : 0
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Shift grid right: last column is discarded, col becomes empty
+        for (int r = 0; r < totalRows; r++) {
+            for (int c = nCols - 1; c > col; c--) {
+                grid[r][c] = grid[r][c - 1];
+                if (grid[r][c] != null) {
+                    grid[r][c].scoreCol = c;
+                    grid[r][c].parentFirstCol = c;
+                }
+            }
+            grid[r][col] = null;
+        }
+
+        // Re-insert linked continuations at the new empty col
+        for (int[] info : linkedToInsert) {
+            int scoreRow = info[0] - BUFFER;
+            addNoteToSquare(scoreRow, col, 1, Settings.getnRowsSquare(),
+                (MyComponent) this, this.controller, this, this.cam,
+                info[1], info[2], info[3],
+                info[4] == 1, info[5] == 1, true, info[6] == 1);
+        }
+
+        // Shift column-indexed maps
+        shiftMapEntriesRight(chordSymbolLine,     col);
+        shiftMapEntriesRight(backgroundChordLine, col);
+        shiftMapEntriesRight(changeMap,           col);
+        shiftMapEntriesRight(messages,            col);
+        shiftMapEntriesRight(midiMessages,        col);
+    }
+
+    /**
+     * Deletes the column at position col, shifting all content to the left.
+     * If a deleted note head was followed by a linked continuation at col+1,
+     * that continuation is promoted to a note head (unlinked).
+     */
+    public void deleteColumn(int col) {
+        if (col < 0 || col >= nCols) return;
+        int totalRows = nKeys + 2 * BUFFER;
+
+        // Collect (gridRow, channel, track) for note heads whose successor needs promotion
+        List<int[]> headsToPromote = new ArrayList<>();
+        if (col + 1 < nCols) {
+            for (int r = 0; r < totalRows; r++) {
+                MyGridSquare sqHere = grid[r][col];
+                MyGridSquare sqNext = grid[r][col + 1];
+                if (sqHere != null && sqNext != null) {
+                    for (MyGridSquare.SubSquare ssHere : sqHere.getPoliNotes()) {
+                        if (!ssHere.isLinked()) {
+                            for (MyGridSquare.SubSquare ssNext : sqNext.getPoliNotes()) {
+                                if (ssNext.isLinked()
+                                        && ssNext.getTrack()   == ssHere.getTrack()
+                                        && ssNext.getChannel() == ssHere.getChannel()) {
+                                    headsToPromote.add(new int[]{r, ssHere.getChannel(), ssHere.getTrack()});
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Shift grid left
+        for (int r = 0; r < totalRows; r++) {
+            for (int c = col; c < nCols - 1; c++) {
+                grid[r][c] = grid[r][c + 1];
+                if (grid[r][c] != null) {
+                    grid[r][c].scoreCol = c;
+                    grid[r][c].parentFirstCol = c;
+                }
+            }
+            grid[r][nCols - 1] = null;
+        }
+
+        // Promote linked continuations to note heads where the original head was deleted
+        for (int[] info : headsToPromote) {
+            MyGridSquare sq = grid[info[0]][col];
+            if (sq != null) {
+                sq.unlinkNote(info[1], info[2], 0, false, false, false, false);
+            }
+        }
+
+        // Shift column-indexed maps
+        shiftMapEntriesLeft(chordSymbolLine,     col);
+        shiftMapEntriesLeft(backgroundChordLine, col);
+        shiftMapEntriesLeft(changeMap,           col);
+        shiftMapEntriesLeft(messages,            col);
+        shiftMapEntriesLeft(midiMessages,        col);
+    }
 }

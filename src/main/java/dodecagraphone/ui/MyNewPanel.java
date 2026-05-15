@@ -284,6 +284,22 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             this.repinta(true);
             return;
         }
+        if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_I) {
+            controller.clearSelection();
+            controller.handleInsertColumn();
+            controller.getAllPurposeScore().drawFullGridinOffscreen();
+            controller.redrawChordLine();
+            this.repinta(true);
+            return;
+        }
+        if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_D) {
+            controller.clearSelection();
+            controller.handleDeleteColumn();
+            controller.getAllPurposeScore().drawFullGridinOffscreen();
+            controller.redrawChordLine();
+            this.repinta(true);
+            return;
+        }
     }
 
     @Override

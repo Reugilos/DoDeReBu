@@ -870,6 +870,27 @@ public class MyLyrics extends MyComponent {
         }
     }
 
+    /**
+     * Shifts lyric segments at or after fromCol by delta columns.
+     * If delta is negative (delete), segments exactly at fromCol are discarded.
+     * Creates new LyricSegment objects since col is final.
+     */
+    public void shiftSegmentsFrom(int fromCol, int delta) {
+        for (List<LyricSegment> segments : lyricsByTrack.values()) {
+            List<LyricSegment> updated = new ArrayList<>();
+            for (LyricSegment seg : segments) {
+                if (delta < 0 && seg.col == fromCol) continue; // deleted column
+                if (seg.col >= fromCol) {
+                    updated.add(new LyricSegment(seg.col + delta, seg.track, seg.text, seg.row, seg.widthCols));
+                } else {
+                    updated.add(seg);
+                }
+            }
+            segments.clear();
+            segments.addAll(updated);
+        }
+    }
+
     // =========================================================================
     // Inner class: LyricSegment
     // =========================================================================

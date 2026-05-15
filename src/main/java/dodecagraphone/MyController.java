@@ -30,6 +30,7 @@ import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.teclesControl.ChordEvent;
 import dodecagraphone.teclesControl.ClipNote;
+import dodecagraphone.teclesControl.ColumnEvent;
 import dodecagraphone.teclesControl.Event;
 import dodecagraphone.teclesControl.MouseSequence;
 import dodecagraphone.teclesControl.MoveNoteEvent;
@@ -54,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
@@ -2601,7 +2603,13 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
-            // Volum: s'aplica directament, sense workflow de canvi pendent.
+            // Crea una marca de volum pendent per col·locar a la partitura
+            int finalVol = getMixer().getCurrentTrack().getVelocity();
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.trackVelocities.put(trackId, finalVol);
+            javax.swing.SwingUtilities.invokeLater(() ->
+                setPendingChange(sc, I18n.t("scoreChange.volume"))
+            );
         });
         replicador.start();
     }
@@ -2632,7 +2640,13 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
-            // Volum: s'aplica directament, sense workflow de canvi pendent.
+            // Crea una marca de volum pendent per col·locar a la partitura
+            int finalVol = getMixer().getCurrentTrack().getVelocity();
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.trackVelocities.put(trackId, finalVol);
+            javax.swing.SwingUtilities.invokeLater(() ->
+                setPendingChange(sc, I18n.t("scoreChange.volume"))
+            );
         });
         replicador.start();
     }
@@ -3208,7 +3222,12 @@ public class MyController {
         }
         for (java.util.Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
             MyTrack t = getMixer().getTrackFromId(e.getKey());
-            if (t != null) t.setVelocity(e.getValue());
+            if (t != null) {
+                t.setVelocity(e.getValue());
+                if (e.getKey() == getMixer().getCurrentTrackId()) {
+                    this.buttons.updateVolumeButton("" + e.getValue());
+                }
+            }
         }
     }
 
@@ -3542,5 +3561,100 @@ public class MyController {
         int midi = ToneRange.getMidi(key);
         // this.allPurposeScore.setMidiKey(midi);
         return midi;
+    }
+
+    // =========================================================================
+    // Column insert / delete (Ctrl+I / Ctrl+D)
+    // =========================================================================
+
+    /** Inserts an empty column at col, extending notes that span the point. */
+    public void insertColumnAt(int col) {
+        allPurposeScore.insertColumn(col, true);
+        getMyLyrics().shiftSegmentsFrom(col, +1);
+        allPurposeScore.updateStopMarker();
+    }
+
+    /** Inserts a truly empty column at col without extending spanning notes (used in undo-of-delete). */
+    public void insertEmptyColumnAt(int col) {
+        allPurposeScore.insertColumn(col, false);
+        getMyLyrics().shiftSegmentsFrom(col, +1);
+        allPurposeScore.updateStopMarker();
+    }
+
+    /** Deletes the column at col, shifting all content left. */
+    public void deleteColumnAt(int col) {
+        allPurposeScore.deleteColumn(col);
+        getMyLyrics().shiftSegmentsFrom(col, -1);
+        allPurposeScore.updateStopMarker();
+    }
+
+    /** Invoked by Ctrl+I: inserts a column at the editing position and registers the undo event. */
+    public void handleInsertColumn() {
+        int col = getEditingCol();
+        insertColumnAt(col);
+        afegirEvent(new ColumnEvent(this, col));
+    }
+
+    /** Invoked by Ctrl+D: deletes the column at the editing position and registers the undo event. */
+    public void handleDeleteColumn() {
+        int col = getEditingCol();
+        ColumnEvent.ColSnapshot snap = buildColumnSnapshot(col);
+        deleteColumnAt(col);
+        afegirEvent(new ColumnEvent(this, col, snap));
+    }
+
+    /** Captures a snapshot of column col before it is deleted. */
+    public ColumnEvent.ColSnapshot buildColumnSnapshot(int col) {
+        ColumnEvent.ColSnapshot snap = new ColumnEvent.ColSnapshot();
+        int nKeys = allPurposeScore.getnKeys();
+        for (int row = 0; row < nKeys; row++) {
+            MyGridSquare sq = allPurposeScore.getGridSquare(row, col);
+            if (sq != null && !sq.getPoliNotes().isEmpty()) {
+                List<int[]> notes = new ArrayList<>();
+                for (MyGridSquare.SubSquare ss : sq.getPoliNotes()) {
+                    notes.add(new int[]{
+                        ss.getChannel(), ss.getTrack(), ss.getVelocity(),
+                        ss.isStoredVisible() ? 1 : 0,
+                        ss.isStoredMuted()   ? 1 : 0,
+                        ss.isLinked()        ? 1 : 0,
+                        ss.isDotted()        ? 1 : 0
+                    });
+                }
+                snap.gridRows.put(row, notes);
+            }
+        }
+        snap.chord   = allPurposeScore.getChordSimbolLine().get(col);
+        snap.bgChord = allPurposeScore.getChordLine().get(col);
+        snap.change  = allPurposeScore.getChangeMap().get(col);
+        snap.message = allPurposeScore.getMessages().get(col);
+        snap.midiMsg = allPurposeScore.getMidiMessages().get(col);
+        for (List<MyLyrics.LyricSegment> segs : getMyLyrics().getLyricsByTrack().values()) {
+            for (MyLyrics.LyricSegment seg : segs) {
+                if (seg.col == col) snap.lyricSegments.add(seg);
+            }
+        }
+        return snap;
+    }
+
+    /** Restores column data from a snapshot (called after insertEmptyColumnAt in undo-of-delete). */
+    public void restoreColumnAt(int col, ColumnEvent.ColSnapshot snapshot) {
+        for (Map.Entry<Integer, List<int[]>> entry : snapshot.gridRows.entrySet()) {
+            int scoreRow = entry.getKey();
+            for (int[] info : entry.getValue()) {
+                allPurposeScore.addNoteToSquare(scoreRow, col, 1, Settings.getnRowsSquare(),
+                    (MyComponent) allPurposeScore, this, allPurposeScore, getCam(),
+                    info[0], info[1], info[2], info[3]==1, info[4]==1, info[5]==1, info[6]==1);
+            }
+        }
+        if (snapshot.chord   != null) allPurposeScore.placeChordSymbol(snapshot.chord, col);
+        if (snapshot.bgChord != null) allPurposeScore.getChordLine().put(col, snapshot.bgChord);
+        if (snapshot.change  != null) allPurposeScore.setScoreChange(col, snapshot.change);
+        if (snapshot.message != null) allPurposeScore.getMessages().put(col, snapshot.message);
+        if (snapshot.midiMsg != null) allPurposeScore.getMidiMessages().put(col, snapshot.midiMsg);
+        Map<Integer, List<MyLyrics.LyricSegment>> byTrack = getMyLyrics().getLyricsByTrack();
+        for (MyLyrics.LyricSegment seg : snapshot.lyricSegments) {
+            byTrack.computeIfAbsent(seg.track, k -> new ArrayList<>()).add(seg);
+        }
+        allPurposeScore.updateStopMarker();
     }
 }
