@@ -234,10 +234,12 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         controller.getButtons().hideTip();
-        // Enter: col·loca el canvi pendent (scoreChange) al playBar
+        // Enter: col·loca el canvi pendent (scoreChange o column op) al playBar
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             controller.clearSelection();
-            if (controller.placePendingChangeAtPlayBar()) {
+            if (controller.isPendingColumnOp()) {
+                controller.executePendingColumnOpAt(controller.getEditingColPublic());
+            } else if (controller.placePendingChangeAtPlayBar()) {
                 controller.getAllPurposeScore().drawCurrentCamInOffscreen();
                 this.repinta(true);
             }
@@ -245,7 +247,9 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
         }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
             controller.clearSelection();
-            if (controller.isPendingPaste()) {
+            if (controller.isPendingColumnOp()) {
+                controller.cancelPendingColumnOp();
+            } else if (controller.isPendingPaste()) {
                 controller.cancelPaste();
             } else if (e.isShiftDown()) {
                 controller.redo();

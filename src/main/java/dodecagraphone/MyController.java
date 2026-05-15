@@ -163,6 +163,9 @@ public class MyController {
     private MyGridScore.ScoreChange pendingChange = null;
     private int pendingTransposeStep = 0;
 
+    private String pendingColumnOp = null;
+    private int pendingColumnN = 1;
+    private javax.swing.JDialog pendingColumnDialog = null;
 
     private SampleOrMidi instrument;
 //    private int numBeatsMeasure;
@@ -1384,6 +1387,13 @@ public class MyController {
                 placePendingChangeAt(col);
             }
             return; // el clic queda consumit pel canvi pendent
+        }
+
+        /* Operació de columna pendent (insert/delete): el clic tria la columna. */
+        if (pendingColumnOp != null) {
+            int col = this.allPurposeScore.getCol(posX);
+            if (col >= 0) executePendingColumnOpAt(col);
+            return;
         }
 
         /* Check chord format button (left keyboard-column area of the chord strip) */
@@ -3589,33 +3599,18 @@ public class MyController {
         allPurposeScore.updateStopMarker();
     }
 
-    /** Invoked by Ctrl+I: asks how many columns, then inserts at playbar. */
+    /** Invoked by Ctrl+I: asks how many, then waits for a column click. */
     public void handleInsertColumn() {
         int n = showColumnCountDialog("insert");
         if (n <= 0) return;
-        int col = getEditingCol();
-        insertNColumnsAt(col, n);
-        afegirEvent(new ColumnEvent(this, col, n));
-        allPurposeScore.drawFullGridinOffscreen();
-        redrawChordLine();
-        if (this.getUi() != null && this.getUi().getPanel() != null) {
-            this.getUi().getPanel().repinta(true);
-        }
+        startPendingColumnOp("insert", n);
     }
 
-    /** Invoked by Ctrl+D: asks how many columns, then deletes at playbar. */
+    /** Invoked by Ctrl+D: asks how many, then waits for a column click. */
     public void handleDeleteColumn() {
         int n = showColumnCountDialog("delete");
         if (n <= 0) return;
-        int col = getEditingCol();
-        List<ColumnEvent.ColSnapshot> snaps = buildColumnSnapshots(col, n);
-        deleteNColumnsAt(col, n);
-        afegirEvent(new ColumnEvent(this, col, n, snaps));
-        allPurposeScore.drawFullGridinOffscreen();
-        redrawChordLine();
-        if (this.getUi() != null && this.getUi().getPanel() != null) {
-            this.getUi().getPanel().repinta(true);
-        }
+        startPendingColumnOp("delete", n);
     }
 
     private int showColumnCountDialog(String op) {
@@ -3628,6 +3623,70 @@ public class MyController {
             JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return 0;
         return (Integer) spinner.getValue();
+    }
+
+    public boolean isPendingColumnOp() { return pendingColumnOp != null; }
+
+    public void cancelPendingColumnOp() {
+        pendingColumnOp = null;
+        if (pendingColumnDialog != null) {
+            pendingColumnDialog.dispose();
+            pendingColumnDialog = null;
+        }
+    }
+
+    public int getEditingColPublic() { return getEditingCol(); }
+
+    public void executePendingColumnOpAt(int col) {
+        if (pendingColumnOp == null) return;
+        String op = pendingColumnOp;
+        int n = pendingColumnN;
+        cancelPendingColumnOp();
+        if ("insert".equals(op)) {
+            insertNColumnsAt(col, n);
+            afegirEvent(new ColumnEvent(this, col, n));
+        } else {
+            List<ColumnEvent.ColSnapshot> snaps = buildColumnSnapshots(col, n);
+            deleteNColumnsAt(col, n);
+            afegirEvent(new ColumnEvent(this, col, n, snaps));
+        }
+        allPurposeScore.drawFullGridinOffscreen();
+        redrawChordLine();
+        if (this.getUi() != null && this.getUi().getPanel() != null) {
+            this.getUi().getPanel().repinta(true);
+        }
+    }
+
+    private void startPendingColumnOp(String op, int n) {
+        if (pendingChange != null) return;
+        cancelPendingColumnOp();
+        pendingColumnOp = op;
+        pendingColumnN  = n;
+        String title   = I18n.t("column." + op + ".dialog.title");
+        String message = I18n.t("column." + op + ".dialog.click");
+        javax.swing.JDialog dlg = new javax.swing.JDialog(this.getUi(), title, false);
+        dlg.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+        dlg.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosed(java.awt.event.WindowEvent e) {
+                pendingColumnOp = null;
+                pendingColumnDialog = null;
+            }
+        });
+        javax.swing.JLabel label = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 24, 8, 24));
+        javax.swing.JButton btnPlaybar = new javax.swing.JButton(I18n.t("column.op.atPlaybar"));
+        btnPlaybar.addActionListener(ev -> executePendingColumnOpAt(getEditingCol()));
+        javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 24, 16, 24));
+        panel.add(label, java.awt.BorderLayout.CENTER);
+        panel.add(btnPlaybar, java.awt.BorderLayout.SOUTH);
+        dlg.add(panel);
+        dlg.getRootPane().setDefaultButton(btnPlaybar);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this.getUi());
+        dlg.setVisible(true);
+        pendingColumnDialog = dlg;
+        drawFull(true);
     }
 
     /** Inserts n columns at col, extending notes that span the insertion point. */
