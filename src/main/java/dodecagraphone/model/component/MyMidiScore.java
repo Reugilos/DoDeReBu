@@ -781,11 +781,11 @@ public class MyMidiScore extends MyExercise {
             }
         }
 
-        tr = this.controller.getMixer().getDrumsTrackId();
-        MyTrack drumsTrack = this.controller.getMixer().getTrackFromId(tr);
+        int drumsTrId = this.controller.getMixer().getDrumsTrackId();
+        MyTrack drumsTrack = this.controller.getMixer().getTrackFromId(drumsTrId);
         if (drumsTrack != null) {
             Track str = sequence.createTrack();
-            trackMap.put(tr, str);
+            trackMap.put(drumsTrId, str);
             saveTrackData(drumsTrack, str);
         }
 

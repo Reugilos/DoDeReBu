@@ -9,9 +9,13 @@ public class ClipNote {
     public final boolean muted;
     public final boolean linked;
     public final boolean dotted;
+    /** Track and channel originaris. Usats en mode multi-track (clipboardMultiTrack). */
+    public final int trackId;
+    public final int channel;
 
     public ClipNote(int rowOffset, int colOffset, int velocity,
-                    boolean visible, boolean muted, boolean linked, boolean dotted) {
+                    boolean visible, boolean muted, boolean linked, boolean dotted,
+                    int trackId, int channel) {
         this.rowOffset = rowOffset;
         this.colOffset = colOffset;
         this.velocity  = velocity;
@@ -19,5 +23,7 @@ public class ClipNote {
         this.muted     = muted;
         this.linked    = linked;
         this.dotted    = dotted;
+        this.trackId   = trackId;
+        this.channel   = channel;
     }
 }
