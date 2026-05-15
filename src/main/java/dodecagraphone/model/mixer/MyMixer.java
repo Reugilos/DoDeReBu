@@ -175,18 +175,27 @@ public class MyMixer {
 
     private void doRefreshMixer() {
         if (this.isMixerVisible()) {
-            this.showMixer(); // recrea el diàleg
+            rebuildTrackContent(true);
         }
         this.contr.getAllPurposeScore().drawCurrentCamInOffscreen();
         this.contr.getUi().getPanel().repinta(true); // pinta la graella
-        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+    }
 
-        // [0] = Thread.getStackTrace
-        // [1] = mètode actual
-        // [2] = qui ha cridat el mètode actual
-        StackTraceElement caller = stack[2];
-        StackTraceElement caller2 = stack[4];
-        Utilities.printOutWithPriority(false, "MyMixer::refreshMixer(): caller = " + caller2.getMethodName() + ":" + caller.getMethodName() + ": faig repinta(true)");
+    private void rebuildTrackContent(boolean doPack) {
+        if (dialog == null) return;
+        contentPanel.removeAll();
+        if (this.chordTrack != null && contr.getAllPurposeScore().hasAnyChords()) {
+            addTrackToDialog(this.chordTrackId, true);
+        }
+        for (int i = 0; i < tracks.size(); i++) {
+            addTrackToDialog(i, false);
+        }
+        if (this.drumsTrack != null && this.drumsTrack.getnNotes() > 0) {
+            addTrackToDialog(this.drumsTrackId, true);
+        }
+        contentPanel.revalidate();
+        contentPanel.repaint();
+        if (doPack) dialog.pack();
     }
 
     private boolean jaExisteixPistaAmbNom(String nom) {
@@ -240,16 +249,7 @@ public class MyMixer {
             }
         });
 
-        contentPanel.removeAll();
-        if (this.chordTrack != null && contr.getAllPurposeScore().hasAnyChords()) {
-            addTrackToDialog(this.chordTrackId, true);
-        }
-        for (int i = 0; i < tracks.size(); i++) {
-            addTrackToDialog(i, false);
-        }
-        if (this.drumsTrack != null && this.drumsTrack.getnNotes() > 0) {
-            addTrackToDialog(this.drumsTrackId, true);
-        }
+        rebuildTrackContent(false);
 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -487,10 +487,10 @@ public class MyMixer {
         MyTrack track = getTrackFromId(index);
         if (isShow) {
             boolean state = track.isVisible();
-            button.setText(state ? "Show" : "Hide ");
+            button.setText(state ? "Hide" : "Show");
         } else {
             boolean state = track.isAudible();
-            button.setText(state ? "Play" : "Mute");
+            button.setText(state ? "Mute" : "Play");
         }
     }
     

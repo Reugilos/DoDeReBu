@@ -2698,6 +2698,7 @@ public class MyController {
             this.allPurposeScore.setTitle(title);
         }
         togg.setPressed(false);
+        updateWindowTitle();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
     }
 
@@ -2708,6 +2709,7 @@ public class MyController {
             this.allPurposeScore.setAuthor(author);
         }
         togg.setPressed(false);
+        updateWindowTitle();
         this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getAuthor());
     }
 
@@ -3010,10 +3012,21 @@ public class MyController {
         throw new IllegalStateException("changeCurrentChannelOfCurrentTrack not implemented");
     }
 
+    private void updateWindowTitle() {
+        String base = this.getUi().getVersion();
+        String title  = this.allPurposeScore != null ? this.allPurposeScore.getTitle()  : "";
+        String author = this.allPurposeScore != null ? this.allPurposeScore.getAuthor() : "";
+        boolean hasTitle  = title  != null && !title.trim().isEmpty();
+        boolean hasAuthor = author != null && !author.trim().isEmpty();
+        String suffix = "";
+        if (hasTitle && hasAuthor) suffix = " — " + title + " (" + author + ")";
+        else if (hasTitle)         suffix = " — " + title;
+        else if (hasAuthor)        suffix = " — (" + author + ")";
+        this.getUi().setTitle(base + suffix);
+    }
+
     public final void updateTextOfButtons() {
-//        String titolGeneral = this.getUi().getVersion();
-//        titolGeneral += "          " + this.allPurposeScore.getTitle() + ", " + this.allPurposeScore.getAuthor(); // +", "+this.allPurposeScore.getDescription()
-//        this.getUi().setTitle(titolGeneral);
+        updateWindowTitle();
 
         // Aplica els canvis de paràmetres registrats a la columna actual
         applyChangesAt(getEditingCol());
@@ -3273,8 +3286,18 @@ public class MyController {
         if (extensio.equals("mid")) {
             this.stop();
             this.buttons.stopPlayButton();
+            boolean saveChordMidi = false;
+            if (this.allPurposeScore.hasAnyChords()) {
+                int resp = JOptionPane.showConfirmDialog(
+                        this.getUi(),
+                        I18n.t("save.chordMidi.confirm"),
+                        I18n.t("save.chordMidi.title"),
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE);
+                saveChordMidi = (resp == JOptionPane.YES_OPTION);
+            }
             MyMidiScore midScore = (MyMidiScore) (this.allPurposeScore);
-            this.allPurposeScore.saveMidiScore(fitxer);
+            this.allPurposeScore.saveMidiScore(fitxer, saveChordMidi);
             this.statusLine.setText(I18n.f("MyController.score.saving", midScore.getName(), fitxer));
         }
         this.needsSaving = false;

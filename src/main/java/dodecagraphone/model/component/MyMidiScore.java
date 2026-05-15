@@ -572,7 +572,32 @@ public class MyMidiScore extends MyExercise {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                    if (text.startsWith("LYRIC:")) {
+                    if (text.startsWith("CHANGEMAP:")) {
+                        try {
+                            String body = text.substring(10);
+                            String[] parts = body.split("::");
+                            int cmCol = -1;
+                            MyGridScore.ScoreChange csc = new MyGridScore.ScoreChange();
+                            for (String p : parts) {
+                                if (p.startsWith("col="))           cmCol = Integer.parseInt(p.substring(4));
+                                else if (p.startsWith("tempo="))    csc.tempo = Integer.parseInt(p.substring(6));
+                                else if (p.startsWith("midiKey="))  csc.midiKey = Integer.parseInt(p.substring(8));
+                                else if (p.startsWith("scaleMode=")) csc.scaleMode = p.charAt(10);
+                                else if (p.startsWith("nBeatsMeasure=")) csc.nBeatsMeasure = Integer.parseInt(p.substring(14));
+                                else if (p.startsWith("beatFigure="))   csc.beatFigure = Integer.parseInt(p.substring(11));
+                                else if (p.startsWith("nColsQuarter=")) csc.nColsQuarter = Integer.parseInt(p.substring(13));
+                                else if (p.startsWith("vel:")) {
+                                    int eq = p.indexOf('=');
+                                    if (eq > 4) {
+                                        int trId = Integer.parseInt(p.substring(4, eq));
+                                        int vel  = Integer.parseInt(p.substring(eq + 1));
+                                        csc.trackVelocities.put(trId, vel);
+                                    }
+                                }
+                            }
+                            if (cmCol >= 0) this.setScoreChange(cmCol, csc);
+                        } catch (Exception e) { e.printStackTrace(); }
+                    } else if (text.startsWith("LYRIC:")) {
                         // LYRIC:track=N::col=C::text=TEXT  (format propi DoDeReBu)
                         try {
                             String body = text.substring(6);
@@ -702,7 +727,7 @@ public class MyMidiScore extends MyExercise {
     }
 
 // Mètode per analitzar un fitxer MIDI i generar la partitura en format MyGridPattern
-    public void saveMidiScore(String filePath) {
+    public void saveMidiScore(String filePath, boolean saveChordMidiTrack) {
         boolean isFirstNoteOn = true;
         this.ticksPerQuarter = SoundWithMidi.DEFAULT_TICKS_PER_QUARTER;
         // Crear la seqüència amb format 1 i la resolució de la partitura
@@ -746,12 +771,14 @@ public class MyMidiScore extends MyExercise {
             }
         }
 
-        int tr = this.controller.getMixer().getChordTrackId();
-        MyTrack chordTrack = this.controller.getMixer().getTrackFromId(tr);
-        if (chordTrack != null) {
-            Track str = sequence.createTrack();
-            trackMap.put(tr, str);
-            saveTrackData(chordTrack, str);
+        if (saveChordMidiTrack) {
+            int tr = this.controller.getMixer().getChordTrackId();
+            MyTrack chordTrack = this.controller.getMixer().getTrackFromId(tr);
+            if (chordTrack != null) {
+                Track str = sequence.createTrack();
+                trackMap.put(tr, str);
+                saveTrackData(chordTrack, str);
+            }
         }
 
         tr = this.controller.getMixer().getDrumsTrackId();
@@ -945,6 +972,28 @@ public class MyMidiScore extends MyExercise {
                     catch (InvalidMidiDataException e) { e.printStackTrace(); }
                 }
             }
+        }
+
+        // Desar entrades del changeMap com a missatges 0x7F amb prefix CHANGEMAP:
+        java.util.TreeMap<Integer, MyGridScore.ScoreChange> changeMap = this.getChangeMap();
+        for (java.util.Map.Entry<Integer, MyGridScore.ScoreChange> entry : changeMap.entrySet()) {
+            int cmCol = entry.getKey();
+            MyGridScore.ScoreChange csc = entry.getValue();
+            StringBuilder sbCm = new StringBuilder("CHANGEMAP:col=").append(cmCol);
+            if (csc.tempo != null)         sbCm.append("::tempo=").append(csc.tempo);
+            if (csc.midiKey != null)       sbCm.append("::midiKey=").append(csc.midiKey);
+            if (csc.scaleMode != null)     sbCm.append("::scaleMode=").append(csc.scaleMode);
+            if (csc.nBeatsMeasure != null) sbCm.append("::nBeatsMeasure=").append(csc.nBeatsMeasure);
+            if (csc.beatFigure != null)    sbCm.append("::beatFigure=").append(csc.beatFigure);
+            if (csc.nColsQuarter != null)  sbCm.append("::nColsQuarter=").append(csc.nColsQuarter);
+            for (java.util.Map.Entry<Integer, Integer> ve : csc.trackVelocities.entrySet()) {
+                sbCm.append("::vel:").append(ve.getKey()).append("=").append(ve.getValue());
+            }
+            long cmTick = (long) cmCol * ticksPerCol;
+            byte[] cmData = sbCm.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            MetaMessage cmMsg = new MetaMessage();
+            try { cmMsg.setMessage(0x7F, cmData, cmData.length); } catch (InvalidMidiDataException e) { e.printStackTrace(); }
+            metaTrack.add(new MidiEvent(cmMsg, cmTick));
         }
 
         // Finalitzar totes les pistes amb End of Track (0x2F)
