@@ -2123,6 +2123,7 @@ public class MyController {
 
     public void transpose(int step) {
         this.allPurposeScore.transpose(step);
+        this.needsSaving = true;
         this.updateTextOfButtons();
         this.myChordSymbolLine.setNeedsDrawing(true);
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
@@ -3495,7 +3496,8 @@ public class MyController {
         this.myChordSymbolLine.initOffscreen();
         this.myLyrics.initOffscreen();
 
-//        this.allPurposeScore.getChoice().setNoneChoice();
+        this.allPurposeScore.getChoice().setNoneChoice();
+        deactivateSelectingMode();
     }
 
     public void clearScore() {

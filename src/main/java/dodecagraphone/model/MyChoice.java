@@ -63,8 +63,9 @@ public class MyChoice {
      * corresponding configuration.
      */
     public void readChoice(int rootMidi) {
-        boolean isChromatic = false;
-        boolean canExtend   = false;
+        boolean isChromatic    = false;
+        boolean canExtend      = false;
+        int     effectiveRoot  = rootMidi;
 
         String kScale    = I18n.t("choice.type.scale");
         String kChord    = I18n.t("choice.type.chord");
@@ -129,7 +130,8 @@ public class MyChoice {
             String kPenta = I18n.t("choice.scale.pentatonicMajor");
             String kBlues = I18n.t("choice.scale.blues");
             String kChrom = I18n.t("choice.scale.chromatic");
-            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom };
+            String kFit   = I18n.t("choice.scale.fitToTonality");
+            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom, kFit };
             String sel = MyDialogs.seleccionaOpcio(
                     I18n.t("choice.scale.prompt"),
                     I18n.t("choice.scale.title"),
@@ -142,6 +144,16 @@ public class MyChoice {
             else if (sel.equals(kPenta)) { setPentatonicMajorScaleChoice(); canExtend = true; }
             else if (sel.equals(kBlues)) { setBluesScaleChoice();           canExtend = true; }
             else if (sel.equals(kChrom)) { setChromaticScaleChoice();       isChromatic = true; }
+            else if (sel.equals(kFit))   {
+                char mode = this.controller.getAllPurposeScore().getScaleMode();
+                if (mode == 'm') setMinorScaleChoice();
+                else             setMajorScaleChoice();
+                // center the scale around middle C (C4 = MIDI 60)
+                int pc = this.controller.getAllPurposeScore().getMidiKey() % 12;
+                effectiveRoot = pc + 48;
+                if (effectiveRoot < 49) effectiveRoot += 12;  // push C (48) up to 60
+                canExtend = true;
+            }
         }
 
         // Botó One octave / Extend (per tots els casos que ho suporten)
@@ -163,7 +175,7 @@ public class MyChoice {
         }
 
         if (isChromatic) addUpRoot(ToneRange.getLowestMidi());
-        else             addUpRoot(rootMidi);
+        else             addUpRoot(effectiveRoot);
     }
     
     public void transposeChoice(int step){
