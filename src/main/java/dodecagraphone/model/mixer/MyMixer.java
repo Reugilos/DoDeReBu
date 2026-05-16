@@ -167,18 +167,30 @@ public class MyMixer {
 
     public void refreshMixer() {
         if (SwingUtilities.isEventDispatchThread()) {
-            doRefreshMixer();   // ja estem a l’EDT
+            doRefreshMixer(false);
         } else {
-            SwingUtilities.invokeLater(this::doRefreshMixer);
+            SwingUtilities.invokeLater(() -> doRefreshMixer(false));
         }
     }
 
-    private void doRefreshMixer() {
+    public void refreshMixerFull() {
+        if (SwingUtilities.isEventDispatchThread()) {
+            doRefreshMixer(true);
+        } else {
+            SwingUtilities.invokeLater(() -> doRefreshMixer(true));
+        }
+    }
+
+    private void doRefreshMixer(boolean fullRedraw) {
         if (this.isMixerVisible()) {
             rebuildTrackContent(true);
         }
-        this.contr.getAllPurposeScore().drawCurrentCamInOffscreen();
-        this.contr.getUi().getPanel().repinta(true); // pinta la graella
+        if (fullRedraw) {
+            this.contr.getAllPurposeScore().drawFullGridinOffscreen();
+        } else {
+            this.contr.getAllPurposeScore().drawCurrentCamInOffscreen();
+        }
+        this.contr.getUi().getPanel().repinta(true);
     }
 
     private void rebuildTrackContent(boolean doPack) {
@@ -435,8 +447,7 @@ public class MyMixer {
         showButton.addActionListener(e -> {
             track.setVisible(!track.isVisible());
             updateButtonState(showButton, index, true);
-            contr.update(); // refresca la graella
-            refreshMixer(); // refresca el diàleg del mixer (opcional)
+            refreshMixerFull();
         });
 
         JButton playButton = new JButton();

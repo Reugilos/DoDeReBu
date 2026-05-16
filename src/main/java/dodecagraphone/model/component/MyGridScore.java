@@ -1308,10 +1308,11 @@ public class MyGridScore extends MyComponent {
         if (sq != null) {
             sq.updateState();
             if (sq.isSqVisible()) {
-                if (!sq.isSqAudible() && Settings.isShowMutted()) {
-                    g.setColor(ColorSets.getGridSquareFontColor(midi));
-                    g.drawString("X", (int) screenX, (int) (screenY + hght));
-                }
+//                // DEPRECATED: X sobre notes mutades
+//                if (!sq.isSqAudible() && Settings.isShowMutted()) {
+//                    g.setColor(ColorSets.getGridSquareFontColor(midi));
+//                    g.drawString("X", (int) screenX, (int) (screenY + hght));
+//                }
                 if (!sq.isSq_is_linked()) {
                     boolean hasDrumsNote = sq.getPoliNotes().stream()
                             .anyMatch(n -> n.isVisible() && n.getChannel() == 9);
