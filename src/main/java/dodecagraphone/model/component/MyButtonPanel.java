@@ -247,6 +247,10 @@ public class MyButtonPanel extends MyComponent {
         return id_PrevExerciseButton;
     }
 
+    public MyButton getSelectChoiceButton() {
+        return buttons.get(id_SelectChoiceButton);
+    }
+
 //    public int getId_TrackButton() {
 //        return id_TrackButton;
 //    }

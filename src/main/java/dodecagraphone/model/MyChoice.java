@@ -6,6 +6,7 @@ package dodecagraphone.model;
  */
 import dodecagraphone.MyController;
 import dodecagraphone.model.component.MyXiloKey;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javax.swing.JOptionPane;
 
 /**
  * Classe que representa una elecció d'escala (None, Diatonic, Pentatonic).
@@ -62,101 +64,106 @@ public class MyChoice {
      */
     public void readChoice(int rootMidi) {
         boolean isChromatic = false;
-        // Primer pas: selecció general
-//        String[] tipusOpcions = {"NoneSelected", "Interval", "Chord", "Scale", "List", "NoChoice"};
-        String[] tipusOpcions = {"Scale", "Chord", "Interval", "NoneSelected", "List"};
+        boolean canExtend   = false;
+
+        String kScale    = I18n.t("choice.type.scale");
+        String kChord    = I18n.t("choice.type.chord");
+        String kInterval = I18n.t("choice.type.interval");
+        String kNone     = I18n.t("choice.type.none");
+        String kList     = I18n.t("choice.type.list");
+
+        String[] tipusOpcions = { kScale, kChord, kInterval, kNone, kList };
         String tipusSeleccio = MyDialogs.seleccionaOpcio(
-                "Choose a Template:", // Missatge
-                "Template", // Títol
-                tipusOpcions,
-                0 // Per defecte: None
-        );
-        
+                I18n.t("choice.dialog.prompt"),
+                I18n.t("choice.dialog.title"),
+                tipusOpcions, 0);
         if (tipusSeleccio == null) return;
-        if (tipusSeleccio.equalsIgnoreCase("NoChoice")) {
-            setNoChoice();
-        } else if (tipusSeleccio.equalsIgnoreCase("NoneSelected")) {
+
+        if (tipusSeleccio.equals(kNone)) {
             setNoneChoice();
-        } else if (tipusSeleccio.equalsIgnoreCase("Interval")) {
-            // Segon pas: selecció d'interval (enter)
+        } else if (tipusSeleccio.equals(kInterval)) {
             String entrada = MyDialogs.mostraInputDialog(
-                    "Enter interval number (in semitons):",
-                    "Interval"
-            );
-            if (entrada != null) {
-                try {
-                    int interval = Integer.parseInt(entrada.trim());
-                    setIntervalChoice(interval);
-                } catch (Exception e) {
-                    MyDialogs.mostraError("Invalid interval.", "Error");                
-                }
-            } else return;
-        } else if (tipusSeleccio.equalsIgnoreCase("List")) {
-            // Segon pas: selecció d'interval (enter)
-            String entrada = MyDialogs.mostraInputDialog(
-                    "Enter a list of intervals. Ex.[0,4,5]:",
-                    "List"
-            );
-            if (entrada != null) {
-                try {
-                    setListChoice(entrada.trim());
-                } catch (Exception e) {
-                    MyDialogs.mostraError("Invalid list.", "Error");                
-                }
-            } else return;
-        } else if (tipusSeleccio.equalsIgnoreCase("Chord")) {
-            // Segon pas: selecció d'acord
-            String[] acords = {"Major", "Minor", "Diminished", "Augmented"};
-            String acordSeleccio = MyDialogs.seleccionaOpcio(
-                    "Chose a chord pattern: ",
-                    "Chord",
-                    acords,
-                    0
-            );
-            if (acordSeleccio==null)return;
-            if ("Major".equalsIgnoreCase(acordSeleccio)) {
-                setMajorChordChoice();
-            } else if ("Minor".equalsIgnoreCase(acordSeleccio)) {
-                setMinorChordChoice();
-            }else if ("Diminished".equalsIgnoreCase(acordSeleccio)) {
-                setDiminishedChordChoice();
-            }else if ("Augemented".equalsIgnoreCase(acordSeleccio)) {
-                setAugmentedChordChoice();
+                    I18n.t("choice.interval.prompt"),
+                    I18n.t("choice.interval.title"));
+            if (entrada == null) return;
+            try {
+                setIntervalChoice(Integer.parseInt(entrada.trim()));
+                canExtend = true;
+            } catch (Exception e) {
+                MyDialogs.mostraError(I18n.t("choice.error.interval"), I18n.t("choice.error.title"));
+                return;
             }
-        } else if (tipusSeleccio.equalsIgnoreCase("Scale")) {
-            // Segon pas: selecció d'escala
-            String[] escales = {"MajorFirstFive","Major","Major full range","Minor","Minor full range","Harmonic minor","MajorPentatonic","Blues","Chromatic"};
-            String escalaSeleccio = MyDialogs.seleccionaOpcio(
-                    "Chose a scale pattern: ",
-                    "Scale",
-                    escales,
-                    0
-            );
-            if (escalaSeleccio==null)return;
-            if ("MajorFirstFive".equalsIgnoreCase(escalaSeleccio)) {
-                setFirstFiveScaleChoice();
-            } else if ("Major".equalsIgnoreCase(escalaSeleccio)) {
-                setMajorScaleChoice();
-            } else if ("Major full range".equalsIgnoreCase(escalaSeleccio)) {
-                setFullRangeMajorScaleChoice();
-            } else if ("Minor".equalsIgnoreCase(escalaSeleccio)) {
-                setMinorScaleChoice();
-            } else if ("Minor full range".equalsIgnoreCase(escalaSeleccio)) {
-                this.setFullRangeMinorScaleChoice();
-            } else if ("Harmonic minor".equalsIgnoreCase(escalaSeleccio)) {
-                setHarmonicMinorScaleChoice();
-            } else if ("PentatonicMajor".equalsIgnoreCase(escalaSeleccio)) {
-                setPentatonicMajorScaleChoice();
-            }else if ("Blues".equalsIgnoreCase(escalaSeleccio)) {
-                setBluesScaleChoice();
-            }else if ("Chromatic".equalsIgnoreCase(escalaSeleccio)) {
-                setChromaticScaleChoice();
-                isChromatic = true;
+        } else if (tipusSeleccio.equals(kList)) {
+            String entrada = MyDialogs.mostraInputDialog(
+                    I18n.t("choice.list.prompt"),
+                    I18n.t("choice.list.title"));
+            if (entrada == null) return;
+            try {
+                setListChoice(entrada.trim());
+                canExtend = true;
+            } catch (Exception e) {
+                MyDialogs.mostraError(I18n.t("choice.error.list"), I18n.t("choice.error.title"));
+                return;
+            }
+        } else if (tipusSeleccio.equals(kChord)) {
+            String kMaj  = I18n.t("choice.chord.major");
+            String kMin  = I18n.t("choice.chord.minor");
+            String kDim  = I18n.t("choice.chord.diminished");
+            String kAug  = I18n.t("choice.chord.augmented");
+            String[] acords = { kMaj, kMin, kDim, kAug };
+            String sel = MyDialogs.seleccionaOpcio(
+                    I18n.t("choice.chord.prompt"),
+                    I18n.t("choice.chord.title"),
+                    acords, 0);
+            if (sel == null) return;
+            if      (sel.equals(kMaj)) setMajorChordChoice();
+            else if (sel.equals(kMin)) setMinorChordChoice();
+            else if (sel.equals(kDim)) setDiminishedChordChoice();
+            else if (sel.equals(kAug)) setAugmentedChordChoice();
+            canExtend = true;
+        } else if (tipusSeleccio.equals(kScale)) {
+            String kMajF5 = I18n.t("choice.scale.majorFirst5");
+            String kMaj   = I18n.t("choice.scale.major");
+            String kMin   = I18n.t("choice.scale.minor");
+            String kHarm  = I18n.t("choice.scale.harmonicMinor");
+            String kPenta = I18n.t("choice.scale.pentatonicMajor");
+            String kBlues = I18n.t("choice.scale.blues");
+            String kChrom = I18n.t("choice.scale.chromatic");
+            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom };
+            String sel = MyDialogs.seleccionaOpcio(
+                    I18n.t("choice.scale.prompt"),
+                    I18n.t("choice.scale.title"),
+                    escales, 0);
+            if (sel == null) return;
+            if      (sel.equals(kMajF5)) { setFirstFiveScaleChoice();       canExtend = true; }
+            else if (sel.equals(kMaj))   { setMajorScaleChoice();           canExtend = true; }
+            else if (sel.equals(kMin))   { setMinorScaleChoice();           canExtend = true; }
+            else if (sel.equals(kHarm))  { setHarmonicMinorScaleChoice();   canExtend = true; }
+            else if (sel.equals(kPenta)) { setPentatonicMajorScaleChoice(); canExtend = true; }
+            else if (sel.equals(kBlues)) { setBluesScaleChoice();           canExtend = true; }
+            else if (sel.equals(kChrom)) { setChromaticScaleChoice();       isChromatic = true; }
+        }
+
+        // Botó One octave / Extend (per tots els casos que ho suporten)
+        if (canExtend) {
+            String kOne  = I18n.t("choice.extend.oneOctave");
+            String kFull = I18n.t("choice.extend.full");
+            int result = JOptionPane.showOptionDialog(
+                    null,
+                    I18n.t("choice.extend.prompt"),
+                    I18n.t("choice.extend.title"),
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    new Object[]{ kOne, kFull },
+                    kOne);
+            if (result == 1) {
+                extendChoiceToFullRange();
             }
         }
-        if(isChromatic) addUpRoot(ToneRange.getLowestMidi());
-        else addUpRoot(rootMidi);
-        
+
+        if (isChromatic) addUpRoot(ToneRange.getLowestMidi());
+        else             addUpRoot(rootMidi);
     }
     
     public void transposeChoice(int step){

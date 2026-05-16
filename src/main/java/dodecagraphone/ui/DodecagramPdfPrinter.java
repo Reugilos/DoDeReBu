@@ -366,6 +366,25 @@ public class DodecagramPdfPrinter {
             }
         }
 
+        // Tonality triangle (same logic as MyXiloKey.draw)
+        if (!controller.isDrumsMode()) {
+            int midiKey = score.getMidiKey();
+            for (int keyId = 0; keyId < nKeys; keyId++) {
+                int midi = ToneRange.keyIdToMidi(keyId);
+                if (midi % 12 != midiKey % 12) continue;
+                int y     = (int) Math.round(keyId * rowH);
+                int nextY = (int) Math.round((keyId + 1) * rowH);
+                int h     = Math.max(1, nextY - y - 1);
+                int triH  = Math.max(5, (int)(h * 0.55));
+                int tip   = w - 2;
+                int cy    = y + h / 2;
+                int[] xp  = { tip - triH, tip - triH, tip };
+                int[] yp  = { cy - triH / 2, cy + triH / 2, cy };
+                g.setColor(ColorSets.getGridSquareFontColor(midi));
+                g.fillPolygon(xp, yp, 3);
+            }
+        }
+
         // Right-edge separator between keyboard and score
         g.setColor(Color.BLACK);
         g.drawLine(w - 1, 0, w - 1, gridH - 1);

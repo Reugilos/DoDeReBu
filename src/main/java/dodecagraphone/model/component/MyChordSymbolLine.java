@@ -55,11 +55,11 @@ public class MyChordSymbolLine extends MyComponent {
     private static final Color COLOR_TEMPO_BG = new Color(0, 90, 190);
     /** Background colour for key change markers (white text on granate). */
     private static final Color COLOR_KEY_BG   = new Color(140, 0, 30);
-    /** Small bold font used inside change markers. */
-    private static final Font  MARK_FONT      = new Font("SansSerif", Font.BOLD, 9);
     /** Cached chord font and the row height it was computed for. */
     private Font   cachedChordFont   = null;
     private double cachedChordRowH   = 0;
+    private Font   cachedMarkFont    = null;
+    private double cachedMarkRowH    = 0;
     private volatile boolean needsDrawing = true;
 
     /** Line gap in pixels between chord text lines (tighter than font leading). */
@@ -84,6 +84,15 @@ public class MyChordSymbolLine extends MyComponent {
         }
         cachedChordFont = f;
         return f;
+    }
+
+    private Font getMarkFont() {
+        double rowH = Settings.getRowHeight();
+        if (cachedMarkFont != null && rowH == cachedMarkRowH) return cachedMarkFont;
+        cachedMarkRowH = rowH;
+        int size = Math.max(6, (int)(rowH * 0.85));
+        cachedMarkFont = new Font("SansSerif", Font.BOLD, size);
+        return cachedMarkFont;
     }
 
     private static int lineStep(FontMetrics fm) {
@@ -425,7 +434,7 @@ public class MyChordSymbolLine extends MyComponent {
     private int drawChangeMark(int col, String text, Color bgColor,
                                Graphics2D g, boolean offscreen, int existingYOff) {
         Font prevFont = g.getFont();
-        g.setFont(MARK_FONT);
+        g.setFont(getMarkFont());
         FontMetrics fm = g.getFontMetrics();
         int pad  = 2;
         int boxW = fm.stringWidth(text) + 2 * pad;
@@ -542,7 +551,7 @@ public class MyChordSymbolLine extends MyComponent {
                 }
                 // Calculem l'amplada màxima rellegint els textos (aproximació: refem FontMetrics)
                 if (yOff > 0) {
-                    offscreenGraphics.setFont(MARK_FONT);
+                    offscreenGraphics.setFont(getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
                     int pad = 2;
                     if (sc.tempo != null) {

@@ -575,7 +575,8 @@ public class MyController {
         //g.setColor(Color.WHITE);
         //g.fillRect(0, 0, (int) Settings.getScreenWidth(), (int) Settings.getScreenHeight());
 //        Font font = new Font("Courier", Font.BOLD, 14);
-        Font font = new Font("Dialog", Font.BOLD, 14);
+        int fontSize = Math.max(8, (int)(Settings.getSquareHeight() * 0.85));
+        Font font = new Font("Dialog", Font.BOLD, fontSize);
         g.setFont(font);
         Font f = g.getFont();
 	//System.out.println("MyController::redraw() Font real: " + f.getFontName() + " | family=" + f.getFamily());
@@ -1447,7 +1448,9 @@ public class MyController {
         int keyId = this.keyboard.whichKey(posX, posY);
         if (keyId != -1) {
             if (this.getAllPurposeScore().getChoice().isSelecting()){
+                this.buttons.hideTip();
                 this.getAllPurposeScore().getChoice().selectChoice(keyId);
+                deactivateSelectingMode();
                 return;
             }
             this.keyboard.getKey(keyId).doNotHighlight(false);
@@ -1539,7 +1542,9 @@ public class MyController {
         keyId = this.keyboard.whichSlideKey(posX, posY);
         if (keyId != -1) {
             if (this.getAllPurposeScore().getChoice().isSelecting()){
+                this.buttons.hideTip();
                 this.getAllPurposeScore().getChoice().selectChoice(keyId);
+                deactivateSelectingMode();
                 return;
             }
             MyXiloKey key = this.keyboard.getKey(keyId);
@@ -2148,7 +2153,7 @@ public class MyController {
         int beatCol = mbc[2] + 1;
         if (lastTipGridBeatCol != beatCol) {
             this.buttons.hideTip();
-            this.buttons.showCustomTip(I18n.f("grid.cursor.beatCol", beatCol),
+            this.buttons.showCustomTip(I18n.f("grid.cursor.beatCol", beatCol, Settings.getnColsBeat()),
                     (int)(posX + 15), (int)(posY - 10));
             lastTipGridBeatCol = beatCol;
         }
@@ -2433,6 +2438,34 @@ public class MyController {
 //        this.drawFull(true);
     }
 
+    public void onScreenResized() {
+        if (allPurposeScore == null) {
+            setNeedsDrawing(true);
+            return;
+        }
+        boolean left = !allPurposeScore.isUseScreenKeyboardRight();
+        screen.setDimensions(0, 0, (int) Settings.getnColsScreen(), (int) Settings.getnRowsScreen());
+        keyboard.setDimensions(Settings.getKeyboardFirstCol(left), Settings.getKeyboardFirstRow(),
+                               Settings.getnColsKeyboard(), Settings.getnRowsKeyboard());
+        cam.setDimensions(Settings.getCamFirstCol(left), Settings.getCamFirstRow(),
+                          Settings.getnColsCam(), Settings.getnRowsCam());
+        allPurposeScore.setDimensions(Settings.getScoreFirstCol() + allPurposeScore.getDelay(left),
+                                      Settings.getScoreFirstRow(), Settings.getnColsScore(), Settings.getnRowsScore());
+        statusLine.setDimensions(Settings.getStatusFirstCol(), Settings.getStatusFirstRow(),
+                                 Settings.getnColsStatus(), Settings.getnRowsStatus());
+        myChordSymbolLine.setDimensions(Settings.getChordFirstCol(), Settings.getChordFirstRow(),
+                                        Settings.getnColsChord(), Settings.getnRowsChord());
+        myLyrics.setDimensions(Settings.getLyricsFirstCol(), Settings.getLyricsFirstRow(),
+                               Settings.getnColsLyrics(), Settings.getnRowsLyrics());
+        allPurposeScore.initOffscreen();
+        myChordSymbolLine.initOffscreen();
+        myLyrics.initOffscreen();
+        allPurposeScore.drawFullGridinOffscreen();
+        myChordSymbolLine.drawFullChordLineInOffscreen();
+        myLyrics.drawFullLyricsInOffscreen();
+        setNeedsDrawing(true);
+    }
+
     public void drawFull(boolean full){
         this.setNeedsDrawing(true);
         //this.allPurposeScore.setDrawNewCol(!full);
@@ -2699,7 +2732,7 @@ public class MyController {
         }
         togg.setPressed(false);
         updateWindowTitle();
-        this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
+        this.statusLine.setText(scoreStatusText());
     }
 
     public void onAuthorButtonPressed(MyButton togg) {
@@ -2710,7 +2743,7 @@ public class MyController {
         }
         togg.setPressed(false);
         updateWindowTitle();
-        this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getAuthor());
+        this.statusLine.setText(scoreStatusText());
     }
 
     public void onDescriptionButtonPressed(MyButton togg) {
@@ -2720,7 +2753,7 @@ public class MyController {
             this.allPurposeScore.setDescription(descr);
         }
         togg.setPressed(false);
-        this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
+        this.statusLine.setText(scoreStatusText());
     }
 
     public void onTransposeDownButtonPressed(MyButton togg) {
@@ -2792,16 +2825,25 @@ public class MyController {
         togg.setPressed(false);
     }
 
+    public void deactivateSelectingMode() {
+        MyChoice choice = this.allPurposeScore.getChoice();
+        choice.setSelecting(false);
+        MyButton btn = this.buttons.getSelectChoiceButton();
+        if (btn != null) btn.setPressed(false);
+        this.allPurposeScore.setGridColorsHaveChanged(true);
+    }
+
     public void onSelectChoiceButtonPressed(MyButton togg) {
         MyChoice choice = this.allPurposeScore.getChoice();
         if (choice.isSelecting()){
-            choice.setSelecting(false);
-            togg.setPressed(false);
-            this.allPurposeScore.setGridColorsHaveChanged(true);
+            deactivateSelectingMode();
         }
         else {
             choice.setSelecting(true);
             togg.setPressed(true);
+            double tipX = Settings.getScreenWidth() / 2.0;
+            double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
+            this.buttons.showCustomTip(I18n.t("buttonLayout.SelectChoiceButton.selectingTip"), tipX, tipY);
         }
     }
 
@@ -3025,6 +3067,23 @@ public class MyController {
         this.getUi().setTitle(base + suffix);
     }
 
+    private String scoreStatusText() {
+        String title  = allPurposeScore.getTitle();
+        String author = allPurposeScore.getAuthor();
+        String descr  = allPurposeScore.getDescription();
+        boolean hasTitle  = title  != null && !title.trim().isEmpty();
+        boolean hasAuthor = author != null && !author.trim().isEmpty();
+        boolean hasDescr  = descr  != null && !descr.trim().isEmpty();
+        StringBuilder sb = new StringBuilder();
+        if (hasTitle)  sb.append(title);
+        if (hasAuthor) sb.append(" (").append(author).append(")");
+        if (hasDescr) {
+            if (sb.length() > 0) sb.append(": ");
+            sb.append(descr);
+        }
+        return sb.toString();
+    }
+
     public final void updateTextOfButtons() {
         updateWindowTitle();
 
@@ -3175,7 +3234,7 @@ public class MyController {
         this.myChordSymbolLine.setNeedsDrawing(true);
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
         this.cam.drawFullCamInOffscreen();
-        this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
+        this.statusLine.setText(scoreStatusText());
         this.updateTextOfButtons();
         this.drawFull(true);
         return true;
@@ -3395,7 +3454,7 @@ public class MyController {
             //this.cam.setScore(allPurposeScore);
             //this.cam.setSymbolLine(myChordSymbolLine);
             this.cam.reset();
-            this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
+            this.statusLine.setText(scoreStatusText());
         }
         this.updateTextOfButtons();
     }
@@ -3426,7 +3485,7 @@ public class MyController {
         //this.cam.setSymbolLine(myChordSymbolLine);
         this.cam.reset();
         allPurposeScore.updateStopMarker();
-        this.statusLine.setText(allPurposeScore.getTitle() + ": " + allPurposeScore.getDescription());
+        this.statusLine.setText(scoreStatusText());
         this.buttons.setToggleButtonsToProgramValues();
         this.currentMidiFile = "";
         resetDrumsMode();
