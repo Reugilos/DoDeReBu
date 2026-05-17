@@ -418,7 +418,7 @@ public class MyController {
     }
 
     public boolean update() {
-        boolean modified = this.mixer.isModified();
+        boolean modified = this.mixer.isModified() || this.needsDrawing;
         this.mixer.setModified(false);
 
         if (this.buttons.isModified()) {
@@ -571,18 +571,23 @@ public class MyController {
     }
 
     public void redraw(Graphics2D g) {
-//        if (doRedraw) { 
-        //g.setColor(Color.WHITE);
-        //g.fillRect(0, 0, (int) Settings.getScreenWidth(), (int) Settings.getScreenHeight());
-//        Font font = new Font("Courier", Font.BOLD, 14);
+        // Auto-correct if panel size diverges from Settings (e.g. maximize without componentResized)
+        int pw = getUi().getPanel().getWidth();
+        int ph = getUi().getPanel().getHeight();
+        if (pw > 0 && ph > 0
+                && (Math.abs(pw - (int) Settings.getScreenWidth())  > 1
+                 || Math.abs(ph - (int) Settings.getScreenHeight()) > 1)) {
+            Settings.setScreenPixelDimensions(pw, ph);
+            onScreenResizedQuick();
+        }
+
         int fontSize = Math.max(8, (int)(Settings.getSquareHeight() * 0.85));
         Font font = new Font("Dialog", Font.BOLD, fontSize);
         g.setFont(font);
-        Font f = g.getFont();
-	//System.out.println("MyController::redraw() Font real: " + f.getFontName() + " | family=" + f.getFamily());
-        //this.setScreenKeyboardRight(this.allPurposeScore.isUseScreenKeyboardRight());
         if(this.isNeedsDrawing()){
             Utilities.printOutWithPriority(5, "MyController::redraw: count = " + count3++);
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, pw, ph);
             drawStripsBackground(g);
             this.screen.draw(g);
 //            System.out.println("MyController::redraw(): "+count3++);
@@ -2223,8 +2228,17 @@ public class MyController {
     }
 
     public void onHelpButtonPressed(MyButton togg){
-        MyDialogs.mostraMissatge(I18n.t("MyController.help.text"), I18n.t("MyController.btn.help.title"));
-        if (togg!=null) togg.setPressed(false);
+        java.awt.Frame owner = (java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(this.getUi().getPanel());
+        dodecagraphone.ui.MyHelpDialog.show(owner, resolveHelpAnchor());
+        if (togg != null) togg.setPressed(false);
+    }
+
+    private String resolveHelpAnchor() {
+        if (this.mixer.isMixerVisible())                          return "mixer";
+        if (this.selectionActive)                                 return "selection";
+        if (this.allPurposeScore.getChoice().isSelecting())       return "pattern";
+        if (this.isDrumsMode())                                   return "mixer";
+        return "grid";
     }
 
     public void onTipsButtonPressed(MyButton togg) {
@@ -2439,11 +2453,14 @@ public class MyController {
 //        this.drawFull(true);
     }
 
-    public void onScreenResized() {
-        if (allPurposeScore == null) {
-            setNeedsDrawing(true);
-            return;
-        }
+    public void onScreenResizedQuick() {
+        if (allPurposeScore == null) return;
+        repositionAllComponents();
+        setNeedsDrawing(true);
+    }
+
+    private void repositionAllComponents() {
+        if (allPurposeScore == null) return;
         boolean left = !allPurposeScore.isUseScreenKeyboardRight();
         screen.setDimensions(0, 0, (int) Settings.getnColsScreen(), (int) Settings.getnRowsScreen());
         keyboard.setDimensions(Settings.getKeyboardFirstCol(left), Settings.getKeyboardFirstRow(),
@@ -2458,6 +2475,16 @@ public class MyController {
                                         Settings.getnColsChord(), Settings.getnRowsChord());
         myLyrics.setDimensions(Settings.getLyricsFirstCol(), Settings.getLyricsFirstRow(),
                                Settings.getnColsLyrics(), Settings.getnRowsLyrics());
+        buttons.resetButtons(Settings.getFirstColControl(), Settings.getControlFirstRow(),
+                             Settings.getnColsControl(), Settings.getnRowsControl());
+    }
+
+    public void onScreenResized() {
+        if (allPurposeScore == null) {
+            setNeedsDrawing(true);
+            return;
+        }
+        repositionAllComponents();
         allPurposeScore.initOffscreen();
         myChordSymbolLine.initOffscreen();
         myLyrics.initOffscreen();
@@ -2465,6 +2492,9 @@ public class MyController {
         myChordSymbolLine.drawFullChordLineInOffscreen();
         myLyrics.drawFullLyricsInOffscreen();
         setNeedsDrawing(true);
+        if (getUi() != null && getUi().getPanel() != null) {
+            getUi().getPanel().repinta(true);
+        }
     }
 
     public void drawFull(boolean full){

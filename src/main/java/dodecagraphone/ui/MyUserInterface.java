@@ -1,7 +1,11 @@
 package dodecagraphone.ui;
 
 import dodecagraphone.MyController;
+import java.awt.Frame;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
@@ -22,14 +26,70 @@ public class MyUserInterface extends JFrame {
         super("DoDeReBu_App_v4.0");
         this.version = this.getTitle();
         this.controller = new MyController(this);
-        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
         this.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         panel = new MyNewPanel(this.controller);
         panel.setDoubleBuffered(false);
         panel.setIgnoreRepaint(true);
         this.add(panel);
         this.pack();
+
+        // Limita la mida inicial (restored bounds) al work area (pantalla - taskbar)
+        // perquè quan l'usuari surti del full-screen no quedi amagat darrere la taskbar.
+        // setBounds() s'ha de cridar ABANS de setExtendedState perquè Windows recordi
+        // les "restored bounds" correctes.
+        Rectangle workArea = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getMaximumWindowBounds();
+        Rectangle bounds = getBounds();
+        if (bounds.width  > workArea.width)  bounds.width  = workArea.width;
+        if (bounds.height > workArea.height) bounds.height = workArea.height;
+        if (bounds.x < workArea.x) bounds.x = workArea.x;
+        if (bounds.y < workArea.y) bounds.y = workArea.y;
+        if (bounds.x + bounds.width  > workArea.x + workArea.width)
+            bounds.x = workArea.x + workArea.width  - bounds.width;
+        if (bounds.y + bounds.height > workArea.y + workArea.height)
+            bounds.y = workArea.y + workArea.height - bounds.height;
+        setBounds(bounds);
+
         this.setVisible(true);
+        // Maximitzem DESPRÉS de setVisible perquè Windows guardi les restored bounds
+        // (del setBounds anterior) i les apliqui quan l'usuari torni al mode finestra.
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Un cop la finestra és visible i maximitzada, forcem el reposicionament
+        // amb les dimensions reals del panell (componentResized pot no haver disparat)
+        SwingUtilities.invokeLater(() -> {
+            int w = panel.getWidth();
+            int h = panel.getHeight();
+            if (w > 0 && h > 0) {
+                Settings.setScreenPixelDimensions(w, h);
+                controller.onScreenResized();
+            }
+        });
+
+        // Quan la finestra passa de maximitzada a normal, assegura que no quedi
+        // amagada darrere la barra de tasques (per exemple si les restored bounds
+        // sobrepassaven el work area).
+        this.addWindowStateListener(e -> {
+            boolean wasMaximized = (e.getOldState() & Frame.MAXIMIZED_BOTH) != 0;
+            boolean isNormal     = (e.getNewState() & Frame.MAXIMIZED_BOTH) == 0;
+            if (wasMaximized && isNormal) {
+                SwingUtilities.invokeLater(() -> {
+                    Rectangle wa = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                            .getMaximumWindowBounds();
+                    Rectangle b  = getBounds();
+                    boolean changed = false;
+                    if (b.x < wa.x) { b.x = wa.x; changed = true; }
+                    if (b.y < wa.y) { b.y = wa.y; changed = true; }
+                    if (b.width  > wa.width)  { b.width  = wa.width;  changed = true; }
+                    if (b.height > wa.height) { b.height = wa.height; changed = true; }
+                    if (b.x + b.width  > wa.x + wa.width)
+                        { b.x = wa.x + wa.width  - b.width;  changed = true; }
+                    if (b.y + b.height > wa.y + wa.height)
+                        { b.y = wa.y + wa.height - b.height; changed = true; }
+                    if (changed) setBounds(b);
+                });
+            }
+        });
 
         // Executar onExitCheckNSave() quan es tanqui la finestra
         this.addWindowListener(new java.awt.event.WindowAdapter() {

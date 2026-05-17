@@ -198,7 +198,30 @@ public class MyButtonPanel extends MyComponent {
      */
     public void resetButtons(int firstCol, int firstRow, int nCols, int nRows) {
         super.setDimensions(firstCol, firstRow, nCols, nRows);
-        this.placeButtons();
+        this.repositionButtons();
+    }
+
+    private void repositionButtons() {
+        int nColsB  = Settings.getnColsButton();
+        int nRowsB  = Settings.getnRowsButton();
+        int firstCol = Settings.getFirstColButton();
+        int sepCols  = Settings.getSepColsButton();
+        int firstRow = 3;
+        int sepRows  = 1 + nRowsB;
+
+        for (ButtonInfo buttonInfo : buttonLayout.values()) {
+            MyButton but = buttons.get(buttonInfo.id);
+            if (but == null) continue;
+            int xPosition = firstCol + (buttonInfo.col - 1) * sepCols;
+            int extraGap  = nRowsB;
+            int cumExtra  = 0;
+            if (buttonInfo.row > 0)  cumExtra += extraGap;
+            if (buttonInfo.row > 7)  cumExtra += extraGap;
+            if (buttonInfo.row > 9)  cumExtra += extraGap;
+            if (buttonInfo.row > 11) cumExtra += extraGap;
+            int yPosition = firstRow + buttonInfo.row * sepRows + cumExtra;
+            but.setDimensions(xPosition, yPosition, nColsB, nRowsB);
+        }
     }
 
     public void showTip(int button, double posX, double posY) {

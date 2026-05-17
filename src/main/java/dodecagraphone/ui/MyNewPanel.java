@@ -18,6 +18,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 /**
  * Manages drawing (paintComponent()), mouse and buttons. Drawing is done on the
@@ -30,6 +31,7 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
     private MyController controller;
     private JButton b, b2;
     private Graphics2D pantalla;
+    private Timer resizeTimer;
 //    private Image buffer; // Imatge en memòria
 //    private Graphics bufferGraphics; // Objecte Graphics per a la imatge en memòria
 
@@ -65,17 +67,22 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
 //        this.add(b2);   
         this.addKeyListener(this);
 
+        resizeTimer = new Timer(150, evt -> {
+            resizeTimer.stop();
+            MyNewPanel.this.controller.onScreenResized();
+        });
+        resizeTimer.setRepeats(false);
+
         this.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
                 int w = getWidth();
                 int h = getHeight();
                 if (w > 0 && h > 0) {
-                    Dimension monitor = Toolkit.getDefaultToolkit().getScreenSize();
-                    Settings.setScreenWidthRatio(w / monitor.getWidth());
-                    Settings.setScreenHeightRatio(h / monitor.getHeight());
+                    Settings.setScreenPixelDimensions(w, h);
+                    MyNewPanel.this.controller.onScreenResizedQuick();
                 }
-                MyNewPanel.this.controller.onScreenResized();
+                resizeTimer.restart();
             }
 
             @Override

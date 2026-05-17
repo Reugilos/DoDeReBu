@@ -126,6 +126,8 @@ public class MyXiloKey extends MyComponent {
             this.screenPosX = parent.screenPosX;
             this.width = parent.width * Settings.KEY_WIDTH_REDUCTION;
         }
+        this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
+        this.height = nRows * Settings.getRowHeight();
     }
 
     public final void setDimensionsSelected() {
@@ -136,11 +138,15 @@ public class MyXiloKey extends MyComponent {
             this.screenPosX = parent.screenPosX;
             this.width = parent.width * Settings.KEY_WIDTH_REDUCTION;
         }
+        this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
+        this.height = nRows * Settings.getRowHeight();
     }
 
     public final void setDimensionsOff() {
         this.screenPosX = parent.screenPosX;
         this.width = parent.width;
+        this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
+        this.height = nRows * Settings.getRowHeight();
     }
 
 //    public void updateKeyFill(){

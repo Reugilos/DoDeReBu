@@ -89,6 +89,8 @@ public class Settings {
     private static boolean showMutted;
     private static double  screenWidthRatio;
     private static double  screenHeightRatio;
+    private static double  screenPixelWidth  = 0;
+    private static double  screenPixelHeight = 0;
     private static boolean fitAnacrusis;
     private static boolean hasAnacrusis;
 
@@ -174,12 +176,24 @@ public class Settings {
     public static double getScreenHeightRatio()             { return screenHeightRatio; }
     public static void   setScreenHeightRatio(double v)     { screenHeightRatio = v; }
 
+    public static void setScreenPixelDimensions(int w, int h) {
+        screenPixelWidth  = w;
+        screenPixelHeight = h;
+        Dimension monitor = Toolkit.getDefaultToolkit().getScreenSize();
+        screenWidthRatio  = w / monitor.getWidth();
+        screenHeightRatio = h / monitor.getHeight();
+    }
+
     public static double getScreenWidth() {
-        return Toolkit.getDefaultToolkit().getScreenSize().getWidth() * screenWidthRatio;
+        return screenPixelWidth > 0
+                ? screenPixelWidth
+                : Toolkit.getDefaultToolkit().getScreenSize().getWidth() * screenWidthRatio;
     }
 
     public static double getScreenHeight() {
-        return Toolkit.getDefaultToolkit().getScreenSize().getHeight() * screenHeightRatio;
+        return screenPixelHeight > 0
+                ? screenPixelHeight
+                : Toolkit.getDefaultToolkit().getScreenSize().getHeight() * screenHeightRatio;
     }
 
     // ── Layout derivat: columnes ──────────────────────────────────────────

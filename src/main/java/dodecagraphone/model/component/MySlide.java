@@ -49,11 +49,13 @@ public class MySlide extends MyComponent {
         this.position = "selected";
         if (!this.controller.getAllPurposeScore().isUseScreenKeyboardRight()){
             this.screenPosX = parent.screenPosX;
-            this.width = parent.width * (1-Settings.KEY_WIDTH_REDUCTION);            
+            this.width = parent.width * (1-Settings.KEY_WIDTH_REDUCTION);
         } else {
             this.screenPosX = parent.screenPosX + parent.width * (Settings.KEY_WIDTH_REDUCTION) ;
             this.width = parent.width * (1-Settings.KEY_WIDTH_REDUCTION);
         }
+        this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
+        this.height = nRows * Settings.getRowHeight();
         this.setColor();
     }
 
@@ -61,11 +63,13 @@ public class MySlide extends MyComponent {
         this.position = "notSelected";
         if (this.controller.getAllPurposeScore().isUseScreenKeyboardRight()){
             this.screenPosX = parent.screenPosX;
-            this.width = parent.width * (1-Settings.KEY_WIDTH_REDUCTION);            
+            this.width = parent.width * (1-Settings.KEY_WIDTH_REDUCTION);
         } else {
             this.screenPosX = parent.screenPosX + parent.width * (Settings.KEY_WIDTH_REDUCTION) ;
             this.width = parent.width * (1-Settings.KEY_WIDTH_REDUCTION);
         }
+        this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
+        this.height = nRows * Settings.getRowHeight();
         this.setColor();
     }
 
@@ -73,6 +77,8 @@ public class MySlide extends MyComponent {
         this.position = "off";
         this.screenPosX = parent.screenPosX;
         this.width = 0;
+        this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
+        this.height = nRows * Settings.getRowHeight();
         this.setColor();
     }
     
