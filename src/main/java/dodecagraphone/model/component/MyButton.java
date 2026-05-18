@@ -6,6 +6,7 @@ import static dodecagraphone.model.color.ColorSets.BUTO;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 
 /**
@@ -20,10 +21,6 @@ import java.awt.Graphics2D;
  * @author Pau
  */
 public class MyButton extends MyComponent {
-    /** Position of the text in the button. */
-    protected static double xOffsetText;
-    protected static double yOffsetText;
-    
     /** Button id. */
     protected int id;
     /* Text of the button. */
@@ -55,8 +52,6 @@ public class MyButton extends MyComponent {
         super(firstCol,firstRow,nCols,nRows,parent,contr);
         this.id = id;
         this.text = text;
-        xOffsetText = this.width /5;
-        yOffsetText = 2* this.height /3;
         this.isPressed = false;
         this.color = this.colorUnpressed;
         this.tipText = "<html> Soc el botó " + id + " i mostro un missatge molt llarg <br>en dos línies </html>";
@@ -83,7 +78,10 @@ public class MyButton extends MyComponent {
         g.setColor(this.color);
         g.fillRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
         g.setColor(java.awt.Color.WHITE);
-        g.drawString(text, (float) (screenPosX + xOffsetText), (float) (screenPosY + yOffsetText));
+        FontMetrics fm = g.getFontMetrics();
+        float tx = (float)(screenPosX + (width  - fm.stringWidth(text)) / 2.0);
+        float ty = (float)(screenPosY + (height + fm.getAscent() - fm.getDescent()) / 2.0);
+        g.drawString(text, tx, ty);
     }
 
     public String getTipText() {
