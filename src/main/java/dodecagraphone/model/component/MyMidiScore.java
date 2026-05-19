@@ -375,10 +375,12 @@ public class MyMidiScore extends MyExercise {
 //            }
             }
             trId = tr-first-specialTracks;// assigna el trackId a mixerTrack
-            mixer.addTrack(mixerTrack);           
+            mixer.addTrack(mixerTrack);
             mixerTrack.setId(trId);
-            this.controller.getMixer().setCurrentTrack(trId);
-            this.controller.getMixer().getCurrentTrack().setnNotes(0);
+            mixerTrack.setnNotes(0); // reset directe; getCurrentTrack() podria apuntar al track equivocat si specialTracks>0
+            if (specialTracks == 0) {
+                this.controller.getMixer().setCurrentTrack(trId);
+            }
             if (LOCAL_VERBOSE) {
                 System.out.println("Processant pista " + (tr - first));
             }

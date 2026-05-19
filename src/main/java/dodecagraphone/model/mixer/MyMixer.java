@@ -200,6 +200,8 @@ public class MyMixer {
             addTrackToDialog(this.chordTrackId, true);
         }
         for (int i = 0; i < tracks.size(); i++) {
+            MyTrack t = tracks.get(i);
+            if (t == chordTrack || t == drumsTrack) continue; // ja mostrats com a tracks especials
             addTrackToDialog(i, false);
         }
         if (this.drumsTrack != null && this.drumsTrack.getnNotes() > 0) {
