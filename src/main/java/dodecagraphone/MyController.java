@@ -145,6 +145,7 @@ public class MyController {
     /** True if firstNote was already linked before the EXTEND_LEFT drag touched it. */
     private boolean firstNoteWasLinkedBeforeDrag = false;
     private boolean needsSaving = false;
+    private Boolean saveChordMidiChoice = null; // null = no preguntat; true/false = resposta de la sessió
     private boolean drumsMode = false;
     private boolean tremoloActive = false;
     private final java.util.Set<Long> tremoloLinkedCells = new java.util.HashSet<>();
@@ -3376,16 +3377,16 @@ public class MyController {
         if (extensio.equals("mid")) {
             this.stop();
             this.buttons.stopPlayButton();
-            boolean saveChordMidi = false;
-            if (this.allPurposeScore.hasAnyChords()) {
+            if (this.allPurposeScore.hasAnyChords() && saveChordMidiChoice == null) {
                 int resp = JOptionPane.showConfirmDialog(
                         this.getUi(),
                         I18n.t("save.chordMidi.confirm"),
                         I18n.t("save.chordMidi.title"),
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE);
-                saveChordMidi = (resp == JOptionPane.YES_OPTION);
+                saveChordMidiChoice = (resp == JOptionPane.YES_OPTION);
             }
+            boolean saveChordMidi = Boolean.TRUE.equals(saveChordMidiChoice);
             MyMidiScore midScore = (MyMidiScore) (this.allPurposeScore);
             this.allPurposeScore.saveMidiScore(fitxer, saveChordMidi);
             this.statusLine.setText(I18n.f("MyController.score.saving", midScore.getName(), fitxer));
@@ -3462,6 +3463,7 @@ public class MyController {
         String extensio = obtenirExtensio(fitxer);
         this.currentMidiFile = fitxer;
         if (extensio.equals("mid")||extensio.equals("midi")) {
+            saveChordMidiChoice = null;
             this.stop();
             this.buttons.stopPlayButton();
             // this.allPurposeScore midScore = new MyMidiScore(this);
@@ -3491,6 +3493,7 @@ public class MyController {
     }
 
     private void newScore() {
+        saveChordMidiChoice = null;
         allPurposeScore.resetAllPurposeScore(); //new MyAllPurposeScore(this);
         this.allPurposeScore.clearScore();  // buida notes, acords i missatges
         Settings.setHasAnacrusis(false);
