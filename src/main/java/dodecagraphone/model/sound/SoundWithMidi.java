@@ -56,17 +56,15 @@ public class SoundWithMidi {
     }
     
     public static void resetChannels(){
+        int defaultInstr = ToneRange.isMetallophone() ? GLOCKENSPIEL : 0;
         for (int i = 0; i < ntimesChannelIsUsed.length; i++) {
-            if (i == 9) {
-                continue; // Ometem canal de drums
+            if (i == 9 || i == 15) continue;
+            ntimesChannelIsUsed[i] = 0;
+            if (channelDataArray[i] != null) {
+                channelDataArray[i].instrument = defaultInstr;
+                channelDataArray[i].isActive = false;
+                runProgramChange(i, defaultInstr);
             }
-            if (i == 15) {
-                continue; // Ometem canal d'acords
-            }
-            ntimesChannelIsUsed[i]=0;
-//            if (Settings.IS_BU){
-//                SoundWithMidi.runProgramChange(i, 9);
-//            }
         }
     }
     

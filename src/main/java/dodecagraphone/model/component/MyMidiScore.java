@@ -1182,7 +1182,7 @@ public class MyMidiScore extends MyExercise {
                         //                            this.controller.getMixer().setChordTrack(Integer.parseInt(text.substring(11)));
                         //                        } else 
                         if (text.startsWith("instruments")) {
-                            Map<Integer, Integer> chanInst = readInstruments(text.substring(9));
+                            Map<Integer, Integer> chanInst = readInstruments(text.substring(12)); // "instruments=" = 12 chars
                             for (int chan : chanInst.keySet()) {
                                 int instr = chanInst.get(chan);
                                 SoundWithMidi.assignInstToChannel(chan, instr);

@@ -57,6 +57,11 @@ public class DodecagramPdfPrinter {
         int stopCol = score.getStopCol();
         if (stopCol <= 0) return;
 
+        // Precompute beat/measure boundaries (lines are now screen-space in draw(), not in offscreen)
+        boolean[] isBeat    = new boolean[stopCol + 2];
+        boolean[] isMeasure = new boolean[stopCol + 2];
+        score.computeBeatMeasureLines(stopCol + 2, isBeat, isMeasure);
+
         double colWidthF   = Settings.getColWidth();
         int colWidthPx     = (int) Math.max(1, Math.round(colWidthF));
         int colsPerMeasure = score.getBaseColsPerMeasure();
@@ -211,6 +216,30 @@ public class DodecagramPdfPrinter {
                     cs.moveTo(MARGIN, sepY);
                     cs.lineTo(MARGIN + pdfUsableW, sepY);
                     cs.stroke();
+                }
+
+                // Beat and measure vertical lines as PDF vectors
+                // (they are drawn in screen-space in draw(), so absent from the offscreen bitmap)
+                {
+                    int limitCol = Math.min(endCol, stopCol);
+                    cs.setStrokingColor(Color.BLACK);
+                    for (int col = startCol + 1; col <= limitCol; col++) {
+                        if (col >= isBeat.length) break;
+                        if (!isBeat[col] && !isMeasure[col]) continue;
+                        float lineX = MARGIN + (float) ((keyWidthPx + (col - startCol) * colWidthF) * rowScaleX);
+                        if (lineX <= MARGIN || lineX >= MARGIN + pdfUsableW) continue;
+                        if (isMeasure[col]) {
+                            cs.setLineWidth(0.75f);
+                            cs.setLineDashPattern(new float[]{}, 0);
+                        } else {
+                            cs.setLineWidth(0.3f);
+                            cs.setLineDashPattern(new float[]{15, 3}, 0);
+                        }
+                        cs.moveTo(lineX, yImgBottom);
+                        cs.lineTo(lineX, yImgBottom + rowImgPdfH);
+                        cs.stroke();
+                    }
+                    cs.setLineDashPattern(new float[]{}, 0);
                 }
 
                 // Double bar at stopCol
