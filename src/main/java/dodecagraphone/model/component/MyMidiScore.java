@@ -914,6 +914,8 @@ public class MyMidiScore extends MyExercise {
         }
 
         // Desar els acords de chordSymbolLine com a missatges de text (MetaMessage 0x7F)
+        // Només si es desa el chord track; d'altra banda els acords no es persisten
+        if (saveChordMidiTrack)
         for (Map.Entry<Integer, Chord> entry : this.chordSymbolLine.entrySet()) {
             int col = entry.getKey();
             Chord chord = entry.getValue();
