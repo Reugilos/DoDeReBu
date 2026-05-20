@@ -151,6 +151,7 @@ public class MyHelpDialog {
               .append("</td><td>").append(row[1]).append("</td></tr>");
         }
         sb.append("</table>");
+        appendBackToIndex(sb);
     }
 
     private static void appendSectionConfig(StringBuilder sb) {
@@ -163,6 +164,13 @@ public class MyHelpDialog {
               .append("</td><td>").append(row[1]).append("</td></tr>");
         }
         sb.append("</table>");
+        appendBackToIndex(sb);
+    }
+
+    private static void appendBackToIndex(StringBuilder sb) {
+        sb.append("<div style=\"text-align:right;font-size:10px;margin:2px 0 10px 0;\">")
+          .append("<a href=\"#top\">").append(I18n.t("help.back.to.index")).append("</a>")
+          .append("</div>");
     }
 
     private static String[][] helpGrid() {
