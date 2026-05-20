@@ -96,20 +96,21 @@ public class MyHelpDialog {
 
         // ── Index ──────────────────────────────────────────────────────────────
         String[][] sections = {
-            {"grid",      "help.section.grid.title"},
-            {"selection", "help.section.selection.title"},
-            {"columns",   "help.section.columns.title"},
-            {"chords",    "help.section.chords.title"},
-            {"lyrics",    "help.section.lyrics.title"},
-            {"pattern",   "help.section.pattern.title"},
-            {"score",     "help.section.score.title"},
-            {"key",       "help.section.key.title"},
-            {"playback",  "help.section.playback.title"},
-            {"view",      "help.section.view.title"},
-            {"exercises", "help.section.exercises.title"},
-            {"mixer",     "help.section.mixer.title"},
-            {"export",    "help.section.export.title"},
-            {"config",    "help.section.config.title"},
+            {"grid",         "help.section.grid.title"},
+            {"selection",    "help.section.selection.title"},
+            {"columns",      "help.section.columns.title"},
+            {"chordslyrics", "help.section.chordslyrics.title"},
+            {"markers",      "help.section.markers.title"},
+            {"xylokeyboard", "help.section.xylokeyboard.title"},
+            {"pattern",      "help.section.pattern.title"},
+            {"score",        "help.section.score.title"},
+            {"key",          "help.section.key.title"},
+            {"playback",     "help.section.playback.title"},
+            {"view",         "help.section.view.title"},
+            {"exercises",    "help.section.exercises.title"},
+            {"mixer",        "help.section.mixer.title"},
+            {"export",       "help.section.export.title"},
+            {"config",       "help.section.config.title"},
         };
         sb.append("<a name=\"top\"></a><div class=\"idx\">");
         for (int i = 0; i < sections.length; i++) {
@@ -120,28 +121,30 @@ public class MyHelpDialog {
         sb.append("</div>");
 
         // ── Sections ───────────────────────────────────────────────────────────
-        appendSection(sb, "grid",      "help.section.grid.title",      helpGrid());
-        appendSection(sb, "selection", "help.section.selection.title",  helpSelection());
-        appendSection(sb, "columns",   "help.section.columns.title",    helpColumns());
-        appendSection(sb, "chords",    "help.section.chords.title",     helpChords());
-        appendSection(sb, "lyrics",    "help.section.lyrics.title",     helpLyrics());
-        appendSection(sb, "pattern",   "help.section.pattern.title",    helpPattern());
-        appendSection(sb, "score",     "help.section.score.title",      helpScore());
-        appendSection(sb, "key",       "help.section.key.title",        helpKey());
-        appendSection(sb, "playback",  "help.section.playback.title",   helpPlayback());
-        appendSection(sb, "view",      "help.section.view.title",       helpView());
-        appendSection(sb, "exercises", "help.section.exercises.title",  helpExercises());
-        appendSection(sb, "mixer",     "help.section.mixer.title",      helpMixer());
-        appendSection(sb, "export",    "help.section.export.title",     helpExport());
+        appendSection(sb, "grid",         "help.section.grid.title",         "help.grid.intro",         helpGrid());
+        appendSection(sb, "selection",    "help.section.selection.title",    "help.selection.intro",    helpSelection());
+        appendSection(sb, "columns",      "help.section.columns.title",      "help.columns.intro",      helpColumns());
+        appendSection(sb, "chordslyrics", "help.section.chordslyrics.title", "help.chordslyrics.intro", helpChordsLyrics());
+        appendSection(sb, "markers",      "help.section.markers.title",      "help.markers.intro",      helpMarkers());
+        appendSection(sb, "xylokeyboard", "help.section.xylokeyboard.title", "help.xylokeyboard.intro", helpXylokeyboard());
+        appendSection(sb, "pattern",      "help.section.pattern.title",      "help.pattern.intro",      helpPattern());
+        appendSection(sb, "score",        "help.section.score.title",        "help.score.intro",        helpScore());
+        appendSection(sb, "key",          "help.section.key.title",          "help.key.intro",          helpKey());
+        appendSection(sb, "playback",     "help.section.playback.title",     "help.playback.intro",     helpPlayback());
+        appendSection(sb, "view",         "help.section.view.title",         "help.view.intro",         helpView());
+        appendSection(sb, "exercises",    "help.section.exercises.title",    "help.exercises.intro",    helpExercises());
+        appendSection(sb, "mixer",        "help.section.mixer.title",        "help.mixer.intro",        helpMixer());
+        appendSection(sb, "export",       "help.section.export.title",       "help.export.intro",       helpExport());
         appendSectionConfig(sb);
 
         sb.append("</body></html>");
         return sb.toString();
     }
 
-    private static void appendSection(StringBuilder sb, String anchor, String titleKey, String[][] rows) {
+    private static void appendSection(StringBuilder sb, String anchor, String titleKey, String descKey, String[][] rows) {
         sb.append("<a name=\"").append(anchor).append("\"></a>");
         sb.append("<h2>").append(I18n.t(titleKey)).append("</h2>");
+        if (descKey != null) sb.append("<p class=\"note\">").append(I18n.t(descKey)).append("</p>");
         sb.append("<table>");
         for (String[] row : rows) {
             sb.append("<tr><td class=\"key\">").append(row[0])
@@ -191,21 +194,32 @@ public class MyHelpDialog {
         };
     }
 
-    private static String[][] helpChords() {
+    private static String[][] helpChordsLyrics() {
         return new String[][] {
-            { I18n.t("help.chords.add.key"),    I18n.t("help.chords.add.desc") },
-            { I18n.t("help.chords.format.key"), I18n.t("help.chords.format.desc") },
-            { I18n.t("help.chords.tempo.key"),  I18n.t("help.chords.tempo.desc") },
-            { I18n.t("help.chords.key.key"),    I18n.t("help.chords.key.desc") },
-        };
-    }
-
-    private static String[][] helpLyrics() {
-        return new String[][] {
+            { I18n.t("help.chords.add.key"),     I18n.t("help.chords.add.desc") },
+            { I18n.t("help.chords.format.key"),  I18n.t("help.chords.format.desc") },
             { I18n.t("help.lyrics.edit.key"),    I18n.t("help.lyrics.edit.desc") },
             { I18n.t("help.lyrics.type.key"),    I18n.t("help.lyrics.type.desc") },
             { I18n.t("help.lyrics.advance.key"), I18n.t("help.lyrics.advance.desc") },
             { I18n.t("help.lyrics.exit.key"),    I18n.t("help.lyrics.exit.desc") },
+        };
+    }
+
+    private static String[][] helpMarkers() {
+        return new String[][] {
+            { I18n.t("help.markers.timesig.key"), I18n.t("help.markers.timesig.desc") },
+            { I18n.t("help.markers.key.key"),     I18n.t("help.markers.key.desc") },
+            { I18n.t("help.markers.tempo.key"),   I18n.t("help.markers.tempo.desc") },
+            { I18n.t("help.markers.volume.key"),  I18n.t("help.markers.volume.desc") },
+            { I18n.t("help.markers.place.key"),   I18n.t("help.markers.place.desc") },
+        };
+    }
+
+    private static String[][] helpXylokeyboard() {
+        return new String[][] {
+            { I18n.t("help.xylokeyboard.play.key"),   I18n.t("help.xylokeyboard.play.desc") },
+            { I18n.t("help.xylokeyboard.slide.key"),  I18n.t("help.xylokeyboard.slide.desc") },
+            { I18n.t("help.xylokeyboard.insert.key"), I18n.t("help.xylokeyboard.insert.desc") },
         };
     }
 
@@ -224,7 +238,6 @@ public class MyHelpDialog {
             { I18n.t("help.score.title.key"),       I18n.t("help.score.title.desc") },
             { I18n.t("help.score.author.key"),      I18n.t("help.score.author.desc") },
             { I18n.t("help.score.description.key"), I18n.t("help.score.description.desc") },
-            { I18n.t("help.score.timesig.key"),     I18n.t("help.score.timesig.desc") },
         };
     }
 
