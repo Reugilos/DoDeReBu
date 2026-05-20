@@ -96,6 +96,7 @@ public class MyHelpDialog {
 
         // ── Index ──────────────────────────────────────────────────────────────
         String[][] sections = {
+            {"config",       "help.section.config.title"},
             {"grid",         "help.section.grid.title"},
             {"selection",    "help.section.selection.title"},
             {"columns",      "help.section.columns.title"},
@@ -110,7 +111,6 @@ public class MyHelpDialog {
             {"exercises",    "help.section.exercises.title"},
             {"mixer",        "help.section.mixer.title"},
             {"export",       "help.section.export.title"},
-            {"config",       "help.section.config.title"},
         };
         sb.append("<a name=\"top\"></a><div class=\"idx\">");
         for (int i = 0; i < sections.length; i++) {
@@ -121,6 +121,7 @@ public class MyHelpDialog {
         sb.append("</div>");
 
         // ── Sections ───────────────────────────────────────────────────────────
+        appendSectionConfig(sb);
         appendSection(sb, "grid",         "help.section.grid.title",         "help.grid.intro",         helpGrid());
         appendSection(sb, "selection",    "help.section.selection.title",    "help.selection.intro",    helpSelection());
         appendSection(sb, "columns",      "help.section.columns.title",      "help.columns.intro",      helpColumns());
@@ -135,7 +136,6 @@ public class MyHelpDialog {
         appendSection(sb, "exercises",    "help.section.exercises.title",    "help.exercises.intro",    helpExercises());
         appendSection(sb, "mixer",        "help.section.mixer.title",        "help.mixer.intro",        helpMixer());
         appendSection(sb, "export",       "help.section.export.title",       "help.export.intro",       helpExport());
-        appendSectionConfig(sb);
 
         sb.append("</body></html>");
         return sb.toString();
@@ -157,6 +157,12 @@ public class MyHelpDialog {
     private static void appendSectionConfig(StringBuilder sb) {
         sb.append("<a name=\"config\"></a>");
         sb.append("<h2>").append(I18n.t("help.section.config.title")).append("</h2>");
+        String path = AppConfig.get().getConfigPathForDebug()
+                .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        sb.append("<p class=\"note\">").append(I18n.t("help.config.path.note1")).append("</p>");
+        sb.append("<p style=\"font-family:monospace;font-size:11px;background:#e8e8e8;padding:3px 6px;margin:2px 0;\">")
+          .append(path).append("</p>");
+        sb.append("<p class=\"note\">").append(I18n.t("help.config.path.note2")).append("</p>");
         sb.append("<p class=\"note\">").append(I18n.t("help.config.intro")).append("</p>");
         sb.append("<table>");
         for (String[] row : helpConfig()) {
