@@ -3,13 +3,8 @@ package dodecagraphone.model.exercise.exerciseList;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.component.MyAllPurposeScore;
-import dodecagraphone.model.component.MyExercise;
-import dodecagraphone.model.exercise.Blues;
-import dodecagraphone.model.exercise.Miri;
-import dodecagraphone.model.exercise.Saxo;
-import dodecagraphone.model.exercise.Test;
+import dodecagraphone.model.exercise.Jazz;
 import dodecagraphone.model.exercise.EarTraining;
-import dodecagraphone.ui.Settings;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,38 +34,17 @@ public class MyExerciseList {
         this.contr = contr;
         exerciseLabelList = new ArrayList<>();
         this.currentExercise = this.contr.getAllPurposeScore();
-        //Settings.initSettings();
         currentExercise.resetAllPurposeScore();
         switch (whichSet) {
             case "EarTraining":
-//                currentExercise.resetAllPurposeScore();
                 EarTraining ear = new EarTraining();
                 currentExercise.setFamily(ear);
                 exerciseLabelList = EarTraining.getExerciseLabelList();
                 break;
-            case "Saxo":
-//                currentExercise.resetAllPurposeScore();
-                Saxo saxo = new Saxo();
-                currentExercise.setFamily(saxo);
-                exerciseLabelList = Saxo.getExerciseLabelList();
-                break;
-            case "Miri":
-//                currentExercise.resetAllPurposeScore();
-                Miri miri = new Miri();
-                currentExercise.setFamily(miri);
-                exerciseLabelList = Miri.getExerciseLabelList();
-                break;
-            case "Test":
-//                currentExercise.resetAllPurposeScore();
-                Test test = new Test();
-                currentExercise.setFamily(test);
-                exerciseLabelList = Test.getExerciseLabelList();
-                break;
-            case "Blues":
-//                currentExercise.resetAllPurposeScore();
-                Blues blues = new Blues();
-                currentExercise.setFamily(blues);
-                exerciseLabelList = Blues.getExerciseLabelList();
+            case "Jazz":
+                Jazz jazz = new Jazz();
+                currentExercise.setFamily(jazz);
+                exerciseLabelList = Jazz.getExerciseLabelList();
                 break;
             default:
                 throw new UnsupportedOperationException("No such exercise family " + whichSet);

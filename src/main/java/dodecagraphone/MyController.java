@@ -74,7 +74,7 @@ public class MyController {
 //    private final String exerciseListName = "Saxo";
 //    private final String exerciseListName = "Miri";
 //    private final String exerciseListName = "UYE";
-    private String[] exerciceListNames = new String[]{"Saxo", "Blues", "Miri", "EarTraining", "Test"};
+    private String[] exerciceListNames = new String[]{"EarTraining", "Jazz"};
     private String exerciseListName;
     private boolean exercisesOn;
 

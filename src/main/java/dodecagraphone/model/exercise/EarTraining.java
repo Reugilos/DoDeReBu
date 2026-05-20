@@ -39,7 +39,8 @@ public class EarTraining implements MyExerciseFamily {
     private static final List<String> exerciseList = Arrays.asList(
             "Ex1", "Ex2", "Ex3", "Ex4", "Ex5", "Ex6", "Ex7",
             "Ex8", "Ex9", "Ex10", "Ex11", "Ex12", "Ex13", "Ex14",
-            "Ex15", "Ex16", "Ex17"
+            "Ex15", "Ex16", "Ex17", "Ex18", "Ex19", "Ex20", "Ex21",
+            "Ex22", "Ex23", "Ex24", "Ex25", "Ex26"
     );
 
     /**
@@ -80,42 +81,33 @@ public class EarTraining implements MyExerciseFamily {
     public void applyExercise(MyExercise ex, String label) {
         ex.setLabel(label);
         switch (label) {
-            case "Ex1" ->
-                setExercise_1(ex);
-            case "Ex2" ->
-                setExercise_2(ex);
-            case "Ex3" ->
-                setExercise_3(ex);
-            case "Ex4" ->
-                setExercise_4(ex);
-            case "Ex5" ->
-                setExercise_5(ex);
-            case "Ex6" ->
-                setExercise_6(ex);
-            case "Ex7" ->
-                setExercise_7(ex);
-            case "Ex8" ->
-                setExercise_8(ex);
-            case "Ex9" ->
-                setExercise_9(ex);
-            case "Ex10" ->
-                setExercise_10(ex);
-            case "Ex11" ->
-                setExercise_11(ex);
-            case "Ex12" ->
-                setExercise_12(ex);
-            case "Ex13" ->
-                setExercise_13(ex);
-            case "Ex14" ->
-                setExercise_14(ex);
-            case "Ex15" ->
-                setExercise_15(ex);
-            case "Ex16" ->
-                setExercise_16(ex);
-            case "Ex17" ->
-                setExercise_17(ex);
-            case "Blank" ->
-                ex.getController().clearScore();
+            case "Ex1"  -> setExercise_1(ex);
+            case "Ex2"  -> setExercise_2(ex);
+            case "Ex3"  -> setMiri_1_a(ex);
+            case "Ex4"  -> setMiri_1_b(ex);
+            case "Ex5"  -> setMiri_1_c(ex);
+            case "Ex6"  -> setExercise_3(ex);
+            case "Ex7"  -> setExercise_4(ex);
+            case "Ex8"  -> setExercise_5(ex);
+            case "Ex9"  -> setExercise_6(ex);
+            case "Ex10" -> setExercise_7(ex);
+            case "Ex11" -> setMiri_2_a(ex);
+            case "Ex12" -> setMiri_2_b(ex);
+            case "Ex13" -> setMiri_2_c(ex);
+            case "Ex14" -> setExercise_8(ex);
+            case "Ex15" -> setExercise_9(ex);
+            case "Ex16" -> setExercise_10(ex);
+            case "Ex17" -> setExercise_11(ex);
+            case "Ex18" -> setExercise_12(ex);
+            case "Ex19" -> setExercise_13(ex);
+            case "Ex20" -> setExercise_14(ex);
+            case "Ex21" -> setMiri_3_a(ex);
+            case "Ex22" -> setMiri_3_b(ex);
+            case "Ex23" -> setMiri_3_c(ex);
+            case "Ex24" -> setExercise_15(ex);
+            case "Ex25" -> setExercise_16(ex);
+            case "Ex26" -> setExercise_17(ex);
+            case "Blank" -> ex.getController().clearScore();
             default -> {
                 ex.getController().clearScore();
                 throw new UnsupportedOperationException(I18n.f("earTraining.error.noSuchPattern", label));
@@ -677,6 +669,181 @@ public class EarTraining implements MyExerciseFamily {
             ex.placeChord(chord, 2 * ex.ONE_BEAT - 1, false);
             ex.skipCols(1);
             ex.placeNote(root + midiKey, 2 * ex.ONE_BEAT - 1, false);
+            ex.skipCols(1);
+        }
+    }
+
+    private static void setMiri_1_a(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex18.description"));
+        int midiKey = Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(false);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setChoice(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12, -12, -10, -8, -7, -5, -3, -1});
+        ex.placeTonalContext(midiKey);
+        while (!ex.isOver()) {
+            int note = Utilities.randFromList(ex.getChoice().getChoiceList()) + midiKey;
+            while (note < ToneRange.getLowestViolin()) note += 12;
+            while (note > ToneRange.getHighestViolin()) note -= 12;
+            ex.placeNote(note, ex.ONE_BAR, false);
+            ex.deletePreviousCol();
+        }
+        MyTempo.slower();
+    }
+
+    private static void setMiri_1_b(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex19.description"));
+        Integer[] keyChoice = {7, 9};
+        int midiKey = keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(false);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setChoice(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12, -12, -10, -8, -7, -5, -3, -1});
+        ex.placeTonalContext(midiKey);
+        while (!ex.isOver()) {
+            int note = Utilities.randFromList(ex.getChoice().getChoiceList()) + midiKey;
+            while (note < ToneRange.getLowestViolin()) note += 12;
+            while (note > ToneRange.getHighestViolin()) note -= 12;
+            ex.placeNote(note, ex.ONE_BAR, false);
+            ex.deletePreviousCol();
+        }
+        MyTempo.slower();
+    }
+
+    private static void setMiri_1_c(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex20.description"));
+        Integer[] keyChoice = {0, 2, 7, 9, 10};
+        int midiKey = keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(false);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setChoice(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12, -12, -10, -8, -7, -5, -3, -1});
+        ex.placeTonalContext(midiKey);
+        while (!ex.isOver()) {
+            int note = Utilities.randFromList(ex.getChoice().getChoiceList()) + midiKey;
+            while (note < ToneRange.getLowestViolin()) note += 12;
+            while (note > ToneRange.getHighestViolin()) note -= 12;
+            ex.placeNote(note, ex.ONE_BAR, false);
+            ex.deletePreviousCol();
+        }
+        MyTempo.slower();
+    }
+
+    private static void setMiri_2_a(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex21.description"));
+        int midiKey = Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(true);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setChoice(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12, -12, -10, -8, -7, -5, -3, -1});
+        ex.placeTonalContext(midiKey);
+        while (!ex.isOver()) {
+            int note = Utilities.randFromList(ex.getChoice().getChoiceList()) + midiKey;
+            while (note < ToneRange.getLowestViolin()) note += 12;
+            while (note > ToneRange.getHighestViolin()) note -= 12;
+            ex.placeNote(note, ex.HALF_BAR, true);
+            ex.placeNote(note, ex.HALF_BAR, false);
+            ex.deletePreviousCol();
+        }
+        MyTempo.slower();
+    }
+
+    private static void setMiri_2_b(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex22.description"));
+        Integer[] keyChoice = {7, 9};
+        int midiKey = keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(true);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setChoice(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12, -12, -10, -8, -7, -5, -3, -1});
+        ex.placeTonalContext(midiKey);
+        while (!ex.isOver()) {
+            int note = Utilities.randFromList(ex.getChoice().getChoiceList()) + midiKey;
+            while (note < ToneRange.getLowestViolin()) note += 12;
+            while (note > ToneRange.getHighestViolin()) note -= 12;
+            ex.placeNote(note, ex.HALF_BAR, true);
+            ex.placeNote(note, ex.HALF_BAR, false);
+            ex.deletePreviousCol();
+        }
+        MyTempo.slower();
+    }
+
+    private static void setMiri_2_c(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex23.description"));
+        Integer[] keyChoice = {0, 2, 7, 9, 10};
+        int midiKey = keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(true);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setChoice(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12, -12, -10, -8, -7, -5, -3, -1});
+        ex.placeTonalContext(midiKey);
+        while (!ex.isOver()) {
+            int note = Utilities.randFromList(ex.getChoice().getChoiceList()) + midiKey;
+            while (note < ToneRange.getLowestViolin()) note += 12;
+            while (note > ToneRange.getHighestViolin()) note -= 12;
+            ex.placeNote(note, ex.HALF_BAR, true);
+            ex.placeNote(note, ex.HALF_BAR, false);
+            ex.deletePreviousCol();
+        }
+        MyTempo.slower();
+    }
+
+    private static void setMiri_3_a(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex24.description"));
+        Integer[] keyChoice = {0, 2, 7, 9, 10};
+        int midiKey = keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(false);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        Integer[] chordChoice = {0, 5, 7, 9, -12, -7, -5, -3};
+        while (!ex.isOver()) {
+            int root = Utilities.randFromList(Arrays.asList(chordChoice));
+            Chord chord = new Triad(root, midiKey, Triad.ROOT_POSITION);
+            ex.placeAppendMessage(chord.toString(), ex.MESSAGE_DELAY);
+            ex.placeChord(chord, 2 * ex.ONE_BEAT - 1, false);
+            ex.skipCols(1);
+        }
+    }
+
+    private static void setMiri_3_b(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex25.description"));
+        int midiKey = ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(false);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        Integer[] chordChoice = {0, 5, 7, 9, -12, -7, -5, -3};
+        while (!ex.isOver()) {
+            int root = Utilities.randFromList(Arrays.asList(chordChoice));
+            Chord chord = new Triad(root, midiKey, Triad.ROOT_POSITION);
+            ex.placeAppendMessage(chord.toString(), ex.MESSAGE_DELAY);
+            ex.placeChord(chord, 2 * ex.ONE_BEAT - 1, false);
+            ex.skipCols(1);
+        }
+    }
+
+    private static void setMiri_3_c(MyExercise ex) {
+        ex.setDescription(I18n.t("earTraining.ex26.description"));
+        Integer[] keyChoice = {7, 9};
+        int midiKey = keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C;
+        ex.setMidiKey(midiKey);
+        ex.setUsePentagramaStrips(false);
+        ex.setUseMobileDo(false);
+        ex.setShowNoteNames(true);
+        ex.setUseScreenKeyboardRight(true);
+        Integer[] chordChoice = {0, 5, 7, 9, -12, -7, -5, -3};
+        while (!ex.isOver()) {
+            int root = Utilities.randFromList(Arrays.asList(chordChoice));
+            Chord chord = new Triad(root, midiKey, Triad.ROOT_POSITION);
+            ex.placeAppendMessage(chord.toString(), ex.MESSAGE_DELAY);
+            ex.placeChord(chord, 2 * ex.ONE_BEAT - 1, false);
             ex.skipCols(1);
         }
     }
