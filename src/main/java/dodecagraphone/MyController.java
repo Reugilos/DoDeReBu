@@ -2239,7 +2239,7 @@ public class MyController {
         if (this.selectionActive)                                 return "selection";
         if (this.allPurposeScore.getChoice().isSelecting())       return "pattern";
         if (this.isDrumsMode())                                   return "mixer";
-        return "grid";
+        return "top";
     }
 
     public void onTipsButtonPressed(MyButton togg) {

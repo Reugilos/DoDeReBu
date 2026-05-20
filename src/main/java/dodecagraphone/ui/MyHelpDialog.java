@@ -111,7 +111,7 @@ public class MyHelpDialog {
             {"export",    "help.section.export.title"},
             {"config",    "help.section.config.title"},
         };
-        sb.append("<div class=\"idx\">");
+        sb.append("<a name=\"top\"></a><div class=\"idx\">");
         for (int i = 0; i < sections.length; i++) {
             if (i > 0) sb.append(" &nbsp;&middot;&nbsp; ");
             sb.append("<a href=\"#").append(sections[i][0]).append("\">")
