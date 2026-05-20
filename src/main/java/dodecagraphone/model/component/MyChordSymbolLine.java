@@ -52,9 +52,11 @@ public class MyChordSymbolLine extends MyComponent {
     public void setNeedsDrawing(boolean needsDrawing) { this.needsDrawing = needsDrawing; }
 
     /** Background colour for tempo change markers (white text on blue). */
-    private static final Color COLOR_TEMPO_BG = new Color(0, 90, 190);
+    private static final Color COLOR_TEMPO_BG  = new Color(0, 90, 190);
     /** Background colour for key change markers (white text on granate). */
-    private static final Color COLOR_KEY_BG   = new Color(140, 0, 30);
+    private static final Color COLOR_KEY_BG    = new Color(140, 0, 30);
+    /** Background colour for volume change markers (white text on green). */
+    private static final Color COLOR_VOLUME_BG = new Color(0, 130, 55);
     /** Cached chord font and the row height it was computed for. */
     private Font   cachedChordFont   = null;
     private double cachedChordRowH   = 0;
@@ -425,6 +427,10 @@ public class MyChordSymbolLine extends MyComponent {
         return drawChangeMark(col, text, COLOR_KEY_BG, g, offscreen, existingYOff);
     }
 
+    private int drawVolumeMark(int col, int velocity, Graphics2D g, boolean offscreen, int existingYOff) {
+        return drawChangeMark(col, "v" + velocity, COLOR_VOLUME_BG, g, offscreen, existingYOff);
+    }
+
     /**
      * Draws a small filled rectangle with white text at the bottom-left of the
      * chord strip cell at {@code col}, stacked {@code existingYOff} pixels above
@@ -466,19 +472,25 @@ public class MyChordSymbolLine extends MyComponent {
         return offscreenImage;
     }
 
-    public void drawInitialMarkersAt(Graphics2D g, int tempo, int midiKey, char scaleMode) {
+    public int drawInitialMarkersAt(Graphics2D g, int tempo, int midiKey, char scaleMode) {
         int yOff = 0;
         if (tempo > 0) yOff += drawTempoMark(0, tempo, g, true, yOff);
         if (midiKey >= 0) yOff += drawKeyMark(0, midiKey, scaleMode, g, true, yOff);
+        return yOff;
     }
 
-    /** Draws the col-0 marks (tempo/key) from the changeMap, with fallback defaults. */
+    /** Draws the col-0 marks (tempo/key/volume) from the changeMap, with fallback defaults. */
     public void drawInitialMarkersAt(Graphics2D g) {
         MyGridScore.ScoreChange sc0 = score.getChangeMap().get(0);
-        int tempo     = (sc0 != null && sc0.tempo     != null) ? sc0.tempo     : Settings.DEFAULT_TEMPO;
-        int midiKey   = (sc0 != null && sc0.midiKey   != null) ? sc0.midiKey   : ToneRange.getDefaultKey();
+        int tempo      = (sc0 != null && sc0.tempo     != null) ? sc0.tempo     : Settings.DEFAULT_TEMPO;
+        int midiKey    = (sc0 != null && sc0.midiKey   != null) ? sc0.midiKey   : ToneRange.getDefaultKey();
         char scaleMode = (sc0 != null && sc0.scaleMode != null) ? sc0.scaleMode : ToneRange.getDefaultMode();
-        drawInitialMarkersAt(g, tempo, midiKey, scaleMode);
+        int yOff = drawInitialMarkersAt(g, tempo, midiKey, scaleMode);
+        if (sc0 != null) {
+            for (Map.Entry<Integer, Integer> e : sc0.trackVelocities.entrySet()) {
+                yOff += drawVolumeMark(0, e.getValue(), g, true, yOff);
+            }
+        }
     }
 
     public void initOffscreen() {
@@ -549,6 +561,9 @@ public class MyChordSymbolLine extends MyComponent {
                     char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
                     yOff += drawKeyMark(col, sc.midiKey, mode, offscreenGraphics, true, yOff);
                 }
+                for (Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
+                    yOff += drawVolumeMark(col, e.getValue(), offscreenGraphics, true, yOff);
+                }
                 // Calculem l'amplada màxima rellegint els textos (aproximació: refem FontMetrics)
                 if (yOff > 0) {
                     offscreenGraphics.setFont(getMarkFont());
@@ -563,6 +578,9 @@ public class MyChordSymbolLine extends MyComponent {
                         try { kn = ToneRange.getKeyName(sc.midiKey, mode); }
                         catch (Exception e) { kn = "?"; }
                         maxW = Math.max(maxW, fm.stringWidth(kn) + 2 * pad);
+                    }
+                    for (Integer vel : sc.trackVelocities.values()) {
+                        maxW = Math.max(maxW, fm.stringWidth("v" + vel) + 2 * pad);
                     }
                     markerMaxWidths.put(col, maxW);
                 }

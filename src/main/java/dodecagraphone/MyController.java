@@ -2445,6 +2445,31 @@ public class MyController {
     }
 
     public void onVolumeButtonPressed(MyButton togg) {
+        if (cam.isPlaying()) return;
+        this.buttons.hideTip();
+        togg.setPressed(false);
+        int currentVol = this.getMixer().getCurrentTrack().getVelocity();
+        String input = MyDialogs.mostraInputDialog(
+                I18n.t("MyController.onVolumeButtonPressed.prompt"),
+                I18n.t("MyController.onVolumeButtonPressed.title"),
+                String.valueOf(currentVol)
+        );
+        if (input == null) return;
+        try {
+            int requested = Integer.parseInt(input.trim());
+            int clamped = Math.max(0, Math.min(127, requested));
+            int trackId = this.getMixer().getCurrentTrackId();
+            this.getMixer().getCurrentTrack().setVelocity(clamped);
+            this.buttons.updateVolumeButton("" + clamped);
+            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+            sc.trackVelocities.put(trackId, clamped);
+            setPendingChange(sc, I18n.t("scoreChange.volume"));
+        } catch (NumberFormatException e) {
+            MyDialogs.mostraError(
+                    I18n.f("MyController.onVolumeButtonPressed.invalidInput", input),
+                    I18n.t("MyController.dialog.error.title")
+            );
+        }
     }
 
     public void onFirstPageButtonPressed(MyButton togg) {
