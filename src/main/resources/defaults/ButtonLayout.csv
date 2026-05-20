@@ -26,7 +26,7 @@ Id;Name;IsToggle;Row;Col;TextOn;TextOff;TipText;IsActive
 15;NewButton;B;9;3;buttonLayout.NewButton.textOn;;buttonLayout.NewButton.tipText;On
 16;NextExerciseButton;B;10;1;buttonLayout.NextExerciseButton.textOn;;buttonLayout.NextExerciseButton.tipText;On
 17;PrevExerciseButton;B;10;2;buttonLayout.PrevExerciseButton.textOn;;buttonLayout.PrevExerciseButton.tipText;On
-18;RestartExerciseButton;B;10;3;;;buttonLayout.RestartExerciseButton.tipText;On
+18;RestartExerciseButton;B;10;3;buttonLayout.RestartExerciseButton.textOn;;buttonLayout.RestartExerciseButton.tipText;On
 25;PentaVsChoiceButton;T;11;1;buttonLayout.PentaVsChoiceButton.textOn;buttonLayout.PentaVsChoiceButton.textOff;buttonLayout.PentaVsChoiceButton.tipText;On
 26;LeftVsRightButton;T;11;2;buttonLayout.LeftVsRightButton.textOn;buttonLayout.LeftVsRightButton.textOff;buttonLayout.LeftVsRightButton.tipText;On
 27;SelectChoiceButton;T;11;3;buttonLayout.SelectChoiceButton.textOn;buttonLayout.SelectChoiceButton.textOff;buttonLayout.SelectChoiceButton.tipText;On
