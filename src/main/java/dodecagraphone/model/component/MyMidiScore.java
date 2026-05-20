@@ -351,6 +351,7 @@ public class MyMidiScore extends MyExercise {
             first = 1;
         }
 
+        int specialTracks = 0;
         for (int tr = first; tr < tracks.length; tr++) {
             Track track = tracks[tr];
             MyTrack mixerTrack = new MyTrack(tr - first, "");
@@ -362,25 +363,19 @@ public class MyMidiScore extends MyExercise {
                 }
             }
             MyMixer mixer = this.controller.getMixer();
-            int specialTracks = 0;
             if (trId == mixer.getChordTrackId()){
                 mixer.setChordTrack(mixerTrack);
                 specialTracks++;
             } else if (trId == mixer.getDrumsTrackId()){
                 mixer.setDrumsTrack(mixerTrack);
                 specialTracks++;
-//            } else {
-//                trId = tr-first-specialTracks;// assigna el trackId a mixerTrack //???
-//                mixer.addTrack(mixerTrack);
-//            }
-            }
-            trId = tr-first-specialTracks;// assigna el trackId a mixerTrack
-            mixer.addTrack(mixerTrack);
-            mixerTrack.setId(trId);
-            mixerTrack.setnNotes(0); // reset directe; getCurrentTrack() podria apuntar al track equivocat si specialTracks>0
-            if (specialTracks == 0) {
+            } else {
+                trId = tr - first - specialTracks;
+                mixer.addTrack(mixerTrack);
                 this.controller.getMixer().setCurrentTrack(trId);
             }
+            mixerTrack.setId(trId);
+            mixerTrack.setnNotes(0);
             if (LOCAL_VERBOSE) {
                 System.out.println("Processant pista " + (tr - first));
             }
@@ -408,14 +403,14 @@ public class MyMidiScore extends MyExercise {
                                 if (LOCAL_VERBOSE) {
                                     System.out.println("NOTE_ON al tick " + tick + ": " + pitch + " canal " + channel + " vol " + velocity);
                                 }
-                                long k = noteKey(pitch, channel, tr - first);
-				activeNotes.put(k, new NoteInfo(pitch, tick, velocity, channel, tr - first));
+                                long k = noteKey(pitch, channel, trId);
+				activeNotes.put(k, new NoteInfo(pitch, tick, velocity, channel, trId));
                             } else {
                                 // Tractar NOTE_ON amb velocitat 0 com un NOTE_OFF
                                 if (LOCAL_VERBOSE) {
                                     System.out.println("NOTE_OFF (vel 0) al tick " + tick + ": " + pitch + " canal " + channel);
                                 }
-                                long k = noteKey(pitch, channel, tr - first);
+                                long k = noteKey(pitch, channel, trId);
                                 processNoteOff(k, tick);
                             }
                             break;
@@ -425,7 +420,7 @@ public class MyMidiScore extends MyExercise {
                             if (LOCAL_VERBOSE) {
                                 System.out.println("NOTE_OFF al tick " + tick + ": " + pitch + " canal " + channel);
                             }
-                            long k = noteKey(pitch, channel, tr - first);
+                            long k = noteKey(pitch, channel, trId);
                             processNoteOff(k, tick);
                             break;
 
