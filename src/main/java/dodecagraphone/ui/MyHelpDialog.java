@@ -163,13 +163,6 @@ public class MyHelpDialog {
         sb.append("<p style=\"font-family:monospace;font-size:11px;background:#e8e8e8;padding:3px 6px;margin:2px 0;\">")
           .append(path).append("</p>");
         sb.append("<p class=\"note\">").append(I18n.t("help.config.path.note2")).append("</p>");
-        sb.append("<p class=\"note\">").append(I18n.t("help.config.intro")).append("</p>");
-        sb.append("<table>");
-        for (String[] row : helpConfig()) {
-            sb.append("<tr><td class=\"key\">").append(row[0])
-              .append("</td><td>").append(row[1]).append("</td></tr>");
-        }
-        sb.append("</table>");
         appendBackToIndex(sb);
     }
 
