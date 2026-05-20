@@ -500,10 +500,10 @@ public class MyMixer {
         MyTrack track = getTrackFromId(index);
         if (isShow) {
             boolean state = track.isVisible();
-            button.setText(state ? "Hide" : "Show");
+            button.setText(state ? "Show" : "Hide");
         } else {
             boolean state = track.isAudible();
-            button.setText(state ? "Mute" : "Play");
+            button.setText(state ? "Play" : "Mute");
         }
     }
     
