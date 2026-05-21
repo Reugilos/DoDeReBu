@@ -3493,6 +3493,7 @@ public class MyController {
             this.buttons.stopPlayButton();
             // this.allPurposeScore midScore = new MyMidiScore(this);
             this.exercisesOn = false;
+            this.buttons.updateCurrentExerciseButton("");
             allPurposeScore.resetAllPurposeScore();
             this.mixer = new MyMixer(this);
             int estimatedCols = estimateLastColFromMidi(fitxer);
@@ -3526,6 +3527,7 @@ public class MyController {
         this.stop();
         this.buttons.stopPlayButton();
         this.exercisesOn = false;
+        this.buttons.updateCurrentExerciseButton("");
         Settings.setnMeasuresCam(4);
         // Restaura el compàs per defecte (4/4) i recalcula nColsBeat
         this.allPurposeScore.timeSignature2Params("4/4");
