@@ -4,6 +4,7 @@ import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.component.MyExercise;
 import dodecagraphone.model.component.MyPatternScore;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 
@@ -44,7 +45,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex1: tonal notes, one octave (from Saxo)
     private void exercise_1(MyExercise ex) {
-        ex.setDescription("Listen, read and repeat, tonal, one octave");
+        ex.setDescription(I18n.t("jazz.ex1.description"));
         ex.setUsePentagramaStrips(false);
         ToneRange.setMovileDo(false);
         ex.setShowNoteNames(true);
@@ -60,7 +61,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex2: 12 bar blues, triad (from Blues tr_1)
     private void exercise_2(MyExercise ex) {
-        ex.setDescription("12 bar blues, triad");
+        ex.setDescription(I18n.t("jazz.ex2.description"));
         ex.setUsePentagramaStrips(true);
         int midiKey = ex.getMidiKey();
         int[] progression = {0, 0, 0, 0, 5, 5, 0, 0, 7, 5, 0, 7};
@@ -76,7 +77,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex3: 12 bar blues, 7th chord (from Blues tr_2)
     private void exercise_3(MyExercise ex) {
-        ex.setDescription("12 bar blues, 7th chord {0 4 7 10}");
+        ex.setDescription(I18n.t("jazz.ex3.description"));
         ex.setUsePentagramaStrips(true);
         int midiKey = ex.getMidiKey();
         int[] progression = {0, 0, 0, 0, 5, 5, 0, 0, 7, 5, 0, 7};
@@ -93,7 +94,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex4: diatonic major progression (from Saxo diaM)
     private void exercise_4(MyExercise ex) {
-        ex.setDescription("Diatonic major progression");
+        ex.setDescription(I18n.t("jazz.ex4.description"));
         ex.setScaleMode('M');
         ex.getChoice().setDefaultChoice();
         int midiKey = ex.getMidiKey();
@@ -129,7 +130,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex5: diatonic minor progression (from Saxo diam)
     private void exercise_5(MyExercise ex) {
-        ex.setDescription("Diatonic minor progression");
+        ex.setDescription(I18n.t("jazz.ex5.description"));
         ex.setScaleMode('m');
         ex.getChoice().setDefaultChoice();
         int midiKey = ex.getMidiKey();
@@ -165,7 +166,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex6: dominant 7th plus 6th (from Blues tr_3)
     private void exercise_6(MyExercise ex) {
-        ex.setDescription("Dominant 7th plus 6th {0 4 7 9 10}");
+        ex.setDescription(I18n.t("jazz.ex6.description"));
         ex.setUsePentagramaStrips(true);
         int midiKey = ex.getMidiKey();
         int[] progression = {0, 5, 7, 0};
@@ -190,7 +191,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex7: ii V I progression (from Saxo ii_V_I)
     private void exercise_7(MyExercise ex) {
-        ex.setDescription("ii V I progression (+vi)");
+        ex.setDescription(I18n.t("jazz.ex7.description"));
         ex.setScaleMode('M');
         ex.getChoice().setDefaultChoice();
         int midiKey = ex.getMidiKey();
@@ -227,7 +228,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex8: ii V i progression (from Saxo ii_V_i)
     private void exercise_8(MyExercise ex) {
-        ex.setDescription("ii V i progression (+III)");
+        ex.setDescription(I18n.t("jazz.ex8.description"));
         ex.setScaleMode('m');
         ex.getChoice().setDefaultMinorChoice();
         ex.setShowNoteNames(true);
@@ -264,7 +265,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex9: pentatonic major + blue notes (from Blues tr_13)
     private void exercise_9(MyExercise ex) {
-        ex.setDescription("Pentatonic major + blue notes {0 2 3 4 7 9 10}");
+        ex.setDescription(I18n.t("jazz.ex9.description"));
         ex.setUsePentagramaStrips(true);
         int midiKey = ex.getMidiKey();
         int[] progression = {0, 5, 7, 0};
@@ -286,7 +287,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex10: blues scale (from Blues tr_15)
     private void exercise_10(MyExercise ex) {
-        ex.setDescription("Blues scale {0 3 5 6 7 10}");
+        ex.setDescription(I18n.t("jazz.ex10.description"));
         ex.setUsePentagramaStrips(true);
         int midiKey = ex.getMidiKey();
         int[] progression = {0, 5, 7, 0};
@@ -301,7 +302,7 @@ public class Jazz implements MyExerciseFamily {
 
     // Ex11: Cantaloupe Island (from Blues Cant)
     private void exercise_11(MyExercise ex) {
-        ex.setDescription("Cantaloupe Island");
+        ex.setDescription(I18n.t("jazz.ex11.description"));
         ex.setUsePentagramaStrips(true);
         ex.setMidiKey(ToneRange.getDefaultKey());
         int midiKey = ex.getMidiKey();
