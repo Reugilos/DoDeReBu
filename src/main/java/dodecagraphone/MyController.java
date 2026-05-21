@@ -3168,7 +3168,9 @@ public class MyController {
         this.buttons.updateTimeSignatureButton(timeSignature);
         if (this.allPurposeScore != null) {
             String label = this.allPurposeScore.getLabel();
-            this.buttons.updateCurrentExerciseButton(label);
+            if (label != null && !label.isEmpty()) {
+                this.buttons.updateCurrentExerciseButton(label);
+            }
         }
         this.buttons.updateCurrentKeyButton(ToneRange.getKeyName(this.allPurposeScore.getMidiKey(), this.allPurposeScore.getScaleMode()));
         this.buttons.setToggleButtonsToProgramValues();
