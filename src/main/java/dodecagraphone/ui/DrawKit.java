@@ -372,6 +372,19 @@ public class DrawKit {
         g.setColor(saved);
     }
 
+    /**
+     * Dibuixa una fletxa cap a la dreta (triangle ple) amb punta a (tipX, cy).
+     * triW és la profunditat (base–punta) i triH l'alçada de la base.
+     */
+    public void drawRightArrow(int tipX, int cy, int triW, int triH, Color color) {
+        int[] xs = {tipX - triW, tipX - triW, tipX};
+        int[] ys = {cy - triH / 2, cy + triH / 2, cy};
+        Color saved = g.getColor();
+        g.setColor(color);
+        g.fillPolygon(xs, ys, 3);
+        g.setColor(saved);
+    }
+
     // ── Imatge offscreen ─────────────────────────────────────────────────────
 
     /**

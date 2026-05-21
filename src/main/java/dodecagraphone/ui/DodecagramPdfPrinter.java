@@ -17,7 +17,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
@@ -25,6 +24,10 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 public class DodecagramPdfPrinter {
 
     private final MyController controller;
+    private final PdfDrawKit   pdf = new PdfDrawKit(
+            new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD),
+            new PDType1Font(Standard14Fonts.FontName.HELVETICA));
+
     private static final float PAGE_W          = PDRectangle.A4.getWidth();
     private static final float PAGE_H          = PDRectangle.A4.getHeight();
     private static final float MARGIN          = 18f;
@@ -32,8 +35,6 @@ public class DodecagramPdfPrinter {
     private static final float SHORT_HEADER_H  = 18f;
     private static final float ROW_GAP         = 6f;
     private static final float MEASURE_LABEL_H = 10f;
-    private static final float BORDER_W        = 0.3f;
-    private static final float DOUBLE_BAR_GAP  = 1f;
     private static final int   TARGET_ROWS     = 4;
     /** Max row image height as fraction of usable page height (single-row case). */
     private static final float MAX_ROW_FRAC    = 0.5f;
@@ -121,9 +122,6 @@ public class DodecagramPdfPrinter {
 
         BufferedImage keyImg = renderNarrowKeyboard(colWidthPx, gridH);
 
-        PDFont fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-        PDFont fontNorm = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-
         try (PDDocument doc = new PDDocument()) {
             PDPage pdfPage = null;
             PDPageContentStream cs = null;
@@ -147,16 +145,17 @@ public class DodecagramPdfPrinter {
                     rowOnPage = 0;
                     yPos = PAGE_H - MARGIN;
                     cs = new PDPageContentStream(doc, pdfPage);
+                    pdf.setContentStream(cs);
 
                     if (pdfPageNum == 1) {
-                        drawText(cs, fontBold, 16, MARGIN, yPos - 16, nullSafe(score.getTitle()));
-                        drawText(cs, fontNorm, 10, MARGIN, yPos - 30, nullSafe(score.getAuthor()));
+                        pdf.drawTitle(MARGIN, yPos - 16, nullSafe(score.getTitle()));
+                        pdf.drawAuthor(MARGIN, yPos - 30, nullSafe(score.getAuthor()));
                         String desc = nullSafe(score.getDescription());
                         if (!desc.isEmpty())
-                            drawText(cs, fontNorm, 9, MARGIN, yPos - 42, desc);
+                            pdf.drawDescription(MARGIN, yPos - 42, desc);
                         yPos -= FIRST_HEADER_H;
                     } else {
-                        drawTextRight(cs, fontBold, 10, PAGE_W - MARGIN, yPos - 12,
+                        pdf.drawPageHeader(PAGE_W - MARGIN, yPos - 12,
                                 nullSafe(score.getTitle()) + "  p." + pdfPageNum);
                         yPos -= SHORT_HEADER_H;
                     }
@@ -187,8 +186,8 @@ public class DodecagramPdfPrinter {
                 float yImgTop    = yImgBottom + rowImgPdfH;
 
                 // Measure number label (above the image, below the top border)
-                drawRowStartLabel(cs, fontNorm, score, startCol,
-                        MARGIN + keyPdfW, yImgTop + 2);
+                pdf.drawMeasureLabel(MARGIN + keyPdfW, yImgTop + 2,
+                        score.getMeasureAndBeatAt(startCol)[0]);
 
                 // Rasterised row image
                 PDImageXObject pdImg = PDImageXObject.createFromByteArray(
@@ -196,56 +195,39 @@ public class DodecagramPdfPrinter {
                 cs.drawImage(pdImg, MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
 
                 // Thin border around the image
-                cs.setLineWidth(BORDER_W);
-                cs.setStrokingColor(Color.BLACK);
-                cs.addRect(MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
-                cs.stroke();
+                pdf.drawImageBorder(MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
 
                 // Horizontal band separators as sharp PDF vector lines (full width, incl. keyboard col).
                 // PDF y=0 is at the bottom; image pixel row p maps to PDF y = yImgTop - p*scaleY.
-                cs.setLineWidth(0.5f);
-                cs.setStrokingColor(Color.BLACK);
                 if (chordH > 0 && gridH > 0) {
                     float sepY = yImgTop - chordH * scaleY;  // chord/grid boundary
-                    cs.moveTo(MARGIN, sepY);
-                    cs.lineTo(MARGIN + pdfUsableW, sepY);
-                    cs.stroke();
+                    pdf.drawBandSeparator(MARGIN, MARGIN + pdfUsableW, sepY);
                 }
                 if (lyricsH > 0) {
                     float sepY = yImgBottom + lyricsH * scaleY;  // grid/lyrics boundary
-                    cs.moveTo(MARGIN, sepY);
-                    cs.lineTo(MARGIN + pdfUsableW, sepY);
-                    cs.stroke();
+                    pdf.drawBandSeparator(MARGIN, MARGIN + pdfUsableW, sepY);
                 }
 
                 // Beat and measure vertical lines as PDF vectors
                 // (they are drawn in screen-space in draw(), so absent from the offscreen bitmap)
                 {
                     int limitCol = Math.min(endCol, stopCol);
-                    cs.setStrokingColor(Color.BLACK);
                     for (int col = startCol + 1; col <= limitCol; col++) {
                         if (col >= isBeat.length) break;
                         if (!isBeat[col] && !isMeasure[col]) continue;
                         float lineX = MARGIN + (float) ((keyWidthPx + (col - startCol) * colWidthF) * rowScaleX);
                         if (lineX <= MARGIN || lineX >= MARGIN + pdfUsableW) continue;
-                        if (isMeasure[col]) {
-                            cs.setLineWidth(0.75f);
-                            cs.setLineDashPattern(new float[]{}, 0);
-                        } else {
-                            cs.setLineWidth(0.3f);
-                            cs.setLineDashPattern(new float[]{15, 3}, 0);
-                        }
-                        cs.moveTo(lineX, yImgBottom);
-                        cs.lineTo(lineX, yImgBottom + rowImgPdfH);
-                        cs.stroke();
+                        if (isMeasure[col])
+                            pdf.drawMeasureLine(lineX, yImgBottom, rowImgPdfH);
+                        else
+                            pdf.drawBeatLine(lineX, yImgBottom, rowImgPdfH);
                     }
-                    cs.setLineDashPattern(new float[]{}, 0);
                 }
 
                 // Double bar at stopCol
                 if (startCol < stopCol && stopCol <= endCol) {
                     float stopXPdf = MARGIN + (float) ((keyWidthPx + (stopCol - startCol) * colWidthF) * rowScaleX);
-                    drawDoubleBar(cs, stopXPdf, yImgBottom, rowImgPdfH);
+                    pdf.drawDoubleBar(stopXPdf, yImgBottom, rowImgPdfH);
                 }
 
                 yPos = yImgBottom - ROW_GAP;
@@ -310,36 +292,6 @@ public class DodecagramPdfPrinter {
         return row;
     }
 
-    // -----------------------------------------------------------------------
-    //  PDF drawing helpers
-    // -----------------------------------------------------------------------
-
-    private void drawRowStartLabel(PDPageContentStream cs, PDFont font,
-            MyAllPurposeScore score, int startCol, float x, float y) throws IOException {
-        int measure = score.getMeasureAndBeatAt(startCol)[0];
-        cs.setFont(font, 7);
-        cs.setNonStrokingColor(Color.DARK_GRAY);
-        cs.beginText();
-        cs.newLineAtOffset(x, y);
-        cs.showText(String.valueOf(measure));
-        cs.endText();
-        cs.setNonStrokingColor(Color.BLACK);
-    }
-
-    /** Double bar: thin line + gap + normal measure-line weight. */
-    private void drawDoubleBar(PDPageContentStream cs,
-            float x, float yBottom, float h) throws IOException {
-        cs.setStrokingColor(Color.BLACK);
-        cs.setLineWidth(0.75f);
-        cs.moveTo(x, yBottom);
-        cs.lineTo(x, yBottom + h);
-        cs.stroke();
-        cs.setLineWidth(1.5f);
-        cs.moveTo(x + DOUBLE_BAR_GAP, yBottom);
-        cs.lineTo(x + DOUBLE_BAR_GAP, yBottom + h);
-        cs.stroke();
-    }
-
     /**
      * Narrow keyboard strip showing key colours and the "slide" selection indicator.
      * Selected keys (in the current scale/choice) are pushed to the right; the slide
@@ -353,15 +305,14 @@ public class DodecagramPdfPrinter {
 
         int w = 4 * colWidthPx;
         BufferedImage img = new BufferedImage(w, gridH, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = img.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, w, gridH);
+        DrawKit dk = new DrawKit(img.createGraphics());
+        dk.clearBackground(0, 0, w, gridH);
 
         double rowH      = (double) gridH / nKeys;
         boolean showChoice = keyboard != null && keyboard.isShowChoice();
         Color slideColor = ColorSets.getEncesColor(ColorSets.LINIA_PENTA);
-        double keyFrac   = Settings.KEY_WIDTH_REDUCTION;   // 0.75 → key occupies 75%
-        double slideFrac = 1.0 - keyFrac;                  // 0.25 → slide indicator
+        double keyFrac   = Settings.KEY_WIDTH_REDUCTION;
+        double slideFrac = 1.0 - keyFrac;
 
         for (int keyId = 0; keyId < nKeys; keyId++) {
             int midi = ToneRange.keyIdToMidi(keyId);
@@ -377,21 +328,14 @@ public class DodecagramPdfPrinter {
                 int slideW = (int) Math.round(slideFrac * w);
                 int keyW2  = w - slideW;
                 if (selected) {
-                    // Selected: slide on left, key pushed to right
-                    g.setColor(slideColor);
-                    g.fillRect(0, y, slideW, h);
-                    g.setColor(keyColor);
-                    g.fillRect(slideW, y, keyW2, h);
+                    dk.fillCell(0, y, slideW, h, slideColor);
+                    dk.fillCell(slideW, y, keyW2, h, keyColor);
                 } else {
-                    // Not selected: key on left, small slide on right
-                    g.setColor(keyColor);
-                    g.fillRect(0, y, keyW2, h);
-                    g.setColor(slideColor);
-                    g.fillRect(keyW2, y, slideW, h);
+                    dk.fillCell(0, y, keyW2, h, keyColor);
+                    dk.fillCell(keyW2, y, slideW, h, slideColor);
                 }
             } else {
-                g.setColor(keyColor);
-                g.fillRect(0, y, w, h);
+                dk.fillCell(0, y, w, h, keyColor);
             }
         }
 
@@ -405,51 +349,19 @@ public class DodecagramPdfPrinter {
                 int nextY = (int) Math.round((keyId + 1) * rowH);
                 int h     = Math.max(1, nextY - y - 1);
                 int triH  = Math.max(5, (int)(h * 0.55));
-                int tip   = w - 2;
                 int cy    = y + h / 2;
-                int[] xp  = { tip - triH, tip - triH, tip };
-                int[] yp  = { cy - triH / 2, cy + triH / 2, cy };
-                g.setColor(ColorSets.getGridSquareFontColor(midi));
-                g.fillPolygon(xp, yp, 3);
+                dk.drawRightArrow(w - 2, cy, triH, triH, ColorSets.getGridSquareFontColor(midi));
             }
         }
 
         // Right-edge separator between keyboard and score
-        g.setColor(Color.BLACK);
-        g.drawLine(w - 1, 0, w - 1, gridH - 1);
-        g.dispose();
+        dk.drawVerticalLine(w - 1, 0, gridH - 1, 1.0f, Color.BLACK);
+        dk.getGraphics().dispose();
         return img;
-    }
-
-    private void drawText(PDPageContentStream cs, PDFont font, float size,
-            float x, float y, String text) throws IOException {
-        if (text == null || text.isEmpty()) return;
-        cs.setFont(font, size);
-        cs.beginText();
-        cs.newLineAtOffset(x, y);
-        cs.showText(sanitize(text));
-        cs.endText();
-    }
-
-    private void drawTextRight(PDPageContentStream cs, PDFont font, float size,
-            float rightX, float y, String text) throws IOException {
-        if (text == null || text.isEmpty()) return;
-        float approxW = text.length() * size * 0.5f;
-        drawText(cs, font, size, rightX - approxW, y, text);
     }
 
     private static String nullSafe(String s) {
         return (s != null) ? s : "";
-    }
-
-    private static String sanitize(String s) {
-        if (s == null) return "";
-        StringBuilder sb = new StringBuilder(s.length());
-        for (char c : s.toCharArray()) {
-            if (c < 256) sb.append(c);
-            else sb.append('?');
-        }
-        return sb.toString();
     }
 
     private static byte[] toBytes(BufferedImage img) throws IOException {
