@@ -2038,7 +2038,11 @@ public class MyController {
                         MyTrack currentTrack = this.mixer.getCurrentTrack();
                         int dispOff = (currentTrack != null) ? currentTrack.getDisplayOffset() : 0;
                         int realMidi = key.getMidi() - dispOff;
-                        keyTip = key.getNoteName() + " " + realMidi;
+                        String visualName = key.getNoteName();
+                        String nameOnly = visualName.replaceAll("-?[0-9]+$", "");
+                        int visualOctave = Integer.parseInt(visualName.substring(nameOnly.length()));
+                        String realNoteName = nameOnly + (visualOctave - dispOff / 12);
+                        keyTip = realNoteName + " (" + realMidi + ")";
                     }
                     this.buttons.showCustomTip(keyTip,
                             (int)(posX + 2 * Settings.getColWidth()), (int) posY);
