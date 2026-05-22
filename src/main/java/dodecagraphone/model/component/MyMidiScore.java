@@ -1287,16 +1287,19 @@ public class MyMidiScore extends MyExercise {
     public static Map<Integer, Integer> readInstruments(String text) {
         Map<Integer, Integer> map = new HashMap<>();
         text = text.trim();
-        if (text.startsWith("{") && text.endsWith("}")) {
-            text = text.substring(1, text.length() - 1);  // elimina les claus
+        int closingBrace = text.indexOf('}');
+        if (text.startsWith("{") && closingBrace > 0) {
+            text = text.substring(1, closingBrace);
             if (!text.isEmpty()) {
                 String[] entries = text.split(",");
                 for (String entry : entries) {
                     String[] kv = entry.trim().split("=");
                     if (kv.length == 2) {
-                        int key = Integer.parseInt(kv[0].trim());
-                        int value = Integer.parseInt(kv[1].trim());
-                        map.put(key, value);
+                        try {
+                            int key = Integer.parseInt(kv[0].trim());
+                            int value = Integer.parseInt(kv[1].trim());
+                            map.put(key, value);
+                        } catch (NumberFormatException ignored) {}
                     }
                 }
             }
