@@ -2035,7 +2035,10 @@ public class MyController {
                         int drumMidi = ToneRange.getDrumMidi(keyRow);
                         keyTip = (drumMidi >= 0) ? ToneRange.getDrumFullName(drumMidi) : "";
                     } else {
-                        keyTip = key.getNoteName() + " " + key.getMidi();
+                        MyTrack currentTrack = this.mixer.getCurrentTrack();
+                        int dispOff = (currentTrack != null) ? currentTrack.getDisplayOffset() : 0;
+                        int realMidi = key.getMidi() - dispOff;
+                        keyTip = key.getNoteName() + " " + realMidi;
                     }
                     this.buttons.showCustomTip(keyTip,
                             (int)(posX + 2 * Settings.getColWidth()), (int) posY);
@@ -3539,7 +3542,7 @@ public class MyController {
 
         // Si hi ha punt i no és al principi del nom
         if (lastIndexOfDot > 0 && lastIndexOfDot < nomFitxer.length() - 1) {
-            return nomFitxer.substring(lastIndexOfDot + 1);  // Retornar l'extensió
+            return nomFitxer.substring(lastIndexOfDot + 1).toLowerCase();  // Retornar l'extensió
         } else {
             return "";  // Retornar buit si no té extensió
         }
