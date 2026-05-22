@@ -3630,6 +3630,9 @@ public class MyController {
             //this.cam.setSymbolLine(myChordSymbolLine);
             this.cam.reset();
             this.statusLine.setText(scoreStatusText());
+            if (getUi() != null && getUi().getPanel() != null) {
+                getUi().getPanel().repinta(true);
+            }
         }
         this.updateTextOfButtons();
     }
