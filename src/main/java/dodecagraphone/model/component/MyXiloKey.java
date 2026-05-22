@@ -7,6 +7,7 @@ package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
 import dodecagraphone.model.*;
+import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.Sound;
@@ -196,9 +197,14 @@ public class MyXiloKey extends MyComponent {
         } else {
             String nameOnly = this.noteName.replaceAll("[0-9]+$", "");
             text = " " + nameOnly;
-            if (!ToneRange.isMetallophone()) {
-                if (this.midi == ToneRange.getHighestSaxo()
-                        || this.midi == ToneRange.getLowestSaxo()) {
+            MyTrack currentTrackForRange = controller.getMixer().getCurrentTrack();
+            if (currentTrackForRange != null) {
+                int dispOffRange = currentTrackForRange.getDisplayOffset();
+                int chan = currentTrackForRange.getCurrentChannel();
+                int prog = SoundWithMidi.getInstrumentInChannel(chan);
+                int visualLow = InstrumentRange.getLowest(prog) + dispOffRange;
+                int visualHigh = InstrumentRange.getHighest(prog) + dispOffRange;
+                if (this.midi == visualLow || this.midi == visualHigh) {
                     text += ">";
                 }
             }
@@ -247,7 +253,14 @@ public class MyXiloKey extends MyComponent {
         }
         if (!this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
-                int midiToPlay = controller.isDrumsMode() ? ToneRange.getDrumMidi(this.keyId) : this.midi;
+                int midiToPlay;
+                if (controller.isDrumsMode()) {
+                    midiToPlay = ToneRange.getDrumMidi(this.keyId);
+                } else {
+                    MyTrack currentTrack = controller.getMixer().getCurrentTrack();
+                    int dispOff = (currentTrack != null) ? currentTrack.getDisplayOffset() : 0;
+                    midiToPlay = this.midi - dispOff;
+                }
                 if (midiToPlay < 0) return;
                 SoundWithMidi.play(midiToPlay, channel, velocity);
             } else {
