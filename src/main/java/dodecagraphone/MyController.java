@@ -695,7 +695,8 @@ public class MyController {
             onScreenResizedQuick();
         }
 
-        int fontSize = Math.max(8, (int)(Settings.getSquareHeight() * 0.85));
+        // rowHeight (no squareHeight) perquè botons i franges no s'adapten a nRowsSquare
+        int fontSize = Math.max(8, (int)(Settings.getRowHeight() * 0.85));
         Font font = new Font("Dialog", Font.BOLD, fontSize);
         g.setFont(font);
         if(this.isNeedsDrawing()){

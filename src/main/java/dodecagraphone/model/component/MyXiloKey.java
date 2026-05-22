@@ -217,8 +217,13 @@ public class MyXiloKey extends MyComponent {
                 }
             }
         }
+        // Font local proporcional a l'alçada de la tecla (pot ser > rowHeight en metallòfon)
+        Font prevFont = g.getFont();
+        int keyFontSize = Math.max(8, (int)(height * 0.65));
+        if (keyFontSize != prevFont.getSize()) g.setFont(prevFont.deriveFont((float) keyFontSize));
         g.setColor(activeChannels.isEmpty() ? ColorSets.getGridSquareFontColor(this.midi) : java.awt.Color.BLACK);
         g.drawString(text, (float) (screenPosX), posY);
+        g.setFont(prevFont);
         this.slide.draw(g);
         if (!this.controller.isDrumsMode()) {
             int midiKey = this.controller.getAllPurposeScore().getMidiKey();
