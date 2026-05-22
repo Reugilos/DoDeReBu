@@ -1032,7 +1032,7 @@ public class MyController {
         this.needsSaving = true;
     }
 
-    /** Replicate selection to the right. toEnd=false: one copy; toEnd=true: fill to endOfScore. */
+    /** Replicate selection to the right. toEnd=false: one copy; toEnd=true: ask target measure. */
     public void replicateSelection(boolean toEnd) {
         if (!selectionActive) return;
         int r1 = Math.min(selStartRow, selEndRow);
@@ -1049,10 +1049,45 @@ public class MyController {
             selStartCol = c2 + 1;
             selEndCol   = c2 + selWidth;
         } else {
-            int bufferEnd = allPurposeScore.getNColsBuffer() - 1;
+            // Calcula el darrer compàs actual
+            int stopCol = allPurposeScore.getStopCol();
+            int colsPerMeasure = Settings.getnColsBeat() * allPurposeScore.getNumBeatsMeasure();
+            if (colsPerMeasure <= 0) colsPerMeasure = 1;
+            int[] stopMB = allPurposeScore.getMeasureAndBeatAt(Math.max(0, stopCol - 1));
+            int lastMeasure = stopMB[0];
+
+            String input = MyDialogs.mostraInputDialog(
+                    I18n.t("replicate.toMeasure.prompt"),
+                    I18n.t("replicate.toMeasure.title"),
+                    String.valueOf(lastMeasure));
+            if (input == null) { mouseSequence = null; return; }
+            int targetMeasure;
+            try { targetMeasure = Integer.parseInt(input); }
+            catch (NumberFormatException ex) { mouseSequence = null; return; }
+
+            // Col final del compàs objectiu; intenta posició exacta via changeMap
+            int targetEndCol;
+            int fc = allPurposeScore.getFirstColOfMeasure(targetMeasure);
+            if (fc >= 0) {
+                targetEndCol = fc + colsPerMeasure - 1;
+            } else {
+                // Compàs més enllà del contingut actual — extrapola des de stopCol
+                targetEndCol = stopCol + (targetMeasure - lastMeasure) * colsPerMeasure - 1;
+            }
+            if (targetEndCol < c2) { mouseSequence = null; return; }
+
+            // Amplia el buffer i els offscreens si cal
+            if (targetEndCol >= allPurposeScore.getNColsBuffer()) {
+                int colsPerPage = allPurposeScore.getFixedColsPerPage();
+                int newNCols = targetEndCol + 2 * colsPerPage;
+                allPurposeScore.resizeOffscreen(newNCols);
+                myChordSymbolLine.resizeOffscreen(newNCols);
+                myLyrics.resizeOffscreen(newNCols);
+            }
+
             int destStart = c2 + 1;
-            while (destStart <= bufferEnd) {
-                int destEnd = Math.min(destStart + selWidth - 1, bufferEnd);
+            while (destStart <= targetEndCol) {
+                int destEnd = Math.min(destStart + selWidth - 1, targetEndCol);
                 pasteSelectionCopy(r1, r2, c1, c2, destStart, destEnd, allTracks);
                 destStart += selWidth;
             }
