@@ -1096,16 +1096,21 @@ public class MyController {
                         int savedTr = this.mixer.getCurrentTrackId();
                         this.mixer.setCurrentTrack(sub.getTrack());
                         addNoteAtCell(row, destCol);
+                        if (sub.isLinked()) {
+                            MyGridSquare dest = this.allPurposeScore.getGridSquare(row, destCol);
+                            if (dest != null) linkNoteAtCell(dest);
+                        }
                         this.mixer.setCurrentTrack(savedTr);
                     }
                 } else {
                     int ch = this.mixer.getCurrentChannelOfCurrentTrack();
                     int tr = this.mixer.getCurrentTrackId();
-                    boolean hasNote = sq.getPoliNotes().stream()
-                            .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
-                    if (!hasNote) continue;
+                    MyGridSquare.SubSquare matchSub = sq.getPoliNotes().stream()
+                            .filter(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible())
+                            .findFirst().orElse(null);
+                    if (matchSub == null) continue;
                     addNoteAtCell(row, destCol);
-                    if (sq.isSq_is_linked()) {
+                    if (matchSub.isLinked()) {
                         MyGridSquare dest = this.allPurposeScore.getGridSquare(row, destCol);
                         if (dest != null) linkNoteAtCell(dest);
                     }
