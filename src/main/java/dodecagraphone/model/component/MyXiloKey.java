@@ -199,11 +199,19 @@ public class MyXiloKey extends MyComponent {
             text = " " + nameOnly;
             MyTrack currentTrackForRange = controller.getMixer().getCurrentTrack();
             if (currentTrackForRange != null) {
-                int dispOffRange = currentTrackForRange.getDisplayOffset();
-                int chan = currentTrackForRange.getCurrentChannel();
-                int prog = SoundWithMidi.getInstrumentInChannel(chan);
-                int visualLow = InstrumentRange.getLowest(prog) + dispOffRange;
-                int visualHigh = InstrumentRange.getHighest(prog) + dispOffRange;
+                int visualLow, visualHigh;
+                if (ToneRange.isMetallophone()) {
+                    // Metallòfon: els límits de tesitura coincideixen amb els del grid
+                    visualLow  = ToneRange.getLowestMidi();
+                    visualHigh = ToneRange.getHighestMidi();
+                } else {
+                    int dispOffRange = currentTrackForRange.getDisplayOffset();
+                    int chan = currentTrackForRange.getCurrentChannel();
+                    int prog = SoundWithMidi.getInstrumentInChannel(chan);
+                    // getHighest retorna el límit exclusiu del CSV → -1 per obtenir l'inclusiu
+                    visualLow  = InstrumentRange.getLowest(prog) + dispOffRange;
+                    visualHigh = InstrumentRange.getHighest(prog) - 1 + dispOffRange;
+                }
                 if (this.midi == visualLow || this.midi == visualHigh) {
                     text += ">";
                 }
