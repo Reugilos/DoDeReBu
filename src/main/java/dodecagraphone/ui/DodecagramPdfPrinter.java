@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import dodecagraphone.MyController;
@@ -21,6 +26,21 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
+/**
+ * [CA] Impressió de partiture en format PDF. Genera un document A4 multipàgina
+ * a partir de les imatges offscreen de la graella de notes, la línia d'acords
+ * i la lletra. Afegeix línies vectorials de compàs i beat, doble barra final i
+ * teclat estret a l'esquerra de cada fila.
+ * <p>
+ * [EN] Score printing to PDF format. Generates a multi-page A4 document from
+ * the offscreen images of the note grid, chord line and lyrics. Adds vector
+ * measure and beat lines, a double final bar and a narrow keyboard strip on
+ * the left of each row.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
+ */
 public class DodecagramPdfPrinter {
 
     private final MyController controller;
@@ -39,10 +59,30 @@ public class DodecagramPdfPrinter {
     /** Max row image height as fraction of usable page height (single-row case). */
     private static final float MAX_ROW_FRAC    = 0.5f;
 
+    /**
+     * [CA] Crea un nou DodecagramPdfPrinter per al controlador especificat.
+     * <p>
+     * [EN] Creates a new DodecagramPdfPrinter for the given controller.
+     *
+     * @param controller [CA] Controlador principal de l'app / [EN] Main application controller
+     */
     public DodecagramPdfPrinter(MyController controller) {
         this.controller = controller;
     }
 
+    /**
+     * [CA] Genera el fitxer PDF al camí indicat. Divideix la partitura en
+     * files de mida fixa, les compon com a imatges rasteritzades i afegeix
+     * les línies vectorials de compàs, beat i doble barra.
+     * <p>
+     * [EN] Generates the PDF file at the given path. Splits the score into
+     * fixed-size rows, composes them as rasterized images and adds vector
+     * measure, beat and double-bar lines.
+     *
+     * @param outputFile [CA] Fitxer de sortida PDF / [EN] Output PDF file
+     * @throws IOException [CA] Si falla la creació o l'escriptura del PDF /
+     *                     [EN] If creating or writing the PDF fails
+     */
     public void print(File outputFile) throws IOException {
         MyAllPurposeScore score = controller.getAllPurposeScore();
         MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
@@ -293,9 +333,18 @@ public class DodecagramPdfPrinter {
     }
 
     /**
-     * Narrow keyboard strip showing key colours and the "slide" selection indicator.
-     * Selected keys (in the current scale/choice) are pushed to the right; the slide
-     * strip occupies the left portion.  Mirrors the MyXiloKeyboard / MySlide rendering.
+     * [CA] Renderitza la franja de teclat estret (key colours i indicator de slide).
+     * Les tecles seleccionades (en l'escala/elecció activa) es desplacen a la dreta;
+     * la franja de slide ocupa la part esquerra.
+     * <p>
+     * [EN] Renders the narrow keyboard strip (key colours and slide indicator).
+     * Selected keys (in the current scale/choice) are pushed to the right;
+     * the slide strip occupies the left portion.
+     *
+     * @param colWidthPx [CA] Amplada d'una columna en píxels / [EN] Column width in pixels
+     * @param gridH      [CA] Alçada de la graella en píxels / [EN] Grid height in pixels
+     * @return [CA] Imatge del teclat estret, o null si les dimensions no són vàlides /
+     *         [EN] Narrow keyboard image, or null if dimensions are invalid
      */
     private BufferedImage renderNarrowKeyboard(int colWidthPx, int gridH) {
         MyAllPurposeScore score = controller.getAllPurposeScore();

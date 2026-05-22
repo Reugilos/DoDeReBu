@@ -1,16 +1,53 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.proves;
+
 import javax.sound.midi.*;
 import java.io.File;
 
+/**
+ * [CA] Parser de fitxers MIDI basat en el {@link Sequencer} de Java Sound que
+ * reprodueix el fitxer i encamina cada missatge MIDI cap a un {@link DummyHandler}
+ * per al seu processament i visualització per consola. Codi experimental / prototip.
+ * <p>
+ * [EN] MIDI file parser based on the Java Sound {@link Sequencer} that plays back
+ * the file and routes each MIDI message to a {@link DummyHandler} for processing
+ * and console output. Experimental / prototype code.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
+ */
 public class MidiFileParser {
 
     private DummyHandler dummyHandler;
     private Sequencer sequencer;
 
+    /**
+     * [CA] Construeix el parser associant-lo al handler que rebrà els missatges MIDI.
+     * <p>
+     * [EN] Constructs the parser associating it with the handler that will receive MIDI messages.
+     *
+     * @param handler [CA] handler destinatari dels missatges MIDI / [EN] handler that will receive MIDI messages
+     */
     public MidiFileParser(DummyHandler handler) {
         this.dummyHandler = handler;
     }
 
+    /**
+     * [CA] Parseja i reprodueix el fitxer MIDI indicat: configura el {@link Sequencer},
+     * afegeix un {@link Receiver} intern que reenvia cada missatge al {@link DummyHandler},
+     * inicia la reproducció i espera que finalitzi.
+     * <p>
+     * [EN] Parses and plays back the given MIDI file: sets up the {@link Sequencer},
+     * adds an internal {@link Receiver} that forwards each message to the {@link DummyHandler},
+     * starts playback and waits for it to finish.
+     *
+     * @param filePath [CA] camí al fitxer MIDI a processar / [EN] path to the MIDI file to process
+     */
     public void parseAndPlayMidiFile(String filePath) {
         try {
             // Obtenir el fitxer MIDI
@@ -23,7 +60,7 @@ public class MidiFileParser {
             // Afegir un Transmitter per enviar missatges al DummyHandler
             Transmitter transmitter = sequencer.getTransmitter();
             transmitter.setReceiver(new MidiReceiver(dummyHandler, sequencer));
-            
+
             // Obrir i començar a reproduir
             sequencer.open();
             sequencer.start();
@@ -38,14 +75,14 @@ public class MidiFileParser {
             sequencer.close();
 
 //            // Recorrer tots els missatges sense iniciar la reproducció
-//            sequencer.open(); 
+//            sequencer.open();
 //            while (sequencer.getTickLength() > sequencer.getTickPosition()) {
 //                // Fem que el sequencer avanci manualment sense reproduir
 //                sequencer.setTickPosition(sequencer.getTickPosition() + 1);  // Incrementem manualment el tick
 //                Thread.sleep(1);  // Simulem el temps
 //            }
 //            sequencer.close();
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }

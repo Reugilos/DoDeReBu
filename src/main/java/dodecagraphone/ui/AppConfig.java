@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import java.io.*;
@@ -6,13 +11,17 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Configuració de l'aplicació.
+ * [CA] Configuració de l'aplicació. Llegeix i desa {@code config.properties}
+ * preservant l'estructura de comentaris i els marcadors {@code #i18n:clau}
+ * del fitxer de defaults.
+ * <p>
+ * [EN] Application configuration. Reads and saves {@code config.properties}
+ * while preserving comment structure and {@code #i18n:key} markers
+ * from the defaults file.
  *
- * Lectura: Properties estàndard (get/set fàcil, suport UTF-8).
- * Escriptura: segueix l'estructura de /defaults/config.properties, substituint
- * els marcadors #i18n:clau per comentaris en l'idioma actiu (I18n.t).
- * Les claus sense entrada als defaults (lastDir*, instruments, etc.) s'afegeixen
- * al final sense comentari.
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public final class AppConfig {
 
@@ -30,10 +39,27 @@ public final class AppConfig {
     private AppConfig() {
     }
 
+    /**
+     * [CA] Retorna la instància singleton d'AppConfig.
+     * <p>
+     * [EN] Returns the singleton instance of AppConfig.
+     *
+     * @return [CA] La instància única / [EN] The singleton instance
+     */
     public static AppConfig get() {
         return INSTANCE;
     }
 
+    /**
+     * [CA] Inicialitza la configuració carregant el fitxer de l'usuari.
+     * Si el fitxer no existeix, el crea a partir dels defaults. Elimina les
+     * claus obsoletes (STALE_KEYS). Pot cridar-se diverses vegades; la
+     * càrrega real es fa una sola vegada.
+     * <p>
+     * [EN] Initializes the configuration by loading the user config file.
+     * Creates it from defaults if it does not exist. Removes stale keys.
+     * Safe to call multiple times; the actual load happens only once.
+     */
     public synchronized void init() {
         if (loaded) {
             return;
@@ -55,11 +81,30 @@ public final class AppConfig {
         }
     }
 
+    /**
+     * [CA] Obté el valor d'una clau com a cadena, o el valor per defecte si no existeix.
+     * <p>
+     * [EN] Gets the value of a key as a string, or the default if not present.
+     *
+     * @param key [CA] Clau de configuració / [EN] Configuration key
+     * @param def [CA] Valor per defecte / [EN] Default value
+     * @return [CA] El valor trobat o el default / [EN] The found value or default
+     */
     public String get(String key, String def) {
         ensureLoaded();
         return props.getProperty(key, def);
     }
 
+    /**
+     * [CA] Assigna o elimina el valor d'una clau. Si {@code value} és null,
+     * la clau s'elimina.
+     * <p>
+     * [EN] Sets or removes a key's value. If {@code value} is null, the key
+     * is removed.
+     *
+     * @param key   [CA] Clau de configuració / [EN] Configuration key
+     * @param value [CA] Valor a assignar, o null per eliminar / [EN] Value to set, or null to remove
+     */
     public void set(String key, String value) {
         ensureLoaded();
         if (value == null) {
@@ -69,6 +114,15 @@ public final class AppConfig {
         }
     }
 
+    /**
+     * [CA] Obté el valor d'una clau com a enter.
+     * <p>
+     * [EN] Gets the value of a key as an integer.
+     *
+     * @param key [CA] Clau de configuració / [EN] Configuration key
+     * @param def [CA] Valor per defecte si la clau no existeix o és invàlida / [EN] Default if key is absent or invalid
+     * @return [CA] El valor enter o el default / [EN] The integer value or default
+     */
     public int getInt(String key, int def) {
         ensureLoaded();
         String v = props.getProperty(key);
@@ -82,6 +136,15 @@ public final class AppConfig {
         }
     }
 
+    /**
+     * [CA] Obté el valor d'una clau com a booleà.
+     * <p>
+     * [EN] Gets the value of a key as a boolean.
+     *
+     * @param key [CA] Clau de configuració / [EN] Configuration key
+     * @param def [CA] Valor per defecte / [EN] Default value
+     * @return [CA] true si el valor és "true", "1", "yes" o "y" / [EN] true if value is "true", "1", "yes" or "y"
+     */
     public boolean getBool(String key, boolean def) {
         ensureLoaded();
         String v = props.getProperty(key);
@@ -92,6 +155,16 @@ public final class AppConfig {
         return v.equals("true") || v.equals("1") || v.equals("yes") || v.equals("y");
     }
 
+    /**
+     * [CA] Desa la configuració al fitxer de l'usuari, seguint l'estructura
+     * dels defaults i substituint els marcadors {@code #i18n:clau} per
+     * comentaris localitzats.
+     * <p>
+     * [EN] Saves the configuration to the user file, following the defaults
+     * structure and replacing {@code #i18n:key} markers with localized comments.
+     *
+     * @throws IOException [CA] Si falla l'escriptura / [EN] If writing fails
+     */
     public synchronized void save() throws IOException {
         ensureLoaded();
         Path p = AppPaths.getUserConfigPath();
@@ -99,11 +172,25 @@ public final class AppConfig {
         writeWithLocalizedComments(p);
     }
 
+    /**
+     * [CA] Recarrega la configuració des del fitxer de l'usuari.
+     * <p>
+     * [EN] Reloads the configuration from the user file.
+     *
+     * @throws IOException [CA] Si falla la lectura / [EN] If reading fails
+     */
     public synchronized void reload() throws IOException {
         ensureLoaded();
         loadFromFile(AppPaths.getUserConfigPath());
     }
 
+    /**
+     * [CA] Retorna la ruta del fitxer de configuració com a cadena (per a depuració).
+     * <p>
+     * [EN] Returns the configuration file path as a string (for debugging).
+     *
+     * @return [CA] Ruta absoluta del fitxer / [EN] Absolute path to the config file
+     */
     public String getConfigPathForDebug() {
         return AppPaths.getUserConfigPath().toString();
     }

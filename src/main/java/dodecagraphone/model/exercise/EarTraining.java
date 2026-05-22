@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.exercise;
 
 import dodecagraphone.model.component.MyExercise;
@@ -673,6 +678,17 @@ public class EarTraining implements MyExerciseFamily {
         }
     }
 
+    /**
+     * [CA] Exercici Miri 1a: Notes de l'escala major en una tonalitat aleatòria
+     * dins del rang del violí. Cada nota sona un compàs sencer; s'esborra la
+     * columna anterior per presentar les notes una per una. Tempo reduït.
+     * <p>
+     * [EN] Miri 1a exercise: Major scale notes in a random key within the
+     * violin range. Each note sounds for a full bar; the previous column is
+     * deleted to present notes one at a time. Reduced tempo.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_1_a(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex18.description"));
         int midiKey = Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6;
@@ -692,6 +708,15 @@ public class EarTraining implements MyExerciseFamily {
         MyTempo.slower();
     }
 
+    /**
+     * [CA] Exercici Miri 1b: Com Miri 1a però la tonalitat s'escull aleatòriament
+     * entre SOL i LA (graus 7 i 9). Rang del violí.
+     * <p>
+     * [EN] Miri 1b exercise: Like Miri 1a but the key is randomly chosen
+     * between G and A (degrees 7 and 9). Violin range.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_1_b(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex19.description"));
         Integer[] keyChoice = {7, 9};
@@ -712,6 +737,15 @@ public class EarTraining implements MyExerciseFamily {
         MyTempo.slower();
     }
 
+    /**
+     * [CA] Exercici Miri 1c: Com Miri 1a però la tonalitat s'escull aleatòriament
+     * entre DO, RE, SOL, LA i SI♭ (graus 0, 2, 7, 9, 10). Rang del violí.
+     * <p>
+     * [EN] Miri 1c exercise: Like Miri 1a but the key is randomly chosen
+     * among C, D, G, A and B♭ (degrees 0, 2, 7, 9, 10). Violin range.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_1_c(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex20.description"));
         Integer[] keyChoice = {0, 2, 7, 9, 10};
@@ -732,6 +766,17 @@ public class EarTraining implements MyExerciseFamily {
         MyTempo.slower();
     }
 
+    /**
+     * [CA] Exercici Miri 2a: Com Miri 1a però cada nota sona dos cops seguits
+     * (mig compàs accent + mig compàs sense accent) i usa bandes de pentagrama mòbils.
+     * Tonalitat aleatòria; rang del violí.
+     * <p>
+     * [EN] Miri 2a exercise: Like Miri 1a but each note sounds twice in a row
+     * (half bar accented + half bar unaccented) and uses mobile pentagrama strips.
+     * Random key; violin range.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_2_a(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex21.description"));
         int midiKey = Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6;
@@ -752,6 +797,13 @@ public class EarTraining implements MyExerciseFamily {
         MyTempo.slower();
     }
 
+    /**
+     * [CA] Exercici Miri 2b: Com Miri 2a però la tonalitat s'escull entre SOL i LA.
+     * <p>
+     * [EN] Miri 2b exercise: Like Miri 2a but the key is chosen between G and A.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_2_b(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex22.description"));
         Integer[] keyChoice = {7, 9};
@@ -773,6 +825,13 @@ public class EarTraining implements MyExerciseFamily {
         MyTempo.slower();
     }
 
+    /**
+     * [CA] Exercici Miri 2c: Com Miri 2a però la tonalitat s'escull entre DO, RE, SOL, LA i SI♭.
+     * <p>
+     * [EN] Miri 2c exercise: Like Miri 2a but the key is chosen among C, D, G, A and B♭.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_2_c(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex23.description"));
         Integer[] keyChoice = {0, 2, 7, 9, 10};
@@ -794,6 +853,17 @@ public class EarTraining implements MyExerciseFamily {
         MyTempo.slower();
     }
 
+    /**
+     * [CA] Exercici Miri 3a: Reconeixement d'acords tríada en estat fonamental
+     * en una tonalitat aleatòria (DO, RE, SOL, LA, SI♭). El nom de l'acord apareix
+     * amb retard. Subconjunt de graus: I, IV, V, VI i equivalents.
+     * <p>
+     * [EN] Miri 3a exercise: Recognition of root-position triads in a random key
+     * (C, D, G, A, B♭). The chord name appears with a delay. Degree subset:
+     * I, IV, V, VI and equivalents.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_3_a(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex24.description"));
         Integer[] keyChoice = {0, 2, 7, 9, 10};
@@ -812,6 +882,15 @@ public class EarTraining implements MyExerciseFamily {
         }
     }
 
+    /**
+     * [CA] Exercici Miri 3b: Com Miri 3a però la tonalitat és sempre DO central
+     * (MIDDLE_C). Subconjunt de graus: I, IV, V, VI i equivalents.
+     * <p>
+     * [EN] Miri 3b exercise: Like Miri 3a but the key is always middle C (MIDDLE_C).
+     * Degree subset: I, IV, V, VI and equivalents.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_3_b(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex25.description"));
         int midiKey = ToneRange.MIDDLE_C;
@@ -829,6 +908,15 @@ public class EarTraining implements MyExerciseFamily {
         }
     }
 
+    /**
+     * [CA] Exercici Miri 3c: Com Miri 3a però la tonalitat s'escull entre SOL i LA,
+     * i s'activa el teclat de pantalla dret.
+     * <p>
+     * [EN] Miri 3c exercise: Like Miri 3a but the key is chosen between G and A,
+     * and the right on-screen keyboard is enabled.
+     *
+     * @param ex [CA] l'objecte exercici a configurar / [EN] the exercise object to configure
+     */
     private static void setMiri_3_c(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex26.description"));
         Integer[] keyChoice = {7, 9};

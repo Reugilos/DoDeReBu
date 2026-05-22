@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.teclesControl;
 
 import dodecagraphone.MyController;
@@ -10,9 +15,21 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Agrupa totes les accions de ratolí entre mousePressed i mouseReleased en un
- * sol Event per poder fer undo/redo.
+ * [CA] Event undo/redo que agrupa totes les accions de ratolí entre
+ * {@code mousePressed} i {@code mouseReleased} en un sol {@link Event}.
  * Suporta tres tipus de canvi: afegir nota, eliminar nota i canvi de link.
+ * El redo ({@code refer()}) aplica els canvis en ordre directe, i el undo
+ * ({@code desfer()}) els aplica en ordre invers.
+ * <p>
+ * [EN] Undo/redo event that groups all mouse actions between {@code mousePressed}
+ * and {@code mouseReleased} into a single {@link Event}.
+ * Supports three change types: add note, remove note and link change.
+ * Redo ({@code refer()}) applies changes in forward order, undo ({@code desfer()})
+ * applies them in reverse order.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MouseSequence extends Event {
 
@@ -87,20 +104,64 @@ public class MouseSequence extends Event {
     private MyController controller;
     private final List<Change> changes = new ArrayList<>();
 
+    /**
+     * [CA] Crea una nova seqüència de ratolí associada al controlador indicat.
+     * <p>
+     * [EN] Creates a new mouse sequence associated with the given controller.
+     *
+     * @param contr [CA] controlador principal / [EN] main controller
+     */
     public MouseSequence(MyController contr) {
         super();
         this.controller = contr;
     }
 
+    /**
+     * [CA] Comprova si la seqüència no té cap canvi registrat.
+     * <p>
+     * [EN] Checks whether the sequence has no recorded changes.
+     *
+     * @return [CA] {@code true} si no hi ha canvis / [EN] {@code true} if there are no changes
+     */
     public boolean isEmpty() {
         return changes.isEmpty();
     }
 
+    /**
+     * [CA] Afegeix un canvi d'afegir o eliminar nota a la seqüència.
+     * <p>
+     * [EN] Adds an add/remove note change to the sequence.
+     *
+     * @param square  [CA] casella de la graella / [EN] grid square
+     * @param added   [CA] {@code true} si s'ha afegit / [EN] {@code true} if added
+     * @param channel [CA] canal MIDI / [EN] MIDI channel
+     * @param trackId [CA] id de la pista / [EN] track id
+     * @param velocity [CA] velocitat MIDI / [EN] MIDI velocity
+     * @param visible [CA] si és visible / [EN] whether visible
+     * @param mutted  [CA] si és muted / [EN] whether muted
+     * @param linked  [CA] si és linked / [EN] whether linked
+     * @param dotted  [CA] si és puntejat / [EN] whether dotted
+     */
     public void addChange(MyGridSquare square, boolean added, int channel, int trackId,
                           int velocity, boolean visible, boolean mutted, boolean linked, boolean dotted) {
         changes.add(new Change(square, channel, trackId, added, velocity, visible, linked, mutted, dotted));
     }
 
+    /**
+     * [CA] Afegeix un canvi de link/unlink a la seqüència.
+     * <p>
+     * [EN] Adds a link/unlink change to the sequence.
+     *
+     * @param square       [CA] casella de la graella / [EN] grid square
+     * @param channel      [CA] canal MIDI / [EN] MIDI channel
+     * @param trackId      [CA] id de la pista / [EN] track id
+     * @param velocity     [CA] velocitat MIDI / [EN] MIDI velocity
+     * @param visible      [CA] si és visible / [EN] whether visible
+     * @param muted        [CA] si és muted / [EN] whether muted
+     * @param dotted       [CA] si és puntejat / [EN] whether dotted
+     * @param linkedBefore [CA] estat de link abans del canvi / [EN] link state before the change
+     * @param linkedAfter  [CA] estat de link després del canvi / [EN] link state after the change
+     */
     public void addLinkChange(MyGridSquare square, int channel, int trackId,
                               int velocity, boolean visible, boolean muted, boolean dotted,
                               boolean linkedBefore, boolean linkedAfter) {
@@ -116,6 +177,11 @@ public class MouseSequence extends Event {
         }
     }
 
+    /**
+     * [CA] Redo: aplica tots els canvis de la seqüència en ordre directe.
+     * <p>
+     * [EN] Redo: applies all changes in the sequence in forward order.
+     */
     @Override
     public void refer() {
         boolean firstTime = true;
@@ -172,6 +238,11 @@ public class MouseSequence extends Event {
         }
     }
 
+    /**
+     * [CA] Undo: reverteix tots els canvis de la seqüència en ordre invers.
+     * <p>
+     * [EN] Undo: reverts all changes in the sequence in reverse order.
+     */
     @Override
     public void desfer() {
         for (int i = changes.size() - 1; i >= 0; i--) {

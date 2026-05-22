@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model;
 
 /**
@@ -17,11 +22,17 @@ import java.util.List;
 import javax.swing.JOptionPane;
 
 /**
- * Classe que representa una elecció d'escala (None, Diatonic, Pentatonic).
- * L'usuari selecciona una opció mitjançant un diàleg gràfic.
- * ---------------------------------------- Class representing a scale choice
- * (None, Diatonic, Pentatonic). The user selects an option using a graphical
- * dialog.
+ * [CA] Classe que representa una elecció de notes (escala, acord, interval o llista personalitzada)
+ * per destacar-les al teclat visual de l'aplicació. L'usuari selecciona el tipus d'elecció
+ * mitjançant un diàleg gràfic i la llista de valors MIDI resultant s'usa per colorar el teclat.
+ * <p>
+ * [EN] Class representing a note choice (scale, chord, interval or custom list)
+ * to highlight on the application's visual keyboard. The user selects the choice type
+ * through a graphical dialog and the resulting MIDI value list is used to color the keyboard.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyChoice {
 
@@ -29,6 +40,13 @@ public class MyChoice {
     private boolean selecting = false;
     private MyController controller;
 
+    /**
+     * [CA] Construeix una {@code MyChoice} amb l'elecció per defecte de {@code Settings}.
+     * <p>
+     * [EN] Constructs a {@code MyChoice} with the default choice from {@code Settings}.
+     *
+     * @param contr [CA] controlador principal de l'aplicació / [EN] main application controller
+     */
     public MyChoice(MyController contr) {
         this.controller = contr;
         this.choice = new ArrayList<>();
@@ -36,10 +54,24 @@ public class MyChoice {
         this.selecting = false;
     }
 
+    /**
+     * [CA] Indica si l'usuari està en mode de selecció de notes.
+     * <p>
+     * [EN] Indicates whether the user is in note selection mode.
+     *
+     * @return [CA] {@code true} si s'està seleccionant / [EN] {@code true} if selecting
+     */
     public boolean isSelecting() {
         return selecting;
     }
 
+    /**
+     * [CA] Estableix el mode de selecció.
+     * <p>
+     * [EN] Sets the selection mode.
+     *
+     * @param selecting [CA] {@code true} per activar el mode de selecció / [EN] {@code true} to activate selection mode
+     */
     public void setSelecting(boolean selecting) {
         this.selecting = selecting;
     }
@@ -48,7 +80,13 @@ public class MyChoice {
 //        this.choice = new ArrayList<>();
 //    }
     /**
-     * Selecciona el choice. Selects choice.
+     * [CA] Selecciona l'elecció a partir de l'identificador d'una tecla del teclat,
+     * llegeix el MIDI corresponent i actualitza les franges i el teclat.
+     * <p>
+     * [EN] Selects the choice from a keyboard key identifier,
+     * reads the corresponding MIDI and updates the strips and keyboard.
+     *
+     * @param keyId [CA] identificador de la tecla del teclat visual / [EN] visual keyboard key identifier
      */
     public void selectChoice(int keyId) {
         int midi = this.controller.getKeyboard().getKey(keyId).getMidi();
@@ -58,9 +96,13 @@ public class MyChoice {
     }
 
     /**
-     * Mostra un diàleg per triar l'escala i aplica la configuració
-     * corresponent. Shows a dialog to select the scale and applies the
-     * corresponding configuration.
+     * [CA] Mostra un diàleg per triar el tipus d'elecció i aplica la configuració
+     * corresponent (escala, acord, interval, llista o cap).
+     * <p>
+     * [EN] Shows a dialog to select the choice type and applies the
+     * corresponding configuration (scale, chord, interval, list or none).
+     *
+     * @param rootMidi [CA] nota MIDI arrel de l'elecció / [EN] root MIDI note of the choice
      */
     public void readChoice(int rootMidi) {
         boolean isChromatic    = false;
@@ -177,7 +219,14 @@ public class MyChoice {
         if (isChromatic) addUpRoot(ToneRange.getLowestMidi());
         else             addUpRoot(effectiveRoot);
     }
-    
+
+    /**
+     * [CA] Transposa tota l'elecció un nombre de semitons.
+     * <p>
+     * [EN] Transposes the entire choice by a number of semitones.
+     *
+     * @param step [CA] nombre de semitons a transposar (positiu cap amunt, negatiu cap avall) / [EN] semitones to transpose (positive up, negative down)
+     */
     public void transposeChoice(int step){
         if (choice!=null && !choice.isEmpty()){
             for (int i=0;i<this.choice.size();i++){
@@ -186,6 +235,13 @@ public class MyChoice {
         }
     }
 
+    /**
+     * [CA] Afegeix el valor MIDI arrel a tots els elements de l'elecció (desplaça la llista).
+     * <p>
+     * [EN] Adds the root MIDI value to all elements of the choice (shifts the list).
+     *
+     * @param rootMidi [CA] valor MIDI arrel a afegir / [EN] root MIDI value to add
+     */
     public void addUpRoot(int rootMidi){
         if (choice!=null && !choice.isEmpty()){
             for (int i=0; i<choice.size(); i++){
@@ -193,6 +249,14 @@ public class MyChoice {
             }
         }
     }
+
+    /**
+     * [CA] Afegeix una tecla a l'elecció actual i ordena la llista resultant.
+     * <p>
+     * [EN] Adds a key to the current choice and sorts the resulting list.
+     *
+     * @param key [CA] tecla del xilòfon a afegir / [EN] xylophone key to add
+     */
     public void addKey(MyXiloKey key) {
         int midi = key.getMidi();
         System.out.println("MyChoice:addKey() choice = "+this.choice);
@@ -201,6 +265,13 @@ public class MyChoice {
 //        System.out.println("MyChoice::addKey:"+this.choice);
     }
 
+    /**
+     * [CA] Elimina una tecla de l'elecció actual.
+     * <p>
+     * [EN] Removes a key from the current choice.
+     *
+     * @param key [CA] tecla del xilòfon a eliminar / [EN] xylophone key to remove
+     */
     public void removeKey(MyXiloKey key) {
         int midi = key.getMidi();
         this.choice.remove(Integer.valueOf(midi));
@@ -208,30 +279,60 @@ public class MyChoice {
         // Collections.sort(this.choice);
     }
 
+    /**
+     * [CA] Desactiva la visualització de l'elecció al teclat (oculta el ressaltat).
+     * <p>
+     * [EN] Deactivates the display of the choice on the keyboard (hides the highlight).
+     */
     public void setNoChoice(){
-        this.controller.getKeyboard().setShowChoice(false);        
+        this.controller.getKeyboard().setShowChoice(false);
     }
-    
+
+    /**
+     * [CA] Estableix una elecció buida (cap nota seleccionada) i activa la visualització.
+     * <p>
+     * [EN] Sets an empty choice (no note selected) and activates the display.
+     */
     public void setNoneChoice() {
         this.choice = new ArrayList<>();
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala diatònica major (intervals: 0,2,4,5,7,9,11,12).
+     * <p>
+     * [EN] Sets the choice as the diatonic major scale (intervals: 0,2,4,5,7,9,11,12).
+     */
     public void setDiatonicScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com les primeres 5 notes de l'escala major (intervals: 0,2,4,5,7).
+     * <p>
+     * [EN] Sets the choice as the first 5 notes of the major scale (intervals: 0,2,4,5,7).
+     */
     public void setFirstFiveScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala major completa (intervals: 0,2,4,5,7,9,11,12).
+     * <p>
+     * [EN] Sets the choice as the full major scale (intervals: 0,2,4,5,7,9,11,12).
+     */
     public void setMajorScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estén l'elecció actual a tot el rang disponible replicant-la en octaves superiors i inferiors.
+     * <p>
+     * [EN] Extends the current choice to the full available range by replicating it in upper and lower octaves.
+     */
     public void extendChoiceToFullRange(){
         List<Integer> currentChoice = choice;
         choice.addAll(Utilities.listPlusConst(currentChoice, 12));
@@ -239,79 +340,139 @@ public class MyChoice {
         choice.addAll(Utilities.listPlusConst(currentChoice, -12));
         choice.addAll(Utilities.listPlusConst(currentChoice, -24));
     }
-    
+
+    /**
+     * [CA] Estableix l'elecció com l'escala major estesa a tot el rang.
+     * <p>
+     * [EN] Sets the choice as the major scale extended to the full range.
+     */
     public void setFullRangeMajorScaleChoice(){
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12}));
         extendChoiceToFullRange();
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala menor estesa a tot el rang.
+     * <p>
+     * [EN] Sets the choice as the minor scale extended to the full range.
+     */
     public void setFullRangeMinorScaleChoice(){
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 8, 10, 12}));
         extendChoiceToFullRange();
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala cromàtica completa.
+     * <p>
+     * [EN] Sets the choice as the full chromatic scale.
+     */
     public void setChromaticScaleChoice(){
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
             17, 18, 19, 20, 21, 22, 23, 24, 25}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala menor natural (intervals: 0,2,3,5,7,8,10,12).
+     * <p>
+     * [EN] Sets the choice as the natural minor scale (intervals: 0,2,3,5,7,8,10,12).
+     */
     public void setMinorScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 8, 10, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala menor harmònica (intervals: 0,2,3,5,7,8,11,12).
+     * <p>
+     * [EN] Sets the choice as the harmonic minor scale (intervals: 0,2,3,5,7,8,11,12).
+     */
     public void setHarmonicMinorScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 8, 11, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala pentatònica (intervals: 0,2,4,7,9,10).
+     * <p>
+     * [EN] Sets the choice as the pentatonic scale (intervals: 0,2,4,7,9,10).
+     */
     public void setPentatonicScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 7, 9, 10}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala pentatònica major (intervals: 0,2,4,7,9,12).
+     * <p>
+     * [EN] Sets the choice as the major pentatonic scale (intervals: 0,2,4,7,9,12).
+     */
     public void setPentatonicMajorScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 7, 9, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'escala de blues (intervals: 0,3,5,6,7,10,12).
+     * <p>
+     * [EN] Sets the choice as the blues scale (intervals: 0,3,5,6,7,10,12).
+     */
     public void setBluesScaleChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 5, 6, 7, 10, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'acord major (intervals: 0,4,7,12).
+     * <p>
+     * [EN] Sets the choice as the major chord (intervals: 0,4,7,12).
+     */
     public void setMajorChordChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 7, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'acord menor (intervals: 0,3,7,12).
+     * <p>
+     * [EN] Sets the choice as the minor chord (intervals: 0,3,7,12).
+     */
     public void setMinorChordChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 7, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'acord disminuït (intervals: 0,3,6,12).
+     * <p>
+     * [EN] Sets the choice as the diminished chord (intervals: 0,3,6,12).
+     */
     public void setDiminishedChordChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 6, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com l'acord augmentat (intervals: 0,4,8,12).
+     * <p>
+     * [EN] Sets the choice as the augmented chord (intervals: 0,4,8,12).
+     */
     public void setAugmentedChordChoice() {
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 8, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
     /**
-     * Afegeix una llista d'enters al paràmetre `choice` a partir d'una cadena
-     * amb format [int,int,...]. Llença una excepció si el format és incorrecte.
+     * [CA] Afegeix una llista d'enters al camp {@code choice} a partir d'una cadena
+     * amb format {@code [int,int,...]}. Llença una excepció si el format és incorrecte.
+     * <p>
+     * [EN] Sets the choice from a string in the format {@code [int,int,...]}.
+     * Throws an exception if the format is invalid.
      *
-     * Adds a list of integers to the `choice` field from a string in the format
-     * [int,int,...]. Throws an exception if the format is invalid.
-     *
-     * @param entrada Cadena amb la llista d'enters
-     * @throws IllegalArgumentException si el format és incorrecte
+     * @param entrada [CA] cadena amb la llista d'enters entre claudàtors / [EN] string with integer list in brackets
+     * @throws IllegalArgumentException [CA] si el format és incorrecte / [EN] if the format is invalid
      */
     public void setListChoice(String entrada) throws IllegalArgumentException {
         if (entrada == null || !entrada.matches("\\[\\s*-?\\d+(\\s*,\\s*-?\\d+)*\\s*\\]")) {
@@ -332,6 +493,15 @@ public class MyChoice {
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció com un interval de dos sons (root i root+interval),
+     * normalitzat entre -12 i +12.
+     * <p>
+     * [EN] Sets the choice as an interval of two pitches (root and root+interval),
+     * normalized between -12 and +12.
+     *
+     * @param interval [CA] interval en semitons / [EN] interval in semitones
+     */
     public void setIntervalChoice(int interval) {
         while (interval>12) interval-=12;
         while (interval<-12) interval+=12;
@@ -340,34 +510,64 @@ public class MyChoice {
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció per defecte definida a {@code Settings.DEFAULT_CHOICE}.
+     * <p>
+     * [EN] Sets the default choice defined in {@code Settings.DEFAULT_CHOICE}.
+     */
     public void setDefaultChoice() {
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_CHOICE));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció per defecte de dues octaves definida a {@code Settings.DEFAULT_CHOICE_2OCTAVES}.
+     * <p>
+     * [EN] Sets the two-octave default choice defined in {@code Settings.DEFAULT_CHOICE_2OCTAVES}.
+     */
     public void setDefaultChoice2Octaves() {
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_CHOICE_2OCTAVES));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció menor per defecte definida a {@code Settings.DEFAULT_MINOR_CHOICE}.
+     * <p>
+     * [EN] Sets the default minor choice defined in {@code Settings.DEFAULT_MINOR_CHOICE}.
+     */
     public void setDefaultMinorChoice() {
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_MINOR_CHOICE));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
+    /**
+     * [CA] Estableix l'elecció menor per defecte de dues octaves definida a {@code Settings.DEFAULT_MINOR_CHOICE_2OCTAVES}.
+     * <p>
+     * [EN] Sets the two-octave default minor choice defined in {@code Settings.DEFAULT_MINOR_CHOICE_2OCTAVES}.
+     */
     public void setDefaultMinorChoice2Octaves() {
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_MINOR_CHOICE_2OCTAVES));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
     /**
-     * Retorna l'escala seleccionada com a llista d'enters. Returns the selected
-     * scale as a list of integers.
+     * [CA] Retorna l'elecció actual com a llista de valors MIDI enters.
+     * <p>
+     * [EN] Returns the current choice as a list of integer MIDI values.
+     *
+     * @return [CA] llista de valors MIDI de l'elecció actual / [EN] list of MIDI values of the current choice
      */
     public List<Integer> getChoiceList() {
         return choice;
     }
 
+    /**
+     * [CA] Estableix la llista de l'elecció directament.
+     * <p>
+     * [EN] Sets the choice list directly.
+     *
+     * @param choice [CA] nova llista de valors MIDI / [EN] new list of MIDI values
+     */
     public void setChoiceList(List<Integer> choice) {
         this.choice = new ArrayList<>(choice);
     }

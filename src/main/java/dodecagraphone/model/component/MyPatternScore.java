@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -14,14 +19,23 @@ import java.util.ArrayList;
 import javax.sound.midi.MidiMessage;
 
 /**
- * A MyGridPattern is a subclass of MyGridScore specialized in placing music
- * elements in the score, for further play. It is useful for designing playing
- * and guessing exercises. Music elements are placed on the score at the
- * currentWriteCol, which is updated after each placement.
+ * [CA] Subclasse de {@link MyGridScore} especialitzada en la col·locació
+ * d'elements musicals (notes, acords, patrons) per a exercicis de reproduc
+ * ció i endevinament. Les notes es col·loquen a {@code currentWriteCol}, que
+ * s'actualitza automàticament. El mètode {@code updateStopMarker()} recalcula
+ * la durada de l'últim acord del {@code chordSymbolLine} fins a {@code endOfScore}
+ * (= final de l'última nota, no del compàs).
+ * <p>
+ * [EN] Subclass of {@link MyGridScore} specialised in placing musical
+ * elements (notes, chords, patterns) for playing and guessing exercises.
+ * Notes are placed at {@code currentWriteCol}, which is updated automatically.
+ * The method {@code updateStopMarker()} recomputes the duration of the last
+ * chord in {@code chordSymbolLine} up to {@code endOfScore} (= end of the
+ * last note, not of the measure).
  *
- * Placed elements can be mutted (for drawing purposes only).
- *
- * @author pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyPatternScore extends MyGridScore {
 
@@ -76,9 +90,13 @@ public class MyPatternScore extends MyGridScore {
     }
 
     /**
-     * Updates the currentWriteCol in ncols, whithout placing anything.
+     * [CA] Avança {@code currentWriteCol} en {@code ncols} columnes sense
+     * col·locar cap nota.
+     * <p>
+     * [EN] Advances {@code currentWriteCol} by {@code ncols} columns without
+     * placing anything.
      *
-     * @param ncols
+     * @param ncols [CA] nombre de columnes a avançar / [EN] number of columns to advance
      */
     public void skipCols(int ncols) {
         this.currentWriteCol += ncols;
@@ -148,7 +166,15 @@ public class MyPatternScore extends MyGridScore {
         stopCol = c;
     }
 
-    /** Returns the column after the last note's OFF in any non-chord track. */
+    /**
+     * [CA] Retorna la columna just després del NOTE_OFF de l'última nota en
+     * qualsevol track que no sigui el track d'acords.
+     * <p>
+     * [EN] Returns the column just after the NOTE_OFF of the last note in
+     * any track that is not the chord track.
+     *
+     * @return [CA] columna de final de l'última nota / [EN] column after last note end
+     */
     public int computeNoteEndCol() {
         int chordTrackId = controller.getMixer().getChordTrackId();
         int upper = Math.min(getLastColWritten(), getNumCols() - 1);
@@ -165,7 +191,19 @@ public class MyPatternScore extends MyGridScore {
         return 0;
     }
 
-    /** Extends stopCol to cover the measure containing noteCol. O(1); only grows. */
+    /**
+     * [CA] Estén {@code stopCol} per cobrir el compàs que conté
+     * {@code noteCol}. Operació O(1) que només creix mai retrocedeix. No
+     * usar en rutes d'afegir notes si hi ha acords; usar
+     * {@link #updateStopMarker()} en aquell cas.
+     * <p>
+     * [EN] Extends {@code stopCol} to cover the measure containing
+     * {@code noteCol}. O(1) operation that only grows, never shrinks. Do not
+     * use in note-add paths if there are chords; use
+     * {@link #updateStopMarker()} in that case.
+     *
+     * @param noteCol [CA] columna de la nota afegida / [EN] column of the added note
+     */
     public void expandStopIfNeeded(int noteCol) {
         int colsPerMeasure = Settings.getnColsBeat() * getNumBeatsMeasure();
         if (colsPerMeasure <= 0) colsPerMeasure = 1;
@@ -175,9 +213,17 @@ public class MyPatternScore extends MyGridScore {
     }
 
     /**
-     * Recomputes endOfScore (last note off or last chord position),
-     * updates the last chord's duration to match endOfScore,
-     * and sets stopCol to the end of the measure containing endOfScore.
+     * [CA] Recalcula {@code endOfScore} (final de l'última nota o posició de
+     * l'últim acord), actualitza la durada de l'últim acord del
+     * {@code chordSymbolLine} perquè arribi fins a {@code endOfScore}, i
+     * estableix {@code stopCol} al final del compàs que conté
+     * {@code endOfScore}. S'ha de cridar tant en afegir com en esborrar notes.
+     * <p>
+     * [EN] Recomputes {@code endOfScore} (end of the last note or last chord
+     * position), updates the duration of the last chord in
+     * {@code chordSymbolLine} to reach {@code endOfScore}, and sets
+     * {@code stopCol} to the end of the measure containing {@code endOfScore}.
+     * Must be called both when adding and when deleting notes.
      */
     public void updateStopMarker() {
         int noteEnd = computeNoteEndCol();

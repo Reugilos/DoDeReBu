@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.sound;
 
 import java.io.ByteArrayInputStream;
@@ -7,10 +12,19 @@ import java.io.IOException;
 import javax.sound.sampled.*;
 
 /**
- * La versió original d'aquesta classe està al projecte Afinador.
- * Aquesta classe gestiona una line in (micro), line out (speakers),
- * source audio file, target audio file, i gestio de l'array de so 
- * (currentAudio). Basada en Javax.sound.sampled.
+ * [CA] Gestiona les línies d'entrada (micròfon) i sortida (altaveus) d'àudio del sistema,
+ * els fitxers d'àudio font i destí, i l'array de bytes d'àudio actual ({@code currentAudio}).
+ * Basada en {@code javax.sound.sampled}. La versió original prové del projecte Afinador.
+ * Singleton: només es pot obtenir una instància via {@link #getAudioManager()}.
+ * <p>
+ * [EN] Manages the system audio input (microphone) and output (speakers) lines,
+ * source and target audio files, and the current audio byte array ({@code currentAudio}).
+ * Based on {@code javax.sound.sampled}. The original version comes from the Afinador project.
+ * Singleton: only one instance can be obtained via {@link #getAudioManager()}.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class AudioManager {
 
@@ -36,6 +50,15 @@ public class AudioManager {
     private AudioManager() {
     }
 
+    /**
+     * [CA] Retorna la instància única de {@code AudioManager} (singleton).
+     * La primera crida retorna una nova instància; les crides posteriors retornen {@code null}.
+     * <p>
+     * [EN] Returns the unique instance of {@code AudioManager} (singleton).
+     * The first call returns a new instance; subsequent calls return {@code null}.
+     *
+     * @return [CA] la instància única, o {@code null} si ja s'ha creat / [EN] the unique instance, or {@code null} if already created
+     */
     public static AudioManager getAudioManager() {
         if (firstTime) {
             firstTime = false;
@@ -44,11 +67,21 @@ public class AudioManager {
         return null;
     }
 
+    /**
+     * [CA] Allibera el buffer d'àudio actual (posa {@code currentAudio} a null).
+     * <p>
+     * [EN] Releases the current audio buffer (sets {@code currentAudio} to null).
+     */
     public void closeAudioManager() {
         currentAudio = null;
     }
 
     //----------------- LineIn (microphone) ------------------------------------
+    /**
+     * [CA] Obre la línia d'entrada del micròfon i la configura amb el format d'àudio estàndard.
+     * <p>
+     * [EN] Opens the microphone input line and configures it with the standard audio format.
+     */
     public void openLineIn() {
         lineIn = null;
         try {
@@ -59,6 +92,14 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Captura exactament {@code nsamples} mostres des del micròfon i les desa a {@code currentAudio}.
+     * <p>
+     * [EN] Captures exactly {@code nsamples} samples from the microphone and stores them in {@code currentAudio}.
+     *
+     * @param nsamples [CA] nombre de mostres a capturar / [EN] number of samples to capture
+     * @return [CA] nombre de frames llegits / [EN] number of frames read
+     */
     public int captureAudioNSamples(int nsamples) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         lineIn.start();
@@ -93,6 +134,14 @@ public class AudioManager {
         return nRead / frameSize;
     }
 
+    /**
+     * [CA] Captura àudio des del micròfon durant la durada especificada en mil·lisegons.
+     * <p>
+     * [EN] Captures audio from the microphone for the specified duration in milliseconds.
+     *
+     * @param durationInMs [CA] durada de la captura en mil·lisegons / [EN] capture duration in milliseconds
+     * @return [CA] nombre de frames llegits / [EN] number of frames read
+     */
     public int captureAudioMsec(long durationInMs) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         lineIn.start();
@@ -114,10 +163,22 @@ public class AudioManager {
         return nRead / frameSize;
     }
 
+    /**
+     * [CA] Mètode no implementat. Llença una excepció si s'invoca.
+     * <p>
+     * [EN] Unimplemented method. Throws an exception if invoked.
+     *
+     * @throws Exception [CA] sempre, perquè el mètode no està llest / [EN] always, because the method is not ready
+     */
     public void captureNPlay() throws Exception {
         throw new Exception("Method not ready!");
     }
 
+    /**
+     * [CA] Tanca la línia d'entrada del micròfon si està oberta.
+     * <p>
+     * [EN] Closes the microphone input line if it is open.
+     */
     public void closeLineIn() {
         if (lineIn != null) {
             lineIn.close();
@@ -125,6 +186,11 @@ public class AudioManager {
     }
 
     //----------------- LineOut (speaker) ------------------------------------
+    /**
+     * [CA] Obre la línia de sortida dels altaveus i la configura amb el format d'àudio estàndard.
+     * <p>
+     * [EN] Opens the speaker output line and configures it with the standard audio format.
+     */
     public void openLineOut() {
         lineOut = null;
         try {
@@ -135,49 +201,48 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Atura la reproducció d'àudio en curs.
+     * <p>
+     * [EN] Stops the ongoing audio playback.
+     */
     public void stopAudio() {
         isPlaying=false;
         lineOut.stop();
         // System.err.println("AudioManager.stopAudio()");
     }
 
+    /**
+     * [CA] Inicia la reproducció de {@code currentAudio} en un fil separat (bucle mentre {@code isPlaying}).
+     * <p>
+     * [EN] Starts playback of {@code currentAudio} in a separate thread (loops while {@code isPlaying}).
+     *
+     * @return [CA] sempre 0 (valor de retorn reservat) / [EN] always 0 (reserved return value)
+     */
     public int playAudio() {
 //        lineOut.start();
         Play pl = new Play();
         isPlaying=true;
         pl.start();
-//        lineOut.stop();
-//        lineOut.start();
-//        ByteArrayInputStream bais = new ByteArrayInputStream(currentAudio);
-//        byte[] buf = new byte[(int) BUFFER_LENGTH * frameSize];
-//        int len;
-//        int nWritten = 0;
-//        int nRead=0;
-//        while (((len = bais.read(buf, 0, buf.length)) != -1)) {
-//            nRead+=len;
-//            nWritten += lineOut.write(buf, 0, len);
-//        }
-//        int pending=(int)(currentAudio.length)-nWritten;
-//        buf = null;
-//        lineOut.stop();
-//        try {
-//            bais.close();
-//            if (nWritten!=(currentAudio.length)||nRead!=(currentAudio.length)){
-//                throw new IOException("AudioManager.playAudio(): Bytes read="+nRead+" or Bytes written="+
-//                        nWritten+" != currentAudioLength="+(currentAudio.length)+" (pending="+pending+")");
-//            }
-//        } catch (IOException ex) {
-//            System.err.println("IOException " + ex.getMessage());
-//        }
         return 0; //nWritten / frameSize;
     }
 
+    /**
+     * [CA] Tanca la línia de sortida dels altaveus si està oberta.
+     * <p>
+     * [EN] Closes the speaker output line if it is open.
+     */
     public void closeLineOut() {
         if (lineOut != null) {
             lineOut.close();
         }
     }
 
+    /**
+     * [CA] Fil intern de reproducció: reprodueix {@code currentAudio} en bucle mentre {@code isPlaying}.
+     * <p>
+     * [EN] Internal playback thread: plays {@code currentAudio} in a loop while {@code isPlaying}.
+     */
     class Play extends Thread {
 
         @Override
@@ -212,6 +277,13 @@ public class AudioManager {
     }
 
     //----------------- SourceAudioFile ------------------------------------
+    /**
+     * [CA] Obre un fitxer d'àudio font per a lectura posterior.
+     * <p>
+     * [EN] Opens a source audio file for subsequent reading.
+     *
+     * @param fileName [CA] ruta del fitxer d'àudio / [EN] audio file path
+     */
     public void openSourceAudioFile(String fileName) {
         File sourceFile = new File(fileName);
         try {
@@ -222,14 +294,23 @@ public class AudioManager {
         this.fileLength = sourceFile.length();
     }
 
+    /**
+     * [CA] Retorna la longitud del fitxer font en frames.
+     * <p>
+     * [EN] Returns the length of the source file in frames.
+     *
+     * @return [CA] longitud en frames / [EN] length in frames
+     */
     public long getFileLength() {
         return this.fileLength / this.frameSize;
     }
 
     /**
-     * Llegeix tot el fitxer
+     * [CA] Llegeix tot el fitxer d'àudio font i el desa a {@code currentAudio}.
+     * <p>
+     * [EN] Reads the entire source audio file and stores it in {@code currentAudio}.
      *
-     * @return
+     * @return [CA] nombre de frames llegits / [EN] number of frames read
      */
     public int readAudioFile() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -264,12 +345,15 @@ public class AudioManager {
     }
 
     /**
-     * Llegeix numFrames frames a partir d'offset. Retorna els no de frames
-     * llegits. Un frame es un sample de cada canal
+     * [CA] Llegeix {@code numFrames} frames a partir de l'offset donat i els desa a {@code currentAudio}.
+     * Un frame és una mostra de cada canal.
+     * <p>
+     * [EN] Reads {@code numFrames} frames starting from the given offset and stores them in {@code currentAudio}.
+     * A frame is one sample per channel.
      *
-     * @param offset posicio al fitxer del primer frame a llegir
-     * @param numFrames nombre de frames a llegir
-     * @return nombre de frames llegits
+     * @param offset    [CA] posició al fitxer del primer frame a llegir / [EN] file position of the first frame to read
+     * @param numFrames [CA] nombre de frames a llegir / [EN] number of frames to read
+     * @return [CA] nombre de frames llegits / [EN] number of frames read
      */
     public int readAudioFile(int offset, int numFrames) {
         // To check, petava despres de 5 o 6 frames. Anyway, potser millor no oferir aquest metode
@@ -336,6 +420,11 @@ public class AudioManager {
         return totalRead / frameSize;
     }
 
+    /**
+     * [CA] Tanca el flux d'entrada del fitxer d'àudio font.
+     * <p>
+     * [EN] Closes the input stream of the source audio file.
+     */
     public void closeSourceAudioFile() {
         try {
             if (audioInputStream != null) {
@@ -347,6 +436,13 @@ public class AudioManager {
     }
 
     //----------------- TargetAudioFile ------------------------------------
+    /**
+     * [CA] Prepara un fitxer destí per a l'escriptura de {@code currentAudio} com a WAV.
+     * <p>
+     * [EN] Prepares a target file for writing {@code currentAudio} as WAV.
+     *
+     * @param fileName [CA] ruta del fitxer destí / [EN] target file path
+     */
     public void openTargetAudioFile(String fileName) {
         if (currentAudio != null) {
             if (currentAudio.length > 0) {
@@ -363,6 +459,13 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Escriu {@code currentAudio} al fitxer destí en format WAV.
+     * <p>
+     * [EN] Writes {@code currentAudio} to the target file in WAV format.
+     *
+     * @return [CA] nombre de frames escrits / [EN] number of frames written
+     */
     public int writeAudioFile() {
         int nbWritten = 0;
         try {
@@ -373,6 +476,11 @@ public class AudioManager {
         return nbWritten / frameSize;
     }
 
+    /**
+     * [CA] Tanca el flux de sortida del fitxer d'àudio destí.
+     * <p>
+     * [EN] Closes the output stream of the target audio file.
+     */
     public void closeTargetAudioFile() {
         try {
             if (ais != null) {
@@ -384,10 +492,22 @@ public class AudioManager {
     }
 
     //---------------- Managing the audio array, currentAudio --------------
+    /**
+     * [CA] Esborra el buffer d'àudio actual (posa {@code currentAudio} a null).
+     * <p>
+     * [EN] Clears the current audio buffer (sets {@code currentAudio} to null).
+     */
     public void clearAudio() {
         currentAudio = null;
     }
 
+    /**
+     * [CA] Retorna la mida de l'àudio actual en frames.
+     * <p>
+     * [EN] Returns the size of the current audio in frames.
+     *
+     * @return [CA] nombre de frames, o 0 si no hi ha àudio / [EN] number of frames, or 0 if no audio
+     */
     public int audioSize() {
         if (currentAudio == null) {
             return 0;
@@ -395,14 +515,35 @@ public class AudioManager {
         return currentAudio.length / frameSize;
     }
 
+    /**
+     * [CA] Retorna la longitud en bytes de l'àudio actual.
+     * <p>
+     * [EN] Returns the length in bytes of the current audio.
+     *
+     * @return [CA] longitud en bytes / [EN] length in bytes
+     */
     public long getCurrentAudioLength() {
         return currentAudio.length;
     }
 
+    /**
+     * [CA] Retorna el buffer d'àudio actual com a array de bytes.
+     * <p>
+     * [EN] Returns the current audio buffer as a byte array.
+     *
+     * @return [CA] array de bytes d'àudio / [EN] audio byte array
+     */
     public byte[] getCurrentAudio() {
         return currentAudio;
     }
 
+    /**
+     * [CA] Extreu el canal esquerre de {@code currentAudio} com a array de doubles.
+     * <p>
+     * [EN] Extracts the left channel from {@code currentAudio} as a double array.
+     *
+     * @return [CA] mostres del canal esquerre / [EN] left channel samples
+     */
     public double[] getLeftChannel() {
         double[] left = new double[currentAudio.length / 4];
         int litEnd, bigEnd;
@@ -417,6 +558,13 @@ public class AudioManager {
         return left;
     }
 
+    /**
+     * [CA] Extreu el canal dret de {@code currentAudio} com a array de doubles.
+     * <p>
+     * [EN] Extracts the right channel from {@code currentAudio} as a double array.
+     *
+     * @return [CA] mostres del canal dret / [EN] right channel samples
+     */
     public double[] getRightChannel() {
         double[] right = new double[currentAudio.length / 4];
         int litEnd, bigEnd;
@@ -431,6 +579,14 @@ public class AudioManager {
         return right;
     }
 
+    /**
+     * [CA] Estableix ambdós canals de {@code currentAudio} a partir d'arrays de doubles.
+     * <p>
+     * [EN] Sets both channels of {@code currentAudio} from double arrays.
+     *
+     * @param left  [CA] mostres del canal esquerre / [EN] left channel samples
+     * @param right [CA] mostres del canal dret / [EN] right channel samples
+     */
     public void setBothChannels(double[] left, double[] right) {
         currentAudio = new byte[left.length * 4];
         int valInt, litEnd, bigEnd;
@@ -455,6 +611,13 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Estableix el canal esquerre de {@code currentAudio} (el canal dret queda a 0).
+     * <p>
+     * [EN] Sets the left channel of {@code currentAudio} (right channel set to 0).
+     *
+     * @param left [CA] mostres del canal esquerre / [EN] left channel samples
+     */
     public void setLeft(double[] left) {
         currentAudio = new byte[left.length * 4];
         int valInt, litEnd, bigEnd;
@@ -473,6 +636,13 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Estableix el canal dret de {@code currentAudio} (el canal esquerre queda a 0).
+     * <p>
+     * [EN] Sets the right channel of {@code currentAudio} (left channel set to 0).
+     *
+     * @param right [CA] mostres del canal dret / [EN] right channel samples
+     */
     public void setRight(double[] right) {
         currentAudio = new byte[right.length * 4];
         int valInt, litEnd, bigEnd;
@@ -491,10 +661,24 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Estableix el buffer d'àudio actual des d'un array de bytes extern.
+     * <p>
+     * [EN] Sets the current audio buffer from an external byte array.
+     *
+     * @param currentAudio [CA] nou buffer d'àudio / [EN] new audio buffer
+     */
     public void setCurrentAudio(byte[] currentAudio) {
         this.currentAudio = currentAudio;
     }
 
+    /**
+     * [CA] Estableix el buffer d'àudio actual convertint un array de doubles a bytes.
+     * <p>
+     * [EN] Sets the current audio buffer by converting a double array to bytes.
+     *
+     * @param audio [CA] array de mostres com a doubles / [EN] sample array as doubles
+     */
     public void setCurrentAudio(double[] audio) {
         this.currentAudio = new byte[audio.length];
         int i = 0;
@@ -504,6 +688,15 @@ public class AudioManager {
         }
     }
 
+    /**
+     * [CA] Compara dos arrays de bytes per comprovar si són iguals (amb marge 0).
+     * <p>
+     * [EN] Compares two byte arrays to check whether they are equal (with margin 0).
+     *
+     * @param a [CA] primer array / [EN] first array
+     * @param b [CA] segon array / [EN] second array
+     * @return [CA] {@code true} si tots els elements coincideixen / [EN] {@code true} if all elements match
+     */
     public static boolean byteArrayIguals(byte[] a, byte[] b) {
         int i = 0;
         byte marge = 0;
@@ -519,6 +712,14 @@ public class AudioManager {
     }
 
     // ---- Managing microphone and speaker lines from the system
+    /**
+     * [CA] Cerca i retorna la primera línia d'entrada de micròfon disponible al sistema.
+     * <p>
+     * [EN] Searches and returns the first available microphone input line on the system.
+     *
+     * @return [CA] la línia de micròfon trobada / [EN] the found microphone line
+     * @throws LineUnavailableException [CA] si no es troba cap línia de micròfon / [EN] if no microphone line is found
+     */
     public static TargetDataLine findMicrophoneLine() throws LineUnavailableException {
         // find a DataLine that can be read
         TargetDataLine line = null;
@@ -537,6 +738,14 @@ public class AudioManager {
         return line;
     }
 
+    /**
+     * [CA] Cerca i retorna la primera línia de sortida d'altaveu disponible al sistema.
+     * <p>
+     * [EN] Searches and returns the first available speaker output line on the system.
+     *
+     * @return [CA] la línia d'altaveu trobada / [EN] the found speaker line
+     * @throws LineUnavailableException [CA] si no es troba cap línia d'altaveu / [EN] if no speaker line is found
+     */
     public static SourceDataLine findSpeakerLine() throws LineUnavailableException {
         // find a DataLine that can be written into
         SourceDataLine line = null;
@@ -556,6 +765,13 @@ public class AudioManager {
         return line;
     }
 
+    /**
+     * [CA] Enumera totes les línies d'àudio (entrada i sortida) disponibles al sistema per consola.
+     * <p>
+     * [EN] Enumerates all available audio lines (input and output) on the system to the console.
+     *
+     * @throws LineUnavailableException [CA] si hi ha un problema en accedir a les línies / [EN] if there is a problem accessing the lines
+     */
     public static void enumerateLines() throws LineUnavailableException {
         Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
         for (Mixer.Info info : mixerInfos) {

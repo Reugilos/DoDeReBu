@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import dodecagraphone.MyController;
@@ -9,18 +14,34 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 /**
- * The user interface manages the main window (JFrame, Jpanel) and the mouse,
- * forwarding actions to the controller.
+ * [CA] Finestra principal de l'aplicació (JFrame). Gestiona el cicle de vida
+ * de la finestra: maximització inicial, reposicionament quan es restaura des
+ * del mode maximitzat, i confirmació de sortida amb possible desat de la
+ * partitura. Conté el {@link MyNewPanel} (zona de dibuix) i el
+ * {@link MyController} (lògica de negoci).
+ * <p>
+ * [EN] Main application window (JFrame). Manages the window lifecycle:
+ * initial maximisation, repositioning when restored from maximised state, and
+ * exit confirmation with optional score saving. Contains the
+ * {@link MyNewPanel} (drawing area) and {@link MyController} (business logic).
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyUserInterface extends JFrame {
     private final MyController controller;
     private MyNewPanel panel;
     private String version;
-    
+
     /**
-     * Set up
-     *
-     * @param titol
+     * [CA] Crea la finestra principal, inicialitza el controlador i el panell
+     * de dibuix, estableix la mida màxima dins de l'àrea de treball i maximitza
+     * la finestra. Registra els listeners de canvi d'estat i de tancament.
+     * <p>
+     * [EN] Creates the main window, initialises the controller and drawing
+     * panel, constrains the initial size to the work area and maximises the
+     * window. Registers window state and closing listeners.
      */
     public MyUserInterface() {
         super("DoDeReBu_App_v4.0");
@@ -96,28 +117,52 @@ public class MyUserInterface extends JFrame {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 if (controller.onExitCheckNSave()) {
-                    e.getWindow().dispose(); // només tanquem si l’usuari no ha cancel·lat
+                    e.getWindow().dispose(); // només tanquem si l'usuari no ha cancel·lat
                     System.exit(0);
                 }
             }
         });
     }
 
+    /**
+     * [CA] Retorna la cadena de versió de l'aplicació (títol de la finestra).
+     * <p>
+     * [EN] Returns the application version string (window title).
+     *
+     * @return [CA] versió de l'aplicació / [EN] application version string
+     */
     public String getVersion() {
         return version;
     }
 
-    
+    /**
+     * [CA] Retorna el controlador principal de l'aplicació.
+     * <p>
+     * [EN] Returns the main application controller.
+     *
+     * @return [CA] controlador principal / [EN] main controller
+     */
     public MyController getController(){
         return this.controller;
     }
 
+    /**
+     * [CA] Retorna el panell principal de dibuix.
+     * <p>
+     * [EN] Returns the main drawing panel.
+     *
+     * @return [CA] panell de dibuix / [EN] drawing panel
+     */
     public MyNewPanel getPanel() {
         return panel;
     }
-    
+
     /**
-     * Invoked inside the main loop.
+     * [CA] Invocada pel bucle principal (Timer). Actualitza l'estat del
+     * controlador i, si cal, repinta el panell.
+     * <p>
+     * [EN] Invoked by the main loop (Timer). Updates the controller state
+     * and repaints the panel if needed.
      */
     public void update() {
 //            this.controller.update();
@@ -134,14 +179,14 @@ public class MyUserInterface extends JFrame {
 ////                e.printStackTrace();
 ////            }
 //            //this.panel.paintImmediately(this.panel.getBounds());
-//            //this.validate(); 
+//            //this.validate();
 //            System.out.println("MyUserInterface::update: controller.update is true, repaint is now called");
 //            this.controller.setNeedsDrawing(true);
 //            this.repaint(); // activa panel.paintComponent() ergo Controller.redraw()
 //            //this.controller.getMixer().repaintMixer();
 //        }
     }
-    
+
 }
 
 ///**
@@ -170,7 +215,7 @@ public class MyUserInterface extends JFrame {
 //        this.addMouseMotionListener(new MyNewMouseAdapter(this, this.controller));
 //
 //        // ImageIcon leftButtonIcon = createImageIcon("images/right.gif");
-//        this.b = new JButton("Test Button");//,leftButtonIcon);        
+//        this.b = new JButton("Test Button");//,leftButtonIcon);
 ////        b1.setVerticalTextPosition(AbstractButton.CENTER);
 ////        b1.setHorizontalTextPosition(AbstractButton.LEADING); //aka LEFT, for left-to-right locales
 ////        b1.setMnemonic(KeyEvent.VK_D);
@@ -186,7 +231,7 @@ public class MyUserInterface extends JFrame {
 //        this.b2.setActionCommand("button2");
 //        b2.addActionListener(this);
 //        b2.setToolTipText("Click this button to show demo 2 message.");
-////        this.add(b2);   
+////        this.add(b2);
 //        this.addKeyListener(this);
 //    }
 //
@@ -226,7 +271,7 @@ public class MyUserInterface extends JFrame {
 ////                e.printStackTrace();
 ////            }
 //            //this.panel.paintImmediately(this.panel.getBounds());
-//            //this.validate(); 
+//            //this.validate();
 ////            System.out.println("MyUserInterface::paintComponent: redraw is now called");
 //            this.controller.redraw((Graphics2D) g);
 //            //this.controller.setNeedsDrawing(false);
@@ -319,7 +364,7 @@ public class MyUserInterface extends JFrame {
 //        controller.onMouseMoved(posX, posY);
 //        // this.panel.repaint();
 //    }
-//    
+//
 //    @Override
 //    public void mouseDragged(MouseEvent e) {
 ////        System.err.println("MyMouseListener.mouseDragged()");

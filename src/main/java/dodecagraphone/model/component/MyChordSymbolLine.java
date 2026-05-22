@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -22,12 +27,24 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
+ * [CA] Franja horitzontal de símbols d'acord que fa scroll juntament amb la
+ * partitura. Mostra els símbols d'acord del {@code chordSymbolLine} del
+ * {@link MyGridScore}, les marques de canvi de tempo, tonalitat i volum
+ * (colorejades), i les línies de compàs i temps. Utilitza un buffer offscreen
+ * ({@link BufferedImage}) per minimitzar el redibuix; el mètode
+ * {@code drawFullChordLineInOffscreen()} regenera tot el buffer i
+ * {@code draw(Graphics2D)} n'extreu la porció visible.
+ * <p>
+ * [EN] Horizontal chord symbol strip that scrolls with the score. Displays
+ * chord symbols from the {@link MyGridScore} {@code chordSymbolLine}, tempo,
+ * key and volume change markers (coloured), and bar/beat lines. Uses an
+ * offscreen buffer ({@link BufferedImage}) to minimise redraws;
+ * {@code drawFullChordLineInOffscreen()} regenerates the whole buffer and
+ * {@code draw(Graphics2D)} extracts the visible slice.
  *
- * The chord symbol line is an horizontal strip that moves along the score, with
- * beat and measures bars, where the application can write chord symbols
- * corresponding to the current score (like in a music fake book).
- *
- * @author Pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyChordSymbolLine extends MyComponent {
 
@@ -102,14 +119,17 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
+     * [CA] Crea la franja de símbols d'acord associada a la partitura indicada.
+     * <p>
+     * [EN] Creates the chord symbol strip associated with the given score.
      *
-     * @param firstCol
-     * @param firstRow
-     * @param nCols
-     * @param nRows
-     * @param parent
-     * @param contr
-     * @param score
+     * @param firstCol [CA] primera columna del component / [EN] first column of the component
+     * @param firstRow [CA] primera fila del component / [EN] first row of the component
+     * @param nCols    [CA] nombre de columnes / [EN] number of columns
+     * @param nRows    [CA] nombre de files / [EN] number of rows
+     * @param parent   [CA] component pare / [EN] parent component
+     * @param contr    [CA] controlador principal / [EN] main controller
+     * @param score    [CA] graella de partitura associada / [EN] associated score grid
      */
     public MyChordSymbolLine(int firstCol, int firstRow, int nCols, int nRows, MyComponent parent, MyController contr, MyGridScore score) {
         super(firstCol, firstRow, nCols, nRows, parent, contr);
@@ -117,6 +137,17 @@ public class MyChordSymbolLine extends MyComponent {
         this.contr = contr;
     }
 
+    /**
+     * [CA] Retorna la columna de partitura corresponent a la posició de
+     * pantalla, alineada al beat, o -1 si la posició és fora de la franja.
+     * <p>
+     * [EN] Returns the score column corresponding to the screen position,
+     * aligned to the beat, or -1 if the position is outside the strip.
+     *
+     * @param screenX [CA] coordenada X de pantalla / [EN] screen X coordinate
+     * @param screenY [CA] coordenada Y de pantalla / [EN] screen Y coordinate
+     * @return [CA] columna alineada al beat, o -1 / [EN] beat-aligned column, or -1
+     */
     public int whichCol(double screenX, double screenY) {
         if (this.contains(screenX, screenY)) {
             int whichCol = this.contr.getAllPurposeScore().getCol(screenX);
@@ -126,6 +157,20 @@ public class MyChordSymbolLine extends MyComponent {
         return -1;
     }
 
+    /**
+     * [CA] Obre un diàleg per introduir o editar un símbol d'acord. Si
+     * l'usuari confirma un text vàlid, retorna el nou {@link Chord}; si
+     * cancel·la retorna l'acord original; si deixa el camp buit retorna null
+     * (senyal d'esborrar).
+     * <p>
+     * [EN] Opens a dialog to enter or edit a chord symbol. If the user
+     * confirms a valid text, returns the new {@link Chord}; if cancelled
+     * returns the original chord; if left empty returns null (delete signal).
+     *
+     * @param oldChord [CA] acord existent (pot ser null) / [EN] existing chord (may be null)
+     * @return [CA] nou acord, acord original (cancel·lació) o null (esborrar) /
+     *         [EN] new chord, original chord (cancel) or null (delete)
+     */
     public Chord enterChord(Chord oldChord) {
         // Show default in current display format (or basicString if unknown)
         String defStr = "";

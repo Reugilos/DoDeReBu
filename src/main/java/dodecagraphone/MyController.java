@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone;
 
 import dodecagraphone.model.MyChoice;
@@ -64,7 +69,33 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 /**
- * Class controller implements user commands by managing model objects.
+ * [CA] Controlador principal de l'aplicació DoDeReBu. Gestiona tota la lògica
+ * d'interacció: events de ratolí (press/drag/release), edició de notes (ADD, ERASE,
+ * EXTEND, MOVE, SELECT, PASTE), sistema undo/redo, reproducció MIDI, canvis de
+ * paràmetres (tempo, to, compàs, volum), gestió de fitxers (new/load/save),
+ * exercicis d'ear training i inserció/eliminació de columnes.
+ * <p>
+ * La classe connecta el model ({@link dodecagraphone.model.component.MyAllPurposeScore},
+ * {@link dodecagraphone.model.component.MyChordSymbolLine},
+ * {@link dodecagraphone.model.component.MyLyrics},
+ * {@link dodecagraphone.model.component.MyCamera}, etc.) amb la vista
+ * ({@link dodecagraphone.ui.MyUserInterface}, {@link dodecagraphone.model.component.MyButtonPanel}).
+ * <p>
+ * [EN] Main application controller for DoDeReBu. Manages all interaction logic:
+ * mouse events (press/drag/release), note editing (ADD, ERASE, EXTEND, MOVE,
+ * SELECT, PASTE), undo/redo system, MIDI playback, parameter changes (tempo, key,
+ * time signature, volume), file management (new/load/save), ear-training exercises
+ * and column insert/delete.
+ * <p>
+ * The class connects the model ({@link dodecagraphone.model.component.MyAllPurposeScore},
+ * {@link dodecagraphone.model.component.MyChordSymbolLine},
+ * {@link dodecagraphone.model.component.MyLyrics},
+ * {@link dodecagraphone.model.component.MyCamera}, etc.) with the view
+ * ({@link dodecagraphone.ui.MyUserInterface}, {@link dodecagraphone.model.component.MyButtonPanel}).
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyController {
 
@@ -177,9 +208,14 @@ public class MyController {
 //    private int tempo;
 
     /**
-     * creates a list with XiloKey's.
+     * [CA] Construeix el controlador i inicialitza tots els components de la UI
+     * (graella, teclat, càmera, botons, franja d'acords, línia de lletra). Es crida
+     * una sola vegada en arrencar l'aplicació.
+     * <p>
+     * [EN] Builds the controller and initialises all UI components (grid, keyboard,
+     * camera, buttons, chord strip, lyrics strip). Called once at application startup.
      *
-     * @param ui
+     * @param ui [CA] finestra principal de l'aplicació / [EN] main application window
      */
     public MyController(MyUserInterface ui) {
         //Settings.initSettings();
@@ -275,6 +311,13 @@ public class MyController {
         }
     }
 
+    /**
+     * [CA] Desfà l'últim event registrat a la pila undo. Usa
+     * {@code drawCurrentCamInOffscreen()} (ràpid) per actualitzar la vista.
+     * <p>
+     * [EN] Undoes the last event recorded in the undo stack. Uses
+     * {@code drawCurrentCamInOffscreen()} (fast) to update the view.
+     */
     public void undo() {
         pilaEvents.undo();
         if (pilaEvents.isUndoEmpty()) needsSaving = false;
@@ -282,45 +325,106 @@ public class MyController {
         this.drawFull(true);
     }
 
+    /**
+     * [CA] Refà l'últim event desfet. Actualitza l'anacrusis i redibuixa la vista.
+     * <p>
+     * [EN] Redoes the last undone event. Updates anacrusis detection and redraws the view.
+     */
     public void redo() {
         pilaEvents.redo();
         refreshAnacrusis();
         this.drawFull(true);
     }
 
+    /**
+     * [CA] Afegeix un event a la pila undo/redo.
+     * <p>
+     * [EN] Adds an event to the undo/redo stack.
+     *
+     * @param e [CA] l'event a afegir / [EN] the event to add
+     */
     public void afegirEvent(Event e) {
         pilaEvents.afegirEvent(e);
     }
 
+    /**
+     * [CA] Redibuixa la franja d'acords al buffer offscreen i actualitza la vista.
+     * <p>
+     * [EN] Redraws the chord strip to the offscreen buffer and updates the view.
+     */
     public void redrawChordLine() {
         myChordSymbolLine.setNeedsDrawing(true);
         myChordSymbolLine.drawFullChordLineInOffscreen();
         drawFull(true);
     }
 
+    /**
+     * [CA] Mostra un missatge flotant informatiu indicant que el porta-retalls
+     * conté dades. Respecta {@code Settings.isTipsVisible()} automàticament.
+     * <p>
+     * [EN] Shows a floating informational tooltip indicating the clipboard contains
+     * data. Respects {@code Settings.isTipsVisible()} automatically.
+     */
     public void showClipboardTip() {
         double tipX = Settings.getScreenWidth() / 2.0;
         double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
         this.buttons.showCustomTip(I18n.t("clipboard.full.tip"), tipX, tipY);
     }
 
+    /**
+     * [CA] Indica si cal redibuixar la pantalla al proper tick de la UI.
+     * <p>
+     * [EN] Indicates whether the screen needs to be redrawn at the next UI tick.
+     *
+     * @return [CA] {@code true} si cal redibuixar / [EN] {@code true} if a redraw is needed
+     */
     public boolean isNeedsDrawing() {
         return needsDrawing;
     }
 
+    /**
+     * [CA] Estableix si cal redibuixar la pantalla al proper tick de la UI.
+     * <p>
+     * [EN] Sets whether the screen needs to be redrawn at the next UI tick.
+     *
+     * @param needsDrawing [CA] {@code true} per forçar un redibuix / [EN] {@code true} to force a redraw
+     */
     public void setNeedsDrawing(boolean needsDrawing) {
         this.needsDrawing = needsDrawing;
     }
 
+    /**
+     * [CA] Indica si l'aplicació es troba en mode d'impressió/exportació.
+     * <p>
+     * [EN] Indicates whether the application is in print/export mode.
+     *
+     * @return [CA] {@code true} si s'està imprimint / [EN] {@code true} if printing is active
+     */
     public boolean isPrinting() {
         return printing;
     }
 
+    /**
+     * [CA] Activa o desactiva el mode d'impressió/exportació.
+     * <p>
+     * [EN] Activates or deactivates print/export mode.
+     *
+     * @param printing [CA] {@code true} per activar el mode impressió / [EN] {@code true} to activate print mode
+     */
     public void setPrinting(boolean printing) {
         this.printing = printing;
     }
 
     
+    /**
+     * [CA] Configura una pista com a pista d'acords i l'afegeix al mixer. Assigna
+     * el canal 15 i l'instrument d'acords per defecte.
+     * <p>
+     * [EN] Configures a track as the chord track and adds it to the mixer. Assigns
+     * channel 15 and the default chord instrument.
+     *
+     * @param track [CA] pista a configurar / [EN] track to configure
+     */
     public void addChordTrackAndInstrumentToMixer(MyTrack track) {
         track.setVelocity(63);
         int canal = 15;
@@ -335,6 +439,15 @@ public class MyController {
         this.mixer.setCurrentTrack(track.getId());
     }
 
+    /**
+     * [CA] Configura una pista com a pista de percussió i l'afegeix al mixer.
+     * Assigna el canal 9 (canal MIDI de percussió general).
+     * <p>
+     * [EN] Configures a track as the drums track and adds it to the mixer. Assigns
+     * channel 9 (General MIDI drums channel).
+     *
+     * @param track [CA] pista a configurar / [EN] track to configure
+     */
     public void addDrumsTrackAndInstrumentToMixer(MyTrack track) {
         track.setVelocity(63);
         int canal = 9;

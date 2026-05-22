@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -21,10 +26,22 @@ import javax.swing.JPopupMenu;
 import javax.swing.JToolTip;
 
 /**
- * The button panel includes the buttons and toggles that control the
- * application. The buttons Map replicates the subComponents List.
+ * [CA] Panell de botons i commutadors que controlen l'aplicació. Inclou tots
+ * els botons de reproducció, navegació, exportació, mixer, opcions de
+ * visualització i exercicis. El layout es carrega des d'un fitxer de
+ * configuració intern i s'utilitza reflexió per associar cada botó a un
+ * mètode del controlador. El mapa {@code buttons} replica la llista
+ * {@code subComponents}.
+ * <p>
+ * [EN] Button panel with toggles that control the application. Includes all
+ * playback, navigation, export, mixer, view options and exercise buttons. The
+ * layout is loaded from an internal configuration file and uses reflection to
+ * associate each button with a controller method. The {@code buttons} map
+ * replicates the {@code subComponents} list.
  *
- * @author paugpt
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyButtonPanel extends MyComponent {
 
@@ -84,13 +101,18 @@ public class MyButtonPanel extends MyComponent {
     private boolean modified;
 
     /**
+     * [CA] Crea el panell de botons, carrega el layout des del fitxer CSV i
+     * instancia tots els botons al seu lloc.
+     * <p>
+     * [EN] Creates the button panel, loads the layout from the CSV file and
+     * instantiates all buttons at their positions.
      *
-     * @param firstCol
-     * @param firstRow
-     * @param nCols
-     * @param nRows
-     * @param parent
-     * @param contr
+     * @param firstCol [CA] primera columna del component / [EN] first column of the component
+     * @param firstRow [CA] primera fila del component / [EN] first row of the component
+     * @param nCols    [CA] nombre de columnes / [EN] number of columns
+     * @param nRows    [CA] nombre de files / [EN] number of rows
+     * @param parent   [CA] component pare / [EN] parent component
+     * @param contr    [CA] controlador principal / [EN] main controller
      */
     public MyButtonPanel(int firstCol, int firstRow, int nCols, int nRows, MyComponent parent, MyController contr) {
         super(firstCol, firstRow, nCols, nRows, parent, contr);
@@ -103,7 +125,15 @@ public class MyButtonPanel extends MyComponent {
         this.popUp.setFocusable(false);
     }
 
-    // Mètode per carregar el disseny dels botons des del fitxer CSV
+    /**
+     * [CA] Carrega el layout dels botons des del fitxer de recursos
+     * {@code /defaults/ButtonLayout.csv}. Cada línia del CSV descriu un botó
+     * amb id, nom, tipus (B/T/C), fila, columna, textos i tooltip.
+     * <p>
+     * [EN] Loads the button layout from the resource file
+     * {@code /defaults/ButtonLayout.csv}. Each CSV line describes a button
+     * with id, name, type (B/T/C), row, column, texts and tooltip.
+     */
     public final void loadButtonLayout() {
         InputStream in = getClass().getResourceAsStream("/defaults/ButtonLayout.csv");
         if (in == null) {
@@ -146,7 +176,11 @@ public class MyButtonPanel extends MyComponent {
     }
 
     /**
-     * Places the buttons and toggles on the button panel.
+     * [CA] Instancia i col·loca tots els botons i commutadors al panell
+     * d'acord amb el layout carregat prèviament.
+     * <p>
+     * [EN] Instantiates and places all buttons and toggles on the panel
+     * according to the previously loaded layout.
      */
 // Mètode placeButtons() modificat per utilitzar el mapa buttonLayout
     public final void placeButtons() {
@@ -189,12 +223,16 @@ public class MyButtonPanel extends MyComponent {
     }
 
     /**
-     * Resets the buttons.
+     * [CA] Reposiciona tots els botons del panell en les noves coordenades.
+     * S'invoca quan canvia la mida de la finestra.
+     * <p>
+     * [EN] Repositions all buttons on the panel at the new coordinates.
+     * Called when the window is resized.
      *
-     * @param firstCol
-     * @param firstRow
-     * @param nCols
-     * @param nRows
+     * @param firstCol [CA] nova primera columna / [EN] new first column
+     * @param firstRow [CA] nova primera fila / [EN] new first row
+     * @param nCols    [CA] nou nombre de columnes / [EN] new number of columns
+     * @param nRows    [CA] nou nombre de files / [EN] new number of rows
      */
     public void resetButtons(int firstCol, int firstRow, int nCols, int nRows) {
         super.setDimensions(firstCol, firstRow, nCols, nRows);

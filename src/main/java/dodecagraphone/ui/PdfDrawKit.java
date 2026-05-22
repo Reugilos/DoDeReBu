@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import java.awt.Color;
@@ -6,12 +11,28 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 
 /**
- * Capa semàntica sobre {@link PDPageContentStream} per a l'impressió PDF.
- * Agrupa tots els paràmetres d'estil (gruixos, fonts, mides) en camps públics
- * i ofereix mètodes amb noms significatius.
+ * [CA] Capa semàntica sobre {@link PDPageContentStream} per a l'impressió PDF.
+ * Agrupa tots els paràmetres d'estil (gruixos de línia, fonts, mides, colors)
+ * en camps públics i ofereix mètodes amb noms significatius per a cada element
+ * de la partitura (títol, autor, línies de compàs, separadors, doble barra,
+ * etiquetes de número de compàs, etc.).
+ * <p>
+ * Ús: crear una instància per document; cridar
+ * {@link #setContentStream(PDPageContentStream)} cada cop que s'obre un nou
+ * {@code PDPageContentStream}.
+ * <p>
+ * [EN] Semantic layer over {@link PDPageContentStream} for PDF printing.
+ * Groups all style parameters (line widths, fonts, sizes, colours) into public
+ * fields and provides meaningfully named methods for each score element (title,
+ * author, bar lines, separators, double bar, measure number labels, etc.).
+ * <p>
+ * Usage: create one instance per document; call
+ * {@link #setContentStream(PDPageContentStream)} each time a new
+ * {@code PDPageContentStream} is opened.
  *
- * Ús: crear una instància per document; cridar {@link #setContentStream(PDPageContentStream)}
- * cada cop que s'obre un nou {@code PDPageContentStream}.
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class PdfDrawKit {
 
@@ -61,8 +82,14 @@ public class PdfDrawKit {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param titleFont  font per al títol (obligatoria)
-     * @param bodyFont   font per a autor, descripció, etiquetes i capçalera
+     * [CA] Crea un nou kit de dibuix PDF amb les fonts especificades.
+     * <p>
+     * [EN] Creates a new PDF drawing kit with the specified fonts.
+     *
+     * @param titleFont [CA] font per al títol (obligatoria) /
+     *                  [EN] font for the title (required)
+     * @param bodyFont  [CA] font per a autor, descripció, etiquetes i capçalera /
+     *                  [EN] font for author, description, labels and header
      */
     public PdfDrawKit(PDFont titleFont, PDFont bodyFont) {
         this.titleFont       = titleFont;
@@ -72,11 +99,26 @@ public class PdfDrawKit {
         this.headerFont      = titleFont;
     }
 
-    /** Actualitza el content stream actiu (cridar per cada pàgina nova). */
+    /**
+     * [CA] Actualitza el content stream actiu. S'ha de cridar per a cada
+     * pàgina nova del document PDF.
+     * <p>
+     * [EN] Updates the active content stream. Must be called for each new
+     * page of the PDF document.
+     *
+     * @param cs [CA] el nou content stream / [EN] the new content stream
+     */
     public void setContentStream(PDPageContentStream cs) {
         this.cs = cs;
     }
 
+    /**
+     * [CA] Retorna el content stream actiu.
+     * <p>
+     * [EN] Returns the active content stream.
+     *
+     * @return [CA] content stream actiu / [EN] active content stream
+     */
     public PDPageContentStream getContentStream() {
         return cs;
     }

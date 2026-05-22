@@ -1,26 +1,25 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.proves;
 
 /**
+ * [CA] Punt d'entrada per a la prova del parser MIDI. Demana a l'usuari el camí
+ * d'un fitxer MIDI per consola, el parseja amb {@link MidiParser}, i el reprodueix
+ * en temps real mitjançant un {@link TickScheduler} i el sintetitzador del sistema.
+ * Codi experimental / prototip.
+ * <p>
+ * [EN] Entry point for the MIDI parser test. Asks the user for a MIDI file path
+ * via the console, parses it with {@link MidiParser}, and plays it back in real
+ * time using a {@link TickScheduler} and the system synthesiser.
+ * Experimental / prototype code.
  *
- * @author grogm
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
-//public class MainParser {
-//    public static void main(String[] args) {
-//        // Ruta al fitxer MIDI (ajusta-ho segons el teu fitxer)
-//        // String midiFilePath = "pachelbel_canon_d.mid";
-//        String midiFilePath = "AmorQueTensMaVida.mid";
-//
-//        // Crear el gestor DummyHandler
-//        DummyHandler handler = new DummyHandler();
-//
-//        // Crear el parser MIDI
-//        MidiFileParser parser = new MidiFileParser(handler);
-//
-//        // Parseja el fitxer MIDI
-//        parser.parseAndPlayMidiFile(midiFilePath);
-//    }
-//}
-
 import javax.sound.midi.*;
 import java.io.IOException;
 import java.util.List;
@@ -28,6 +27,16 @@ import java.util.Scanner;
 
 public class MainParser {
 
+    /**
+     * [CA] Llegeix el camí del fitxer MIDI des de l'entrada estàndard, parseja el fitxer
+     * i inicia la reproducció. Obre el sintetitzador del sistema i el tanca en finalitzar
+     * o en cas d'error.
+     * <p>
+     * [EN] Reads the MIDI file path from standard input, parses the file and starts
+     * playback. Opens the system synthesiser and closes it when done or on error.
+     *
+     * @param args [CA] arguments de la línia de comandes (no s'utilitzen) / [EN] command-line arguments (unused)
+     */
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 

@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import java.awt.BorderLayout;
@@ -10,11 +15,39 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.event.HyperlinkEvent;
 
+/**
+ * [CA] Diàleg d'ajuda no-modal que mostra la documentació de l'aplicació en
+ * format HTML navegable. Cada secció té una àncora i un índex de navegació.
+ * Si el diàleg ja és obert, un nou clic simplement hi desplaça l'àncora
+ * demandada i el porta al davant.
+ * <p>
+ * [EN] Non-modal help dialog that displays the application documentation as
+ * navigable HTML. Each section has an anchor and a navigation index. If the
+ * dialog is already open, a new call simply scrolls to the requested anchor
+ * and brings the dialog to the front.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
+ */
 public class MyHelpDialog {
 
     private static JDialog dialog;
     private static JEditorPane pane;
 
+    /**
+     * [CA] Obre el diàleg d'ajuda a l'àncora indicada. Si el diàleg ja és
+     * visible, desplaça a l'àncora i el porta al davant sense crear-ne un de
+     * nou.
+     * <p>
+     * [EN] Opens the help dialog at the specified anchor. If the dialog is
+     * already visible, scrolls to the anchor and brings it to the front
+     * without creating a new one.
+     *
+     * @param owner  [CA] finestra pare / [EN] parent frame
+     * @param anchor [CA] identificador d'àncora HTML de la secció destí /
+     *               [EN] HTML anchor id of the target section
+     */
     public static void show(Frame owner, String anchor) {
         if (dialog != null && dialog.isVisible()) {
             scrollTo(anchor);
@@ -56,12 +89,28 @@ public class MyHelpDialog {
         SwingUtilities.invokeLater(() -> pane.scrollToReference(anchor));
     }
 
+    /**
+     * [CA] Desplaça el panell HTML a l'àncora indicada si el diàleg és obert.
+     * <p>
+     * [EN] Scrolls the HTML pane to the given anchor if the dialog is open.
+     *
+     * @param anchor [CA] identificador d'àncora / [EN] anchor id
+     */
     private static void scrollTo(String anchor) {
         if (pane != null) {
             SwingUtilities.invokeLater(() -> pane.scrollToReference(anchor));
         }
     }
 
+    /**
+     * [CA] Construeix el document HTML complet de l'ajuda a partir de les
+     * claus i18n. Inclou índex de navegació i totes les seccions.
+     * <p>
+     * [EN] Builds the complete HTML help document from i18n keys. Includes a
+     * navigation index and all sections.
+     *
+     * @return [CA] cadena HTML de l'ajuda / [EN] HTML string for the help
+     */
     private static String buildHtml() {
         String bg     = "#f8f8f8";
         String hdrBg  = "#2a6099";
@@ -141,6 +190,21 @@ public class MyHelpDialog {
         return sb.toString();
     }
 
+    /**
+     * [CA] Afegeix una secció genèrica (capçalera, descripció i taula de
+     * tecles/accions) al StringBuilder HTML.
+     * <p>
+     * [EN] Appends a generic section (heading, description and key/action
+     * table) to the HTML StringBuilder.
+     *
+     * @param sb       [CA] StringBuilder de sortida / [EN] output StringBuilder
+     * @param anchor   [CA] identificador d'àncora HTML / [EN] HTML anchor id
+     * @param titleKey [CA] clau i18n del títol / [EN] i18n title key
+     * @param descKey  [CA] clau i18n de la descripció (pot ser null) /
+     *                 [EN] i18n description key (may be null)
+     * @param rows     [CA] files de la taula {clau, descripció} /
+     *                 [EN] table rows {key, description}
+     */
     private static void appendSection(StringBuilder sb, String anchor, String titleKey, String descKey, String[][] rows) {
         sb.append("<a name=\"").append(anchor).append("\"></a>");
         sb.append("<h2>").append(I18n.t(titleKey)).append("</h2>");
@@ -154,6 +218,15 @@ public class MyHelpDialog {
         appendBackToIndex(sb);
     }
 
+    /**
+     * [CA] Afegeix la secció de configuració (ruta del fitxer config.properties)
+     * al StringBuilder HTML.
+     * <p>
+     * [EN] Appends the configuration section (config.properties file path) to
+     * the HTML StringBuilder.
+     *
+     * @param sb [CA] StringBuilder de sortida / [EN] output StringBuilder
+     */
     private static void appendSectionConfig(StringBuilder sb) {
         sb.append("<a name=\"config\"></a>");
         sb.append("<h2>").append(I18n.t("help.section.config.title")).append("</h2>");
@@ -166,12 +239,20 @@ public class MyHelpDialog {
         appendBackToIndex(sb);
     }
 
+    /**
+     * [CA] Afegeix un enllaç "tornar a l'índex" al StringBuilder HTML.
+     * <p>
+     * [EN] Appends a "back to index" link to the HTML StringBuilder.
+     *
+     * @param sb [CA] StringBuilder de sortida / [EN] output StringBuilder
+     */
     private static void appendBackToIndex(StringBuilder sb) {
         sb.append("<div style=\"text-align:right;font-size:10px;margin:2px 0 10px 0;\">")
           .append("<a href=\"#top\">").append(I18n.t("help.back.to.index")).append("</a>")
           .append("</div>");
     }
 
+    /** [CA] Files de la secció graella. / [EN] Grid section rows. */
     private static String[][] helpGrid() {
         return new String[][] {
             { I18n.t("help.grid.enter.key"),  I18n.t("help.grid.enter.desc") },
@@ -183,6 +264,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció selecció. / [EN] Selection section rows. */
     private static String[][] helpSelection() {
         return new String[][] {
             { I18n.t("help.selection.select.key"),       I18n.t("help.selection.select.desc") },
@@ -194,6 +276,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció columnes. / [EN] Columns section rows. */
     private static String[][] helpColumns() {
         return new String[][] {
             { I18n.t("help.columns.insert.key"), I18n.t("help.columns.insert.desc") },
@@ -201,6 +284,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció acords i lletra. / [EN] Chords and lyrics section rows. */
     private static String[][] helpChordsLyrics() {
         return new String[][] {
             { I18n.t("help.chords.add.key"),     I18n.t("help.chords.add.desc") },
@@ -212,6 +296,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció marques de canvi. / [EN] Change markers section rows. */
     private static String[][] helpMarkers() {
         return new String[][] {
             { I18n.t("help.markers.timesig.key"), I18n.t("help.markers.timesig.desc") },
@@ -222,6 +307,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció teclat de xilòfon. / [EN] Xylophone keyboard section rows. */
     private static String[][] helpXylokeyboard() {
         return new String[][] {
             { I18n.t("help.xylokeyboard.play.key"),   I18n.t("help.xylokeyboard.play.desc") },
@@ -230,6 +316,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció patró. / [EN] Pattern section rows. */
     private static String[][] helpPattern() {
         return new String[][] {
             { I18n.t("help.pattern.activate.key"), I18n.t("help.pattern.activate.desc") },
@@ -240,6 +327,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció partitura. / [EN] Score section rows. */
     private static String[][] helpScore() {
         return new String[][] {
             { I18n.t("help.score.title.key"),       I18n.t("help.score.title.desc") },
@@ -248,6 +336,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció tonalitat. / [EN] Key section rows. */
     private static String[][] helpKey() {
         return new String[][] {
             { I18n.t("help.key.nextprev.key"), I18n.t("help.key.nextprev.desc") },
@@ -255,6 +344,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció reproducció. / [EN] Playback section rows. */
     private static String[][] helpPlayback() {
         return new String[][] {
             { I18n.t("help.playback.first.key"),        I18n.t("help.playback.first.desc") },
@@ -270,6 +360,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció vista. / [EN] View section rows. */
     private static String[][] helpView() {
         return new String[][] {
             { I18n.t("help.view.penta.key"),     I18n.t("help.view.penta.desc") },
@@ -281,6 +372,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció exercicis. / [EN] Exercises section rows. */
     private static String[][] helpExercises() {
         return new String[][] {
             { I18n.t("help.exercises.nextprev.key"), I18n.t("help.exercises.nextprev.desc") },
@@ -288,6 +380,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció mixer. / [EN] Mixer section rows. */
     private static String[][] helpMixer() {
         return new String[][] {
             { I18n.t("help.mixer.open.key"),  I18n.t("help.mixer.open.desc") },
@@ -297,6 +390,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció exportació. / [EN] Export section rows. */
     private static String[][] helpExport() {
         return new String[][] {
             { I18n.t("help.export.new.key"),  I18n.t("help.export.new.desc") },
@@ -307,6 +401,7 @@ public class MyHelpDialog {
         };
     }
 
+    /** [CA] Files de la secció configuració avançada. / [EN] Advanced config section rows. */
     private static String[][] helpConfig() {
         return new String[][] {
             { "ui.language",                          I18n.t("help.config.language.desc") },

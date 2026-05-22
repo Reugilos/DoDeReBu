@@ -1,7 +1,7 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
  */
 package dodecagraphone.model.component;
 
@@ -13,14 +13,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The screen of the application is a tree of MyCmponent. The screen has some
- * child subcomponents, and each component can have other subcomponents. Each
- * component knows its parent component and the parent has a list of
- * subcomponents. Each component knows its absolute position and size in the
- * screen, (in pixels starting at the top-left), and it also knows its first row
- * and column in the parent (top-left).
+ * [CA] Classe base abstracta per a tots els components visuals de l'aplicació.
+ * La pantalla de l'aplicació és un arbre de MyComponent: la pantalla té
+ * subcomponents fills i cada component pot tenir altres subcomponents.
+ * Cada component coneix la seva posició absoluta i mida a la pantalla
+ * (en píxels, des de dalt-esquerra), i també coneix la seva primera fila
+ * i columna dins del pare (dalt-esquerra).
+ * <p>
+ * [EN] Abstract base class for all visual components of the application.
+ * The application screen is a tree of MyComponent: the screen has child
+ * subcomponents, and each component can have other subcomponents. Each
+ * component knows its absolute position and size on the screen (in pixels
+ * starting at the top-left), and it also knows its first row and column
+ * in the parent (top-left).
  *
- * @author pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public abstract class MyComponent {
 
@@ -41,16 +50,22 @@ public abstract class MyComponent {
      * Acces to the members of the controller.
      */
     protected MyController controller;
-    
+
 //    protected boolean needsDrawing;
 
     /**
-     * @param firstCol, relative to parent
-     * @param firstRow, relative to parent
-     * @param nCols
-     * @param nRows
-     * @param parent
-     * @param contr
+     * [CA] Constructor que estableix la posició relativa al pare i les dimensions.
+     * Si el pare és null (cas MyScreen), la posició de pantalla es calcula des de (0,0).
+     * <p>
+     * [EN] Constructor that sets the position relative to the parent and dimensions.
+     * If parent is null (MyScreen case), screen position is calculated from (0,0).
+     *
+     * @param firstCol [CA] primera columna relativa al pare / [EN] first column relative to parent
+     * @param firstRow [CA] primera fila relativa al pare / [EN] first row relative to parent
+     * @param nCols    [CA] nombre de columnes / [EN] number of columns
+     * @param nRows    [CA] nombre de files / [EN] number of rows
+     * @param parent   [CA] component pare (null per a MyScreen) / [EN] parent component (null for MyScreen)
+     * @param contr    [CA] referència al controlador principal / [EN] reference to the main controller
      */
     public MyComponent(int firstCol, int firstRow, int nCols, int nRows, MyComponent parent, MyController contr) {
         this.parentFirstCol = firstCol;
@@ -84,11 +99,16 @@ public abstract class MyComponent {
 //    }
 //
     /**
+     * [CA] Estableix la posició i les dimensions del component.
+     * Recalcula les coordenades de pantalla a partir de la posició del pare.
+     * <p>
+     * [EN] Sets the position and dimensions of the component.
+     * Recalculates screen coordinates from the parent position.
      *
-     * @param firstCol
-     * @param firstRow
-     * @param nCols
-     * @param nRows
+     * @param firstCol [CA] primera columna relativa al pare / [EN] first column relative to parent
+     * @param firstRow [CA] primera fila relativa al pare / [EN] first row relative to parent
+     * @param nCols    [CA] nombre de columnes / [EN] number of columns
+     * @param nRows    [CA] nombre de files / [EN] number of rows
      */
     public void setDimensions(int firstCol, int firstRow, int nCols, int nRows) {
         this.parentFirstCol = firstCol;
@@ -107,10 +127,12 @@ public abstract class MyComponent {
     }
 
     /**
-     * Get the screenX position of a local column.
+     * [CA] Retorna la posició X de pantalla d'una columna local.
+     * <p>
+     * [EN] Get the screen X position of a local column.
      *
-     * @param col (the first column of the component is 0)
-     * @return
+     * @param col [CA] la primera columna del component és 0 / [EN] the first column of the component is 0
+     * @return [CA] coordenada X absoluta en píxels / [EN] absolute X coordinate in pixels
      */
     public double getScreenX(int col) {
         double screenX = screenPosX + col * Settings.getColWidth();
@@ -118,10 +140,12 @@ public abstract class MyComponent {
     }
 
     /**
-     * Get the screenY position of a local row.
+     * [CA] Retorna la posició Y de pantalla d'una fila local.
+     * <p>
+     * [EN] Get the screen Y position of a local row.
      *
-     * @param row (the first row of the component is 0)
-     * @return
+     * @param row [CA] la primera fila del component és 0 / [EN] the first row of the component is 0
+     * @return [CA] coordenada Y absoluta en píxels / [EN] absolute Y coordinate in pixels
      */
     public double getScreenY(int row) {
         double screenY = screenPosY + row * Settings.getRowHeight();
@@ -129,37 +153,24 @@ public abstract class MyComponent {
     }
 
     /**
-     * Given a Y position of the screen, returns the corresponding local row.
+     * [CA] Donada una posició X de pantalla, retorna la columna local corresponent.
+     * <p>
+     * [EN] Given an X position of the screen, returns the corresponding local column.
      *
-     * @param screenY
-     * @return (the first row of the component is 0)
-     */
-//    public int getRow(double screenY) {
-//        int row = (int) (screenY - getScreenPosY()) / Settings.getRowHeight();
-//        return row;
-//    }
-//
-    /**
-     * Given an X position of the screen, returns the corresponing local column.
-     *
-     * @param screenX
-     * @return (the first column of the component is 0)
+     * @param screenX [CA] posició X absoluta en píxels / [EN] absolute X position in pixels
+     * @return [CA] columna local (la primera columna del component és 0) / [EN] local column (first column is 0)
      */
     public int getCol(double screenX) {
         int col = (int) ((screenX - getScreenPosX()) / Settings.getColWidth());
         return col;
     }
 
-//    public void thisAndAncestorsNeedDrawing(){
-//        this.setNeedsDrawing(true);
-//        if (this.parent!=null){
-//            this.parent.thisAndAncestorsNeedDrawing();
-//        }
-//    }
     /**
-     * Draw the child components.
+     * [CA] Dibuixa els components fills.
+     * <p>
+     * [EN] Draw the child components.
      *
-     * @param g
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     public void draw(Graphics2D g) {
 //        if (this.needsDrawing){
@@ -172,29 +183,35 @@ public abstract class MyComponent {
     }
 
     /**
-     * Add a child component.
+     * [CA] Afegeix un component fill.
+     * <p>
+     * [EN] Add a child component.
      *
-     * @param comp
+     * @param comp [CA] component a afegir / [EN] component to add
      */
     public void add(MyComponent comp) {
         this.subComponents.add(comp);
     }
 
     /**
-     * Add a child component.
+     * [CA] Elimina un component fill.
+     * <p>
+     * [EN] Remove a child component.
      *
-     * @param comp
+     * @param comp [CA] component a eliminar / [EN] component to remove
      */
     public void remove(MyComponent comp) {
         this.subComponents.remove(comp);
     }
 
     /**
-     * Checks whether an (x,y) position in the screen is inside the component.
+     * [CA] Comprova si una posició (x,y) de pantalla és dins del component.
+     * <p>
+     * [EN] Checks whether an (x,y) position in the screen is inside the component.
      *
-     * @param x
-     * @param y
-     * @return
+     * @param x [CA] coordenada X en píxels / [EN] X coordinate in pixels
+     * @param y [CA] coordenada Y en píxels / [EN] Y coordinate in pixels
+     * @return [CA] true si el punt és dins del component / [EN] true if the point is inside the component
      */
     public boolean contains(double x, double y) {
         boolean cont = true;
@@ -210,58 +227,136 @@ public abstract class MyComponent {
         if (y > screenPosY + height){
             cont = false;
         }
-//        if (cont) System.out.println("MyComponent::contains: posX = "+this.screenPosX+", width = "+this.width+", posY = "+this.screenPosY+", height = "+this.height);
         return cont;
     }
 
+    /**
+     * [CA] Retorna la primera columna relativa al pare.
+     * <p>
+     * [EN] Returns the first column relative to the parent.
+     *
+     * @return [CA] primera columna relativa al pare / [EN] first column relative to parent
+     */
     public int getFirstParentCol() {
         return parentFirstCol;
     }
 
+    /**
+     * [CA] Retorna la primera fila relativa al pare.
+     * <p>
+     * [EN] Returns the first row relative to the parent.
+     *
+     * @return [CA] primera fila relativa al pare / [EN] first row relative to parent
+     */
     public int getParentFirstRow() {
         return parentFirstRow;
     }
 
+    /**
+     * [CA] Retorna el nombre de columnes del component.
+     * <p>
+     * [EN] Returns the number of columns of the component.
+     *
+     * @return [CA] nombre de columnes / [EN] number of columns
+     */
     public int getnCols() {
         return nCols;
     }
 
+    /**
+     * [CA] Retorna el nombre de files del component.
+     * <p>
+     * [EN] Returns the number of rows of the component.
+     *
+     * @return [CA] nombre de files / [EN] number of rows
+     */
     public int getnRows() {
         return nRows;
     }
 
+    /**
+     * [CA] Retorna la posició X absoluta del component en píxels.
+     * <p>
+     * [EN] Returns the absolute X position of the component in pixels.
+     *
+     * @return [CA] posició X de pantalla / [EN] screen X position
+     */
     public double getScreenPosX() {
         return screenPosX;
     }
 
+    /**
+     * [CA] Retorna la posició Y absoluta del component en píxels.
+     * <p>
+     * [EN] Returns the absolute Y position of the component in pixels.
+     *
+     * @return [CA] posició Y de pantalla / [EN] screen Y position
+     */
     public double getScreenPosY() {
         return screenPosY;
     }
 
+    /**
+     * [CA] Retorna l'amplada del component en píxels.
+     * <p>
+     * [EN] Returns the width of the component in pixels.
+     *
+     * @return [CA] amplada en píxels / [EN] width in pixels
+     */
     public double getComponentWidth() {
         return width;
     }
 
+    /**
+     * [CA] Retorna l'alçada del component en píxels.
+     * <p>
+     * [EN] Returns the height of the component in pixels.
+     *
+     * @return [CA] alçada en píxels / [EN] height in pixels
+     */
     public double getComponentHeight() {
         return height;
     }
 
+    /**
+     * [CA] Retorna el controlador principal associat.
+     * <p>
+     * [EN] Returns the main controller associated with this component.
+     *
+     * @return [CA] referència al controlador / [EN] reference to the controller
+     */
     public MyController getController() {
         return controller;
     }
 
+    /**
+     * [CA] Retorna l'amplada del component en píxels.
+     * <p>
+     * [EN] Returns the width of the component in pixels.
+     *
+     * @return [CA] amplada en píxels / [EN] width in pixels
+     */
     public double getWidth() {
         return width;
     }
 
+    /**
+     * [CA] Retorna l'alçada del component en píxels.
+     * <p>
+     * [EN] Returns the height of the component in pixels.
+     *
+     * @return [CA] alçada en píxels / [EN] height in pixels
+     */
     public double getHeight() {
         return height;
     }
 
     /**
-     * Returns the class name of the component.
+     * [CA] Retorna el nom de la classe del component (sense paquet).
+     * <p>
+     * [EN] Returns the class name of the component (without package).
      *
-     * @return
+     * @return [CA] nom simple de la classe / [EN] simple class name
      */
     public String getName() {
         String cl = this.getClass().getName();
@@ -271,11 +366,12 @@ public abstract class MyComponent {
     }
 
     /**
-     * Shows the tree structure of the components, and their respective
-     * coordinates.
+     * [CA] Mostra l'estructura d'arbre dels components i les seves coordenades.
+     * <p>
+     * [EN] Shows the tree structure of the components, and their respective coordinates.
      *
-     * @param indent
-     * @return
+     * @param indent [CA] cadena d'indentació inicial / [EN] initial indentation string
+     * @return [CA] representació en text de l'arbre / [EN] text representation of the tree
      */
     public String showLayout(String indent) {
         StringBuilder result = new StringBuilder();
@@ -301,10 +397,18 @@ public abstract class MyComponent {
         return result.toString();
     }
 
+    /**
+     * [CA] Retorna una representació en text de les coordenades i dimensions del component.
+     * <p>
+     * [EN] Returns a text representation of the component coordinates and dimensions.
+     *
+     * @return [CA] cadena amb posX, posY, amplada, alçada, firstCol, firstRow, nCols, nRows /
+     *         [EN] string with posX, posY, width, height, firstCol, firstRow, nCols, nRows
+     */
     @Override
     public String toString() {
-        return " {" + "posX=" + (int) screenPosX + ", posY=" + (int) screenPosY + 
-                ", width=" + (int) width + ", height=" + (int) height + ", firstCol=" + parentFirstCol 
+        return " {" + "posX=" + (int) screenPosX + ", posY=" + (int) screenPosY +
+                ", width=" + (int) width + ", height=" + (int) height + ", firstCol=" + parentFirstCol
                 + ", firstRow=" + parentFirstRow + ", nCols=" + nCols + ", nRows=" + nRows + '}';
     }
 

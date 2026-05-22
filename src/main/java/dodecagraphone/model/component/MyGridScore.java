@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -33,32 +38,24 @@ import java.util.TreeMap;
 import javax.sound.midi.MidiMessage;
 
 /**
- * The MyGridScore is an array of MyGridSquare's: rows correspond to midi values
- * (notes) and columns correspond to time instants. A great square can be on or
- * off (see MyGridSquare), and they can be toggled with the mouse. Each note has
- * its own color.
+ * [CA] Graella de notes de la partitura: un array de {@link MyGridSquare} on
+ * les files corresponen a valors MIDI (notes) i les columnes a instants de
+ * temps. Cada cel·la pot estar activada o desactivada (polifònica: diverses
+ * notes per cel·la). Gestiona el rendering offscreen (
+ * {@code drawFullGridinOffscreen} i {@code drawCurrentCamInOffscreen}),
+ * el {@code changeMap} de paràmetres globals, la reproducció MIDI de notes i
+ * acords de fons, i la detecció de columna d'edició via {@code getEditingCol}.
+ * <p>
+ * [EN] Score note grid: an array of {@link MyGridSquare} where rows correspond
+ * to MIDI values (notes) and columns to time instants. Each cell can be on or
+ * off (polyphonic: multiple notes per cell). Manages offscreen rendering
+ * ({@code drawFullGridinOffscreen} and {@code drawCurrentCamInOffscreen}),
+ * the global-parameter {@code changeMap}, MIDI note and background chord
+ * playback, and editing column detection via {@code getEditingCol}.
  *
- * The camera shows the visible part of the score, with currentCol the first
- * column out of sight. When a column of the score hits the camera's play bar,
- * all the grid squares that are on in this column play their midi note. If you
- * set a square to mutted, the note will be drawn but it will not play.
- *
- * In addition to individual notes, the score can play chords on the background.
- * The score includes four maps, indexed by columns: the background chord, the
- * chord symbol (displayed in MyChordSymbolLine), a message to be printed in the
- * status line, and a midi message to be executed by the midi player.
- *
- * The score includes also the number of squares for beat, the number of beats
- * per measure, and the beat figure (4=quarter note).
- *
- * A GridScoreSquare is the minimum time lapse. available.
- *
- * When drawing the score, the strip corresponding to the key note is
- * highlighted in pale red. And other strips highlighted or grey. You can chose
- * to paint in grey the lines corresponding to the pentagram, or highlight the
- * lines that you chose in the field "choice" (see below).
- *
- * @author Pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyGridScore extends MyComponent {
 
@@ -207,17 +204,23 @@ public class MyGridScore extends MyComponent {
     protected MyXiloKeyboard keyboard;
 
     /**
-     * Initializes all atributes and creats the grid with grid squares set to
-     * off (constructor).
+     * [CA] Inicialitza tots els atributs i crea la graella amb totes les
+     * cel·les a null (sense nota). Congela els paràmetres de timing base
+     * ({@code freezeBaseTimingParams}) i estableix la posició inicial de la
+     * càmera.
+     * <p>
+     * [EN] Initialises all attributes and creates the grid with all cells set
+     * to null (no note). Freezes the base timing parameters
+     * ({@code freezeBaseTimingParams}) and sets the initial camera position.
      *
-     * @param firstCol
-     * @param firstRow
-     * @param ncols
-     * @param nrows
-     * @param parent
-     * @param contr
-     * @param cam
-     * @param keyboard
+     * @param firstCol [CA] primera columna del component / [EN] first column of the component
+     * @param firstRow [CA] primera fila del component / [EN] first row of the component
+     * @param ncols    [CA] nombre de columnes de la partitura / [EN] number of score columns
+     * @param nrows    [CA] nombre de files de la partitura / [EN] number of score rows
+     * @param parent   [CA] component pare / [EN] parent component
+     * @param contr    [CA] controlador principal / [EN] main controller
+     * @param cam      [CA] càmera (viewport) / [EN] camera (viewport)
+     * @param nKeys    [CA] nombre de tecles (files visibles) / [EN] number of keys (visible rows)
      */
     public MyGridScore(int firstCol, int firstRow, int ncols, int nrows, MyComponent parent, MyController contr, MyCamera cam, int nKeys) {
         super(firstCol, firstRow, ncols, nrows, parent, contr);
@@ -251,14 +254,50 @@ public class MyGridScore extends MyComponent {
         gridColorsHaveChanged = true;
     }
 
+    /**
+     * [CA] Restableix el retard (delay) al valor per defecte (= una quarter note).
+     * <p>
+     * [EN] Resets the delay to the default value (= one quarter note).
+     */
     public final void setDefaultDelay(){
             this.delay = Settings.getDefaultDelay();
     }
 
+    /**
+     * [CA] Assigna el teclat de xilòfon associat a la graella.
+     * <p>
+     * [EN] Assigns the xylophone keyboard associated with the grid.
+     *
+     * @param keyb [CA] teclat de xilòfon / [EN] xylophone keyboard
+     */
     public void setKeyboard(MyXiloKeyboard keyb) {
         this.keyboard = keyb;
     }
 
+    /**
+     * [CA] Afegeix una nota (SubSquare) a la cel·la indicada. Si la cel·la
+     * no existeix, la crea. Retorna la cel·la modificada.
+     * <p>
+     * [EN] Adds a note (SubSquare) to the specified cell. Creates the cell
+     * if it does not exist. Returns the modified cell.
+     *
+     * @param firstRow   [CA] fila de partitura / [EN] score row
+     * @param firstCol   [CA] columna de partitura / [EN] score column
+     * @param nCols      [CA] amplada de la nota / [EN] note width
+     * @param nRows      [CA] alçada de la nota / [EN] note height
+     * @param parent     [CA] component pare / [EN] parent component
+     * @param contr      [CA] controlador / [EN] controller
+     * @param score      [CA] graella / [EN] grid
+     * @param cam        [CA] càmera / [EN] camera
+     * @param channel    [CA] canal MIDI / [EN] MIDI channel
+     * @param track      [CA] id del track / [EN] track id
+     * @param volume     [CA] velocitat / [EN] velocity
+     * @param is_visible [CA] visible a la partitura / [EN] visible in score
+     * @param is_mutted  [CA] silenciada / [EN] muted
+     * @param is_linked  [CA] lligada a la nota anterior / [EN] tied to previous note
+     * @param is_dotted  [CA] puntejada / [EN] dotted
+     * @return [CA] la cel·la modificada / [EN] the modified cell
+     */
     public MyGridSquare addNoteToSquare(
             int firstRow, int firstCol, int nCols, int nRows, MyComponent parent, MyController contr, MyGridScore score, MyCamera cam,
             int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
@@ -271,6 +310,21 @@ public class MyGridScore extends MyComponent {
         return sq;
     }
 
+    /**
+     * [CA] Elimina una nota (SubSquare) de la cel·la indicada. Si la cel·la
+     * queda buida, l'esborra de la graella. Retorna la SubSquare eliminada,
+     * o null si no existia.
+     * <p>
+     * [EN] Removes a note (SubSquare) from the specified cell. If the cell
+     * becomes empty, removes it from the grid. Returns the removed SubSquare,
+     * or null if it did not exist.
+     *
+     * @param row     [CA] fila de partitura / [EN] score row
+     * @param col     [CA] columna de partitura / [EN] score column
+     * @param channel [CA] canal MIDI / [EN] MIDI channel
+     * @param track   [CA] id del track / [EN] track id
+     * @return [CA] la SubSquare eliminada, o null / [EN] the removed SubSquare, or null
+     */
     public SubSquare removeNoteFromSquare(int row, int col, int channel, int track) {
         MyGridSquare sq = this.grid[row + BUFFER][col];
         if (sq == null) {

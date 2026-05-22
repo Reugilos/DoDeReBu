@@ -1,34 +1,51 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
 
 /**
- * A MyToggle is a button with two states: on an off, and it toggles its state
+ * [CA] Botó de dos estats (activat/desactivat) que commuta el seu estat cada cop
+ * que es prem, activant l'acció corresponent del controlador definida a
+ * {@code MyButtonPanel::onButtonPressed()}. El text i el color del botó canvien
+ * mentre el botó és activat. El booleà heretat {@code isPressed} indica si el
+ * toggle és activat o no.
+ * <p>
+ * [EN] A MyToggle is a button with two states: on and off, and it toggles its state
  * each time the button is pressed, activating the corresponding
- * controller action, as specified in MyButtonPanel::onButtonPressed().
+ * controller action, as specified in {@code MyButtonPanel::onButtonPressed()}.
  * The text and color of the button change while the button is on, until
- * next click on the button. The inherited boolean isPressed is used here
+ * the next click on the button. The inherited boolean {@code isPressed} is used here
  * to identify whether the button is on or off.
- * @author pau
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyToggle extends MyButton{
     /** Text when the toggle has been clicked on. */
     private final String textOn;
     /** Text when the toggle has been clicked off. */
     private final String textOff;
-    
-    
+
     /**
-     * 
-     * @param id
-     * @param firstCol
-     * @param firstRow
-     * @param nCols
-     * @param nRows
-     * @param parent
-     * @param contr
-     * @param textOn
-     * @param textOff 
+     * [CA] Constructor del toggle.
+     * <p>
+     * [EN] Toggle constructor.
+     *
+     * @param id       [CA] identificador del botó / [EN] button identifier
+     * @param firstCol [CA] primera columna relativa al pare / [EN] first column relative to parent
+     * @param firstRow [CA] primera fila relativa al pare / [EN] first row relative to parent
+     * @param nCols    [CA] nombre de columnes / [EN] number of columns
+     * @param nRows    [CA] nombre de files / [EN] number of rows
+     * @param parent   [CA] component pare / [EN] parent component
+     * @param contr    [CA] referència al controlador / [EN] reference to the controller
+     * @param textOn   [CA] text quan el toggle és activat / [EN] text when toggle is on
+     * @param textOff  [CA] text quan el toggle és desactivat / [EN] text when toggle is off
+     * @param tipText  [CA] text del tooltip / [EN] tooltip text
      */
     public MyToggle(int id,int firstCol,int firstRow,int nCols,int nRows,MyComponent parent,MyController contr,
             String textOn,String textOff,String tipText){
@@ -41,21 +58,16 @@ public class MyToggle extends MyButton{
     }
 
     /**
-     * Sets the isPressed flag, the color and the text, as specified by
+     * [CA] Estableix el flag {@code isPressed}, el color i el text segons el paràmetre.
+     * <p>
+     * [EN] Sets the {@code isPressed} flag, the color and the text as specified by
      * the parameter pressed.
-     * 
-     * @param pressed 
+     *
+     * @param pressed [CA] true per activar el toggle / [EN] true to activate the toggle
      */
     @Override
     public void setPressed(boolean pressed){
         if (this.id == 28 ) {
- //           System.out.println("MyToggle::setPressed: " + this.id + " " + pressed);
-//            try {
-//                throw new InvalidParameterException("toggle.setPressed()");
-//            }
-//            catch (InvalidParameterException ex){
-//                ex.printStackTrace();
-//            }
         }
         this.isPressed = pressed;
         if (this.isPressed){
@@ -69,20 +81,27 @@ public class MyToggle extends MyButton{
     }
 
     /**
-     * Resetting a toggle does nothing. In the superclass MyButton, though,
-     * reset sets isPressed to false.
+     * [CA] Reseteja un toggle no fa res. A la superclasse {@code MyButton},
+     * reset posa {@code isPressed} a false.
+     * <p>
+     * [EN] Resetting a toggle does nothing. In the superclass {@code MyButton}, though,
+     * reset sets {@code isPressed} to false.
      */
     @Override
-    public void reset(){        
+    public void reset(){
     }
-    
-    /** Toggling a button does nothing, but toggling a toggle does toggle it.
-     * In the superclass MyButton this method does nothing.
+
+    /**
+     * [CA] Commuta el toggle: si era activat passa a desactivat i viceversa,
+     * actualitzant color i text. A la superclasse {@code MyButton} aquest mètode
+     * no fa res.
+     * <p>
+     * [EN] Toggles the button: if it was on it goes off and vice versa,
+     * updating color and text. In the superclass {@code MyButton} this method does nothing.
      */
     @Override
     public void toggle(){
         this.isPressed = !this.isPressed;
-        // if (this.id == 28) System.out.println("MyToggle::togle: after toggling isPressed = " + isPressed);
         if (this.isPressed){
             this.color = this.colorPressed;
             this.text = this.textOn;
@@ -92,12 +111,7 @@ public class MyToggle extends MyButton{
             this.text=this.textOff;
         }
     }
-    
-//    public static boolean once = true;
-//    
-//    @Override
-//    public void draw(Graphics2D g){
-//        once = false;
-//        super.draw(g);
-//    }
+
+    /** [CA] Flag estàtic per al log de jerarquia de dibuix (MyButtonPanel el reseteja). */
+    public static boolean once = true;
 }

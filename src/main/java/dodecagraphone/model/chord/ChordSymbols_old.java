@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.chord;
 
 import dodecagraphone.ui.Settings;
@@ -8,6 +13,28 @@ import java.text.Normalizer;
 import java.util.*;
 import java.util.regex.*;
 
+/**
+ * [CA] Versió antiga del motor de conversió de símbols d'acords.
+ * Carrega les dades en temps d'execució des d'un fitxer CSV ({@code ChordSymbols.csv})
+ * en lloc de tenir-les codificades. Ha estat substituïda per {@link ChordSymbols},
+ * que té totes les dades incrustades.
+ * <p>
+ * Aquesta classe es manté per compatibilitat i referència.
+ * <p>
+ * [EN] Old version of the chord symbol conversion engine.
+ * Loads data at runtime from a CSV file ({@code ChordSymbols.csv}) instead of
+ * having it hardcoded. It has been superseded by {@link ChordSymbols},
+ * which has all data embedded.
+ * <p>
+ * This class is kept for compatibility and reference.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
+ * @see ChordSymbols
+ * @deprecated Substituïda per {@link ChordSymbols}. / Superseded by {@link ChordSymbols}.
+ */
+@Deprecated
 public class ChordSymbols_old {
 
     // ===== Config =====
@@ -63,30 +90,85 @@ public class ChordSymbols_old {
     }
 
     /* ===================== API de validació ===================== */
+
+    /**
+     * [CA] Retorna {@code true} si el text és un símbol d'acord vàlid (format simbòlic).
+     * <p>
+     * [EN] Returns {@code true} if the text is a valid chord symbol (symbolic format).
+     *
+     * @param text [CA] text a validar / [EN] text to validate
+     * @return [CA] {@code true} si és simbòlic / [EN] {@code true} if symbolic
+     * @throws IllegalArgumentException [CA] si el text no correspon a cap acord vàlid /
+     *                                  [EN] if the text does not match any valid chord
+     */
     public static boolean isSymbolic(String text) {
         String in = norm(text);
         if (looksIntervalic(in) || looksNoteNames(in) || looksPosicio(in) || looksAlteracions(in)) return false;
         try { parseSymbolicToIntervals(in); return true; }
         catch (RuntimeException ex) { throw new IllegalArgumentException("El text " + text + " no es correspon a cap acord vàlid"); }
     }
+
+    /**
+     * [CA] Retorna {@code true} si el text és una representació intervalica (format {@code Do[0,4,7]}).
+     * <p>
+     * [EN] Returns {@code true} if the text is an interval representation (format {@code Do[0,4,7]}).
+     *
+     * @param text [CA] text a validar / [EN] text to validate
+     * @return [CA] {@code true} si és intervalic / [EN] {@code true} if interval-based
+     * @throws IllegalArgumentException [CA] si el text no correspon a cap acord vàlid /
+     *                                  [EN] if the text does not match any valid chord
+     */
     public static boolean isIntervalic(String text) {
         String in = norm(text);
         if (looksIntervalic(in)) return true;
         if (looksNoteNames(in) || looksPosicio(in) || looksAlteracions(in) || looksPossiblySymbolic(in)) return false;
         throw new IllegalArgumentException("El text " + text + " no es correspon a cap acord vàlid");
     }
+
+    /**
+     * [CA] Retorna {@code true} si el text és una llista de noms de nota (format {@code [do, mi, so]}).
+     * <p>
+     * [EN] Returns {@code true} if the text is a list of note names (format {@code [do, mi, so]}).
+     *
+     * @param text [CA] text a validar / [EN] text to validate
+     * @return [CA] {@code true} si és una llista de noms de nota / [EN] {@code true} if a note name list
+     * @throws IllegalArgumentException [CA] si el text no correspon a cap acord vàlid /
+     *                                  [EN] if the text does not match any valid chord
+     */
     public static boolean isNoteNames(String text) {
         String in = norm(text);
         if (looksNoteNames(in)) return true;
         if (looksIntervalic(in) || looksPosicio(in) || looksAlteracions(in) || looksPossiblySymbolic(in)) return false;
         throw new IllegalArgumentException("El text " + text + " no es correspon a cap acord vàlid");
     }
+
+    /**
+     * [CA] Retorna {@code true} si el text és una llista d'alteracions anglosaxones (format {@code [C, E, G]}).
+     * <p>
+     * [EN] Returns {@code true} if the text is a list of Anglo alterations (format {@code [C, E, G]}).
+     *
+     * @param text [CA] text a validar / [EN] text to validate
+     * @return [CA] {@code true} si és una llista d'alteracions / [EN] {@code true} if an alteration list
+     * @throws IllegalArgumentException [CA] si el text no correspon a cap acord vàlid /
+     *                                  [EN] if the text does not match any valid chord
+     */
     public static boolean isAlteracions(String text) {
         String in = norm(text);
         if (looksAlteracions(in)) return true;
         if (looksIntervalic(in) || looksPosicio(in) || looksNoteNames(in) || looksPossiblySymbolic(in)) return false;
         throw new IllegalArgumentException("El text " + text + " no es correspon a cap acord vàlid");
     }
+
+    /**
+     * [CA] Retorna {@code true} si el text és una llista de posicions diatòniques (format {@code [1,b3,5]}).
+     * <p>
+     * [EN] Returns {@code true} if the text is a list of diatonic positions (format {@code [1,b3,5]}).
+     *
+     * @param text [CA] text a validar / [EN] text to validate
+     * @return [CA] {@code true} si és una llista de posicions / [EN] {@code true} if a position list
+     * @throws IllegalArgumentException [CA] si el text no correspon a cap acord vàlid /
+     *                                  [EN] if the text does not match any valid chord
+     */
     public static boolean isPosicio(String text) {
         String in = norm(text);
         in = stripOuterQuotes(in);
@@ -94,14 +176,43 @@ public class ChordSymbols_old {
         if (looksIntervalic(in) || looksNoteNames(in) || looksAlteracions(in) || looksPossiblySymbolic(in)) return false;
         throw new IllegalArgumentException("El text " + text + " no es correspon a cap acord vàlid");
     }
+
+    /**
+     * [CA] Àlies de {@link #isPosicio(String)}.
+     * <p>
+     * [EN] Alias for {@link #isPosicio(String)}.
+     *
+     * @param text [CA] text a validar / [EN] text to validate
+     * @return [CA] {@code true} si és una llista de posicions / [EN] {@code true} if a position list
+     */
     public static boolean isPoscio(String text) { return isPosicio(text); }
 
     /* ===================== API principal ===================== */
+
+    /**
+     * [CA] Converteix un símbol d'acord anglosaxó a la notació intervalica dodecafònica.
+     * <p>
+     * [EN] Converts an Anglo chord symbol to dodecaphonic interval notation.
+     *
+     * @param symbol [CA] símbol d'acord (p.ex. {@code "Cmaj7"}) / [EN] chord symbol (e.g. {@code "Cmaj7"})
+     * @return [CA] notació intervalica (p.ex. {@code "Do[0,4,7,11]"}) / [EN] interval notation (e.g. {@code "Do[0,4,7,11]"})
+     */
     public static String toIntervalNotation(String symbol) {
         ParsedSymbol ps = parseSymbolicToIntervals(norm(symbol));
         String rootOut = capitalize(PC_TO_CUSTOM.get(ps.rootPc));
         return rootOut + formatIntervals(ps.intervals) + (ps.relBass!=null? "/"+ps.relBass : "");
     }
+
+    /**
+     * [CA] Converteix una notació intervalica dodecafònica a un símbol d'acord anglosaxó.
+     * <p>
+     * [EN] Converts a dodecaphonic interval notation to an Anglo chord symbol.
+     *
+     * @param intervalStr [CA] notació intervalica (p.ex. {@code "Do[0,4,7,11]"}) / [EN] interval notation (e.g. {@code "Do[0,4,7,11]"})
+     * @return [CA] símbol d'acord anglosaxó / [EN] Anglo chord symbol
+     * @throws IllegalArgumentException [CA] si el format és invàlid o els intervals no corresponen a cap qualitat /
+     *                                  [EN] if the format is invalid or intervals don't match any quality
+     */
     public static String fromIntervalNotation(String intervalStr) {
         String in = norm(intervalStr);
         int slashIdx = in.indexOf('/');
@@ -127,6 +238,15 @@ public class ChordSymbols_old {
         }
         return out;
     }
+
+    /**
+     * [CA] Converteix qualsevol representació d'acord a una llista de noms de nota dodecafònics.
+     * <p>
+     * [EN] Converts any chord representation to a list of dodecaphonic note names.
+     *
+     * @param text [CA] text de l'acord en qualsevol format suportat / [EN] chord text in any supported format
+     * @return [CA] llista de noms de nota (p.ex. {@code "[do, mi, so]"}) / [EN] note name list (e.g. {@code "[do, mi, so]"})
+     */
     public static String toNoteNames(String text) {
         ParsedAny pa = parseAny(text);
         TreeSet<Integer> uniq = new TreeSet<>();
@@ -140,6 +260,15 @@ public class ChordSymbols_old {
             return "[" + String.join(", ", rest) + "]";
         }
     }
+
+    /**
+     * [CA] Converteix qualsevol representació d'acord a una llista d'alteracions anglosaxones.
+     * <p>
+     * [EN] Converts any chord representation to a list of Anglo alterations.
+     *
+     * @param text [CA] text de l'acord en qualsevol format suportat / [EN] chord text in any supported format
+     * @return [CA] llista d'alteracions (p.ex. {@code "[C, E, G]"}) / [EN] alteration list (e.g. {@code "[C, E, G]"})
+     */
     public static String toAlteracions(String text) {
         ParsedAny pa = parseAny(text);
         TreeSet<Integer> uniq = new TreeSet<>();
@@ -153,6 +282,16 @@ public class ChordSymbols_old {
             return "[" + String.join(", ", rest) + "]";
         }
     }
+
+    /**
+     * [CA] Converteix una llista de posicions diatòniques a la notació intervalica de Do.
+     * <p>
+     * [EN] Converts a list of diatonic positions to Do interval notation.
+     *
+     * @param list [CA] llista de posicions (p.ex. {@code "[1,b3,5]"}) / [EN] position list (e.g. {@code "[1,b3,5]"})
+     * @return [CA] notació intervalica de Do (p.ex. {@code "Do[0,3,7]"}) / [EN] Do interval notation (e.g. {@code "Do[0,3,7]"})
+     * @throws IllegalArgumentException [CA] si el format és invàlid / [EN] if the format is invalid
+     */
     public static String fromPosicio(String list) {
         String in = norm(list);
         in = stripOuterQuotes(in);
@@ -162,6 +301,14 @@ public class ChordSymbols_old {
     }
 
     /* =============== Generador AllSymbols.csv (mateix ordre i seccions del CSV) =============== */
+
+    /**
+     * [CA] Genera el fitxer {@code AllSymbols.csv} amb tots els símbols d'acords en el
+     * mateix ordre i seccions que el CSV original. No fa res si {@code Settings.IS_BU} és actiu.
+     * <p>
+     * [EN] Generates the {@code AllSymbols.csv} file with all chord symbols in the same
+     * order and sections as the original CSV. Does nothing if {@code Settings.IS_BU} is active.
+     */
     public static void generaChordSymbolTable() {
         if (Settings.IS_BU) return;
         try (BufferedWriter w = Files.newBufferedWriter(Paths.get(ALL_SYMBOLS_OUT), StandardCharsets.UTF_8)) {
@@ -255,7 +402,7 @@ public class ChordSymbols_old {
         if (SECTION_KEYS.contains(key)) return true;
         // també admet variants freqüents (sense accent diacrític o errades d'exportació)
         if (key.startsWith("cuatr") || key.startsWith("quatr") || key.startsWith("quadrid")) {
-            // “Cuatriades/Quatriades ... diatoniques”
+            // "Cuatriades/Quatriades ... diatoniques"
             if (key.contains("diaton")) return true;
         }
         return false;
@@ -629,7 +776,7 @@ public class ChordSymbols_old {
         if ((norm.startsWith("\"") && norm.endsWith("\"")) || (norm.startsWith("“") && norm.endsWith("”"))) {
             norm = norm.substring(1, norm.length()-1).trim();
         }
-        norm = norm.replace('\uFF0C', ',').replace('\u00A0', ' ').replace('\u2007', ' ').replace('\u202F', ' ');
+        norm = norm.replace('，', ',').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ');
         if (norm.indexOf(';') >= 0) throw new IllegalArgumentException("Separador ';' invàlid dins la llista d'intervals: \"" + norm + "\"");
         if (norm.isEmpty()) return new int[0];
         String[] parts = norm.split("\\s*,\\s*");
@@ -678,6 +825,14 @@ public class ChordSymbols_old {
     }
 
     /* ===================== CSV runtime ===================== */
+
+    /**
+     * [CA] Recarrega les dades de qualitats i intervals des del fitxer CSV.
+     * Neteja les taules internes i les reconstrueix.
+     * <p>
+     * [EN] Reloads quality and interval data from the CSV file.
+     * Clears internal tables and rebuilds them.
+     */
     public static synchronized void reloadFromCsv() {
         QUALITY_TO_INTERVALS.clear();
         QUALITY_ALIAS.clear();
@@ -843,7 +998,7 @@ public class ChordSymbols_old {
 
     /* ===================== Header & split utils ===================== */
     private static String stripBOM(String s) {
-        if (s != null && !s.isEmpty() && s.charAt(0) == '\uFEFF') return s.substring(1);
+        if (s != null && !s.isEmpty() && s.charAt(0) == '﻿') return s.substring(1);
         return s;
     }
     private static String normalizeAscii(String raw) {
@@ -916,6 +1071,16 @@ public class ChordSymbols_old {
     }
 
     /* ===================== MAIN ===================== */
+
+    /**
+     * [CA] Punt d'entrada per a la generació de la taula {@code AllSymbols.csv} i
+     * una prova ràpida de conversió.
+     * <p>
+     * [EN] Entry point for generating the {@code AllSymbols.csv} table and a quick
+     * conversion test.
+     *
+     * @param args [CA] arguments de línia de comandes (no s'usen) / [EN] command-line arguments (unused)
+     */
     public static void main(String[] args) {
         // Genera la taula amb el mateix ordre i seccions del CSV original
         generaChordSymbolTable();

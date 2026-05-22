@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.teclesControl;
 
 import dodecagraphone.MyController;
@@ -9,8 +14,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Agrupa totes les accions de ratolí entre mousePressed i mouseReleased en un
- sol Event per poder refer undo/redo.
+ * [CA] Event undo/redo per a l'eliminació d'una pista completa. Acumula tots els
+ * canvis de notes que implica l'eliminació (en forma de llista de {@code Change}) i
+ * permet refer-los (redo) o desfer-los (undo) en ordre correcte. L'undo restaura
+ * la pista com a no eliminada i reafegeix totes les notes.
+ * <p>
+ * [EN] Undo/redo event for deleting an entire track. Accumulates all note changes
+ * involved in the deletion (as a list of {@code Change} entries) and allows them
+ * to be redone or undone in the correct order. Undo marks the track as not deleted
+ * and re-adds all notes.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class DeleteTrackSequence extends Event {
 
@@ -39,32 +55,67 @@ public class DeleteTrackSequence extends Event {
             this.visible = visible;
         }
     }
-    
+
     private MyController controller;
 
     private final List<Change> changes = new ArrayList<>();
-    
+
     private int trackId;
 
+    /**
+     * [CA] Crea un nou event d'eliminació de pista associat al controlador indicat.
+     * <p>
+     * [EN] Creates a new track deletion event associated with the given controller.
+     *
+     * @param contr [CA] controlador principal / [EN] main controller
+     */
     public DeleteTrackSequence(MyController contr){
         super();
         this.controller = contr;
     }
-    
+
+    /**
+     * [CA] Afegeix tots els canvis de notes associats a l'eliminació d'una pista.
+     * <p>
+     * [EN] Adds all note changes associated with deleting a track.
+     *
+     * @param trackId [CA] identificador de la pista eliminada / [EN] id of the deleted track
+     * @param list    [CA] llista de subsquares (notes) que pertanyen a la pista / [EN] list of subsquares (notes) belonging to the track
+     */
     public void addAllChanges(int trackId,List<MyGridSquare.SubSquare> list){
         this.trackId = trackId;
         for (MyGridSquare.SubSquare note:list){
             MyGridSquare square = note.getSquare();
-            this.addChange(square, false, note.getChannel(),trackId, note.getVelocity(), 
+            this.addChange(square, false, note.getChannel(),trackId, note.getVelocity(),
                     note.isVisible(), !note.isAudible(), note.isLinked(), square.isSqDotted());
         }
     }
-    
-    public void addChange(MyGridSquare square, boolean added,int channel, int trackId, 
+
+    /**
+     * [CA] Afegeix un canvi individual (nota afegida o eliminada) a la llista de canvis.
+     * <p>
+     * [EN] Adds an individual change (note added or removed) to the change list.
+     *
+     * @param square  [CA] casella de la graella afectada / [EN] affected grid square
+     * @param added   [CA] {@code true} si s'ha afegit, {@code false} si s'ha eliminat / [EN] {@code true} if added, {@code false} if removed
+     * @param channel [CA] canal MIDI / [EN] MIDI channel
+     * @param trackId [CA] identificador de la pista / [EN] track identifier
+     * @param velocity [CA] velocitat MIDI / [EN] MIDI velocity
+     * @param visible [CA] si la nota és visible / [EN] whether the note is visible
+     * @param mutted  [CA] si la nota és silenciada / [EN] whether the note is muted
+     * @param linked  [CA] si la nota és linked / [EN] whether the note is linked
+     * @param dotted  [CA] si la nota és puntejada / [EN] whether the note is dotted
+     */
+    public void addChange(MyGridSquare square, boolean added,int channel, int trackId,
                           int velocity, boolean visible, boolean mutted, boolean linked, boolean dotted) {
         changes.add(new Change(square, channel, trackId, added, velocity, visible, linked, mutted, dotted));
     }
 
+    /**
+     * [CA] Redo: reaplicar l'eliminació de la pista (esborra les notes).
+     * <p>
+     * [EN] Redo: re-applies the track deletion (removes the notes).
+     */
     @Override
     public void refer() {
         boolean firstTime = true;
@@ -118,6 +169,13 @@ public class DeleteTrackSequence extends Event {
 //        }
     }
 
+    /**
+     * [CA] Undo: restaura la pista (marcada com a no eliminada) i reafegeix totes
+     * les notes en ordre invers.
+     * <p>
+     * [EN] Undo: restores the track (marked as not deleted) and re-adds all notes
+     * in reverse order.
+     */
     @Override
     public void desfer() {
         this.controller.getMixer().getTrackFromId(trackId).setDeleted(false);

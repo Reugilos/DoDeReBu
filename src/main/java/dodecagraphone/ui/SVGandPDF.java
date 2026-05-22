@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import dodecagraphone.MyController;
@@ -16,12 +21,31 @@ import org.apache.batik.dom.GenericDOMImplementation;
 import org.apache.batik.svggen.SVGGraphics2D;
 
 /**
+ * [CA] Exportació de la partitura a format SVG (i en el futur PDF). Utilitza
+ * la biblioteca Apache Batik per generar un {@link SVGGraphics2D} sobre el
+ * qual es dibuixa la partitura amb el mètode estàndard
+ * {@link MyController#redraw(java.awt.Graphics2D)}. El resultat es desa en un
+ * fitxer SVG codificat en UTF-8.
+ * <p>
+ * [EN] Score export to SVG (and in the future PDF) format. Uses the Apache
+ * Batik library to generate an {@link SVGGraphics2D} on which the score is
+ * drawn via the standard {@link MyController#redraw(java.awt.Graphics2D)}
+ * method. The result is saved to a UTF-8 encoded SVG file.
  *
- * @author gptgrogm
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class SVGandPDF {
         private MyController controller;
-        
+
+        /**
+         * [CA] Crea una nova instància associada al controlador principal.
+         * <p>
+         * [EN] Creates a new instance associated with the main controller.
+         *
+         * @param contr [CA] controlador principal / [EN] main controller
+         */
         public SVGandPDF(MyController contr){
             controller = contr;
         }
@@ -58,6 +82,24 @@ public class SVGandPDF {
 //			svgG.stream(out, useCSS);
 //		}
 //	}
+
+        /**
+         * [CA] Exporta la vista actual de la partitura a un fitxer SVG.
+         * Activa el mode d'impressió del controlador durant el dibuix i
+         * el restaura en finalitzar (fins i tot en cas d'error).
+         * <p>
+         * [EN] Exports the current score view to an SVG file. Activates the
+         * controller's printing mode during drawing and restores it when done
+         * (even on error).
+         *
+         * @param outSvg   [CA] fitxer de sortida SVG / [EN] output SVG file
+         * @param widthPx  [CA] amplada en píxels del llenç SVG /
+         *                 [EN] SVG canvas width in pixels
+         * @param heightPx [CA] alçada en píxels del llenç SVG /
+         *                 [EN] SVG canvas height in pixels
+         * @throws IOException [CA] si hi ha un error d'E/S en escriure el fitxer /
+         *                     [EN] if an I/O error occurs while writing the file
+         */
 	public void printSvg(File outSvg, int widthPx, int heightPx) throws IOException {
 		DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
 		String svgNS = "http://www.w3.org/2000/svg";
@@ -84,7 +126,7 @@ public class SVGandPDF {
 			controller.setPrinting(false);
 		}
 	}
-        
+
 //    public void printPdf(File outPdf, int widthPx, int heightPx) throws Exception {
 //        // 1) Genera SVG temporal
 //        File tmpSvg = File.createTempFile("print_", ".svg");

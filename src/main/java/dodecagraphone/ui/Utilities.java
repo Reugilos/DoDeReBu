@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import java.util.ArrayList;
@@ -6,22 +11,21 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Aquesta classe ofereix utilitats diverses per a operacions aleatòries i manipulació bàsica de dades.
- * Proporciona mètodes per fer seleccions aleatòries, llençar una moneda, barrejar o rotar arrays,
- * capitalitzar text i trobar valors mínims o màxims dins de llistes.
+ * [CA] Classe d'utilitats generals per a operacions aleatòries i manipulació
+ * bàsica de dades. Proporciona mètodes per fer seleccions aleatòries, llençar
+ * una moneda, barrejar o rotar arrays, capitalitzar text i trobar valors mínims
+ * o màxims dins de llistes. Està pensada com a suport genèric per a altres
+ * components de l'aplicació.
+ * <p>
+ * [EN] General-purpose utilities class for random operations and basic data
+ * manipulation. Provides methods for random selection, coin tossing, array
+ * shuffling and rotation, text capitalisation, and finding minimum or maximum
+ * values in lists. Intended as a generic helper for other application
+ * components.
  *
- * Està pensada com a suport genèric per a altres components de l’aplicació.
- * 
- * ------------------------------------------------------------------------------
- * 
- * This class provides various utilities for random operations and basic data manipulation.
- * It includes methods for random selection, coin tossing, array shuffling and rotation,
- * text capitalization, and finding minimum or maximum values in lists.
- *
- * It is intended as a general-purpose helper for other parts of the application.
- * 
- * @autor pau  
- * @author pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class Utilities {
 
@@ -30,11 +34,16 @@ public class Utilities {
     private static int oldrand = -1;
 
     /**
-     * Retorna un valor aleatori de la llista proporcionada, evitant repetir el darrer.
-     * Returns a random value from the provided list, avoiding repetition of the previous one.
+     * [CA] Retorna un valor aleatori de la llista proporcionada, evitant
+     * repetir el darrer valor retornat.
+     * <p>
+     * [EN] Returns a random value from the provided list, avoiding repetition
+     * of the last returned value.
      *
-     * @param choice Array d'enters entre els quals escollir. / Array of integers to choose from.
-     * @return Un valor aleatori diferent de l'anterior. / A random value different from the last one.
+     * @param choice [CA] llista d'enters entre els quals escollir /
+     *               [EN] list of integers to choose from
+     * @return [CA] un valor aleatori diferent de l'anterior /
+     *         [EN] a random value different from the last one
      */
     public static int randFromList(List<Integer> choice) {
         int pos = rand.nextInt(choice.size());
@@ -42,11 +51,34 @@ public class Utilities {
         oldrand = pos;
         return choice.get(pos);
     }
-    
+
+    /**
+     * [CA] Imprimeix un missatge per consola si {@code print} és cert,
+     * amb la prioritat màxima.
+     * <p>
+     * [EN] Prints a message to the console if {@code print} is true,
+     * with maximum priority.
+     *
+     * @param print [CA] true per imprimir / [EN] true to print
+     * @param text  [CA] missatge a imprimir / [EN] message to print
+     */
     public static void printOutWithPriority(boolean print, String text) {
         if (print) printOutWithPriority(1,text);
     }
 
+    /**
+     * [CA] Imprimeix un missatge per consola si la prioritat indicada és
+     * inferior o igual a {@link Settings#PRINT_OUT_PRIORITY}. El missatge
+     * inclou el nom del fil i el timestamp.
+     * <p>
+     * [EN] Prints a message to the console if the given priority is less than
+     * or equal to {@link Settings#PRINT_OUT_PRIORITY}. The message includes
+     * the thread name and a timestamp.
+     *
+     * @param priority [CA] nivell de prioritat (1 = sempre, valors alts = debug) /
+     *                 [EN] priority level (1 = always, high values = debug)
+     * @param text     [CA] missatge a imprimir / [EN] message to print
+     */
     public static void printOutWithPriority(int priority, String text) {
         if (priority <= Settings.PRINT_OUT_PRIORITY) {
             String time = String.format("%06d", System.currentTimeMillis() % 1000000);
@@ -58,10 +90,12 @@ public class Utilities {
     }
 
     /**
-     * Simula una tirada de moneda.
-     * Simulates a coin toss.
+     * [CA] Simula una tirada de moneda.
+     * <p>
+     * [EN] Simulates a coin toss.
      *
-     * @return true si surt cara; false si surt creu. / true for heads; false for tails.
+     * @return [CA] true si surt cara; false si surt creu /
+     *         [EN] true for heads; false for tails
      */
     public static boolean tossCoin() {
         int val = rand.nextInt(2);
@@ -69,10 +103,11 @@ public class Utilities {
     }
 
     /**
-     * Barreja els elements d’un array enter.
-     * Shuffles the elements of an integer array.
+     * [CA] Barreja els elements d'un array enter en ordre aleatori.
+     * <p>
+     * [EN] Shuffles the elements of an integer array into random order.
      *
-     * @param array L'array a barrejar. / The array to shuffle.
+     * @param array [CA] l'array a barrejar / [EN] the array to shuffle
      */
     public static void shuffle(Integer[] array) {
         List<Integer> list = new ArrayList<>(Arrays.asList(array));
@@ -83,21 +118,23 @@ public class Utilities {
     }
 
     /**
-     * Retorna l'objecte Random intern.
-     * Returns the internal Random object.
+     * [CA] Retorna l'objecte {@link Random} intern.
+     * <p>
+     * [EN] Returns the internal {@link Random} object.
      *
-     * @return Instància de Random. / Random instance.
+     * @return [CA] instància de Random / [EN] Random instance
      */
     public static Random getRand() {
         return rand;
     }
 
     /**
-     * Suma una constant a tots els valors d’un array.
-     * Adds a constant value to all elements in an array.
+     * [CA] Suma una constant a tots els valors d'un array.
+     * <p>
+     * [EN] Adds a constant value to all elements in an array.
      *
-     * @param array L'array d'enters. / The array of integers.
-     * @param k La constant a afegir. / The constant to add.
+     * @param array [CA] l'array d'enters / [EN] the array of integers
+     * @param k     [CA] la constant a afegir / [EN] the constant to add
      */
     public static void arrayPlusConst(int[] array, int k) {
         for (int i = 0; i < array.length; i++) {
@@ -105,6 +142,18 @@ public class Utilities {
         }
     }
 
+    /**
+     * [CA] Crea una nova llista on cada element és la suma de l'element
+     * original i la constant {@code k}.
+     * <p>
+     * [EN] Creates a new list where each element is the sum of the original
+     * element and the constant {@code k}.
+     *
+     * @param list [CA] llista d'origen / [EN] source list
+     * @param k    [CA] la constant a afegir / [EN] the constant to add
+     * @return [CA] nova llista amb els valors incrementats /
+     *         [EN] new list with incremented values
+     */
     public static List<Integer> listPlusConst(List<Integer> list, int k){
         List<Integer> newList = new ArrayList<>();
         for (int i=0;i<list.size();i++){
@@ -112,11 +161,13 @@ public class Utilities {
         }
         return newList;
     }
+
     /**
-     * Imprimeix un array d'enters per consola.
-     * Prints an array of integers to the console.
+     * [CA] Imprimeix un array d'enters per consola en format [a,b,c,...].
+     * <p>
+     * [EN] Prints an array of integers to the console in [a,b,c,...] format.
      *
-     * @param array L'array a imprimir. / The array to print.
+     * @param array [CA] l'array a imprimir / [EN] the array to print
      */
     public static void printArray(int[] array) {
         System.out.print("[");
@@ -130,11 +181,14 @@ public class Utilities {
     }
 
     /**
-     * Rota cap a l'esquerra un array un nombre determinat de posicions.
-     * Rotates an array to the left by a specified number of positions.
+     * [CA] Rota cap a l'esquerra un array un nombre determinat de posicions.
+     * Cada rotació mou l'element 0 al final.
+     * <p>
+     * [EN] Rotates an array to the left by a specified number of positions.
+     * Each rotation moves element 0 to the end.
      *
-     * @param n Nombre de rotacions. / Number of rotations.
-     * @param array L'array a rotar. / The array to rotate.
+     * @param n     [CA] nombre de rotacions / [EN] number of rotations
+     * @param array [CA] l'array a rotar / [EN] the array to rotate
      */
     public static void rotateArray(int n, int[] array) {
         for (int i = 0; i < n; i++) {
@@ -147,22 +201,28 @@ public class Utilities {
     }
 
     /**
-     * Capitalitza el primer caràcter d’un text.
-     * Capitalizes the first character of a string.
+     * [CA] Capitalitza el primer caràcter d'un text i deixa la resta intacta.
+     * <p>
+     * [EN] Capitalises the first character of a string and leaves the rest
+     * unchanged.
      *
-     * @param text Text d’entrada. / Input text.
-     * @return El text amb la primera lletra en majúscula. / Text with the first letter capitalized.
+     * @param text [CA] text d'entrada / [EN] input text
+     * @return [CA] el text amb la primera lletra en majúscula /
+     *         [EN] text with the first letter capitalised
      */
     public static String capitalize(String text) {
         return text.substring(0, 1).toUpperCase() + text.substring(1);
     }
 
     /**
-     * Troba el valor màxim dins d'una llista.
-     * Finds the maximum value in a list.
+     * [CA] Troba el valor màxim dins d'una llista. Retorna 0 si la llista és
+     * null o buida.
+     * <p>
+     * [EN] Finds the maximum value in a list. Returns 0 if the list is null
+     * or empty.
      *
-     * @param list Llista d'enters. / List of integers.
-     * @return Valor màxim. / Maximum value.
+     * @param list [CA] llista d'enters / [EN] list of integers
+     * @return [CA] valor màxim / [EN] maximum value
      */
     public static int max(List<Integer> list) {
         if (list==null || list.isEmpty()) return 0;
@@ -176,11 +236,14 @@ public class Utilities {
     }
 
     /**
-     * Troba el valor mínim dins d'una llista.
-     * Finds the minimum value in a list.
+     * [CA] Troba el valor mínim dins d'una llista. Retorna 0 si la llista és
+     * null o buida.
+     * <p>
+     * [EN] Finds the minimum value in a list. Returns 0 if the list is null
+     * or empty.
      *
-     * @param list Llista d'enters. / List of integers.
-     * @return Valor mínim. / Minimum value.
+     * @param list [CA] llista d'enters / [EN] list of integers
+     * @return [CA] valor mínim / [EN] minimum value
      */
     public static int min(List<Integer> list) {
         if (list==null || list.isEmpty()) return 0;
@@ -192,7 +255,7 @@ public class Utilities {
         }
         return mi;
     }
-    
+
 //    public static Integer[] listToArray(List<Integer> llista){
 //        Integer[] array = new Integer[llista.size()];
 //        if (llista==null||llista.isEmpty()) return null;

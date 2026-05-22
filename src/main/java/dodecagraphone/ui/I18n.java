@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.ui;
 
 import java.io.IOException;
@@ -13,8 +18,19 @@ import java.util.Properties;
 import java.util.ResourceBundle;
 
 /**
+ * [CA] Gestió de la internacionalització (i18n) de l'aplicació. Carrega els
+ * fitxers de missatges {@code messages_ca.properties} / {@code messages_en.properties}
+ * en UTF-8 i ofereix els mètodes {@link #t(String)} i {@link #f(String, Object...)}
+ * per obtenir textos traduïts. L'idioma per defecte és l'anglès.
+ * <p>
+ * [EN] Application internationalisation (i18n) management. Loads the message
+ * files {@code messages_ca.properties} / {@code messages_en.properties} in
+ * UTF-8 and provides the methods {@link #t(String)} and {@link #f(String, Object...)}
+ * for translated strings. The default language is English.
  *
- * @author gptgrogm
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public final class I18n {
 
@@ -30,8 +46,13 @@ public final class I18n {
     }
 
     /**
-     * Inicialitza l'idioma a partir d'un "language tag" (ex: "ca", "en", "fr",
-     * "pt-BR"). Si el tag és buit/null, no fa res.
+     * [CA] Inicialitza l'idioma a partir d'un language tag (ex: "ca", "en",
+     * "fr", "pt-BR"). Si el tag és buit o null, no fa cap canvi.
+     * <p>
+     * [EN] Initializes the language from a language tag (e.g. "ca", "en",
+     * "fr", "pt-BR"). Does nothing if the tag is empty or null.
+     *
+     * @param languageTag [CA] Tag d'idioma BCP-47 / [EN] BCP-47 language tag
      */
     public static void initFromLanguageTag(String languageTag) {
         if (languageTag == null) {
@@ -45,7 +66,14 @@ public final class I18n {
     }
 
     /**
-     * Canvia l'idioma a partir d'un language tag: "ca", "en", "fr", "pt-BR"...
+     * [CA] Canvia l'idioma actiu a partir d'un language tag.
+     * <p>
+     * [EN] Changes the active language from a language tag.
+     *
+     * @param languageTag [CA] Tag d'idioma BCP-47, ex: "ca", "en" /
+     *                    [EN] BCP-47 language tag, e.g. "ca", "en"
+     * @throws IllegalArgumentException [CA] Si el tag és null o buit /
+     *                                  [EN] If the tag is null or blank
      */
     public static void setLanguageTag(String languageTag) {
         if (languageTag == null || languageTag.isBlank()) {
@@ -54,6 +82,14 @@ public final class I18n {
         setLocale(Locale.forLanguageTag(languageTag.trim()));
     }
 
+    /**
+     * [CA] Canvia el {@link Locale} actiu i recarrega el bundle.
+     * <p>
+     * [EN] Changes the active {@link Locale} and reloads the bundle.
+     *
+     * @param newLocale [CA] Nou locale / [EN] New locale
+     * @throws IllegalArgumentException [CA] Si newLocale és null / [EN] If newLocale is null
+     */
     public static void setLocale(Locale newLocale) {
         if (newLocale == null) {
             throw new IllegalArgumentException("newLocale null");
@@ -62,10 +98,27 @@ public final class I18n {
         bundle = loadBundle(locale);
     }
 
+    /**
+     * [CA] Retorna el {@link Locale} actiu.
+     * <p>
+     * [EN] Returns the active {@link Locale}.
+     *
+     * @return [CA] Locale actual de l'app / [EN] Current app locale
+     */
     public static Locale getLocale() {
         return locale;
     }
 
+    /**
+     * [CA] Retorna el text traduït per a la clau indicada. Si la clau no
+     * existeix, retorna {@code "??" + key + "??"}.
+     * <p>
+     * [EN] Returns the translated text for the given key. If the key does
+     * not exist, returns {@code "??" + key + "??"}.
+     *
+     * @param key [CA] Clau del missatge / [EN] Message key
+     * @return [CA] Text traduït o marcador d'error / [EN] Translated text or error marker
+     */
     public static String t(String key) {
         if (key == null) {
             return "??null??";
@@ -78,8 +131,16 @@ public final class I18n {
     }
 
     /**
-     * Format amb placeholders {0}, {1}... amb el locale de l'app (no el del
-     * sistema).
+     * [CA] Retorna el text traduït amb substitució de placeholders ({0}, {1}…)
+     * usant el locale actiu (no el del sistema).
+     * <p>
+     * [EN] Returns the translated text with placeholder substitution ({0}, {1}…)
+     * using the active locale (not the system locale).
+     *
+     * @param key  [CA] Clau del missatge / [EN] Message key
+     * @param args [CA] Arguments a substituir als placeholders /
+     *             [EN] Arguments to substitute in placeholders
+     * @return [CA] Text formatat / [EN] Formatted text
      */
     public static String f(String key, Object... args) {
         String pattern = t(key);
@@ -98,8 +159,11 @@ public final class I18n {
     }
 
     /**
-     * ResourceBundle per defecte llegeix .properties en ISO-8859-1. Això força
-     * UTF-8.
+     * [CA] Control de ResourceBundle que força la lectura dels fitxers
+     * {@code .properties} en UTF-8 en lloc d'ISO-8859-1.
+     * <p>
+     * [EN] ResourceBundle control that forces reading {@code .properties}
+     * files in UTF-8 instead of ISO-8859-1.
      */
     private static final class UTF8Control extends ResourceBundle.Control {
 

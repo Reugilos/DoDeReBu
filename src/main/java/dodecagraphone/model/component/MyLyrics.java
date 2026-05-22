@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -20,16 +25,23 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * An horizontal strip below the score that scrolls in sync with the grid,
- * reserved for song lyrics. Mirrors the BufferedImage offscreen mechanism of
- * MyChordSymbolLine: the full content is pre-rendered into an offscreen
- * BufferedImage and the visible slice is extracted each frame with
- * drawImageClamped().
- *
  * [CA] Franja horitzontal a sota de la partitura que fa scroll juntament amb
- * el grid, reservada per a la lletra de la cançó.
+ * el grid, reservada per a la lletra de la cançó. Utilitza el mateix mecanisme
+ * de buffer offscreen que {@link MyChordSymbolLine}: el contingut complet es
+ * pre-renderitza en un {@link java.awt.image.BufferedImage} i la porció visible
+ * s'extreu a cada frame amb {@code drawImageClamped()}. Suporta edició inline
+ * (mode {@code editMode}) amb cursor de text i navegació per tecles.
+ * <p>
+ * [EN] Horizontal strip below the score that scrolls in sync with the grid,
+ * reserved for song lyrics. Uses the same offscreen buffer mechanism as
+ * {@link MyChordSymbolLine}: the full content is pre-rendered into a
+ * {@link java.awt.image.BufferedImage} and the visible slice is extracted each
+ * frame with {@code drawImageClamped()}. Supports inline editing (
+ * {@code editMode}) with a text cursor and keyboard navigation.
  *
- * @author Pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyLyrics extends MyComponent {
 
@@ -58,13 +70,19 @@ public class MyLyrics extends MyComponent {
     private volatile boolean needsDrawing  = true;
 
     /**
-     * @param firstCol  col within parent (camera)
-     * @param firstRow  row within parent (camera)
-     * @param nCols     number of columns
-     * @param nRows     number of rows (= Settings.getnRowsLyrics())
-     * @param parent    parent component (camera)
-     * @param contr     controller
-     * @param score     the grid score (used for currentCol, beat/measure info)
+     * [CA] Crea la franja de lletra associada a la partitura indicada.
+     * <p>
+     * [EN] Creates the lyrics strip associated with the given score.
+     *
+     * @param firstCol [CA] columna dins del pare (càmera) / [EN] col within parent (camera)
+     * @param firstRow [CA] fila dins del pare (càmera) / [EN] row within parent (camera)
+     * @param nCols    [CA] nombre de columnes / [EN] number of columns
+     * @param nRows    [CA] nombre de files (= Settings.getnRowsLyrics()) /
+     *                 [EN] number of rows (= Settings.getnRowsLyrics())
+     * @param parent   [CA] component pare (càmera) / [EN] parent component (camera)
+     * @param contr    [CA] controlador principal / [EN] controller
+     * @param score    [CA] graella de partitura (per a currentCol i info de compàs) /
+     *                 [EN] the grid score (used for currentCol, beat/measure info)
      */
     public MyLyrics(int firstCol, int firstRow, int nCols, int nRows,
                     MyComponent parent, MyController contr, MyGridScore score) {

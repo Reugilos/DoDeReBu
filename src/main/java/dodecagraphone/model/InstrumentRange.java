@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model;
 
 import java.io.BufferedReader;
@@ -6,9 +11,17 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Tesitures dels instruments General MIDI (programa 0-127).
- * Llegides de defaults/GeneralMidiInstruments.csv (camps 3 i 4: lowestMidi i highestMidi).
- * Usada per calcular el displayOffset de cada track en funció de l'instrument.
+ * [CA] Tesitures dels instruments General MIDI (programa 0-127).
+ * Llegides de {@code defaults/GeneralMidiInstruments.csv} (camps 3 i 4: lowestMidi i highestMidi).
+ * Usada per calcular el {@code displayOffset} de cada pista en funció de l'instrument.
+ * <p>
+ * [EN] Pitch ranges for General MIDI instruments (program 0-127).
+ * Read from {@code defaults/GeneralMidiInstruments.csv} (fields 3 and 4: lowestMidi and highestMidi).
+ * Used to calculate the {@code displayOffset} of each track based on the instrument.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public final class InstrumentRange {
 
@@ -48,18 +61,43 @@ public final class InstrumentRange {
 
     private InstrumentRange() {}
 
+    /**
+     * [CA] Retorna la nota MIDI més baixa del rang de l'instrument especificat.
+     * <p>
+     * [EN] Returns the lowest MIDI note of the specified instrument's range.
+     *
+     * @param program [CA] número de programa MIDI (0-127) / [EN] MIDI program number (0-127)
+     * @return [CA] nota MIDI mínima del rang / [EN] minimum MIDI note of the range
+     */
     public static int getLowest(int program) {
         return RANGES[clamp(program)][0];
     }
 
+    /**
+     * [CA] Retorna la nota MIDI més alta del rang de l'instrument especificat.
+     * <p>
+     * [EN] Returns the highest MIDI note of the specified instrument's range.
+     *
+     * @param program [CA] número de programa MIDI (0-127) / [EN] MIDI program number (0-127)
+     * @return [CA] nota MIDI màxima del rang / [EN] maximum MIDI note of the range
+     */
     public static int getHighest(int program) {
         return RANGES[clamp(program)][1];
     }
 
     /**
-     * Calcula el displayOffset (múltiple de 12) que maximitza la superposició
+     * [CA] Calcula el {@code displayOffset} (múltiple de 12) que maximitza la superposició
      * entre el rang de l'instrument i el rang del grid. En cas d'empat,
      * prefereix el menor offset absolut.
+     * <p>
+     * [EN] Calculates the {@code displayOffset} (multiple of 12) that maximises the overlap
+     * between the instrument range and the grid range. In case of a tie,
+     * prefers the smaller absolute offset.
+     *
+     * @param program     [CA] número de programa MIDI / [EN] MIDI program number
+     * @param gridLowest  [CA] nota MIDI mínima del grid / [EN] lowest MIDI note of the grid
+     * @param gridHighest [CA] nota MIDI màxima del grid / [EN] highest MIDI note of the grid
+     * @return [CA] offset en semitons (múltiple de 12) / [EN] offset in semitones (multiple of 12)
      */
     public static int calcDisplayOffset(int program, int gridLowest, int gridHighest) {
         int instrLo = getLowest(program);

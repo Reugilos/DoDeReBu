@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.chord;
 
 import dodecagraphone.ui.I18n;
@@ -5,35 +10,67 @@ import dodecagraphone.ui.Settings;
 import java.util.*;
 
 /**
- * Chord symbol conversion between all supported formats.
- *
- * Formats:
- *   DodecaFormat        – user's format:  So[0,4,7] / So[0,4,7]/Re
- *   Simbol              – Anglo symbol:   G  / Gm7b5 / G7b9
- *   Posicions diatòn.   – degrees:        [1,3,5]
- *   Notes anglosaxo     – note names:     [G, B, D]
- *   Solfeig             – solfège:        [sol, si, re]
- *   Intervals           – raw intervals:  [0,4,7]
- *   DodecaNotes         – dodeca notes:   [so, ti, re]
- *   Nom genèric         – generic name:   Major
- *
- * All data is hardcoded from AllSymbols.csv — no runtime file reading needed.
+ * [CA] Motor de conversió entre tots els formats de símbols d'acords suportats per DoDeReBu.
+ * Tots les dades estan codificades a la pròpia classe (extretes de {@code AllSymbols.csv});
+ * no cal llegir cap fitxer en temps d'execució.
+ * <p>
+ * Formats suportats:
+ * <ul>
+ *   <li>{@code DodecaFormat} — format propi: {@code So[0,4,7]} / {@code So[0,4,7]/Re}</li>
+ *   <li>{@code Simbol} — símbol anglòfon: {@code G}, {@code Gm7b5}, {@code G7b9}</li>
+ *   <li>{@code Posicions diatòniques} — graus: {@code [1,3,5]}</li>
+ *   <li>{@code Notes anglosaxo} — noms de nota: {@code [G, B, D]}</li>
+ *   <li>{@code Solfeig} — solfège: {@code [sol, si, re]}</li>
+ *   <li>{@code Intervals} — intervals bruts: {@code [0,4,7]}</li>
+ *   <li>{@code DodecaNotes} — notes dodecafòniques: {@code [so, ti, re]}</li>
+ *   <li>{@code Nom genèric} — nom genèric: {@code Major}</li>
+ * </ul>
+ * <p>
+ * [EN] Conversion engine between all chord symbol formats supported by DoDeReBu.
+ * All data is hardcoded in the class (extracted from {@code AllSymbols.csv});
+ * no runtime file reading is needed.
+ * <p>
+ * Supported formats:
+ * <ul>
+ *   <li>{@code DodecaFormat} — user's format: {@code So[0,4,7]} / {@code So[0,4,7]/Re}</li>
+ *   <li>{@code Simbol} — Anglo symbol: {@code G}, {@code Gm7b5}, {@code G7b9}</li>
+ *   <li>{@code Posicions diatòniques} — degrees: {@code [1,3,5]}</li>
+ *   <li>{@code Notes anglosaxo} — note names: {@code [G, B, D]}</li>
+ *   <li>{@code Solfeig} — solfège: {@code [sol, si, re]}</li>
+ *   <li>{@code Intervals} — raw intervals: {@code [0,4,7]}</li>
+ *   <li>{@code DodecaNotes} — dodeca notes: {@code [so, ti, re]}</li>
+ *   <li>{@code Nom genèric} — generic name: {@code Major}</li>
+ * </ul>
  *
  * Root is always a dodecaphonic name (do/De/re/Ri … case-insensitive) or
  * an Anglo note name (C/Db/D/Eb/E/F/F#/G/Ab/A/Bb/B).
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class ChordSymbols {
 
     // ── Format name constants ────────────────────────────────────────────────
+    /** [CA] Constant de format: format propi DoDeReBu. / [EN] Format constant: DoDeReBu own format. */
     public static final String FORMAT_MY        = "DodecaFormat";
+    /** [CA] Constant de format: símbol anglòfon. / [EN] Format constant: Anglo symbol. */
     public static final String FORMAT_SIMBOL    = "Simbol";
+    /** [CA] Constant de format: sinònims del símbol. / [EN] Format constant: symbol synonyms. */
     public static final String FORMAT_SINONIMS  = "Sinònims";
+    /** [CA] Constant de format: posicions diatòniques. / [EN] Format constant: diatonic positions. */
     public static final String FORMAT_POSICIONS = "Posicions diatòniques";
+    /** [CA] Constant de format: noms de nota anglosaxons. / [EN] Format constant: Anglo note names. */
     public static final String FORMAT_NOTES     = "Notes anglosaxo";
+    /** [CA] Constant de format: solfège. / [EN] Format constant: solfège. */
     public static final String FORMAT_SOLFEIG   = "Solfeig";
+    /** [CA] Constant de format: intervals bruts. / [EN] Format constant: raw intervals. */
     public static final String FORMAT_INTERVALS = "Intervals";
+    /** [CA] Constant de format: notes dodecafòniques. / [EN] Format constant: dodecaphonic notes. */
     public static final String FORMAT_DODECA    = "DodecaNotes";
+    /** [CA] Constant de format: nom genèric de l'acord. / [EN] Format constant: generic chord name. */
     public static final String FORMAT_NOM       = "Nom genèric";
+    /** [CA] Constant de format: valors MIDI. / [EN] Format constant: MIDI values. */
     public static final String FORMAT_MIDI      = "Midi";
 
     /** All display formats in cycling order (Sinònims and Nom genèric excluded). */
@@ -41,6 +78,14 @@ public class ChordSymbols {
         FORMAT_MY, FORMAT_DODECA, FORMAT_MIDI, FORMAT_SIMBOL, FORMAT_POSICIONS, FORMAT_SOLFEIG, FORMAT_NOTES
     };
 
+    /**
+     * [CA] Retorna l'etiqueta localitzada (i18n) per a un format donat.
+     * <p>
+     * [EN] Returns the localised (i18n) label for a given format.
+     *
+     * @param fmt [CA] una de les constants {@code FORMAT_*} / [EN] one of the {@code FORMAT_*} constants
+     * @return [CA] etiqueta localitzada / [EN] localised label
+     */
     public static String formatLabel(String fmt) {
         switch (fmt) {
             case FORMAT_MY:        return I18n.t("chordFormat.dodeca");
@@ -104,6 +149,13 @@ public class ChordSymbols {
     static final boolean[] TENSION_FLAT    = {true,false,false,false,false,true,false};
 
     // ── Chord templates ──────────────────────────────────────────────────────
+    /**
+     * [CA] Plantilla interna que descriu un tipus d'acord: intervals, sufix, sinònims,
+     * posicions diatòniques, preferències bemoll/sostingut i nom genèric.
+     * <p>
+     * [EN] Internal template describing a chord type: intervals, suffix, synonyms,
+     * diatonic positions, flat/sharp preferences and generic name.
+     */
     static class Template {
         final int[]     intervals;
         final String    suffix;    // chord-type suffix for Simbol (after root letter)
@@ -332,6 +384,10 @@ public class ChordSymbols {
     /**
      * Return all possible chords for a given root in a given format.
      * Includes all 20 templates. Root in dodecaphonic notation.
+     *
+     * @param root [CA] arrel en notació dodecafònica / [EN] root in dodecaphonic notation
+     * @param fmt  [CA] un dels formats {@code FORMAT_*} / [EN] one of the {@code FORMAT_*} formats
+     * @return [CA] llista d'acords en el format demanat / [EN] list of chords in the requested format
      */
     public static List<String> allChordsForRoot(String root, String fmt) {
         Integer rootPc = resolvePc(root);
@@ -485,6 +541,9 @@ public class ChordSymbols {
      * If all intervals are ≤ 11 and the array has a recognizable base-chord prefix,
      * promotes any remaining values whose mod-12 is a tension value by adding 12.
      * E.g. [0,4,7,2] → prefix [0,4,7]=major, 2∈tensionMod12 → [0,4,7,14].
+     *
+     * @param ivs [CA] array d'intervals / [EN] intervals array
+     * @return [CA] array d'intervals canonitzat / [EN] canonicalized intervals array
      */
     static int[] canonicalizeIntervals(int[] ivs) {
         boolean hasExt = false;
@@ -698,6 +757,10 @@ public class ChordSymbols {
     /**
      * Convert a Chord object to any display format string.
      * Returns null for info-only or invalid chords.
+     *
+     * @param chord [CA] acord a convertir / [EN] chord to convert
+     * @param fmt   [CA] format de sortida (una de les constants {@code FORMAT_*}) / [EN] output format (one of the {@code FORMAT_*} constants)
+     * @return [CA] cadena en el format demanat, o {@code null} si no es pot convertir / [EN] string in the requested format, or {@code null} if not convertible
      */
     public static String chordToFormat(Chord chord, String fmt) {
         if (chord == null || !chord.isValidChord()) return null;
@@ -714,6 +777,9 @@ public class ChordSymbols {
      * Returns the number of lines that correspond to base-chord notes (root line included),
      * i.e. the index at which tensions start in the list returned by chordToFormatLines.
      * Tensions are intervals > 11.
+     *
+     * @param chord [CA] acord a inspeccionar / [EN] chord to inspect
+     * @return [CA] nombre de línies base (incloent l'arrel) / [EN] number of base lines (including root)
      */
     public static int baseLinesCount(Chord chord) {
         if (chord == null || !chord.isValidChord()
@@ -729,6 +795,10 @@ public class ChordSymbols {
      * Returns the chord as a list of display lines for vertical rendering.
      * First element is the root name; remaining elements are notes/intervals.
      * Returns null for formats that don't produce a list (FORMAT_SIMBOL, FORMAT_NOM).
+     *
+     * @param chord [CA] acord a convertir / [EN] chord to convert
+     * @param fmt   [CA] format de sortida / [EN] output format
+     * @return [CA] llista de línies per a la representació vertical, o {@code null} / [EN] list of display lines for vertical rendering, or {@code null}
      */
     public static List<String> chordToFormatLines(Chord chord, String fmt) {
         if (chord == null || !chord.isValidChord()) return null;
@@ -1043,6 +1113,9 @@ public class ChordSymbols {
     /**
      * Print all chords for a given root in all display formats.
      * Used for validation.
+     *
+     * @param root [CA] arrel en notació dodecafònica o anglòfona / [EN] root in dodecaphonic or Anglo notation
+     * @return [CA] informe textual de tots els acords per a l'arrel donada / [EN] text report of all chords for the given root
      */
     public static String generateRootReport(String root) {
         Integer rootPc = resolvePc(root);
@@ -1067,6 +1140,15 @@ public class ChordSymbols {
         return sb.toString();
     }
 
+    /**
+     * [CA] Punt d'entrada per a proves i validació. Genera un informe de tots els
+     * acords de Sol i fa proves de round-trip.
+     * <p>
+     * [EN] Entry point for tests and validation. Generates a report of all Sol chords
+     * and runs round-trip tests.
+     *
+     * @param args [CA] arguments de línia de comandes (no s'usen) / [EN] command-line arguments (unused)
+     */
     public static void main(String[] args) {
         System.out.println(generateRootReport("so"));
         // Quick round-trip test

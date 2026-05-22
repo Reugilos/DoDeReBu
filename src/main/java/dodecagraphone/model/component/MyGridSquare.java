@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -9,10 +14,21 @@ import java.awt.Color;
 import java.util.LinkedList;
 
 /**
- * Each MyGridSquare corresponds to a midi note (row) and a time instant
- * (column). It is the elementary component of MyGridScore.
+ * [CA] Cel·la elemental de la graella de partitura ({@link MyGridScore}).
+ * Correspon a una nota MIDI (fila) i un instant de temps (columna). Suporta
+ * polifonia a través de la llista de {@link SubSquare}, on cada SubSquare
+ * representa una nota independent (canal, track, velocitat, visibilitat,
+ * silenciament, lligadura i puntet).
+ * <p>
+ * [EN] Elementary cell of the score grid ({@link MyGridScore}). Corresponds
+ * to a MIDI note (row) and a time instant (column). Supports polyphony
+ * through the list of {@link SubSquare}, where each SubSquare represents an
+ * independent note (channel, track, velocity, visibility, muting, tie and
+ * dotted flag).
  *
- * @author Pau
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyGridSquare extends MyComponent {
 
@@ -126,6 +142,21 @@ public class MyGridSquare extends MyComponent {
     private int are_playing;
     private LinkedList<SubSquare> poliNotes;
     
+    /**
+     * [CA] Crea una cel·la de la graella de partitura a la posició indicada.
+     * <p>
+     * [EN] Creates a score grid cell at the given position.
+     *
+     * @param firstCol [CA] columna de partitura / [EN] score column
+     * @param firstRow [CA] fila de partitura / [EN] score row
+     * @param nCols    [CA] amplada en columnes / [EN] width in columns
+     * @param nRows    [CA] alçada en files / [EN] height in rows
+     * @param parent   [CA] component pare / [EN] parent component
+     * @param contr    [CA] controlador principal / [EN] main controller
+     * @param score    [CA] graella de partitura a la qual pertany /
+     *                 [EN] score grid this cell belongs to
+     * @param cam      [CA] càmera (viewport) / [EN] camera (viewport)
+     */
     public MyGridSquare(int firstCol, int firstRow, int nCols, int nRows, MyComponent parent, MyController contr, MyGridScore score, MyCamera cam) {
         super(firstCol, firstRow, nCols, nRows, parent, contr);
 //        System.out.println("MyGridSquare::MyGridSquare: nRows = "+nRows);

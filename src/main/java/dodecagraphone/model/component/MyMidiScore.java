@@ -1,3 +1,8 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
@@ -24,9 +29,22 @@ import java.util.Map;
 import javax.swing.JOptionPane;
 
 /**
- * Un MyMidiScore és un MyGridPattern extret d'un arxiu midi.
+ * [CA] Gestiona la lectura i escriptura de fitxers MIDI (format 1) i la
+ * persistència de la partitura. Analitza les pistes MIDI per omplir la
+ * graella ({@link MyGridScore}) i serialitza la graella de tornada a MIDI.
+ * Inclou el {@code changeMap} ({@link MyGridScore.ScoreChange}) per desar
+ * canvis de paràmetres (tempo, tonalitat, compàs, volum) com a meta-missatges
+ * 0x7F incrustats en la pista 0.
+ * <p>
+ * [EN] Manages reading and writing MIDI files (format 1) and score
+ * persistence. Parses MIDI tracks to populate the grid ({@link MyGridScore})
+ * and serialises the grid back to MIDI. Includes the {@code changeMap}
+ * ({@link MyGridScore.ScoreChange}) to save parameter changes (tempo, key,
+ * time signature, volume) as 0x7F meta-messages embedded in track 0.
  *
- * @author paugpt
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
  */
 public class MyMidiScore extends MyExercise {
 
@@ -49,8 +67,15 @@ public class MyMidiScore extends MyExercise {
 //    }
 
     /**
-     * Retorna el tick més aviat on apareix un NOTE_ON amb velocitat > 0 en
-     * qualsevol track de la Sequence. Si no es troba cap NOTE_ON, retorna -1.
+     * [CA] Retorna el tick més aviat on apareix un NOTE_ON amb velocitat > 0
+     * en qualsevol track de la Sequence. Si no es troba cap NOTE_ON, retorna -1.
+     * <p>
+     * [EN] Returns the earliest tick at which a NOTE_ON with velocity > 0
+     * appears in any track of the Sequence. Returns -1 if no NOTE_ON is found.
+     *
+     * @param sequence [CA] seqüència MIDI / [EN] MIDI sequence
+     * @return [CA] tick del primer NOTE_ON, o -1 si no n'hi ha /
+     *         [EN] tick of the first NOTE_ON, or -1 if none
      */
     public long firstTick(Sequence sequence) {
         long firstTick = Long.MAX_VALUE;
@@ -75,6 +100,17 @@ public class MyMidiScore extends MyExercise {
         return (firstTick == Long.MAX_VALUE) ? -1 : firstTick;
     }
 
+    /**
+     * [CA] Ajusta la resolució MIDI per fer-la múltiple del nombre de
+     * quarters per compàs.
+     * <p>
+     * [EN] Adjusts the MIDI resolution to make it a multiple of the number
+     * of quarters per measure.
+     *
+     * @param oldValue [CA] resolució original (ticks per quarter) /
+     *                 [EN] original resolution (ticks per quarter)
+     * @return [CA] resolució ajustada / [EN] adjusted resolution
+     */
     public long adjustResolution(long oldValue) {
         int quartersPerMeasure = this.numBeatsMeasure * 4 / this.beatFigure;
         double exactTicksPerQuarter = Math.round(oldValue / quartersPerMeasure) * quartersPerMeasure;
@@ -304,7 +340,19 @@ public class MyMidiScore extends MyExercise {
 //        this.controller.updateTextOfButtons();
 //    }
 
-// Mètode per analitzar un fitxer MIDI i generar la partitura en format MyGridPattern
+    /**
+     * [CA] Llegeix un fitxer MIDI i emplena la graella de la partitura.
+     * Analitza les pistes MIDI, detecta la capçalera (tempo, compàs,
+     * tonalitat), processa les notes (NOTE_ON/OFF), els acords, la lletra i
+     * el changeMap, i actualitza el mixer.
+     * <p>
+     * [EN] Reads a MIDI file and populates the score grid. Analyses MIDI
+     * tracks, detects the header (tempo, time signature, key), processes
+     * notes (NOTE_ON/OFF), chords, lyrics and the changeMap, and updates the
+     * mixer.
+     *
+     * @param fitxer [CA] ruta al fitxer MIDI / [EN] path to the MIDI file
+     */
     public void readMidiScore(String fitxer) {
         // defaults;
         this.choice.setNoneChoice();
@@ -723,7 +771,22 @@ public class MyMidiScore extends MyExercise {
         }
     }
 
-// Mètode per analitzar un fitxer MIDI i generar la partitura en format MyGridPattern
+    /**
+     * [CA] Desa la partitura actual en un fitxer MIDI (format 1). Genera la
+     * pista 0 de capçalera (tempo, compàs, tonalitat, metadades, acords,
+     * lletra, changeMap) i una pista MIDI per a cada track del mixer amb les
+     * notes NOTE_ON/OFF corresponents.
+     * <p>
+     * [EN] Saves the current score to a MIDI file (format 1). Generates
+     * track 0 header (tempo, time signature, key, metadata, chords, lyrics,
+     * changeMap) and one MIDI track per mixer track with the corresponding
+     * NOTE_ON/OFF events.
+     *
+     * @param filePath           [CA] ruta de sortida del fitxer MIDI /
+     *                           [EN] output path for the MIDI file
+     * @param saveChordMidiTrack [CA] true per incloure la pista d'acords MIDI /
+     *                           [EN] true to include the chord MIDI track
+     */
     public void saveMidiScore(String filePath, boolean saveChordMidiTrack) {
         boolean isFirstNoteOn = true;
         this.ticksPerQuarter = SoundWithMidi.DEFAULT_TICKS_PER_QUARTER;
@@ -1022,6 +1085,16 @@ public class MyMidiScore extends MyExercise {
         }
     }
 
+    /**
+     * [CA] Comprova si una pista MIDI és una pista de metadades (no conté
+     * missatges de canal com NOTE_ON o CONTROL_CHANGE).
+     * <p>
+     * [EN] Checks whether a MIDI track is a metadata track (contains no
+     * channel messages such as NOTE_ON or CONTROL_CHANGE).
+     *
+     * @param track [CA] pista MIDI a comprovar / [EN] MIDI track to check
+     * @return [CA] true si és una pista de metadades / [EN] true if metadata track
+     */
     public static boolean isMetaTrack(Track track) {
         for (int i = 0; i < track.size(); i++) {
             MidiEvent event = track.get(i);
@@ -1042,10 +1115,16 @@ public class MyMidiScore extends MyExercise {
     }
 
     /**
-     * Assigna els valors de tempo i keys direcament, sense fer un place a la
-     * partitura.
+     * [CA] Analitza la capçalera de la seqüència MIDI i aplica directament
+     * els valors de tempo, compàs, tonalitat i metadades a la partitura,
+     * sense generar events a la graella.
+     * <p>
+     * [EN] Analyses the MIDI sequence header and directly applies tempo,
+     * time signature, key and metadata values to the score, without
+     * generating events in the grid.
      *
-     * @param filePath
+     * @param sequence [CA] seqüència MIDI a analitzar / [EN] MIDI sequence to analyse
+     * @return [CA] true si l'anàlisi ha tingut èxit / [EN] true if analysis succeeded
      */
     public boolean analyzeMidiHeader(Sequence sequence) {
         boolean ok = true;
@@ -1196,13 +1275,14 @@ public class MyMidiScore extends MyExercise {
     }
 
     /**
-     * Construeix un Map<Integer, Integer> a partir del seu format toString()
-     * (p. ex. "{0=25, 1=32}"). Builds a Map<Integer, Integer> from its
-     * toString() format (e.g., "{0=25, 1=32}").
+     * [CA] Construeix un {@code Map<Integer, Integer>} canal→instrument a
+     * partir de la representació textual del mapa (p. ex. "{@code {0=25, 1=32}}").
+     * <p>
+     * [EN] Builds a {@code Map<Integer, Integer>} channel→instrument from
+     * the text representation of the map (e.g., "{@code {0=25, 1=32}}").
      *
-     * @param text el text amb el format del map // the map-formatted input
-     * string
-     * @return un mapa canal→instrument // a map from channel to instrument
+     * @param text [CA] text en format Map.toString() / [EN] text in Map.toString() format
+     * @return [CA] mapa canal→instrument / [EN] channel→instrument map
      */
     public static Map<Integer, Integer> readInstruments(String text) {
         Map<Integer, Integer> map = new HashMap<>();
@@ -1224,6 +1304,16 @@ public class MyMidiScore extends MyExercise {
         return map;
     }
 
+    /**
+     * [CA] Analitza una llista de canals MIDI des de la seva representació
+     * textual (p. ex. "{@code [0, 1, 9]}") i retorna una llista d'enters.
+     * <p>
+     * [EN] Parses a list of MIDI channels from its text representation
+     * (e.g., "{@code [0, 1, 9]}") and returns a list of integers.
+     *
+     * @param text [CA] text en format List.toString() / [EN] text in List.toString() format
+     * @return [CA] llista de canals / [EN] list of channels
+     */
     public static List<Integer> readCanals(String text) {
         List<Integer> canals = new ArrayList<>();
         // Elimina els claudàtors i espais al voltant
@@ -1240,6 +1330,19 @@ public class MyMidiScore extends MyExercise {
         return canals;
     }
 
+    /**
+     * [CA] Construeix la pista de capçalera MIDI (pista 0) amb els
+     * meta-missatges de tempo (0x51), compàs (0x58), tonalitat (0x59) i
+     * metadades de la partitura (títol, autor, descripció, opcions de
+     * visualització, instruments, delay).
+     * <p>
+     * [EN] Builds the MIDI header track (track 0) with meta-messages for
+     * tempo (0x51), time signature (0x58), key signature (0x59) and score
+     * metadata (title, author, description, display options, instruments,
+     * delay).
+     *
+     * @param metaTrack [CA] pista MIDI de destinació / [EN] destination MIDI track
+     */
     public void buildMidiHeader(Track metaTrack) {
 //        try {
         // --- Tempo ---

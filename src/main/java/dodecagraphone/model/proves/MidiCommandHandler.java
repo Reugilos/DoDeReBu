@@ -1,18 +1,64 @@
+/*
+ * MIT License
+ * Copyright (c) 2024-2026 Pau Bofill, Claude IA
+ * Llicència completa: LICENSE (arrel del projecte)
+ */
 package dodecagraphone.model.proves;
 
 import javax.sound.midi.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * [CA] Gestor estàtic de comandes MIDI per a proves. Processa missatges {@code ShortMessage}
+ * i {@code MetaMessage}, els mostra per consola i opcionalment els envia al sintetitzador
+ * del sistema per a la reproducció en temps real. Manté un mapa intern de notes actives
+ * per calcular les duracions. Codi experimental / prototip.
+ * <p>
+ * [EN] Static MIDI command handler for testing. Processes {@code ShortMessage} and
+ * {@code MetaMessage} messages, prints them to the console and optionally forwards them
+ * to the system synthesiser for real-time playback. Maintains an internal map of active
+ * notes to compute durations. Experimental / prototype code.
+ *
+ * @author Pau Bofill
+ * @author Claude IA
+ * @version 4.0
+ */
 public class MidiCommandHandler {
 
     private static boolean enablePlayback = true;
     private static Map<Integer, NoteInfo> activeNotes = new HashMap<>();
 
+    /**
+     * [CA] Activa o desactiva la reproducció en temps real dels missatges MIDI
+     * al sintetitzador del sistema.
+     * <p>
+     * [EN] Enables or disables real-time playback of MIDI messages through the
+     * system synthesiser.
+     *
+     * @param enable [CA] {@code true} per activar la reproducció, {@code false} per desactivar-la /
+     *               [EN] {@code true} to enable playback, {@code false} to disable it
+     */
     public static void setEnablePlayback(boolean enable) {
         enablePlayback = enable;
     }
 
+    /**
+     * [CA] Processa un missatge MIDI (ShortMessage o MetaMessage): el mostra per consola
+     * amb el tick, la pista i els detalls del missatge, i si la reproducció està activada
+     * l'envia al sintetitzador. Gestiona NOTE_ON, NOTE_OFF, CONTROL_CHANGE, PROGRAM_CHANGE
+     * i els meta-missatges de nom de pista, tempo, compàs i tonalitat.
+     * <p>
+     * [EN] Processes a MIDI message (ShortMessage or MetaMessage): prints it to the console
+     * with tick, track and message details, and if playback is enabled forwards it to the
+     * synthesiser. Handles NOTE_ON, NOTE_OFF, CONTROL_CHANGE, PROGRAM_CHANGE and meta-messages
+     * for track name, tempo, time signature and key signature.
+     *
+     * @param message     [CA] missatge MIDI a processar / [EN] MIDI message to process
+     * @param synthesizer [CA] sintetitzador destinatari de la reproducció / [EN] synthesiser for playback output
+     * @param track       [CA] índex de la pista d'origen / [EN] source track index
+     * @param tick        [CA] posició temporal en ticks MIDI / [EN] temporal position in MIDI ticks
+     */
     public static void handleMidiMessage(MidiMessage message, Synthesizer synthesizer, int track, long tick) {
         try {
             Receiver receiver = synthesizer.getReceiver();
@@ -126,8 +172,8 @@ public class MidiCommandHandler {
     }
 
     private static void showNoteInfo(NoteInfo noteInfo) {
-        System.out.println("Nota: Pitch: " + noteInfo.getPitch() + ", Canal: " + noteInfo.getChannel() + 
-                           ", Tick Inici: " + noteInfo.getStartTick() + ", Durada: " + noteInfo.getDuration() + 
+        System.out.println("Nota: Pitch: " + noteInfo.getPitch() + ", Canal: " + noteInfo.getChannel() +
+                           ", Tick Inici: " + noteInfo.getStartTick() + ", Durada: " + noteInfo.getDuration() +
                            " ticks, Velocity: " + noteInfo.getVelocity());
     }
 
