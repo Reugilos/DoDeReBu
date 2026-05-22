@@ -3607,9 +3607,9 @@ public class MyController {
             saveChordMidiChoice = null;
             this.stop();
             this.buttons.stopPlayButton();
-            // this.allPurposeScore midScore = new MyMidiScore(this);
             this.exercisesOn = false;
             this.buttons.updateCurrentExerciseButton("");
+            this.updateTextOfButtons();
             allPurposeScore.resetAllPurposeScore();
             this.mixer = new MyMixer(this);
             int estimatedCols = estimateLastColFromMidi(fitxer);
@@ -3625,16 +3625,17 @@ public class MyController {
             this.allPurposeScore.initOffscreen();
             this.myChordSymbolLine.initOffscreen();
             this.myLyrics.initOffscreen();
-            //this.myChordSymbolLine.setScore(allPurposeScore);
-            //this.cam.setScore(allPurposeScore);
-            //this.cam.setSymbolLine(myChordSymbolLine);
             this.cam.reset();
             this.statusLine.setText(scoreStatusText());
-            if (getUi() != null && getUi().getPanel() != null) {
-                getUi().getPanel().repinta(true);
+            MyNewPanel panel = getUi() != null ? getUi().getPanel() : null;
+            if (panel != null) {
+                MyNewPanel.setRepintaWasCalled(true);
+                this.setNeedsDrawing(true);
+                panel.paintImmediately(0, 0, panel.getWidth(), panel.getHeight());
             }
+        } else {
+            this.updateTextOfButtons();
         }
-        this.updateTextOfButtons();
     }
 
     private void newScore() {
