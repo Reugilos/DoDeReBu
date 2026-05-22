@@ -3038,6 +3038,12 @@ public class MyController {
     public void onLoadButtonPressed(MyButton togg) {
         this.buttons.hideTip();
         togg.setPressed(false);
+        this.updateTextOfButtons();
+        MyNewPanel panel = getUi() != null ? getUi().getPanel() : null;
+        if (panel != null) {
+            MyNewPanel.setRepintaWasCalled(true);
+            panel.paintImmediately(0, 0, panel.getWidth(), panel.getHeight());
+        }
         this.loadScore("");
         togg.setPressed(false);
     }
