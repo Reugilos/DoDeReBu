@@ -3627,6 +3627,8 @@ public class MyController {
             this.myLyrics.initOffscreen();
             this.cam.reset();
             this.statusLine.setText(scoreStatusText());
+            this.updateTextOfButtons();
+            this.buttons.hideTip();
             MyNewPanel panel = getUi() != null ? getUi().getPanel() : null;
             if (panel != null) {
                 MyNewPanel.setRepintaWasCalled(true);
