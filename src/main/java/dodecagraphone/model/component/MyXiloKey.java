@@ -15,6 +15,7 @@ import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.util.HashSet;
 import java.util.Set;
