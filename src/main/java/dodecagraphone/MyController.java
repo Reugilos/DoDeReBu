@@ -3117,8 +3117,6 @@ public class MyController {
         tremoloActive = true;
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
-        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
-        boolean dotted = this.mixer.getCurrentTrack().isDotted();
         int nKeys = this.allPurposeScore.getnKeys();
         int nCols = this.allPurposeScore.getLastColWritten();
         for (int col = 0; col < nCols; col++) {
@@ -3133,7 +3131,7 @@ public class MyController {
                 MyGridSquare.SubSquare note = noteOpt.get();
                 if (note.isLinked()) {
                     note.setFirstSquareOfNote(false);
-                    sq.unlinkNote(ch, tr, vel, true, false, false, dotted);
+                    sq.unlinkNote(ch, tr, 0, true, false, false, false);
                 } else {
                     note.setFirstSquareOfNote(true);
                 }
@@ -3145,8 +3143,6 @@ public class MyController {
         tremoloActive = false;
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
-        int vel = SoundWithMidi.getCurrentKeyboardVelocity();
-        boolean dotted = this.mixer.getCurrentTrack().isDotted();
         int nKeys = this.allPurposeScore.getnKeys();
         int nCols = this.allPurposeScore.getLastColWritten();
         for (int col = 0; col < nCols; col++) {
@@ -3163,7 +3159,7 @@ public class MyController {
                     MyGridSquare prev = this.allPurposeScore.getGridSquare(row, col - 1);
                     if (prev != null && prev.getPoliNotes().stream()
                             .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr)) {
-                        sq.linkNote(ch, tr, vel, true, false, false, dotted);
+                        sq.linkNote(ch, tr, 0, true, false, false, false);
                     }
                 }
                 note.setFirstSquareOfNote(true);
