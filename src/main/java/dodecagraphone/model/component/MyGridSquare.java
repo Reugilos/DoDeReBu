@@ -42,6 +42,8 @@ public class MyGridSquare extends MyComponent {
         private boolean is_linked;
         private boolean is_visible;
         private boolean is_dotted;
+        /** true = primera square d'una nota (o nota solitària); false = continuació (lligada). Usat pel tremolo. */
+        private boolean isFirstSquareOfNote = true;
 
         private SubSquare(int channel, int track, MyGridSquare sq, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
             this.channel = channel;
@@ -62,6 +64,9 @@ public class MyGridSquare extends MyComponent {
         public boolean isLinked() {
             return is_linked;
         }
+
+        public boolean isFirstSquareOfNote() { return isFirstSquareOfNote; }
+        public void setFirstSquareOfNote(boolean v) { isFirstSquareOfNote = v; }
 
         public boolean isDotted() { return is_dotted; }
         public boolean isStoredVisible() { return is_visible; }

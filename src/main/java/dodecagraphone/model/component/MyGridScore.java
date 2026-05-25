@@ -1371,10 +1371,15 @@ public class MyGridScore extends MyComponent {
                     boolean hasDrumsNote = sq.getPoliNotes().stream()
                             .anyMatch(n -> n.isVisible() && n.getChannel() == 9);
                     boolean isFirstInTremoloGroup = true;
-                    if (this.controller.isTremoloActive() && col > 0) {
-                        MyGridSquare prev = this.grid[row + BUFFER][col - 1];
-                        if (prev != null && prev.isSq_is_visible()) {
-                            isFirstInTremoloGroup = false;
+                    if (this.controller.isTremoloActive()) {
+                        int curCh = this.controller.getMixer().getCurrentChannelOfCurrentTrack();
+                        int curTr = this.controller.getMixer().getCurrentTrackId();
+                        final int fCh = curCh, fTr = curTr;
+                        java.util.Optional<SubSquare> curNote = sq.getPoliNotes().stream()
+                            .filter(n -> n.getChannel() == fCh && n.getTrack() == fTr)
+                            .findFirst();
+                        if (curNote.isPresent()) {
+                            isFirstInTremoloGroup = curNote.get().isFirstSquareOfNote();
                         }
                     }
                     String name;

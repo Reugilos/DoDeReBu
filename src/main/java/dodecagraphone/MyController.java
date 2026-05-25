@@ -179,8 +179,6 @@ public class MyController {
     private Boolean saveChordMidiChoice = null; // null = no preguntat; true/false = resposta de la sessió
     private boolean drumsMode = false;
     private boolean tremoloActive = false;
-    private final java.util.Set<Long> tremoloLinkedCells = new java.util.HashSet<>();
-    private final java.util.Set<Long> tremoloPreNotes   = new java.util.HashSet<>();
     private int lastMelodyTrackId = 0;
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
@@ -3117,8 +3115,6 @@ public class MyController {
 
     private void activateTremolo() {
         tremoloActive = true;
-        tremoloLinkedCells.clear();
-        tremoloPreNotes.clear();
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
         int vel = SoundWithMidi.getCurrentKeyboardVelocity();
@@ -3130,16 +3126,16 @@ public class MyController {
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
                 if (sq == null) continue;
                 final int fCh = ch, fTr = tr;
-                boolean hasNote = sq.getPoliNotes().stream()
-                    .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr);
-                if (!hasNote) continue;
-                long key = (long) row << 32 | (col & 0xFFFFFFFFL);
-                tremoloPreNotes.add(key);
-                boolean isLinked = sq.getPoliNotes().stream()
-                    .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr && n.isLinked());
-                if (isLinked) {
-                    tremoloLinkedCells.add(key);
+                java.util.Optional<MyGridSquare.SubSquare> noteOpt = sq.getPoliNotes().stream()
+                    .filter(n -> n.getChannel() == fCh && n.getTrack() == fTr)
+                    .findFirst();
+                if (!noteOpt.isPresent()) continue;
+                MyGridSquare.SubSquare note = noteOpt.get();
+                if (note.isLinked()) {
+                    note.setFirstSquareOfNote(false);
                     sq.unlinkNote(ch, tr, vel, true, false, false, dotted);
+                } else {
+                    note.setFirstSquareOfNote(true);
                 }
             }
         }
@@ -3151,18 +3147,28 @@ public class MyController {
         int tr = this.mixer.getCurrentTrackId();
         int vel = SoundWithMidi.getCurrentKeyboardVelocity();
         boolean dotted = this.mixer.getCurrentTrack().isDotted();
-        for (long encoded : tremoloLinkedCells) {
-            int row = (int) (encoded >> 32);
-            int col = (int) (encoded & 0xFFFFFFFFL);
-            long nextKey = (long) row << 32 | ((col + 1) & 0xFFFFFFFFL);
-            if (!tremoloPreNotes.contains(nextKey)) continue;
-            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-            if (sq != null) {
-                sq.linkNote(ch, tr, vel, true, false, false, dotted);
+        int nKeys = this.allPurposeScore.getnKeys();
+        int nCols = this.allPurposeScore.getLastColWritten();
+        for (int col = 0; col < nCols; col++) {
+            for (int row = 0; row < nKeys; row++) {
+                MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+                if (sq == null) continue;
+                final int fCh = ch, fTr = tr;
+                java.util.Optional<MyGridSquare.SubSquare> noteOpt = sq.getPoliNotes().stream()
+                    .filter(n -> n.getChannel() == fCh && n.getTrack() == fTr)
+                    .findFirst();
+                if (!noteOpt.isPresent()) continue;
+                MyGridSquare.SubSquare note = noteOpt.get();
+                if (!note.isFirstSquareOfNote() && col > 0) {
+                    MyGridSquare prev = this.allPurposeScore.getGridSquare(row, col - 1);
+                    if (prev != null && prev.getPoliNotes().stream()
+                            .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr)) {
+                        sq.linkNote(ch, tr, vel, true, false, false, dotted);
+                    }
+                }
+                note.setFirstSquareOfNote(true);
             }
         }
-        tremoloLinkedCells.clear();
-        tremoloPreNotes.clear();
     }
 
     public boolean isTremoloActive() {
@@ -3171,8 +3177,6 @@ public class MyController {
 
     private void resetTremolo() {
         tremoloActive = false;
-        tremoloLinkedCells.clear();
-        tremoloPreNotes.clear();
     }
 
     /** Detecta anacrusa i actualitza el botó de compàs si el resultat ha canviat. */
