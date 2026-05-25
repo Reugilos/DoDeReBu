@@ -3119,8 +3119,6 @@ public class MyController {
         int tr = this.mixer.getCurrentTrackId();
         int nKeys = this.allPurposeScore.getnKeys();
         int nCols = this.allPurposeScore.getLastColWritten();
-        System.out.println("[TREMOLO] activateTremolo: ch="+ch+" tr="+tr+" nKeys="+nKeys+" nCols="+nCols);
-        int unlinked = 0, marked = 0;
         for (int col = 0; col < nCols; col++) {
             for (int row = 0; row < nKeys; row++) {
                 MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
@@ -3134,14 +3132,11 @@ public class MyController {
                 if (note.isLinked()) {
                     note.setFirstSquareOfNote(false);
                     sq.unlinkNote(ch, tr, 0, true, false, false, false);
-                    unlinked++;
                 } else {
                     note.setFirstSquareOfNote(true);
-                    marked++;
                 }
             }
         }
-        System.out.println("[TREMOLO] activateTremolo: unlinked="+unlinked+" marked="+marked);
     }
 
     private void deactivateTremolo() {

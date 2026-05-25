@@ -1401,6 +1401,8 @@ public class MyGridScore extends MyComponent {
                         g.setColor(ColorSets.getGridSquareFontColor(midi));
                         g.drawString(name, (int) (2 + screenX + wdth / 3), (int) (screenY + hght * 0.8));
                     }
+                    // Border esquerre sempre en color de font (contrasta amb el fons de nota)
+                    g.setColor(ColorSets.getGridSquareFontColor(midi));
                     g.drawLine(screenX + 1, screenY, screenX + 1, screenY + hght-1);
 
                 }
