@@ -3129,9 +3129,14 @@ public class MyController {
                     .findFirst();
                 if (!noteOpt.isPresent()) continue;
                 MyGridSquare.SubSquare note = noteOpt.get();
-                // isFirstSquareOfNote ja és correcte des del constructor (!is_linked)
+                // Assignem isFirstSquareOfNote EXPLÍCITAMENT segons l'estat real is_linked:
+                // addNoteAtCell sempre crea amb is_linked=false; linkNoteAtCell linka després
+                // sense tocar isFirstSquareOfNote, de manera que el constructor no és suficient.
                 if (note.isLinked()) {
+                    note.setFirstSquareOfNote(false); // continuació: marcar com a no-primera
                     sq.unlinkNote(ch, tr, 0, true, false, false, false);
+                } else {
+                    note.setFirstSquareOfNote(true); // inici de nota o nota aïllada
                 }
             }
         }
