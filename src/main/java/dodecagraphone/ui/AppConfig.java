@@ -245,7 +245,7 @@ public final class AppConfig {
             }
         }
 
-        Files.write(userFile, out, StandardCharsets.UTF_8);
+        Files.write(userFile, out, StandardCharsets.ISO_8859_1);
     }
 
     private void loadFromFile(Path path) throws IOException {

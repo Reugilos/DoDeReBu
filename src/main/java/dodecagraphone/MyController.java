@@ -1786,6 +1786,7 @@ public class MyController {
                             this, moveNoteOrigRow, finalRow, moveNoteOrigHeadCol, finalHeadCol, moveNoteLength,
                             moveCh, moveTr, moveVelocities, moveVisibles, moveMuteds, moveLinkeds, moveDotted);
                     afegirEvent(event);
+                    this.needsSaving = true;
                 }
                 dragMode = DragMode.NONE;
                 moveNoteOrigRow = -1;
@@ -1825,6 +1826,7 @@ public class MyController {
 
             if (mouseSequence != null && !mouseSequence.isEmpty()) {
                 this.afegirEvent(mouseSequence);
+                this.needsSaving = true;
             }
             mouseSequence = null;
 
@@ -1858,6 +1860,7 @@ public class MyController {
                     if (acHead != null) unlinkNoteForUndo(acHead);
                     if (mouseSequence != null && !mouseSequence.isEmpty()) {
                         this.afegirEvent(mouseSequence);
+                        this.needsSaving = true;
                     }
                     mouseSequence = null;
                     firstNote = null;
