@@ -1347,9 +1347,18 @@ public class MyController {
 
     /** Linka la nota d'un square i registra el canvi al mouseSequence per undo. */
     private void linkNoteAtCell(MyGridSquare sq) {
-        if (tremoloActive) return;
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
+        if (tremoloActive) {
+            // Durant el tremolo no linkem físicament (les notes es mostren com a separades),
+            // però marquem la square com a continuació perquè es re-linki en desactivar.
+            final int fCh = ch, fTr = tr;
+            sq.getPoliNotes().stream()
+                .filter(n -> n.getChannel() == fCh && n.getTrack() == fTr)
+                .findFirst()
+                .ifPresent(n -> n.setFirstSquareOfNote(false));
+            return;
+        }
         int vel = SoundWithMidi.getCurrentKeyboardVelocity();
         boolean wasMuted = !sq.isSqAudible();
         boolean wasDotted = this.mixer.getCurrentTrack().isDotted();
