@@ -3556,7 +3556,13 @@ public class MyController {
 
     public void saveScore(String fitxer) {
         if ("".equals(fitxer)) {
-            String defMidi = allPurposeScore.getTitle();
+            String defMidi;
+            if (currentMidiFile != null && !currentMidiFile.isEmpty()) {
+                String basename = new java.io.File(currentMidiFile).getName();
+                defMidi = basename.replaceFirst("(?i)(\\.ddcgr)?\\.midi?$", "");
+            } else {
+                defMidi = allPurposeScore.getTitle();
+            }
             if (defMidi == null || defMidi.isBlank()) defMidi = "partitura";
             defMidi = defMidi.trim().replaceAll("[^\\p{L}\\p{N}\\-._]", "_") + ".ddcgr.mid";
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");

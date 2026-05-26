@@ -14,6 +14,7 @@ import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.mixer.MyMixer;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SoundWithMidi;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.Settings;
 import javax.sound.midi.*;
 import java.io.File;
@@ -372,11 +373,11 @@ public class MyMidiScore extends MyExercise {
         try {
             sequence = MidiSystem.getSequence(midiFile);
         } catch (InvalidMidiDataException e) {
-            JOptionPane.showMessageDialog(null, "El fitxer " + fitxer + " no és un fitxer midi!");
+            JOptionPane.showMessageDialog(null, I18n.f("midi.error.invalidFile", fitxer));
             this.controller.updateTextOfButtons();
             return;
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "El fitxer " + fitxer + " no existeix!");
+            JOptionPane.showMessageDialog(null, I18n.f("midi.error.ioError", fitxer));
             this.controller.updateTextOfButtons();
             return;
         }

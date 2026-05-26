@@ -434,11 +434,12 @@ public class MyDialogs {
         int dotIdx = ext.lastIndexOf('.');
         if (dotIdx > 0) {
             String simpleSuffix = "." + ext.substring(dotIdx + 1).toLowerCase();
-            if (lower.endsWith(simpleSuffix)) {
+            if (simpleSuffix.equals(".mid")) {
+                // MIDI: .mid i .ddcgr.mid son ambdós vàlids; no forcem .ddcgr.mid
+                if (lower.endsWith(".mid")) return f;
+                if (lower.endsWith(".midi")) return new File(path.substring(0, path.length() - 5) + ".mid");
+            } else if (lower.endsWith(simpleSuffix)) {
                 return new File(path.substring(0, path.length() - simpleSuffix.length()) + dotExt);
-            }
-            if (simpleSuffix.equals(".mid") && lower.endsWith(".midi")) {
-                return new File(path.substring(0, path.length() - 5) + dotExt);
             }
         } else if ("mid".equals(ext) && lower.endsWith(".midi")) {
             return f;
