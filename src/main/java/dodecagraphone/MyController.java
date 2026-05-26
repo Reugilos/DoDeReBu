@@ -179,8 +179,6 @@ public class MyController {
     private Boolean saveChordMidiChoice = null; // null = no preguntat; true/false = resposta de la sessió
     private boolean drumsMode = false;
     private boolean tremoloActive = false;
-    /** Cel·les (row<<32|col) que tenien nota ABANS d'activar el tremolo. */
-    private final java.util.Set<Long> tremoloPreNotes = new java.util.HashSet<>();
     private int lastMelodyTrackId = 0;
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
@@ -3117,7 +3115,6 @@ public class MyController {
 
     private void activateTremolo() {
         tremoloActive = true;
-        tremoloPreNotes.clear();
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
         int nKeys = this.allPurposeScore.getnKeys();
@@ -3131,14 +3128,10 @@ public class MyController {
                     .filter(n -> n.getChannel() == fCh && n.getTrack() == fTr)
                     .findFirst();
                 if (!noteOpt.isPresent()) continue;
-                long key = (long) row << 32 | (col & 0xFFFFFFFFL);
-                tremoloPreNotes.add(key);
                 MyGridSquare.SubSquare note = noteOpt.get();
+                // isFirstSquareOfNote ja és correcte des del constructor (!is_linked)
                 if (note.isLinked()) {
-                    note.setFirstSquareOfNote(false);
                     sq.unlinkNote(ch, tr, 0, true, false, false, false);
-                } else {
-                    note.setFirstSquareOfNote(true);
                 }
             }
         }
@@ -3160,22 +3153,17 @@ public class MyController {
                     .findFirst();
                 if (!noteOpt.isPresent()) continue;
                 MyGridSquare.SubSquare note = noteOpt.get();
-                long key = (long) row << 32 | (col & 0xFFFFFFFFL);
-                boolean wasPreNote = tremoloPreNotes.contains(key);
-                // Re-linka si: era continuació original (isFirst=false)
-                //           O: és nova (no era pre-note) i la square anterior té nota
-                boolean shouldLink = (!note.isFirstSquareOfNote() || !wasPreNote) && col > 0;
-                if (shouldLink) {
+                // Re-linka si és continuació (isFirstSquareOfNote=false, fixat al constructor)
+                // Cobreix tant notes originals com notes noves afegides per drag durant el tremolo
+                if (!note.isFirstSquareOfNote() && col > 0) {
                     MyGridSquare prev = this.allPurposeScore.getGridSquare(row, col - 1);
                     if (prev != null && prev.getPoliNotes().stream()
                             .anyMatch(n -> n.getChannel() == fCh && n.getTrack() == fTr)) {
                         sq.linkNote(ch, tr, 0, true, false, false, false);
                     }
                 }
-                note.setFirstSquareOfNote(true);
             }
         }
-        tremoloPreNotes.clear();
     }
 
     public boolean isTremoloActive() {
@@ -3184,7 +3172,6 @@ public class MyController {
 
     private void resetTremolo() {
         tremoloActive = false;
-        tremoloPreNotes.clear();
     }
 
     /** Detecta anacrusa i actualitza el botó de compàs si el resultat ha canviat. */

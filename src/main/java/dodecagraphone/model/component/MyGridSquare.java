@@ -55,6 +55,8 @@ public class MyGridSquare extends MyComponent {
             this.is_linked = is_linked;
             this.is_playing = false;
             this.is_dotted = is_dotted;
+            // Continuacions (is_linked=true) no són el primer square d'una nota
+            this.isFirstSquareOfNote = !is_linked;
         }
 
         public MyGridSquare getSquare() {
