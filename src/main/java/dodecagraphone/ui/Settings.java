@@ -127,7 +127,7 @@ public class Settings {
      */
     public static void initSettings() {
         autoCorrect  = Boolean.parseBoolean(AppConfig.get().get("autoCorrect",  "" + DEFAULT_AUTO_CORRECT));
-        tipsVisible  = Boolean.parseBoolean(AppConfig.get().get("tipsVisible",  "" + DEFAULT_TIPS_VISIBLE));
+        tipsVisible  = DEFAULT_TIPS_VISIBLE;
         showMutted   = DEFAULT_SHOW_MUTTED;
 
         nMeasuresCam = Integer.parseInt(AppConfig.get().get("nMeasuresCam", "" + DEFAULT_NMEASURES_CAM));

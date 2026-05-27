@@ -90,63 +90,75 @@ public class MyChoice {
      */
     public void selectChoice(int keyId) {
         int midi = this.controller.getKeyboard().getKey(keyId).getMidi();
-        //clearChoice();
-        readChoice(midi);
-        this.controller.getAllPurposeScore().updateStripsNKeyboard();
+        applyChoiceRoot(midi);
     }
 
     /**
-     * [CA] Mostra un diàleg per triar el tipus d'elecció i aplica la configuració
-     * corresponent (escala, acord, interval, llista o cap).
+     * [CA] Mostra el diàleg de selecció de tipus de patró (primer l'opció d'ajust a la
+     * tonalitat, després escales, acords, etc.), aplica la configuració dels intervals i
+     * l'extensió, i retorna si el patró ja s'ha aplicat completament o si cal que
+     * l'usuari cliqui la nota arrel al teclat.
      * <p>
-     * [EN] Shows a dialog to select the choice type and applies the
-     * corresponding configuration (scale, chord, interval, list or none).
+     * [EN] Shows the pattern type selection dialog (fit to tonality first, then scales,
+     * chords, etc.), applies the interval configuration and extension, and returns whether
+     * the pattern has been fully applied or the user still needs to click the root note.
      *
-     * @param rootMidi [CA] nota MIDI arrel de l'elecció / [EN] root MIDI note of the choice
+     * @return [CA] {@code true} si el patró s'ha aplicat completament (cal retornar al mode normal);
+     *         {@code false} si l'usuari ha de clicar la nota arrel al teclat
+     *         [EN] {@code true} if the pattern was fully applied; {@code false} if the user
+     *         must click the root note on the keyboard
      */
-    public void readChoice(int rootMidi) {
-        boolean isChromatic    = false;
-        boolean canExtend      = false;
-        int     effectiveRoot  = rootMidi;
-
+    public boolean showChoiceDialog() {
+        String kFit      = I18n.t("choice.scale.fitToTonality");
         String kScale    = I18n.t("choice.type.scale");
         String kChord    = I18n.t("choice.type.chord");
         String kInterval = I18n.t("choice.type.interval");
         String kNone     = I18n.t("choice.type.none");
         String kList     = I18n.t("choice.type.list");
 
-        String[] tipusOpcions = { kScale, kChord, kInterval, kNone, kList };
+        String[] tipusOpcions = { kFit, kScale, kChord, kInterval, kNone, kList };
         String tipusSeleccio = MyDialogs.seleccionaOpcio(
                 I18n.t("choice.dialog.prompt"),
                 I18n.t("choice.dialog.title"),
                 tipusOpcions, 0);
-        if (tipusSeleccio == null) return;
+        if (tipusSeleccio == null) return true;
 
-        if (tipusSeleccio.equals(kNone)) {
+        if (tipusSeleccio.equals(kFit)) {
+            char mode = this.controller.getAllPurposeScore().getScaleMode();
+            if (mode == 'm') setMinorScaleChoice();
+            else             setMajorScaleChoice();
+            askAndExtend();
+            int pc = this.controller.getAllPurposeScore().getMidiKey() % 12;
+            int lowestMidi = ToneRange.getLowestMidi();
+            int root = lowestMidi + ((pc - lowestMidi % 12 + 12) % 12);
+            addUpRoot(root);
+            this.controller.getAllPurposeScore().updateStripsNKeyboard();
+            return true;
+        } else if (tipusSeleccio.equals(kNone)) {
             setNoneChoice();
+            this.controller.getAllPurposeScore().updateStripsNKeyboard();
+            return true;
         } else if (tipusSeleccio.equals(kInterval)) {
             String entrada = MyDialogs.mostraInputDialog(
                     I18n.t("choice.interval.prompt"),
                     I18n.t("choice.interval.title"));
-            if (entrada == null) return;
+            if (entrada == null) return true;
             try {
                 setIntervalChoice(Integer.parseInt(entrada.trim()));
-                canExtend = true;
             } catch (Exception e) {
                 MyDialogs.mostraError(I18n.t("choice.error.interval"), I18n.t("choice.error.title"));
-                return;
+                return true;
             }
         } else if (tipusSeleccio.equals(kList)) {
             String entrada = MyDialogs.mostraInputDialog(
                     I18n.t("choice.list.prompt"),
                     I18n.t("choice.list.title"));
-            if (entrada == null) return;
+            if (entrada == null) return true;
             try {
                 setListChoice(entrada.trim());
-                canExtend = true;
             } catch (Exception e) {
                 MyDialogs.mostraError(I18n.t("choice.error.list"), I18n.t("choice.error.title"));
-                return;
+                return true;
             }
         } else if (tipusSeleccio.equals(kChord)) {
             String kMaj  = I18n.t("choice.chord.major");
@@ -158,12 +170,11 @@ public class MyChoice {
                     I18n.t("choice.chord.prompt"),
                     I18n.t("choice.chord.title"),
                     acords, 0);
-            if (sel == null) return;
+            if (sel == null) return true;
             if      (sel.equals(kMaj)) setMajorChordChoice();
             else if (sel.equals(kMin)) setMinorChordChoice();
             else if (sel.equals(kDim)) setDiminishedChordChoice();
             else if (sel.equals(kAug)) setAugmentedChordChoice();
-            canExtend = true;
         } else if (tipusSeleccio.equals(kScale)) {
             String kMajF5 = I18n.t("choice.scale.majorFirst5");
             String kMaj   = I18n.t("choice.scale.major");
@@ -172,52 +183,57 @@ public class MyChoice {
             String kPenta = I18n.t("choice.scale.pentatonicMajor");
             String kBlues = I18n.t("choice.scale.blues");
             String kChrom = I18n.t("choice.scale.chromatic");
-            String kFit   = I18n.t("choice.scale.fitToTonality");
-            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom, kFit };
+            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom };
             String sel = MyDialogs.seleccionaOpcio(
                     I18n.t("choice.scale.prompt"),
                     I18n.t("choice.scale.title"),
                     escales, 0);
-            if (sel == null) return;
-            if      (sel.equals(kMajF5)) { setFirstFiveScaleChoice();       canExtend = true; }
-            else if (sel.equals(kMaj))   { setMajorScaleChoice();           canExtend = true; }
-            else if (sel.equals(kMin))   { setMinorScaleChoice();           canExtend = true; }
-            else if (sel.equals(kHarm))  { setHarmonicMinorScaleChoice();   canExtend = true; }
-            else if (sel.equals(kPenta)) { setPentatonicMajorScaleChoice(); canExtend = true; }
-            else if (sel.equals(kBlues)) { setBluesScaleChoice();           canExtend = true; }
-            else if (sel.equals(kChrom)) { setChromaticScaleChoice();       isChromatic = true; }
-            else if (sel.equals(kFit))   {
-                char mode = this.controller.getAllPurposeScore().getScaleMode();
-                if (mode == 'm') setMinorScaleChoice();
-                else             setMajorScaleChoice();
-                // center the scale around middle C (C4 = MIDI 60)
-                int pc = this.controller.getAllPurposeScore().getMidiKey() % 12;
-                effectiveRoot = pc + 48;
-                if (effectiveRoot < 49) effectiveRoot += 12;  // push C (48) up to 60
-                canExtend = true;
-            }
+            if (sel == null) return true;
+            if      (sel.equals(kMajF5)) setFirstFiveScaleChoice();
+            else if (sel.equals(kMaj))   setMajorScaleChoice();
+            else if (sel.equals(kMin))   setMinorScaleChoice();
+            else if (sel.equals(kHarm))  setHarmonicMinorScaleChoice();
+            else if (sel.equals(kPenta)) setPentatonicMajorScaleChoice();
+            else if (sel.equals(kBlues)) setBluesScaleChoice();
+            else if (sel.equals(kChrom)) setChromaticScaleChoice();
         }
+        askAndExtend();
+        return false; // cal que l'usuari cliqui la nota arrel
+    }
 
-        // Botó One octave / Extend (per tots els casos que ho suporten)
-        if (canExtend) {
-            String kOne  = I18n.t("choice.extend.oneOctave");
-            String kFull = I18n.t("choice.extend.full");
-            int result = JOptionPane.showOptionDialog(
-                    null,
-                    I18n.t("choice.extend.prompt"),
-                    I18n.t("choice.extend.title"),
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    new Object[]{ kOne, kFull },
-                    kOne);
-            if (result == 1) {
-                extendChoiceToFullRange();
-            }
+    /**
+     * [CA] Mostra el diàleg d'una octava / tot el teclat i amplia l'elecció si cal.
+     * [EN] Shows the one-octave / full keyboard dialog and extends the choice if needed.
+     */
+    private void askAndExtend() {
+        String kOne  = I18n.t("choice.extend.oneOctave");
+        String kFull = I18n.t("choice.extend.full");
+        int result = JOptionPane.showOptionDialog(
+                null,
+                I18n.t("choice.extend.prompt"),
+                I18n.t("choice.extend.title"),
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                new Object[]{ kOne, kFull },
+                kOne);
+        if (result == 1) {
+            extendChoiceToFullRange();
         }
+    }
 
-        if (isChromatic) addUpRoot(ToneRange.getLowestMidi());
-        else             addUpRoot(effectiveRoot);
+    /**
+     * [CA] Aplica la nota arrel a l'elecció actual i actualitza el teclat i les franges.
+     * S'ha de cridar quan l'usuari clica la nota arrel al teclat (mode de selecció).
+     * <p>
+     * [EN] Applies the root note to the current choice and updates the keyboard and strips.
+     * Called when the user clicks the root note on the keyboard (selection mode).
+     *
+     * @param midi [CA] valor MIDI de la nota arrel / [EN] MIDI value of the root note
+     */
+    public void applyChoiceRoot(int midi) {
+        addUpRoot(midi);
+        this.controller.getAllPurposeScore().updateStripsNKeyboard();
     }
 
     /**

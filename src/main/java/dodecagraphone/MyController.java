@@ -272,6 +272,7 @@ public class MyController {
         this.turningOn = false;
         this.allPurposeScore.setShowNoteNames(true);
         this.allPurposeScore.setUseScreenKeyboardRight(!left);
+        this.allPurposeScore.resetMetadata();
         this.updateTextOfButtons();
         this.ui.getContentPane().setSize((int) screen.getComponentWidth(), (int) screen.getComponentHeight());
         this.ui.pack();
@@ -1618,6 +1619,8 @@ public class MyController {
                 this.buttons.hideTip();
                 this.getAllPurposeScore().getChoice().selectChoice(keyId);
                 deactivateSelectingMode();
+                this.allPurposeScore.drawCurrentCamInOffscreen();
+                this.getUi().getPanel().repinta(true);
                 return;
             }
             this.keyboard.getKey(keyId).doNotHighlight(false);
@@ -1712,6 +1715,8 @@ public class MyController {
                 this.buttons.hideTip();
                 this.getAllPurposeScore().getChoice().selectChoice(keyId);
                 deactivateSelectingMode();
+                this.allPurposeScore.drawCurrentCamInOffscreen();
+                this.getUi().getPanel().repinta(true);
                 return;
             }
             MyXiloKey key = this.keyboard.getKey(keyId);
@@ -2323,7 +2328,7 @@ public class MyController {
         mixer.refreshMixer();
         updateTextOfButtons();
         this.allPurposeScore.drawCurrentCamInOffscreen();
-        this.getUi().getPanel().repinta(true);
+        redrawChordLine();
     }
 
     private void showBeatColTip(int scoreCol, double posX, double posY) {
@@ -2856,7 +2861,6 @@ public class MyController {
         if (replicador != null && replicador.isAlive()) {
             return;
         }
-        int trackId = this.getMixer().getCurrentTrackId();
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
@@ -2875,13 +2879,6 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
-            // Crea una marca de volum pendent per col·locar a la partitura
-            int finalVol = getMixer().getCurrentTrack().getVelocity();
-            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-            sc.trackVelocities.put(trackId, finalVol);
-            javax.swing.SwingUtilities.invokeLater(() ->
-                setPendingChange(sc, I18n.t("scoreChange.volume"))
-            );
         });
         replicador.start();
     }
@@ -2893,7 +2890,6 @@ public class MyController {
         if (replicador != null && replicador.isAlive()) {
             return;
         }
-        int trackId = this.getMixer().getCurrentTrackId();
         replicador = new Thread(() -> {
             if (togg.isPressed()) {
                 try {
@@ -2912,13 +2908,6 @@ public class MyController {
                     Thread.currentThread().interrupt();
                 }
             }
-            // Crea una marca de volum pendent per col·locar a la partitura
-            int finalVol = getMixer().getCurrentTrack().getVelocity();
-            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-            sc.trackVelocities.put(trackId, finalVol);
-            javax.swing.SwingUtilities.invokeLater(() ->
-                setPendingChange(sc, I18n.t("scoreChange.volume"))
-            );
         });
         replicador.start();
     }
@@ -3059,25 +3048,66 @@ public class MyController {
         togg.setPressed(false);
     }
 
+    /** Mostra un diàleg no modal que demana a l'usuari que cliqui la nota arrel al teclat. */
+    private void showSelectingDialog() {
+        if (selectingDialog != null) selectingDialog.dispose();
+        javax.swing.JDialog dlg = new javax.swing.JDialog(
+                this.getUi(), I18n.t("choice.selectingDialog.title"), false);
+        dlg.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        javax.swing.JLabel label = new javax.swing.JLabel(
+                I18n.t("buttonLayout.SelectChoiceButton.selectingTip"),
+                javax.swing.SwingConstants.CENTER);
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 24, 8, 24));
+        javax.swing.JButton btnCancel = new javax.swing.JButton(I18n.t("choice.selectingDialog.cancel"));
+        btnCancel.addActionListener(ev -> {
+            deactivateSelectingMode();
+            if (selectingDialog != null) { selectingDialog.dispose(); selectingDialog = null; }
+            allPurposeScore.drawCurrentCamInOffscreen();
+            getUi().getPanel().repinta(true);
+        });
+        javax.swing.JPanel contentPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
+        contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 24, 16, 24));
+        contentPanel.add(label, java.awt.BorderLayout.CENTER);
+        contentPanel.add(btnCancel, java.awt.BorderLayout.SOUTH);
+        dlg.add(contentPanel);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this.getUi());
+        dlg.setVisible(true);
+        selectingDialog = dlg;
+    }
+
+    /** Tanca el diàleg de selecció d'arrel si estava obert. */
+    private void closeSelectingDialog() {
+        if (selectingDialog != null) {
+            selectingDialog.dispose();
+            selectingDialog = null;
+        }
+    }
+
     public void deactivateSelectingMode() {
         MyChoice choice = this.allPurposeScore.getChoice();
         choice.setSelecting(false);
         MyButton btn = this.buttons.getSelectChoiceButton();
         if (btn != null) btn.setPressed(false);
         this.allPurposeScore.setGridColorsHaveChanged(true);
+        closeSelectingDialog();
     }
 
     public void onSelectChoiceButtonPressed(MyButton togg) {
         MyChoice choice = this.allPurposeScore.getChoice();
-        if (choice.isSelecting()){
+        if (choice.isSelecting()) {
             deactivateSelectingMode();
-        }
-        else {
-            choice.setSelecting(true);
-            togg.setPressed(true);
-            double tipX = Settings.getScreenWidth() / 2.0;
-            double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
-            this.buttons.showCustomTip(I18n.t("buttonLayout.SelectChoiceButton.selectingTip"), tipX, tipY);
+        } else {
+            boolean done = choice.showChoiceDialog();
+            if (!done) {
+                choice.setSelecting(true);
+                togg.setPressed(true);
+                showSelectingDialog();
+            } else {
+                togg.setPressed(false);
+                this.allPurposeScore.drawCurrentCamInOffscreen();
+                this.getUi().getPanel().repinta(true);
+            }
         }
     }
 
@@ -3385,6 +3415,8 @@ public class MyController {
      */
     /** Finestra emergent no modal que es mostra mentre hi ha un canvi pendent. */
     private javax.swing.JDialog pendingChangeDialog = null;
+    /** Finestra emergent no modal que es mostra mentre s'espera que l'usuari cliqui l'arrel del patró. */
+    private javax.swing.JDialog selectingDialog = null;
 
     private void setPendingChange(MyGridScore.ScoreChange change, String description) {
         setPendingChange(change, description, null);
@@ -3441,9 +3473,16 @@ public class MyController {
      */
     private boolean placePendingChangeAt(int col) {
         if (pendingChange == null) return false;
-        // Snap a la primera columna del compàs que conté col:
-        // tempo, compàs i to només té sentit aplicar-los a l'inici d'un compàs.
-        col = allPurposeScore.getFirstColOfCurrentMeasure(col);
+        // Snap a l'inici de compàs per a canvis de tempo, tonalitat i compàs.
+        // Per a canvis de volum purs (trackVelocities), s'aplica a la columna exacta.
+        boolean isVolumeOnly = pendingChange.tempo == null && pendingChange.midiKey == null
+                && pendingChange.scaleMode == null && pendingChange.nBeatsMeasure == null
+                && pendingChange.beatFigure == null && pendingChange.nColsQuarter == null
+                && pendingChange.nColsBeat == null
+                && !pendingChange.trackVelocities.isEmpty();
+        if (!isVolumeOnly) {
+            col = allPurposeScore.getFirstColOfCurrentMeasure(col);
+        }
         // Si hi ha un canvi de to pendent, preguntar si cal transposar les notes.
         if (pendingTransposeStep != 0) {
             int step = pendingTransposeStep;
@@ -3453,6 +3492,10 @@ public class MyController {
                     I18n.t("keyButton.transposeConfirm.title"));
             if (res == javax.swing.JOptionPane.YES_OPTION) {
                 allPurposeScore.transpose(step);
+            } else {
+                // Les notes no es transposen, però el choice sí segueix la nova tonalitat
+                allPurposeScore.getChoice().transposeChoice(step);
+                allPurposeScore.updateStripsNKeyboard();
             }
         }
         allPurposeScore.setScoreChange(col, pendingChange);
@@ -3543,12 +3586,17 @@ public class MyController {
         if (sc.nMeasuresCam != null) {
             Settings.setnMeasuresCam(sc.nMeasuresCam);
         }
-        for (java.util.Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
-            MyTrack t = getMixer().getTrackFromId(e.getKey());
-            if (t != null) {
-                t.setVelocity(e.getValue());
-                if (e.getKey() == getMixer().getCurrentTrackId()) {
-                    this.buttons.updateVolumeButton("" + e.getValue());
+        // Les velocitats del changeMap s'apliquen al track i al botó només durant la
+        // reproducció (quan el playbar passa per una marca de volum). En mode d'edició,
+        // la velocitat del track reflecteix l'ajust manual de l'usuari (Louder/Quieter/Volum).
+        if (cam.isPlaying()) {
+            for (java.util.Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
+                MyTrack t = getMixer().getTrackFromId(e.getKey());
+                if (t != null) {
+                    t.setVelocity(e.getValue());
+                    if (e.getKey() == getMixer().getCurrentTrackId()) {
+                        this.buttons.updateVolumeButton("" + e.getValue());
+                    }
                 }
             }
         }
@@ -3700,6 +3748,7 @@ public class MyController {
             this.myLyrics.initOffscreen();
             this.cam.reset();
             this.statusLine.setText(scoreStatusText());
+            Settings.setTipsVisible(true);
             this.updateTextOfButtons();
             this.buttons.hideTip();
             MyNewPanel panel = getUi() != null ? getUi().getPanel() : null;
@@ -3742,6 +3791,7 @@ public class MyController {
         this.cam.reset();
         allPurposeScore.updateStopMarker();
         this.statusLine.setText(scoreStatusText());
+        Settings.setTipsVisible(true);
         this.buttons.setToggleButtonsToProgramValues();
         this.currentMidiFile = "";
         resetDrumsMode();

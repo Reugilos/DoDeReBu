@@ -92,9 +92,9 @@ public class MyGridScore extends MyComponent {
     /** Mida del buffer offscreen en columnes. 0 = usa nCols (mida màxima). */
     private int nColsBuffer = 0;
     protected String label = "";
-    protected String title = "Cançó";
-    protected String author = "Tradicional";
-    protected String description = "Descripció";
+    protected String title = "";
+    protected String author = "";
+    protected String description = "";
     protected int nKeys;
     /** Files de buffer (2 octaves) per sobre i per sota del rang visible. */
     protected static final int BUFFER = 24;
@@ -1880,9 +1880,11 @@ public class MyGridScore extends MyComponent {
         }
         // Garanteix que col-0 del changeMap reflecteix la tonalitat base transposada.
         // applyChangesAt llegeix sempre un valor d'aquí i tornaria al default si no hi ha entrada.
+        // scaleMode sempre s'actualitza (no null-check) perquè getNextKey/getPrevKey el canvien
+        // abans de cridar transpose(), i applyChangesAt el llegiria del changeMap sobreescrivint-lo.
         ScoreChange sc0 = changeMap.computeIfAbsent(0, k -> new ScoreChange());
         if (sc0.midiKey == null)   sc0.midiKey   = this.midiKey;
-        if (sc0.scaleMode == null) sc0.scaleMode = this.scaleMode;
+        sc0.scaleMode = this.scaleMode;
         this.grid = newgrid;
         this.transposeChordSymbolLine(step);
         this.transposeBackgroundChordLine(step);

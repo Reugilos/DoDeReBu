@@ -588,17 +588,54 @@ public class MyChordSymbolLine extends MyComponent {
             boolean[] isMeasure = new boolean[numCols + 1];
             score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
 
-            // Marques de canvi de tempo i to (excloent col 0, que no es mostra a la UI).
-            // Les marques s'apilen verticalment de baix cap amunt.
+            // Marques de canvi de tempo i to. Les marques s'apilen verticalment de baix cap amunt.
             // Per a cada columna guardem l'amplada màxima de les marques (per desplaçar l'acord).
             TreeMap<Integer, Integer> markerMaxWidths = new TreeMap<>();
             TreeMap<Integer, MyGridScore.ScoreChange> changeMap = score.getChangeMap();
+
+            // Només mostrem la marca de volum del track actual.
+            int currentTrackId = contr.getMixer().getCurrentTrackId();
+
+            // Col 0: sempre es dibuixa (amb fallback als defaults si el changeMap no té entrada).
+            {
+                MyGridScore.ScoreChange sc0 = changeMap.get(0);
+                int tempo0   = (sc0 != null && sc0.tempo    != null) ? sc0.tempo    : Settings.DEFAULT_TEMPO;
+                int midiKey0 = (sc0 != null && sc0.midiKey  != null) ? sc0.midiKey  : ToneRange.getDefaultKey();
+                char mode0   = (sc0 != null && sc0.scaleMode != null) ? sc0.scaleMode : ToneRange.getDefaultMode();
+                int yOff = 0;
+                yOff += drawTempoMark(0, tempo0, offscreenGraphics, true, yOff);
+                yOff += drawKeyMark(0, midiKey0, mode0, offscreenGraphics, true, yOff);
+                // Volum: només el del track actual, i només si hi ha marca explícita.
+                if (sc0 != null) {
+                    Integer vel0 = sc0.trackVelocities.get(currentTrackId);
+                    if (vel0 != null) {
+                        yOff += drawVolumeMark(0, vel0, offscreenGraphics, true, yOff);
+                    }
+                }
+                if (yOff > 0) {
+                    offscreenGraphics.setFont(getMarkFont());
+                    FontMetrics fm = offscreenGraphics.getFontMetrics();
+                    int pad = 2;
+                    int maxW = fm.stringWidth("" + tempo0) + 2 * pad;
+                    try { maxW = Math.max(maxW, fm.stringWidth(ToneRange.getKeyName(midiKey0, mode0)) + 2 * pad); }
+                    catch (Exception ignored) {}
+                    if (sc0 != null) {
+                        Integer vel0 = sc0.trackVelocities.get(currentTrackId);
+                        if (vel0 != null) {
+                            maxW = Math.max(maxW, fm.stringWidth("v" + vel0) + 2 * pad);
+                        }
+                    }
+                    markerMaxWidths.put(0, maxW);
+                }
+            }
+
+            // Col > 0: marques del changeMap.
             for (Map.Entry<Integer, MyGridScore.ScoreChange> entry : changeMap.entrySet()) {
                 int col = entry.getKey();
                 if (col <= 0 || col >= numCols) continue;
                 MyGridScore.ScoreChange sc = entry.getValue();
-                int yOff   = 0;  // alçada acumulada (s'apila cap amunt)
-                int maxW   = 0;  // amplada màxima de les marques en aquesta columna
+                int yOff   = 0;
+                int maxW   = 0;
                 if (sc.tempo != null) {
                     yOff += drawTempoMark(col, sc.tempo, offscreenGraphics, true, yOff);
                 }
@@ -606,10 +643,11 @@ public class MyChordSymbolLine extends MyComponent {
                     char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
                     yOff += drawKeyMark(col, sc.midiKey, mode, offscreenGraphics, true, yOff);
                 }
-                for (Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
-                    yOff += drawVolumeMark(col, e.getValue(), offscreenGraphics, true, yOff);
+                // Volum: només el del track actual.
+                Integer velCur = sc.trackVelocities.get(currentTrackId);
+                if (velCur != null) {
+                    yOff += drawVolumeMark(col, velCur, offscreenGraphics, true, yOff);
                 }
-                // Calculem l'amplada màxima rellegint els textos (aproximació: refem FontMetrics)
                 if (yOff > 0) {
                     offscreenGraphics.setFont(getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
@@ -624,8 +662,8 @@ public class MyChordSymbolLine extends MyComponent {
                         catch (Exception e) { kn = "?"; }
                         maxW = Math.max(maxW, fm.stringWidth(kn) + 2 * pad);
                     }
-                    for (Integer vel : sc.trackVelocities.values()) {
-                        maxW = Math.max(maxW, fm.stringWidth("v" + vel) + 2 * pad);
+                    if (velCur != null) {
+                        maxW = Math.max(maxW, fm.stringWidth("v" + velCur) + 2 * pad);
                     }
                     markerMaxWidths.put(col, maxW);
                 }

@@ -732,6 +732,7 @@ public class MyMixer {
         selectButton.addActionListener(e -> {
             setCurrentTrack(index);
             refreshMixer();
+            contr.redrawChordLine();
         });
         rightPanel.add(selectButton);
 

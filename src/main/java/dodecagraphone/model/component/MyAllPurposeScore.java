@@ -8,6 +8,7 @@ package dodecagraphone.model.component;
 import dodecagraphone.MyController;
 import dodecagraphone.model.MyTempo;
 import dodecagraphone.model.ToneRange;
+import dodecagraphone.ui.I18n;
 
 /**
  * [CA] Estén {@link MyMidiScore} i actua com a punt d'entrada de la partitura
@@ -26,9 +27,6 @@ import dodecagraphone.model.ToneRange;
  * @version 4.0
  */
 public class MyAllPurposeScore extends MyMidiScore {
-    private String titol;
-    private String author;
-    private String description;
 
     /**
      * [CA] Crea una nova partitura de propòsit general i estableix la
@@ -71,6 +69,7 @@ public class MyAllPurposeScore extends MyMidiScore {
         this.setDefaultDelay();
         this.scaleMode = 'M';
         MyTempo.setTempo(60);
+        resetMetadata();
         // updates;
         updateStripsNKeyboard(usePentagramaStrips);
         this.controller.setScreenKeyboardRight(useScreenKeyboardRight);
@@ -79,5 +78,10 @@ public class MyAllPurposeScore extends MyMidiScore {
         // showNoteNames;
     }
 
+    public void resetMetadata() {
+        this.setTitle(I18n.t("score.default.title"));
+        this.setAuthor(I18n.t("score.default.author"));
+        this.setDescription(I18n.t("score.default.description"));
+    }
 
 }
