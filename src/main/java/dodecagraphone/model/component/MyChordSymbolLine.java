@@ -83,6 +83,8 @@ public class MyChordSymbolLine extends MyComponent {
 
     /** Line gap in pixels between chord text lines (tighter than font leading). */
     private static final int LINE_GAP = 1;
+    /** Pixels reserved at the very bottom of the chord strip for the attack triangle. */
+    private static final int TRIANGLE_SPACE = 10;
 
     private Font getChordFont(Graphics2D g) {
         double rowH = Settings.getRowHeight();
@@ -370,9 +372,10 @@ public class MyChordSymbolLine extends MyComponent {
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) score.getScreenX(col));
 
-        // Bottom of chord strip — text baseline drawn upward from here
+        // Bottom of chord strip — text baseline drawn upward from here.
+        // TRIANGLE_SPACE pixels are reserved at the very bottom for the attack triangle.
         int chordH = (int) Math.round(Settings.getnRowsChord() * Settings.getRowHeight());
-        int camY = (offscreen ? 0 : (int) screenPosY) + chordH - fm.getDescent() - 2;
+        int camY = (offscreen ? 0 : (int) screenPosY) + chordH - TRIANGLE_SPACE - fm.getDescent() - 2;
         int gap   = 3;
 
         if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) {
@@ -419,19 +422,21 @@ public class MyChordSymbolLine extends MyComponent {
             g.drawString(displayStr != null ? displayStr : chord.basicString(), camX, camY);
         }
 
-        // Arrow at top pointing to the actual attack column (only when offset > 0)
-        int offset = chord.getBeatColOffset();
-        if (offset > 0) {
-            int cw   = (int) Settings.getColWidth();
-            int ax   = (offscreen
+        // Triangle at bottom pointing down, tip aligned with the left edge of the
+        // attack column (= exact onset position). ayTip = chordH - 1 to stay inside
+        // the buffer (chordH itself is out of bounds).
+        {
+            int offset = chord.getBeatColOffset();
+            int cw = (int) Settings.getColWidth();
+            int ax = (offscreen
                     ? (int) Math.floor((col + offset) * Settings.getColWidth())
                     : (int) Math.floor(score.getScreenX(col + offset)))
                     + cw / 2;
-            int ay   = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
-            int aw   = 5;  // half-width of arrow base
-            int ah   = 5;  // arrow height
+            int ayTip = (offscreen ? 0 : (int) screenPosY) + chordH - 1;
+            int aw = 4;
+            int ah = 6;
             int[] xs = { ax - aw, ax + aw, ax };
-            int[] ys = { ay,      ay,      ay + ah };
+            int[] ys = { ayTip - ah, ayTip - ah, ayTip };
             Color prevColor = g.getColor();
             g.setColor(Color.BLACK);
             g.fillPolygon(xs, ys, 3);
@@ -497,7 +502,7 @@ public class MyChordSymbolLine extends MyComponent {
         int stripH  = (int) Math.round(nRows * Settings.getRowHeight());
         int cellTop = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int boxX    = cellX;
-        int boxY    = cellTop + stripH - boxH - existingYOff;
+        int boxY    = cellTop + stripH - TRIANGLE_SPACE - boxH - existingYOff;
 
         g.setColor(bgColor);
         g.fillRect(boxX, boxY, boxW, boxH);
