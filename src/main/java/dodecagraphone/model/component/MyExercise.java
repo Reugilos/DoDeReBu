@@ -164,6 +164,16 @@ public class MyExercise extends MyPatternScore {
             }
             setFirstTime(false);
         }
+        // Evita que midiKey + 12 superi highestMidi i provoqui que l'octava
+        // superior aparegui una octava per sota (wrapping de midiToKeyId).
+        // Prevents midiKey + 12 from exceeding highestMidi, which would cause
+        // the upper-octave note to wrap one octave downward via midiToKeyId.
+        {
+            int hi = ToneRange.getHighestMidi() - 12;
+            int lo = ToneRange.getLowestMidi();
+            while (this.midiKey > hi) this.midiKey -= 12;
+            while (this.midiKey < lo) this.midiKey += 12;
+        }
 
         setCurrentExercise(label);
 
