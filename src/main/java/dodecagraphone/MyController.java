@@ -2461,7 +2461,6 @@ public class MyController {
     }
 
     public void onPrintButtonPressed(MyButton togg) {
-        System.out.println("MyController::onPrintButtonPressed()");
         String defaultName = allPurposeScore.getTitle();
         if (defaultName == null || defaultName.isBlank()) defaultName = "partitura";
         defaultName = defaultName.trim().replaceAll("[^\\p{L}\\p{N}\\-._]", "_") + ".ddcgr.pdf";

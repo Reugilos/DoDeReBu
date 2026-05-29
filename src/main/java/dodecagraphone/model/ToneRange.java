@@ -208,11 +208,8 @@ public class ToneRange {
      * @throws NumberFormatException [CA] si el MIDI és fora del rang vàlid / [EN] if MIDI is out of valid range
      */
     public static String getNoteName(int midi) {
-        if (midi > getHighestMidi() || midi < getLowestMidi()) {
-            throw new NumberFormatException("Midi " + midi + " out of range!");
-        }
-//        while (midi>highestMidi) midi-=12;
-//        while (midi<lowestMidi) midi+=12;
+        // Desplaça per octaves si cal — safety net (ex. mode dodecàfon)
+        midi = clampToRange(midi);
         String nomNota = "" + noteNames.get(midi % 12) + (midi / 12 - 1);
         return nomNota;
     }
@@ -240,11 +237,8 @@ public class ToneRange {
      * @throws NumberFormatException [CA] si el MIDI és fora del rang vàlid / [EN] if MIDI is out of valid range
      */
     public static String getNoteName(int midi, int midiKey) {
-        if (midi > getHighestMidi() || midi < getLowestMidi()) {
-            throw new NumberFormatException("Midi " + midi + " out of range!");
-        }
-//        while (midi>highestMidi) midi-=12;
-//        while (midi<lowestMidi) midi+=12;
+        // Desplaça per octaves si cal — safety net per a crides que no passen per placeNote
+        midi = clampToRange(midi);
         if (movileDo) {
             String nomNota = "" + noteNames.get((midi - midiKey) % 12) + (midi / 12 - 2);
             return nomNota;
@@ -681,6 +675,27 @@ public class ToneRange {
      * @param midi [CA] valor MIDI d'entrada / [EN] input MIDI value
      * @return [CA] valor MIDI ajustat al rang de saxo inferior / [EN] MIDI value adjusted to lower saxophone range
      */
+    /**
+     * [CA] Desplaça el valor MIDI per octaves fins que queda dins del rang actual
+     * [{@code lowestMidi}, {@code highestMidi}]. Si el rang és massa estret per a
+     * cap octava vàlida, retorna el valor sense modificar.
+     * <p>
+     * [EN] Shifts the MIDI value by octaves until it falls within the current range
+     * [{@code lowestMidi}, {@code highestMidi}]. If the range is too narrow for any
+     * valid octave, returns the value unchanged.
+     *
+     * @param midi [CA] valor MIDI d'entrada / [EN] input MIDI value
+     * @return [CA] valor MIDI ajustat al rang actual / [EN] MIDI value adjusted to current range
+     */
+    public static int clampToRange(int midi) {
+        int lo = getLowestMidi();
+        int hi = getHighestMidi();
+        int limit = 0;
+        while (midi > hi && limit++ < 10) midi -= 12;
+        while (midi < lo && limit++ < 10) midi += 12;
+        return midi;
+    }
+
     public static int lowerSaxOctave(int midi) {
         if (midi < 51) {
             midi += 12;

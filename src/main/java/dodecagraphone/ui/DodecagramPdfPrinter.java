@@ -250,9 +250,11 @@ public class DodecagramPdfPrinter {
 
                 // Beat and measure vertical lines as PDF vectors
                 // (they are drawn in screen-space in draw(), so absent from the offscreen bitmap)
+                // El bucle comença a startCol (no startCol+1) per incloure la primera measureLine
+                // de cada fila, que coincideix amb el límit dret de la columna de teclat.
                 {
                     int limitCol = Math.min(endCol, stopCol);
-                    for (int col = startCol + 1; col <= limitCol; col++) {
+                    for (int col = startCol; col <= limitCol; col++) {
                         if (col >= isBeat.length) break;
                         if (!isBeat[col] && !isMeasure[col]) continue;
                         float lineX = MARGIN + (float) ((keyWidthPx + (col - startCol) * colWidthF) * rowScaleX);
@@ -275,6 +277,9 @@ public class DodecagramPdfPrinter {
             }
 
             if (cs != null) cs.close();
+            // Esborra el fitxer existent (l'usuari ja ha confirmat la sobreescriptura)
+            // perquè PDFBox no emeti el fals warning "overwriting existing file".
+            if (outputFile.exists()) outputFile.delete();
             doc.save(outputFile);
         }
     }

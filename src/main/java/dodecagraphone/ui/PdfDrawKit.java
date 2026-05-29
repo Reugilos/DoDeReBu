@@ -64,7 +64,7 @@ public class PdfDrawKit {
 
     // ── Gruixos de línia ──────────────────────────────────────────────────────
 
-    public float measureLineWidth    = 0.75f;
+    public float measureLineWidth    = 1.5f;
     public float beatLineWidth       = 0.3f;
     public float bandSeparatorWidth  = 0.5f;
     public float imageBorderWidth    = 0.3f;

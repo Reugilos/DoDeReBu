@@ -680,6 +680,7 @@ public class MyPatternScore extends MyGridScore {
     }
 
     public void placeNote(int midi, int ncols, boolean mutted, boolean linked, int channel, int trackId, int velocity) {
+        midi = ToneRange.clampToRange(midi); // desplaça per octaves si cal (ex. mode dodecàfon)
         int col = currentWriteCol;
         int keyId = ToneRange.midiToKeyId(midi);
         for (int i = 0; i < ncols; i++) {
