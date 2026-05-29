@@ -613,10 +613,13 @@ public class MyLyrics extends MyComponent {
             return (int) Math.round(screenPosX
                     + (col - firstColToDraw) * Settings.getColWidth());
         } else {
-            // Teclat dret: screenPosX ja apunta al keyboard; les columnes visibles
-            // van de (ccol - this.nCols) fins a ccol.
-            int firstColToDraw = Math.max(0, ccol - this.nCols);
+            // Teclat dret: mateixa fórmula que draw() perquè el cursor quedi alineat.
+            // screenPosX = 0 (càmera esquerra); s'afegeix firstCamColIn per compensar
+            // l'espai buit a l'inici quan ccol < nColsCam.
+            int firstCamColIn  = Math.max(0, Settings.getnColsCam() - ccol);
+            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
             return (int) Math.round(screenPosX
+                    + firstCamColIn  * Settings.getColWidth()
                     + (col - firstColToDraw) * Settings.getColWidth());
         }
     }

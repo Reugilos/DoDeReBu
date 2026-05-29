@@ -45,6 +45,9 @@ public class Settings {
     public static final boolean SHOW_DIMENSIONS     = false;
     public static       int     PRINT_OUT_PRIORITY  = 1; // 1 = màxim, 0 = silenci
     public static final int     NUM_SIBLINGS        = 5; // companys mostrats a showDimensions()
+    /** [CA] Si és true, mostra missatges d'avís (warnings) per consola i diàlegs.
+     *  [EN] If true, shows warning messages in console and dialogs. */
+    public static boolean showWarnings = true;
 
     // ── Valors sentinel de domini ─────────────────────────────────────────
     public static final int USE_INFO_AS_SIMBOL = -13;
