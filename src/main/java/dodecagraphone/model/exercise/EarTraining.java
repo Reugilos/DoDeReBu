@@ -691,8 +691,7 @@ public class EarTraining implements MyExerciseFamily {
      */
     private static void setMiri_1_a(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex18.description"));
-        int midiKey = Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6);
         ex.setUsePentagramaStrips(false);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -720,8 +719,7 @@ public class EarTraining implements MyExerciseFamily {
     private static void setMiri_1_b(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex19.description"));
         Integer[] keyChoice = {7, 9};
-        int midiKey = keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(false);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -749,8 +747,7 @@ public class EarTraining implements MyExerciseFamily {
     private static void setMiri_1_c(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex20.description"));
         Integer[] keyChoice = {0, 2, 7, 9, 10};
-        int midiKey = keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(false);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -779,8 +776,7 @@ public class EarTraining implements MyExerciseFamily {
      */
     private static void setMiri_2_a(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex21.description"));
-        int midiKey = Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(Utilities.getRand().nextInt(12) + ToneRange.MIDDLE_C - 6);
         ex.setUsePentagramaStrips(true);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -807,8 +803,7 @@ public class EarTraining implements MyExerciseFamily {
     private static void setMiri_2_b(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex22.description"));
         Integer[] keyChoice = {7, 9};
-        int midiKey = keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(true);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -835,8 +830,7 @@ public class EarTraining implements MyExerciseFamily {
     private static void setMiri_2_c(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex23.description"));
         Integer[] keyChoice = {0, 2, 7, 9, 10};
-        int midiKey = keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(true);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -867,8 +861,7 @@ public class EarTraining implements MyExerciseFamily {
     private static void setMiri_3_a(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex24.description"));
         Integer[] keyChoice = {0, 2, 7, 9, 10};
-        int midiKey = keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(keyChoice[Utilities.getRand().nextInt(5)] + ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(false);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -893,8 +886,7 @@ public class EarTraining implements MyExerciseFamily {
      */
     private static void setMiri_3_b(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex25.description"));
-        int midiKey = ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(false);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);
@@ -920,8 +912,7 @@ public class EarTraining implements MyExerciseFamily {
     private static void setMiri_3_c(MyExercise ex) {
         ex.setDescription(I18n.t("earTraining.ex26.description"));
         Integer[] keyChoice = {7, 9};
-        int midiKey = keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C;
-        ex.setMidiKey(midiKey);
+        int midiKey = ex.useMidiKeyForExercise(keyChoice[Utilities.getRand().nextInt(2)] + ToneRange.MIDDLE_C);
         ex.setUsePentagramaStrips(false);
         ex.setUseMobileDo(false);
         ex.setShowNoteNames(true);

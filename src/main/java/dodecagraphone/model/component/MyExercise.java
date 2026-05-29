@@ -112,6 +112,29 @@ public class MyExercise extends MyPatternScore {
     }
 
     /**
+     * [CA] Estableix el midiKey de l'exercici garantint que midiKey+12 quedi
+     * dins del rang [lowestMidi, highestMidi]. Retorna el valor ajustat per a
+     * ús com a variable local als exercicis Miri.
+     * <p>
+     * [EN] Sets the exercise midiKey ensuring that midiKey+12 stays within
+     * [lowestMidi, highestMidi]. Returns the adjusted value for use as a local
+     * variable in Miri exercises.
+     *
+     * @param rawMidiKey [CA] valor MIDI de la tònica (no ajustat) /
+     *                   [EN] raw MIDI tonic value (unadjusted)
+     * @return [CA] midiKey ajustat (≤ highestMidi−12) / [EN] adjusted midiKey (≤ highestMidi−12)
+     */
+    public int useMidiKeyForExercise(int rawMidiKey) {
+        int hi = ToneRange.getHighestMidi() - 12;
+        int lo = ToneRange.getLowestMidi();
+        int adjusted = rawMidiKey;
+        while (adjusted > hi) adjusted -= 12;
+        if (adjusted < lo)    adjusted += 12;
+        this.midiKey = adjusted;
+        return adjusted;
+    }
+
+    /**
      * [CA] Aplica l'exercici identificat per {@code label} dins de la família activa.
      * <p>
      * [EN] Applies the exercise identified by {@code label} within the active family.
