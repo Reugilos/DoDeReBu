@@ -2463,7 +2463,7 @@ public class MyController {
     public void onPrintButtonPressed(MyButton togg) {
         String defaultName = allPurposeScore.getTitle();
         if (defaultName == null || defaultName.isBlank()) defaultName = "partitura";
-        defaultName = defaultName.trim().replaceAll("[^\\p{L}\\p{N}\\-._]", "_") + ".ddcgr.pdf";
+        defaultName = defaultName.trim().replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + ".ddcgr.pdf";
         String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
         if (fitxer == null || fitxer.isBlank()) {
             if (togg != null) togg.setPressed(false);
@@ -3611,15 +3611,9 @@ public class MyController {
 
     public void saveScore(String fitxer) {
         if ("".equals(fitxer)) {
-            String defMidi;
-            if (currentMidiFile != null && !currentMidiFile.isEmpty()) {
-                String basename = new java.io.File(currentMidiFile).getName();
-                defMidi = basename.replaceFirst("(?i)(\\.ddcgr)?\\.midi?$", "");
-            } else {
-                defMidi = allPurposeScore.getTitle();
-            }
+            String defMidi = allPurposeScore.getTitle();
             if (defMidi == null || defMidi.isBlank()) defMidi = "partitura";
-            defMidi = defMidi.trim().replaceAll("[^\\p{L}\\p{N}\\-._]", "_") + ".ddcgr.mid";
+            defMidi = defMidi.trim().replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + ".ddcgr.mid";
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
         }
         if (fitxer == null || "".equals(fitxer)) {
