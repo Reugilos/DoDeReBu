@@ -496,7 +496,9 @@ public class MyController {
         this.allPurposeScore.setCurrentCol(Settings.getInitialCurrentCol(left,allPurposeScore));
         Utilities.printOutWithPriority(false,"MyController::setScreenKeyboardRight() currentCol = "+this.allPurposeScore.getCurrentCol());
         this.statusLine.setDimensions(Settings.getStatusFirstCol(), Settings.getStatusFirstRow(), Settings.getnColsStatus(), Settings.getnRowsStatus());
+        // Chord i lyrics sempre dins la càmera (firstCol=0 relatiu a cam), nColsCam columnes.
         this.myChordSymbolLine.setDimensions(Settings.getChordFirstCol(), Settings.getChordFirstRow(), Settings.getnColsChord(), Settings.getnRowsChord());
+        this.myLyrics.setDimensions(Settings.getLyricsFirstCol(), Settings.getLyricsFirstRow(), Settings.getnColsLyrics(), Settings.getnRowsLyrics());
         this.cam.reset();
         if (Settings.SHOW_DIMENSIONS) {
             System.out.println("Screen(w,h) = " + Settings.getScreenWidth() + ", " + Settings.getScreenHeight());
@@ -626,42 +628,45 @@ public class MyController {
     private void drawStripsBackground(Graphics2D g) {
         double rowH   = Settings.getRowHeight();
         double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
+        double camW   = Settings.getnColsCam()      * Settings.getColWidth();
+        boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
 
-        int chordY  = (int) Math.round(Settings.getChordFirstRow()  * rowH); // = 0
+        int chordY  = (int) Math.round(Settings.getChordFirstRow()  * rowH);
         int chordH  = (int) Math.round(Settings.getnRowsChord()     * rowH);
         int lyricsY = (int) Math.round(Settings.getLyricsFirstRow() * rowH);
         int lyricsH = (int) Math.round(Settings.getnRowsLyrics()    * rowH);
         int kw      = (int) Math.ceil(keyW);
-        int sepX    = kw; // x of vertical separator = camera left edge
+        int kx      = right ? (int) Math.ceil(camW) : 0;  // x on comença la zona del keyboard
+        int sepX    = right ? (int) Math.ceil(camW) : kw; // línia separadora càmera/keyboard
 
         // White fill for the keyboard-column part of each strip
         g.setColor(Color.WHITE);
-        g.fillRect(0, chordY,  kw, chordH);
-        g.fillRect(0, lyricsY, kw, lyricsH);
+        g.fillRect(kx, chordY,  kw, chordH);
+        g.fillRect(kx, lyricsY, kw, lyricsH);
 
         // Vertical separator line between keyboard column and camera area
-        // (same default stroke as MyCamera.drawRect — BasicStroke(1f))
         g.setColor(Color.BLACK);
         g.drawLine(sepX, chordY,  sepX, chordY  + chordH);
         g.drawLine(sepX, lyricsY, sepX, lyricsY + lyricsH);
 
-        // Labels: vertically centered, left-aligned with a small margin
+        // Labels: vertically centered, aligned with keyboard zone
         java.awt.FontMetrics fm = g.getFontMetrics();
         int lineH  = fm.getAscent() + fm.getDescent();
         int margin = (int) Math.max(4, Settings.getColWidth());
+        int labelX = kx + margin;
         g.setColor(Color.BLACK);
 
         // "Acords" label at top of chord strip
         int acordsY = chordY + margin + fm.getAscent();
-        g.drawString(I18n.t("myChordSymbolLine.label"), margin, acordsY);
+        g.drawString(I18n.t("myChordSymbolLine.label"), labelX, acordsY);
 
-        // Format button 2 rows below the "Acords" label (row-height units so it always fits)
+        // Format button 2 rows below the "Acords" label
         String fmtLabel = dodecagraphone.model.chord.ChordSymbols.formatLabel(
                 myChordSymbolLine.getDisplayFormat());
         int btnPad = 2;
         int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
         int btnH = lineH + 2 * btnPad;
-        int btnX = margin;
+        int btnX = labelX;
         int btnY = (int) Math.round(chordY + 2 * rowH);
         g.setColor(new Color(220, 230, 255));
         g.fillRoundRect(btnX, btnY, btnW, btnH, 4, 4);
@@ -671,16 +676,18 @@ public class MyController {
 
         // Lyrics label
         g.drawString(I18n.t("myLyrics.label"),
-                margin,
+                labelX,
                 lyricsY + (lyricsH + lineH) / 2);
     }
 
     private boolean isChordFormatButtonClick(double posX, double posY) {
         double rowH   = Settings.getRowHeight();
         double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
+        boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
+        double kx     = right ? Settings.getnColsCam() * Settings.getColWidth() : 0;
         double chordY = Settings.getChordFirstRow()  * rowH;
         double chordH = Settings.getnRowsChord()     * rowH;
-        return posX >= 0 && posX < keyW && posY >= chordY && posY < chordY + chordH;
+        return posX >= kx && posX < kx + keyW && posY >= chordY && posY < chordY + chordH;
     }
 
     public void redraw(Graphics2D g) {
@@ -3556,11 +3563,12 @@ public class MyController {
         MyGridScore.ScoreChange sc = allPurposeScore.getEffectiveChange(col);
         // Apliquem sempre un valor (el del canvi o el per defecte), igual que fem amb
         // el compàs, perquè tornar enrere restauri els valors anteriors a la marca.
-        // Durant la reproducció: si hi ha una marca explícita, reseteja també playbackTempo
-        // (setTempo) perquè getNanosPerSquareGrid() l'usi. Fora de reproducció o sense marca,
-        // setScoreTempo preserva l'ajust Speed+/Speed-.
+        // Fora de reproducció: setTempo sincronitza scoreTempo i playbackTempo amb la
+        // marca efectiva, de manera que el botó sempre mostra el tempo de la partitura.
+        // Durant la reproducció amb marca explícita: setTempo (la marca substitueix Spd+).
+        // Durant la reproducció sense marca explícita: setScoreTempo preserva Spd+/Spd-.
         int resolvedTempo = sc.tempo != null ? sc.tempo : Settings.DEFAULT_TEMPO;
-        if (sc.tempo != null && cam.isPlaying()) {
+        if (!cam.isPlaying() || sc.tempo != null) {
             MyTempo.setTempo(resolvedTempo);
         } else {
             MyTempo.setScoreTempo(resolvedTempo);
@@ -3616,7 +3624,6 @@ public class MyController {
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
         }
         if (fitxer == null || "".equals(fitxer)) {
-            this.updateTextOfButtons();
             return;
         }
         File file = new File(fitxer);
@@ -3630,7 +3637,6 @@ public class MyController {
                     JOptionPane.WARNING_MESSAGE
             );
             if (resposta == JOptionPane.NO_OPTION) {
-                this.updateTextOfButtons();
                 return;
             }
         }
@@ -3649,12 +3655,9 @@ public class MyController {
                 saveChordMidiChoice = (resp == JOptionPane.YES_OPTION);
             }
             boolean saveChordMidi = Boolean.TRUE.equals(saveChordMidiChoice);
-            MyMidiScore midScore = (MyMidiScore) (this.allPurposeScore);
             this.allPurposeScore.saveMidiScore(fitxer, saveChordMidi);
-            this.statusLine.setText(I18n.f("MyController.score.saving", midScore.getName(), fitxer));
         }
         this.needsSaving = false;
-        this.updateTextOfButtons();
     }
 
     public static String obtenirExtensio(String nomFitxer) {
@@ -3732,6 +3735,7 @@ public class MyController {
             this.buttons.updateCurrentExerciseButton("");
             this.updateTextOfButtons();
             allPurposeScore.resetAllPurposeScore();
+            this.myLyrics.clear();
             this.mixer = new MyMixer(this);
             int estimatedCols = estimateLastColFromMidi(fitxer);
             allPurposeScore.setNColsBuffer(computeInitialBufferSize(Math.max(0, estimatedCols)));
@@ -3743,8 +3747,26 @@ public class MyController {
             }
             allPurposeScore.updateStopMarker();
             allPurposeScore.freezeBaseTimingParams();
+            // Assegura que el changeMap té el tempo inicial del fitxer al col 0.
+            // analyzeMidiHeader (dins readMidiScore) ja ha fixat MyTempo al tempo MIDI.
+            // Si no hi ha cap entrada de tempo al col 0, n'afegim una implícita perquè
+            // applyChangesAt (cridat des d'updateTextOfButtons) no caigui al DEFAULT_TEMPO.
+            int midiTempo = MyTempo.getTempo();
+            MyGridScore.ScoreChange sc0fix = allPurposeScore.getChangeMap().get(0);
+            if (sc0fix == null) {
+                sc0fix = new MyGridScore.ScoreChange();
+                allPurposeScore.setScoreChange(0, sc0fix);
+            }
+            if (sc0fix.tempo == null) {
+                sc0fix.tempo = midiTempo;
+            }
+            MyTempo.setTempo(sc0fix.tempo);
             this.allPurposeScore.initOffscreen();
             this.myChordSymbolLine.initOffscreen();
+            // Sincronitza el track de visualització de lletres al primer que en té.
+            // clear() ha resetejat displayTrackId=0; sense aquesta crida les lletres
+            // carregades sota un altre trackId no es dibuixarien.
+            this.myLyrics.syncDisplayTrackId();
             this.myLyrics.initOffscreen();
             this.cam.reset();
             this.statusLine.setText(scoreStatusText());

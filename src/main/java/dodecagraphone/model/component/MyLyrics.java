@@ -190,6 +190,23 @@ public class MyLyrics extends MyComponent {
     }
 
     /**
+     * Si el track actiu (displayTrackId) no té lletres carregades, canvia
+     * automàticament al primer track que en té. S'ha de cridar just després
+     * de carregar un fitxer (loadScore) per sincronitzar la vista.
+     */
+    public void syncDisplayTrackId() {
+        boolean currentHasLyrics = lyricsByTrack.containsKey(displayTrackId)
+                && !lyricsByTrack.get(displayTrackId).isEmpty();
+        if (!currentHasLyrics) {
+            lyricsByTrack.entrySet().stream()
+                    .filter(e -> !e.getValue().isEmpty())
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .ifPresent(t -> displayTrackId = t);
+        }
+    }
+
+    /**
      * Updates the track whose lyrics are drawn. Triggers a redraw of the
      * offscreen buffer so the new track's lyrics appear immediately.
      *
@@ -596,10 +613,10 @@ public class MyLyrics extends MyComponent {
             return (int) Math.round(screenPosX
                     + (col - firstColToDraw) * Settings.getColWidth());
         } else {
-            int firstCamColIn  = Math.max(0, Settings.getnColsCam() - ccol);
-            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
+            // Teclat dret: screenPosX ja apunta al keyboard; les columnes visibles
+            // van de (ccol - this.nCols) fins a ccol.
+            int firstColToDraw = Math.max(0, ccol - this.nCols);
             return (int) Math.round(screenPosX
-                    + firstCamColIn  * Settings.getColWidth()
                     + (col - firstColToDraw) * Settings.getColWidth());
         }
     }
@@ -627,8 +644,11 @@ public class MyLyrics extends MyComponent {
         offscreenGraphics = offscreenImage.createGraphics();
         offscreenGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
+        // Font explícita proporcional a l'alçada de fila per garantir llegibilitat.
+        int fontSize = Math.max(12, (int) Math.round(Settings.getRowHeight() * 0.85));
+        offscreenGraphics.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, fontSize));
         Utilities.printOutWithPriority(false,
-                "MyLyrics::initOffscreen: w=" + w + ", h=" + h);
+                "MyLyrics::initOffscreen: w=" + w + ", h=" + h + ", fontSize=" + fontSize);
         needsDrawing = true;
         drawFullLyricsInOffscreen();
     }
@@ -786,18 +806,15 @@ public class MyLyrics extends MyComponent {
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             } else {
-                int firstCamColIn    = Math.max(0, Settings.getnColsCam() - ccol);
+                // Teclat dret: lyrics dins la càmera, desplaçament idèntic al grid.
+                int firstCamColIn = Math.max(0, Settings.getnColsCam() - ccol);
                 int actualWidthInCols = Settings.getnColsCam() - firstCamColIn;
-                x1 = (int) Math.round(screenPosX + firstCamColIn * Settings.getColWidth());
+                x1 = (int) Math.round(controller.getCam().getScreenX(firstCamColIn));
                 y1 = (int) Math.round(screenPosY);
                 w  = (int) Math.ceil(actualWidthInCols * Settings.getColWidth());
                 h  = (int) Math.ceil(height);
                 int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
                 int lastColToDraw  = ccol;
-                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
-                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
-                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             }

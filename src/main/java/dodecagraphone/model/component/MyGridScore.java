@@ -2128,7 +2128,7 @@ public class MyGridScore extends MyComponent {
             }
             this.keyboard.playAtBeat(20);
             this.checkNRunMidiMessage(col);
-            this.checkNShowMessage(col);
+//            this.checkNShowMessage(col); // missatges interns MIDI, no es mostren a l'usuari
 //            if (this.controller.getAllPurposeScore().getBackground().isBackgroundChordPlayerOn()) {
 //                this.checkNPlayBackgroundChord(col);
 //            }

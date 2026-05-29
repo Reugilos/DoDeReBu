@@ -762,18 +762,15 @@ public class MyChordSymbolLine extends MyComponent {
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             } else {
+                // Teclat dret: chord dins la càmera, desplaçament idèntic al grid.
                 int firstCamColIn = Math.max(0, Settings.getnColsCam() - ccol);
                 int actualWidthInCols = Settings.getnColsCam() - firstCamColIn;
-                x1 = (int) Math.round(screenPosX + firstCamColIn * Settings.getColWidth());
+                x1 = (int) Math.round(contr.getCam().getScreenX(firstCamColIn));
                 y1 = (int) Math.round(screenPosY);
                 w  = (int) Math.ceil(actualWidthInCols * Settings.getColWidth());
                 h  = (int) Math.ceil(height);
                 firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
                 int lastColToDraw = ccol;
-                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
-                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
-                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             }

@@ -58,8 +58,8 @@ return Math.max(0, col);
 
 ### MyTempo
 Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (ajustat per Spd+/Spd-). `DEFAULT_TEMPO = 60`.
-- `setTempo()` — reseteja ambdós; cridar en `newScore`, `loadScore`, quan es col·loca una marca de tempo.
-- `setScoreTempo()` — només actualitza `scoreTempo` (no toca `playbackTempo`); cridar des de `applyChangesAt` per preservar els ajustos Spd+/Spd- durant la navegació.
+- `setTempo()` — reseteja ambdós; cridar en `newScore`, `loadScore`, quan es col·loca una marca de tempo, i des d'`applyChangesAt` quan NO s'està reproduint o hi ha una marca explícita.
+- `setScoreTempo()` — només actualitza `scoreTempo` (no toca `playbackTempo`); cridat des d'`applyChangesAt` únicament durant la reproducció sense marca explícita (per preservar l'ajust Spd+/Spd-).
 
 ## Convencions de codi
 - `I18n.t("clau")` per a textos UI; `I18n.f("clau", arg)` per a textos amb paràmetres.

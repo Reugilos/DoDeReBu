@@ -691,6 +691,8 @@ public class MyMidiScore extends MyExercise {
                                 || text.startsWith("chordTrack=")
                                 || text.startsWith("nMeasuresCam=")
                                 || text.startsWith("nColsQuarter=")
+                                || text.startsWith("nBeatsMeasure=")
+                                || text.startsWith("beatFigure=")
                                 || text.startsWith("instruments"))) {
 
                             // Només entra aquí si el text no comença amb cap d’aquests prefixos
@@ -727,6 +729,22 @@ public class MyMidiScore extends MyExercise {
         ToneRange.setMovileDo(useMobileDo);
         // showNoteNames;
         this.setCurrentWriteCol(this.getLastColWritten() + 1);
+        // Assegura que el changeMap té el tempo inicial al col 0.
+        // analyzeMidiHeader ja ha fixat MyTempo al tempo real del fitxer MIDI.
+        // Si no hi ha cap entrada de tempo al col 0 (fitxer vell sense CHANGEMAP),
+        // n'afegim una implícita perquè applyChangesAt (cridat des d'updateTextOfButtons)
+        // no caigui al DEFAULT_TEMPO i el botó mostri el valor correcte.
+        {
+            MyGridScore.ScoreChange sc0 = this.getChangeMap().get(0);
+            if (sc0 == null) {
+                sc0 = new MyGridScore.ScoreChange();
+                this.setScoreChange(0, sc0);
+            }
+            if (sc0.tempo == null) {
+                sc0.tempo = MyTempo.getTempo(); // valor fixat per analyzeMidiHeader
+            }
+            MyTempo.setTempo(sc0.tempo);
+        }
         this.controller.updateTextOfButtons();
         this.initOffscreen();
         if (Settings.IS_BU){
@@ -856,7 +874,7 @@ public class MyMidiScore extends MyExercise {
                 if (col == getLastColWritten()) {
                     break;
                 }
-                MyGridSquare square = this.grid[keyId][col];
+                MyGridSquare square = this.grid[keyId + BUFFER][col];
                 int visualPitch = ToneRange.keyIdToMidi(keyId);
 
                 if (square==null) continue;
@@ -870,7 +888,7 @@ public class MyMidiScore extends MyExercise {
                         if (!sub.isLinked()) {
                             int lengthCols = 1;
                             for (int k = col + 1; k < this.nCols; k++) {
-                                MyGridSquare next = this.grid[keyId][k];
+                                MyGridSquare next = this.grid[keyId + BUFFER][k];
                                 boolean linked = false;
                                 if (next!= null){
                                     for (Object o2 : next.getPoliNotes()) {
@@ -1165,10 +1183,10 @@ public class MyMidiScore extends MyExercise {
                         }
                         this.setAuthor(text);
                     }
-                    // Anàlisi del canvi de tempo
-//                        if ((type == 0x51) && !tempoDetected) {
-//                            tempoDetected = true;
-                    if ((type == 0x51)) {
+                    // Anàlisi del canvi de tempo: només events 0x51 al tick 0 (tempo inicial).
+                    // No hi ha guard "primer guanya": si diversos tracks/events cauen al tick 0,
+                    // l'últim processa't guanya — igual que el sequenciador Java MIDI.
+                    if (type == 0x51 && event.getTick() == 0) {
                         byte[] tempoData = metaMessage.getData();
                         int tempoMicroseconds = ((tempoData[0] & 0xFF) << 16) | ((tempoData[1] & 0xFF) << 8) | (tempoData[2] & 0xFF);
                         tempoBPM = 60000000 / tempoMicroseconds;
@@ -1176,7 +1194,6 @@ public class MyMidiScore extends MyExercise {
                             System.out.println("Tempo: " + tempoBPM + " BPM");
                         }
                         MyTempo.setTempo(tempoBPM);
-//                            MyTempo.checkTempo(); 
                     }
 
                     // Anàlisi de la time signature
