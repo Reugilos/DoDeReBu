@@ -481,7 +481,11 @@ public class ColorSets {
      */
     private static void setGamaPentagramaColors(){
         TreeSet<Integer> linies=new TreeSet<Integer>();
-        int octavaAlta=12*ToneRange.getOctavesUp();
+        // int octavaAlta = 12 * ToneRange.getOctavesUp();  // OLD: eliminat
+        // Deriva l'octava de les línies del pentagrama a partir del rang actual del grid,
+        // de manera que la primera línia (E4=64) pugi d'octava fins a caure dins del rang.
+        int octavaAlta = 0;
+        while (64 + octavaAlta < ToneRange.getLowestMidi() - 2) octavaAlta += 12;
         linies.add(64+octavaAlta);
         linies.add(67+octavaAlta);
         linies.add(71+octavaAlta);

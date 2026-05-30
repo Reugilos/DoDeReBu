@@ -74,9 +74,11 @@ public class ToneRange {
         if (isMetallophone()){
             lowestMidi = 79;
             highestMidi = 103;
-            octavesUp = 2;
+//            octavesUp = 2;  // OLD: eliminat - la transposició la gestiona displayOffset (I/O)
         }
-        MIDDLE_C = 60 + 12 * octavesUp;
+//        MIDDLE_C = 60 + 12 * octavesUp;  // OLD
+        MIDDLE_C = isMetallophone() ? 84 : (60 + 12 * octavesUp);
+        // Metall: C6=84 (5 semitons per sobre de lowestMidi=79). Estàndard: C4=60.
         DEFAULT_KEY = MIDDLE_C;
         lowestPau = MIDDLE_C - 20;
         highestPau = MIDDLE_C + 4;

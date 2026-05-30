@@ -931,8 +931,9 @@ public class MyMidiScore extends MyExercise {
                                 } else {
                                     int dispOff = (trackObj != null) ? trackObj.getDisplayOffset() : 0;
                                     int realPitch = visualPitch - dispOff;
-                                    rectified = realPitch - 12 * ToneRange.getOctavesUp();
-                                    if (Settings.IS_BU) rectified = realPitch;
+//                                    rectified = realPitch - 12 * ToneRange.getOctavesUp();  // OLD: eliminat
+                                    rectified = realPitch;  // displayOffset ja cobreix la transposició
+//                                    if (Settings.IS_BU) rectified = realPitch;  // ara redundant
                                 }
                                 ShortMessage on = new ShortMessage();
                                 try {
@@ -1246,7 +1247,8 @@ public class MyMidiScore extends MyExercise {
                                     .toArray(Integer[]::new); // crea Integer[] 
                             this.choice.setChoiceList(Arrays.asList(ch));
                         } else if (text.startsWith("midiKey=")) {
-                            this.midiKey = Integer.parseInt(text.substring(8))+12*ToneRange.getOctavesUp();
+//                            this.midiKey = Integer.parseInt(text.substring(8))+12*ToneRange.getOctavesUp();  // OLD: eliminat
+                            this.midiKey = Integer.parseInt(text.substring(8));
                         } else if (text.startsWith("scaleMode=")) {
                             this.scaleMode = text.substring(10).charAt(0);
                         } else if (text.startsWith("usePentagramaStrips=")) {
@@ -1555,7 +1557,8 @@ public class MyMidiScore extends MyExercise {
                 placeNoteAtRow(drumRow, ncols, false, chan, noteInfo.getTrack(), noteInfo.getVelocity());
             } else {
                 int offset = (chan >= 0 && chan < 16) ? loadChannelDisplayOffset[chan] : 0;
-                int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;
+//                int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;  // OLD: octavesUp eliminat
+                int rectifiedPitch = noteInfo.getPitch() + offset;
                 if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();
                 placeNote(rectifiedPitch, ncols, false, false, chan, noteInfo.getTrack(), noteInfo.getVelocity());
             }
@@ -1572,8 +1575,8 @@ public class MyMidiScore extends MyExercise {
 //            System.out.println("MyMidiScore::processNoteOff: " + noteInfo.getPitch() + " " +  noteInfo.getChannel()+ " " + noteInfo.getTrack()+ " " + noteInfo.getVelocity());  // Col·locar la nota a la graella
             // if (getCurrentWriteCol()>getLastColWritten())
 //            System.out.println("MyMidiScore::processNoteOff, ncols, curWrCol=" + ncols + " " + getCurrentWriteCol());
-            int aux = ToneRange.getOctavesUp();
-            placeNote(noteInfo.getPitch() + 12 * ToneRange.getOctavesUp(), ncols, false, false, noteInfo.getChannel(), noteInfo.getTrack(), noteInfo.getVelocity());  // Col·locar la nota a la graella
+//            int aux = ToneRange.getOctavesUp();  // OLD: eliminat
+            placeNote(noteInfo.getPitch(), ncols, false, false, noteInfo.getChannel(), noteInfo.getTrack(), noteInfo.getVelocity());  // Col·locar la nota a la graella
 //            this.controller.getMixer().getCurrentTrack().oneNoteMore();
         }
     }
