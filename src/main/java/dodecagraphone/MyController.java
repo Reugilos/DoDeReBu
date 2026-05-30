@@ -2560,35 +2560,25 @@ public class MyController {
 
     public void onResetKeyButtonPressed(MyButton togg) {
         if (cam.isPlaying()) { togg.setPressed(false); return; }
-        if (Settings.IS_BU) {
-            // Botó de tonalitat: demana la nova to i activa el workflow de canvi pendent.
-            // Si l'usuari tria "A l'inici", se li ofereix transportar la partitura.
-            togg.setPressed(false);
-            String to = MyDialogs.mostraInputDialog(I18n.t("keyButton.prompt"), I18n.t("keyButton.title"));
-            if (to == null || to.isBlank()) return;
-            char mode = ToneRange.getScaleMode(to);
-            int newMidiKey = ToneRange.getMidiKey(to);
-            if (mode == ' ' || newMidiKey < 0) {
-                MyDialogs.mostraError(
-                    I18n.f("keyButton.invalidInput", to),
-                    I18n.t("MyController.dialog.error.title"));
-                return;
-            }
-            int oldMidiKey = allPurposeScore.getMidiKey();
-            int step = newMidiKey - oldMidiKey;
-            MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
-            sc.midiKey   = newMidiKey;
-            sc.scaleMode = mode;
-            setPendingChange(sc, I18n.t("scoreChange.key"));
-            pendingTransposeStep = step;
-        } else {
-            int old_key = allPurposeScore.getMidiKey();
-            int new_key = this.getRandKey();
-            this.transpose(new_key - old_key);
-            if (this.exercisesOn) {
-                this.resetExercise();
-            }
+        // Botó de tonalitat: demana la nova to i activa el workflow de canvi pendent.
+        togg.setPressed(false);
+        String to = MyDialogs.mostraInputDialog(I18n.t("keyButton.prompt"), I18n.t("keyButton.title"));
+        if (to == null || to.isBlank()) return;
+        char mode = ToneRange.getScaleMode(to);
+        int newMidiKey = ToneRange.getMidiKey(to);
+        if (mode == ' ' || newMidiKey < 0) {
+            MyDialogs.mostraError(
+                I18n.f("keyButton.invalidInput", to),
+                I18n.t("MyController.dialog.error.title"));
+            return;
         }
+        int oldMidiKey = allPurposeScore.getMidiKey();
+        int step = newMidiKey - oldMidiKey;
+        MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+        sc.midiKey   = newMidiKey;
+        sc.scaleMode = mode;
+        setPendingChange(sc, I18n.t("scoreChange.key"));
+        pendingTransposeStep = step;
     }
 
     public void onNextExerciseButtonPressed(MyButton togg) {

@@ -310,7 +310,7 @@ public class ChordSymbols_old {
      * order and sections as the original CSV. Does nothing if {@code Settings.IS_BU} is active.
      */
     public static void generaChordSymbolTable() {
-        if (Settings.IS_BU) return;
+        return;  // CSV generation desactivada (era condicionada a !IS_BU; IS_BU eliminat)
         try (BufferedWriter w = Files.newBufferedWriter(Paths.get(ALL_SYMBOLS_OUT), StandardCharsets.UTF_8)) {
             w.write("Simbol;Sinonims;Posicions;Notes;Intervals;DodecaNoms\n");
 

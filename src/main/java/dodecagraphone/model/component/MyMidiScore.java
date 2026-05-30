@@ -747,7 +747,8 @@ public class MyMidiScore extends MyExercise {
         }
         this.controller.updateTextOfButtons();
         this.initOffscreen();
-        if (Settings.IS_BU){
+        if (ToneRange.isMetallophone()){
+            // Força el Glockenspiel (prog 9) com a veu del metallòfon en carregar.
             SoundWithMidi.assignInstToChannel(this.controller.getMixer().getCurrentChannelOfCurrentTrack(),9);
             SoundWithMidi.runProgramChange(this.controller.getMixer().getCurrentChannelOfCurrentTrack(),9);
         }
@@ -913,7 +914,9 @@ public class MyMidiScore extends MyExercise {
                                         "MyMidiScore::saveMidiScore() col = " + col + " > lastColWritten = " + getLastColWritten());
                             }
                             if (track != null) {
-                                if (Settings.IS_BU && isFirstNoteOn) {
+                                if (ToneRange.isMetallophone() && isFirstNoteOn) {
+                                    // Escriu un PROGRAM_CHANGE a Glockenspiel (prog 9) just abans
+                                    // de la primera nota per garantir que el load n'activi el displayOffset.
                                     isFirstNoteOn = false;
                                     ShortMessage pc = new ShortMessage();
                                     try {
@@ -1559,7 +1562,7 @@ public class MyMidiScore extends MyExercise {
                 int offset = (chan >= 0 && chan < 16) ? loadChannelDisplayOffset[chan] : 0;
 //                int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;  // OLD: octavesUp eliminat
                 int rectifiedPitch = noteInfo.getPitch() + offset;
-                if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();
+//                if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();  // BUG: anul·lava l'offset sempre
                 placeNote(rectifiedPitch, ncols, false, false, chan, noteInfo.getTrack(), noteInfo.getVelocity());
             }
         }

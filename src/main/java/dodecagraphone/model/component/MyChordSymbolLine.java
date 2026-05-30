@@ -833,12 +833,9 @@ public class MyChordSymbolLine extends MyComponent {
 
         } else {
             // ---- Live (fallback) path ----
-            if (!Settings.IS_BU) {
-                System.out.println("MyChordSymbolLine::draw nColsBeat = " + Settings.getnColsBeat()
-                        + " nBM = " + score.getNumBeatsMeasure()
-                        + " colWidth=" + Settings.getColWidth()
-                        + " beatPx=" + (Settings.getnColsBeat() * Settings.getColWidth()));
-            }
+            // if (!Settings.IS_BU) {  // debug print eliminat (IS_BU sempre true)
+            //     System.out.println("MyChordSymbolLine::draw nColsBeat = " + ...);
+            // }
             int firstDrawCol = score.getScoreCol(0);
             if (firstDrawCol < 0) firstDrawCol = 0;
             Map<Integer, Chord> chordSimbolLine = score.getChordSimbolLine();

@@ -35,7 +35,7 @@ public class Settings {
 
     // ── Comportament de l'app ─────────────────────────────────────────────
     public static final boolean COLORS_BU  = true;
-    public static final boolean IS_BU      = true;
+    // IS_BU = true;  // Eliminat: usos substituïts per ToneRange.isMetallophone() o codi directe
     public static final int  REFRESH_PERIOD               = 30;  // ms → ~33 fps
     public static final int  BUTTON_REPEAT_INITIAL_DELAY_MS = 600;
     public static final int  BUTTON_REPEAT_INTERVAL_MS      = 100;
