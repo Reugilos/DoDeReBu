@@ -488,7 +488,12 @@ public class MyMidiScore extends MyExercise {
                             int instr = ((ShortMessage) message).getData1();
                             SoundWithMidi.assignInstToChannel(channel, instr);
                             SoundWithMidi.runProgramChange(channel, instr);
-                            if (!mixerTrack.isDisplayOffsetFromMetadata()) {
+                            // Recalcula sempre si: (a) no hi ha metadata, o (b) la metadata té offset=0,
+                            // que pot ser un fitxer de metallòfon (on offset=0 era correcte però ara no ho és)
+                            // o un fitxer antic sense displayOffset. Per a instruments que necessiten offset≠0
+                            // (p.ex. glock), el càlcul donarà el valor correcte; per a piano (rang ample),
+                            // tornarà 0, que és igualment correcte.
+                            if (!mixerTrack.isDisplayOffsetFromMetadata() || mixerTrack.getDisplayOffset() == 0) {
                                 int offset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
                                 mixerTrack.setDisplayOffset(offset);
                                 loadChannelDisplayOffset[channel] = offset;
@@ -914,13 +919,18 @@ public class MyMidiScore extends MyExercise {
                                         "MyMidiScore::saveMidiScore() col = " + col + " > lastColWritten = " + getLastColWritten());
                             }
                             if (track != null) {
-                                if (ToneRange.isMetallophone() && isFirstNoteOn) {
-                                    // Escriu un PROGRAM_CHANGE a Glockenspiel (prog 9) just abans
-                                    // de la primera nota per garantir que el load n'activi el displayOffset.
+                                if (isFirstNoteOn && channel != 9) {
+                                    // Escriu sempre el PROGRAM_CHANGE de l'instrument de la pista
+                                    // a la primera nota, perquè el load pugui recalcular el displayOffset
+                                    // fins i tot si la metadata té offset=0 (fitxers de metallòfon o antics).
                                     isFirstNoteOn = false;
+                                    MyTrack trackObjPC = this.controller.getMixer().getTrackFromId(trackIndex);
+                                    int instrPC = (trackObjPC != null)
+                                            ? SoundWithMidi.getInstrumentInChannel(trackObjPC.getCurrentChannel())
+                                            : (ToneRange.isMetallophone() ? 9 : 0);
                                     ShortMessage pc = new ShortMessage();
                                     try {
-                                        pc.setMessage(ShortMessage.PROGRAM_CHANGE, channel, 9, 0);
+                                        pc.setMessage(ShortMessage.PROGRAM_CHANGE, channel, instrPC, 0);
                                     } catch (InvalidMidiDataException e) {
                                         e.printStackTrace();
                                     }

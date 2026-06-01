@@ -77,23 +77,25 @@ public class DoDeReBuExercises implements MyExerciseFamily {
         MyChoice c = ex.getChoice();
         if (minor) c.setMinorScaleChoice();
         else       c.setMajorScaleChoice();
-        // Una sola octava (sense extendChoiceToFullRange)
-        // root = nota més baixa del rang que té la mateixa classe de to que midiKey
-        int pc        = ex.getMidiKey() % 12;
-        int lowestMidi = ToneRange.getLowestMidi();
-        int root      = lowestMidi + ((pc - lowestMidi % 12 + 12) % 12);
+        // root = primera nota de l'escala al rang visual de l'instrument
+        // (usem el rang de l'instrument, no el rang brut del grid, perquè
+        //  l'exercici soni en el registre correcte de l'instrument)
+        int pc         = ex.getMidiKey() % 12;
+        int[] r        = ex.getLeadInstrumentVisualRange();
+        int lowestMidi = r[0];
+        int root       = lowestMidi + ((pc - lowestMidi % 12 + 12) % 12);
         c.addUpRoot(root);
     }
 
     /**
-     * [CA] Retorna la llista de notes MIDI vàlides dins del rang del teclat,
-     * deduplicades, per ser usades com a pool de generació aleatòria.
-     * [EN] Returns the list of valid MIDI notes within the keyboard range,
-     * deduplicated, to be used as the random generation pool.
+     * [CA] Retorna la llista de notes MIDI vàlides dins del rang visual de
+     * l'instrument lead, deduplicades, per ser usades com a pool de generació.
+     * [EN] Returns the list of valid MIDI notes within the lead instrument's
+     * visual range, deduplicated, for use as the random generation pool.
      */
     private static List<Integer> validNotePool(MyExercise ex) {
-        int lo = ToneRange.getLowestMidi();
-        int hi = ToneRange.getHighestMidi();
+        int[] r = ex.getLeadInstrumentVisualRange();
+        int lo = r[0], hi = r[1];
         return ex.getChoice().getChoiceList().stream()
                 .filter(n -> n >= lo && n <= hi)
                 .distinct()

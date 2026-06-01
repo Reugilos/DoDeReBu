@@ -25,8 +25,8 @@ import java.util.HashMap;
  * @version 4.0
  */
 public class ToneRange {
-    public static final int DEFAULT_HIGHEST_MIDI = 84;
-    public static final int DEFAULT_LOWEST_MIDI = 36;
+    public static final int DEFAULT_HIGHEST_MIDI = 84;  // do6 (C6)
+    public static final int DEFAULT_LOWEST_MIDI  = 36;  // do2 (C2)
     public static final int DEFAULT_OCTAVES_UP = 0;
     public static final boolean DEFAULT_IS_METALLOPHONE = true;
     public static final int MAX_NKEYS = 50;

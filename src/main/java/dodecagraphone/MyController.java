@@ -2625,6 +2625,7 @@ public class MyController {
     }
 
     public void onPageNumButtonPressed(MyButton togg) {
+        togg.setPressed(false);
         String input = (String) javax.swing.JOptionPane.showInputDialog(
                 this.getUi(),
                 I18n.t("goto.measure.prompt"),
@@ -3915,6 +3916,23 @@ public class MyController {
         return true;
     }
 
+    /** Inicialitza el track per a la família d'exercicis donada.
+     *  Per a EarTraining i Jazz força l'instrument a piano (0);
+     *  per a DoDeReBuExercises usa l'instrument de la configuració (glock). */
+    private void initExerciseFamilyTrack(String familyName) {
+        this.setDefaultTrack();
+        if ("EarTraining".equals(familyName) || "Jazz".equals(familyName)) {
+            dodecagraphone.model.mixer.MyTrack leadTrack = this.mixer.getCurrentTrack();
+            if (leadTrack != null) {
+                int chan = leadTrack.getCurrentChannel();
+                SoundWithMidi.assignInstToChannel(chan, 0);
+                SoundWithMidi.runProgramChange(chan, 0);
+                int offset = InstrumentRange.calcDisplayOffset(0, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                leadTrack.setDisplayOffset(offset);
+            }
+        }
+    }
+
     private void nextExercise() {
         if (!this.exercisesOn) {
             this.exerciseListName = MyDialogs.seleccionaOpcio(I18n.t("MyController.exercise.selectFamily.prompt"), I18n.t("MyController.exercise.selectFamily.title"), getExerciseListNames(), 0);
@@ -3924,7 +3942,7 @@ public class MyController {
             }
             this.exerciseList = new MyExerciseList(exerciseListName, this);
             this.exercisesOn = true;
-            this.setDefaultTrack();
+            this.initExerciseFamilyTrack(exerciseListName);
 //            this.mixer = new MyMixer(this);
 //            MyTrack track = new MyTrack(0, "Track 1");
 //            track.afegirCanal(0);
@@ -3956,7 +3974,7 @@ public class MyController {
             }
             this.exerciseList = new MyExerciseList(exerciseListName, this);
             this.exercisesOn = true;
-            this.setDefaultTrack();
+            this.initExerciseFamilyTrack(exerciseListName);
 //            this.mixer = new MyMixer(this);
 //            MyTrack track = new MyTrack(0, "Track 1");
 //            track.afegirCanal(0);

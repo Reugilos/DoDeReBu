@@ -6,6 +6,7 @@
 package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
+import dodecagraphone.model.InstrumentRange;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.chord.ChordProgression;
@@ -13,6 +14,7 @@ import dodecagraphone.model.chord.DiatonicChordProgression;
 import dodecagraphone.model.chord.Triad;
 import dodecagraphone.model.mixer.MyMixer;
 import dodecagraphone.model.mixer.MyTrack;
+import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.note.MyNote;
 import dodecagraphone.ui.Settings;
 import java.util.ArrayList;
@@ -622,16 +624,11 @@ public class MyPatternScore extends MyGridScore {
      *
      */
     public void deletePreviousCol() {
-        throw new UnsupportedOperationException("deletePreviousCol");
-//        int col = currentWriteCol - 1;
-//        for (int row = 0; row < nRows; row++) {
-//            if (grid[row][col].isSqVisible()) {
-//                if (grid[row][col].isMutted()) {
-//                    grid[row][col].setMuttedOff();
-//                }
-//                grid[row][col].setOff();
-//            }
-//        }
+        int col = currentWriteCol - 1;
+        if (col < 0) return;
+        for (int row = 0; row < nKeys; row++) {
+            this.grid[row + BUFFER][col] = null;
+        }
     }
 
     /**
@@ -741,8 +738,35 @@ public class MyPatternScore extends MyGridScore {
         this.controller.getAllPurposeScore().setLastColWritten(this.currentWriteCol + 1);
     }
 
+    /**
+     * [CA] Retorna el rang MIDI visual [lo, hi] de l'instrument lead actual.
+     * En mode metallòfon: rang brut del grid. Altrament: rang de l'instrument
+     * ajustat pel displayOffset, lo clamped al grid, hi sense clamp (per
+     * permetre el check +12 sense desplaçar innecessàriament midiKey).
+     * <p>
+     * [EN] Returns the visual MIDI range [lo, hi] of the current lead instrument.
+     * In metallophone mode: raw grid range. Otherwise: instrument range adjusted
+     * by displayOffset, lo clamped to grid, hi unclamped.
+     */
+    protected int[] getLeadInstrumentVisualRange() {
+        if (ToneRange.isMetallophone()) {
+            return new int[]{ToneRange.getLowestMidi(), ToneRange.getHighestMidi()};
+        }
+        MyTrack track = controller.getMixer().getCurrentTrack();
+        if (track == null) {
+            return new int[]{ToneRange.getLowestMidi(), ToneRange.getHighestMidi()};
+        }
+        int dispOff = track.getDisplayOffset();
+        int chan = track.getCurrentChannel();
+        int prog = SoundWithMidi.getInstrumentInChannel(chan);
+        int lo = Math.max(InstrumentRange.getLowest(prog) + dispOff, ToneRange.getLowestMidi());
+        int hi = Math.min(InstrumentRange.getHighest(prog) + dispOff, ToneRange.getHighestMidi());
+        return new int[]{lo, hi};
+    }
+
     public void placeTonalContext(int key) {
-        placeTonalContext(key,ToneRange.getLowestMidi(),ToneRange.getHighestMidi());
+        int[] r = getLeadInstrumentVisualRange();
+        placeTonalContext(key, r[0], r[1]);
     }
 
     /**
@@ -774,12 +798,13 @@ public class MyPatternScore extends MyGridScore {
      * ascending and descending minor scale, and pedal note.
      */
     public void placeTonalContextMinor(int midiKey) {
-        placeTonalContextMinor(midiKey, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+        int[] r = getLeadInstrumentVisualRange();
+        placeTonalContextMinor(midiKey, r[0], r[1]);
     }
 
     public void placeTonalContextMinor(int midiKey, int lowest, int highest) {
         if (midiKey < lowest)      midiKey += 12;
-        if (midiKey + 14 > highest) midiKey -= 12;
+        if (midiKey + 12 > highest) midiKey -= 12;
         // i  iv  V  i  (acords menors excepte V major)
         Chord ci  = new Chord(0,  new int[]{0, 3, 7},  midiKey, "");
         Chord civ = new Chord(5,  new int[]{0, 3, 7},  midiKey, "");
@@ -808,7 +833,7 @@ public class MyPatternScore extends MyGridScore {
     public void placeTonalContext(int midiKey,int lowest,int highest) {
         Integer[] rootProgression = new Integer[]{0, 5, 7, 0};
         if (midiKey<lowest) midiKey+=12;
-        if (midiKey+14>highest) midiKey-=12;
+        if (midiKey+12>highest) midiKey-=12;
         DiatonicChordProgression progression
                 = new DiatonicChordProgression(midiKey, rootProgression, Triad.ROOT_POSITION);
         placeProgression(progression, ONE_BEAT, false);

@@ -125,11 +125,15 @@ public class MyExercise extends MyPatternScore {
      * @return [CA] midiKey ajustat (≤ highestMidi−12) / [EN] adjusted midiKey (≤ highestMidi−12)
      */
     public int useMidiKeyForExercise(int rawMidiKey) {
-        int hi = ToneRange.getHighestMidi() - 12;
-        int lo = ToneRange.getLowestMidi();
+        int[] r = getLeadInstrumentVisualRange();
+        int lo = r[0];
+        int hi = r[1] - 12; // deixa espai per a una octava completa
+        // Prefereix l'octava més alta dins del rang (per coincidir amb el registre
+        // natural de l'instrument, especialment rellevant per al glockenspiel)
         int adjusted = rawMidiKey;
-        while (adjusted > hi) adjusted -= 12;
-        if (adjusted < lo)    adjusted += 12;
+        while (adjusted + 12 <= hi) adjusted += 12;
+        while (adjusted > hi)       adjusted -= 12;
+        if (adjusted < lo)          adjusted += 12;
         this.midiKey = adjusted;
         return adjusted;
     }

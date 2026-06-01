@@ -209,9 +209,8 @@ public class MyXiloKey extends MyComponent {
                     int dispOffRange = currentTrackForRange.getDisplayOffset();
                     int chan = currentTrackForRange.getCurrentChannel();
                     int prog = SoundWithMidi.getInstrumentInChannel(chan);
-                    // getHighest retorna el límit exclusiu del CSV → -1 per obtenir l'inclusiu
                     visualLow  = InstrumentRange.getLowest(prog) + dispOffRange;
-                    visualHigh = InstrumentRange.getHighest(prog) - 1 + dispOffRange;
+                    visualHigh = InstrumentRange.getHighest(prog) + dispOffRange;
                 }
                 if (this.midi == visualLow || this.midi == visualHigh) {
                     text += ">";
