@@ -108,7 +108,7 @@ public class MyController {
     private String[] getExerciseListNames() {
         return ToneRange.isMetallophone()
                 ? new String[]{"DoDeReBuExercises"}
-                : new String[]{"EarTraining", "Jazz"};
+                : new String[]{"DoDeReBuExercises", "EarTraining", "Jazz"};
     }
     private String exerciseListName;
     private boolean exercisesOn;
