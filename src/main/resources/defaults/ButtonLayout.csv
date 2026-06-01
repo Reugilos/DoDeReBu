@@ -38,6 +38,7 @@ Id;Name;IsToggle;Row;Col;TextOn;TextOff;TipText;IsActive
 42;TremoloButton;T;13;3;buttonLayout.TremoloButton.textOn;buttonLayout.TremoloButton.textOff;buttonLayout.TremoloButton.tipText;On
 39;FitAnacrusisButton;T;14;1;buttonLayout.FitAnacrusisButton.textOn;buttonLayout.FitAnacrusisButton.textOff;buttonLayout.FitAnacrusisButton.tipText;On
 30;MixerButton;T;14;2;buttonLayout.MixerButton.textOn;buttonLayout.MixerButton.textOff;buttonLayout.MixerButton.tipText;On
+43;MetronomeButton;T;14;3;buttonLayout.MetronomeButton.textOn;buttonLayout.MetronomeButton.textOff;buttonLayout.MetronomeButton.tipText;On
 41;PrintButton;B;15;1;buttonLayout.PrintButton.textOn;;buttonLayout.PrintButton.tipText;On
 37;ExportButton;B;15;2;buttonLayout.ExportButton.textOn;;buttonLayout.ExportButton.tipText;On
 38;HelpButton;B;15;3;buttonLayout.HelpButton.textOn;;buttonLayout.HelpButton.tipText;On

@@ -48,6 +48,17 @@ public class SoundWithMidi {
     private static final boolean LOCAL_VERBOSE = false;
     /** [CA] Canal MIDI per defecte. [EN] Default MIDI channel. */
     public static final int DEFAULT_CHANNEL = 0;
+    /**
+     * [CA] Canal MIDI de percussió GM (canal 10, índex 9). Les notes activen sons
+     * de percussió directament sense necessitat de programChange.
+     * [EN] GM percussion MIDI channel (channel 10, index 9). Notes trigger drum
+     * sounds directly without programChange.
+     */
+    public static final int METRONOME_CHANNEL = 9;
+    /** [CA] Nota de percussió GM per al temps fort (inici de compàs): Claves. [EN] GM drum note for strong beat (measure start): Claves. */
+    public static final int METRONOME_NOTE_STRONG = 75; // Claves
+    /** [CA] Nota de percussió GM per al temps feble (beat interior): Low Wood Block. [EN] GM drum note for weak beat (inner beat): Low Wood Block. */
+    public static final int METRONOME_NOTE_WEAK   = 77; // Low Wood Block
     /** [CA] Velocitat MIDI per defecte (fortíssim). [EN] Default MIDI velocity (fortissimo). */
     public static final int DEFAULT_VELOCITY = 127;
     /** [CA] Instrument lead per defecte (Glockenspiel). [EN] Default lead instrument (Glockenspiel). */
@@ -310,6 +321,27 @@ public class SoundWithMidi {
         } catch (MidiUnavailableException | IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * [CA] Toca un tic de metrònom en el canal reservat. Envia noteOn i programa
+     * un noteOff 50 ms després en un fil dimoni per no bloquejar el fil de reproducció.
+     * <p>
+     * [EN] Plays a metronome tick on the reserved channel. Sends noteOn and schedules
+     * a noteOff 50 ms later on a daemon thread to avoid blocking the playback thread.
+     *
+     * @param midi [CA] nota MIDI a tocar / [EN] MIDI note to play
+     * @param vel  [CA] velocitat MIDI (0–127) / [EN] MIDI velocity (0–127)
+     */
+    public static void playMetronomeTick(int midi, int vel) {
+        if (channelDataArray[METRONOME_CHANNEL] == null) return;
+        channelDataArray[METRONOME_CHANNEL].midiChannel.noteOn(midi, vel);
+        Thread t = new Thread(() -> {
+            try { Thread.sleep(50); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            channelDataArray[METRONOME_CHANNEL].midiChannel.noteOff(midi);
+        });
+        t.setDaemon(true);
+        t.start();
     }
 
     /**

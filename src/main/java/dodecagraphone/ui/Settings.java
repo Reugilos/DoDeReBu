@@ -107,6 +107,7 @@ public class Settings {
     private static boolean chordSymbolVertical;
     private static boolean autoCorrect;
     private static boolean tipsVisible;
+    private static boolean metronome;
     private static boolean showMutted;
     private static double  screenWidthRatio;
     private static double  screenHeightRatio;
@@ -914,4 +915,7 @@ public class Settings {
      * @return [CA] true si s'alinea als beats / [EN] true if aligned to beats
      */
     public static boolean isPlayAtBeat() { return PLAY_AT_BEAT; }
+
+    public static boolean isMetronome() { return metronome; }
+    public static void    setMetronome(boolean v) { metronome = v; }
 }

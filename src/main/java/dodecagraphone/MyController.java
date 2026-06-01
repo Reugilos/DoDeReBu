@@ -2194,6 +2194,10 @@ public class MyController {
         //this.getCam().setPlaying(true);
         cam.setPlaying(true); // opcional: pot activar dibuix
         //cam.getTimer().reset();
+        int metroBufSize = allPurposeScore.getStopCol() + Settings.getnColsBeat() * allPurposeScore.getNumBeatsMeasure() + 2;
+        boolean[] metroIsBeat    = new boolean[metroBufSize];
+        boolean[] metroIsMeasure = new boolean[metroBufSize];
+        allPurposeScore.computeBeatMeasureLines(metroBufSize, metroIsBeat, metroIsMeasure);
         Thread playbackThread = new Thread(() -> {
             long nextStep = System.nanoTime();
             // long nanosPerStep = (long) MyTempo.getNanosPerSquareGrid(); // o calcula-ho
@@ -2221,6 +2225,16 @@ public class MyController {
                 // applyChangesAt síncron: cal que s'executi abans de getNanosPerSquareGrid()
                 // perquè les marques de tempo del changeMap actualitzin playbackTempo a temps.
                 applyChangesAt(getEditingCol());
+                if (Settings.isMetronome()) {
+                    int scoreColAtPlayBar = allPurposeScore.getScoreCol(camPBar);
+                    if (scoreColAtPlayBar >= 0 && scoreColAtPlayBar < metroIsBeat.length && metroIsBeat[scoreColAtPlayBar]) {
+                        if (metroIsMeasure[scoreColAtPlayBar]) {
+                            SoundWithMidi.playMetronomeTick(SoundWithMidi.METRONOME_NOTE_STRONG, 100); // Claves — inici de compàs
+                        } else {
+                            SoundWithMidi.playMetronomeTick(SoundWithMidi.METRONOME_NOTE_WEAK,   70);  // Low Wood Block — beat
+                        }
+                    }
+                }
                 // Resta de la UI asíncrona: no bloquejar el fil de timing.
                 SwingUtilities.invokeLater(() -> {
                     updateTextOfButtons();      // crida applyChangesAt de nou (idempotent)
@@ -3154,6 +3168,10 @@ public class MyController {
         this.allPurposeScore.drawFullGridinOffscreen();
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
         this.drawFull(true);
+    }
+
+    public void onMetronomeButtonPressed(MyButton togg) {
+        Settings.setMetronome(togg.isPressed());
     }
 
     public void onTremoloButtonPressed(MyButton togg) {
