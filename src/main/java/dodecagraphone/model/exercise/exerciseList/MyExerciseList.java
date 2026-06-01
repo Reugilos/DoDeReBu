@@ -8,6 +8,7 @@ package dodecagraphone.model.exercise.exerciseList;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.component.MyAllPurposeScore;
+import dodecagraphone.model.exercise.DoDeReBuExercises;
 import dodecagraphone.model.exercise.Jazz;
 import dodecagraphone.model.exercise.EarTraining;
 import java.util.ArrayList;
@@ -89,6 +90,11 @@ public class MyExerciseList {
                 Jazz jazz = new Jazz();
                 currentExercise.setFamily(jazz);
                 exerciseLabelList = Jazz.getExerciseLabelList();
+                break;
+            case "DoDeReBuExercises":
+                DoDeReBuExercises ddrbEx = new DoDeReBuExercises();
+                currentExercise.setFamily(ddrbEx);
+                exerciseLabelList = DoDeReBuExercises.getExerciseLabelList();
                 break;
             default:
                 throw new UnsupportedOperationException("No such exercise family " + whichSet);

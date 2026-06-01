@@ -744,6 +744,60 @@ public class MyPatternScore extends MyGridScore {
     public void placeTonalContext(int key) {
         placeTonalContext(key,ToneRange.getLowestMidi(),ToneRange.getHighestMidi());
     }
+
+    /**
+     * [CA] Col·loca l'escala menor natural ascendent a partir de midiKey.
+     * [EN] Places the ascending natural minor scale starting on midiKey.
+     */
+    public void placeScaleUpMinor(int midiKey, int ncols, boolean mutted) {
+        int[] relativeScale = new int[]{0, 2, 3, 5, 7, 8, 10, 12};
+        for (int i = 0; i < 8; i++) {
+            this.placeNote(relativeScale[i] + midiKey, ncols, mutted);
+        }
+    }
+
+    /**
+     * [CA] Col·loca l'escala menor natural descendent a partir de midiKey.
+     * [EN] Places the descending natural minor scale starting on midiKey.
+     */
+    public void placeScaleDownMinor(int midiKey, int ncols, boolean mutted) {
+        int[] relativeScale = new int[]{12, 10, 8, 7, 5, 3, 2, 0};
+        for (int i = 0; i < 8; i++) {
+            this.placeNote(relativeScale[i] + midiKey, ncols, mutted);
+        }
+    }
+
+    /**
+     * [CA] Col·loca el context tonal menor: progressió i-iv-V-i, acord tònica menor,
+     * escala ascendent i descendent i nota de pedal.
+     * [EN] Places the minor tonal context: i-iv-V-i progression, tonic minor chord,
+     * ascending and descending minor scale, and pedal note.
+     */
+    public void placeTonalContextMinor(int midiKey) {
+        placeTonalContextMinor(midiKey, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+    }
+
+    public void placeTonalContextMinor(int midiKey, int lowest, int highest) {
+        if (midiKey < lowest)      midiKey += 12;
+        if (midiKey + 14 > highest) midiKey -= 12;
+        // i  iv  V  i  (acords menors excepte V major)
+        Chord ci  = new Chord(0,  new int[]{0, 3, 7},  midiKey, "");
+        Chord civ = new Chord(5,  new int[]{0, 3, 7},  midiKey, "");
+        Chord cV  = new Chord(7,  new int[]{0, 4, 7},  midiKey, "");
+        Chord ci2 = new Chord(0,  new int[]{0, 3, 7},  midiKey, "");
+        placeChord(ci,  ONE_BEAT,     false);
+        placeChord(civ, ONE_BEAT,     false);
+        placeChord(cV,  ONE_BEAT,     false);
+        placeChord(ci2, ONE_BEAT,     false);
+        // Tònica menor sostinguda
+        Chord tonalityChord = new Chord(0, new int[]{-12, 0, 3, 7}, midiKey, "");
+        placeChord(tonalityChord, ONE_BAR, false);
+        // Escala ascendent i descendent
+        placeScaleUpMinor(midiKey,   HALF_BEAT, false);
+        placeScaleDownMinor(midiKey, HALF_BEAT, false);
+        // Pedal al baix
+        placeSustained(midiKey - 24, true);
+    }
     
     /**
      * Places the required elements to set up a tonal context, updating the

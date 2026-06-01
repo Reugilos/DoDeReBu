@@ -308,6 +308,10 @@ public class MyButtonPanel extends MyComponent {
         return id_PrevExerciseButton;
     }
 
+    public int getId_RestartExerciseButton() {
+        return id_RestartExerciseButton;
+    }
+
     public MyButton getSelectChoiceButton() {
         return buttons.get(id_SelectChoiceButton);
     }

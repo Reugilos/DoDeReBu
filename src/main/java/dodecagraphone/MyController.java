@@ -105,7 +105,11 @@ public class MyController {
 //    private final String exerciseListName = "Saxo";
 //    private final String exerciseListName = "Miri";
 //    private final String exerciseListName = "UYE";
-    private String[] exerciceListNames = new String[]{"EarTraining", "Jazz"};
+    private String[] getExerciseListNames() {
+        return ToneRange.isMetallophone()
+                ? new String[]{"DoDeReBuExercises"}
+                : new String[]{"EarTraining", "Jazz"};
+    }
     private String exerciseListName;
     private boolean exercisesOn;
 
@@ -2214,18 +2218,29 @@ public class MyController {
 
                 cam.updateCurrentCol();
                 //this.allPurposeScore.setDrawNewCol(true);// potser cal sincronització amb el fil de dibuix
-                updateTextOfButtons();
-                this.getUi().getPanel().repinta(true);
-                // this.redraw(this.getUi().getPanel().getPantalla());
-                
+                // applyChangesAt síncron: cal que s'executi abans de getNanosPerSquareGrid()
+                // perquè les marques de tempo del changeMap actualitzin playbackTempo a temps.
+                applyChangesAt(getEditingCol());
+                // Resta de la UI asíncrona: no bloquejar el fil de timing.
+                SwingUtilities.invokeLater(() -> {
+                    updateTextOfButtons();      // crida applyChangesAt de nou (idempotent)
+                    getUi().getPanel().repinta(true);
+                });
+
                 nextStep += (long) MyTempo.getNanosPerSquareGrid();
-                long sleepTime = nextStep - System.nanoTime();
-                if (sleepTime > 0) {
+                // Sleep fins a ~1.5 ms abans del deadline, després spin-wait precís.
+                // Thread.sleep() a Windows arrodoneix sempre cap amunt (biaix +0.5–1 ms/col);
+                // el spin-wait final elimina aquest biaix sistemàtic sense cost significatiu.
+                long waitNanos = nextStep - System.nanoTime();
+                if (waitNanos > 1_500_000L) {
                     try {
-                        Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000));
+                        Thread.sleep((waitNanos - 1_500_000L) / 1_000_000L);
                     } catch (InterruptedException e) {
                         break;
                     }
+                }
+                while (System.nanoTime() < nextStep) {
+                    Thread.onSpinWait();
                 }
 //                long nanosPerSquare = (long) Math.floor(MyTempo.getNanosPerSquareGrid());
 //                long sleepTime = nanosPerSquare - this.cam.getTimer().elapsedNanos();
@@ -3884,7 +3899,7 @@ public class MyController {
 
     private void nextExercise() {
         if (!this.exercisesOn) {
-            this.exerciseListName = MyDialogs.seleccionaOpcio(I18n.t("MyController.exercise.selectFamily.prompt"), I18n.t("MyController.exercise.selectFamily.title"), exerciceListNames, 0);
+            this.exerciseListName = MyDialogs.seleccionaOpcio(I18n.t("MyController.exercise.selectFamily.prompt"), I18n.t("MyController.exercise.selectFamily.title"), getExerciseListNames(), 0);
             if (exerciseListName == null || exerciseListName.isEmpty()) {
                 this.buttons.onButtonRelesased(this.getButtons().getId_NextExerciseButton());
                 return;
@@ -3909,13 +3924,14 @@ public class MyController {
 //        this.cam.setSymbolLine(myChordSymbolLine);
         this.cam.reset();
         this.showExerciseList();
-        this.buttons.setToggleButtonsToProgramValues();
+        this.updateTextOfButtons();
+        this.buttons.onButtonRelesased(this.getButtons().getId_NextExerciseButton());
         this.statusLine.setText(allPurposeScore.getLabel() + ": " + allPurposeScore.getDescription());
     }
 
     private void prevExercise() {
         if (!this.exercisesOn) {
-            this.exerciseListName = MyDialogs.seleccionaOpcio(I18n.t("MyController.exercise.selectPackage.prompt"), I18n.t("MyController.exercise.selectPackage.title"), exerciceListNames, 0);
+            this.exerciseListName = MyDialogs.seleccionaOpcio(I18n.t("MyController.exercise.selectPackage.prompt"), I18n.t("MyController.exercise.selectPackage.title"), getExerciseListNames(), 0);
             if (exerciseListName == null || exerciseListName.isEmpty()) {
                 this.buttons.onButtonRelesased(this.getButtons().getId_PrevExerciseButton());
                 return;
@@ -3940,7 +3956,8 @@ public class MyController {
 //        this.cam.setSymbolLine(myChordSymbolLine);
         this.cam.reset();
         this.showExerciseList();
-        this.buttons.setToggleButtonsToProgramValues();
+        this.updateTextOfButtons();
+        this.buttons.onButtonRelesased(this.getButtons().getId_PrevExerciseButton());
         this.statusLine.setText(allPurposeScore.getLabel() + ": " + allPurposeScore.getDescription());
     }
 
@@ -3950,7 +3967,9 @@ public class MyController {
         this.exerciseList.resetCurrentExercise();
         this.myChordSymbolLine.initOffscreen();
         this.myLyrics.initOffscreen();
-        this.buttons.setToggleButtonsToProgramValues();
+        this.cam.reset();
+        this.updateTextOfButtons();
+        this.buttons.onButtonRelesased(this.getButtons().getId_RestartExerciseButton());
         this.statusLine.setText(allPurposeScore.getLabel() + ": " + allPurposeScore.getDescription());
     }
 

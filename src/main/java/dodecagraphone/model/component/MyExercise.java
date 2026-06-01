@@ -161,14 +161,20 @@ public class MyExercise extends MyPatternScore {
      * @param label [CA] etiqueta de l'exercici a carregar / [EN] label of the exercise to load
      */
     public void setExercise(String label) {
+        // Preservem l'estat de l'usuari per a showNoteNames i useMobileDo.
+        // usePentagramaStrips → sempre false (template) en entrar a mode exercici.
+        // Els exercicis que necessiten valors diferents els sobreescriuen explícitament.
+        boolean savedShowNoteNames = this.showNoteNames;
+        boolean savedUseMobileDo   = this.useMobileDo;
+
         // defaults
         this.stopAll();
         this.resetPattern();
         this.scaleMode = 'M';
         this.choice.setDefaultChoice();
-        this.usePentagramaStrips = true;
-        this.showNoteNames = true;
-        this.useMobileDo = false;
+        this.usePentagramaStrips = false;       // template per defecte en mode exercici
+        this.showNoteNames = savedShowNoteNames; // preserva la preferència de l'usuari
+        this.useMobileDo   = savedUseMobileDo;
         this.useScreenKeyboardRight = false;
         this.label = label;
         setNumBeatsMeasure(Settings.getnBeatsMeasure());
@@ -199,6 +205,16 @@ public class MyExercise extends MyPatternScore {
         }
 
         setCurrentExercise(label);
+
+        // Posa la clau de l'exercici al changeMap col 0 perquè applyChangesAt(0)
+        // (cridat per updateTextOfButtons) mostri la tonalitat correcta als botons.
+        MyGridScore.ScoreChange kc = new MyGridScore.ScoreChange();
+        kc.midiKey = this.midiKey;
+        kc.scaleMode = this.scaleMode;
+        this.setScoreChange(0, kc);
+
+        // Actualitza stopCol perquè playScoreCol() toqui les notes de l'exercici.
+        this.updateStopMarker();
 
         this.author = "Tradicional";
         this.title = this.label;

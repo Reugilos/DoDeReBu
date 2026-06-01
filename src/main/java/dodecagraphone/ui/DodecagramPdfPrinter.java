@@ -51,7 +51,8 @@ public class DodecagramPdfPrinter {
     private static final float PAGE_W          = PDRectangle.A4.getWidth();
     private static final float PAGE_H          = PDRectangle.A4.getHeight();
     private static final float MARGIN          = 18f;
-    private static final float FIRST_HEADER_H  = 44f;
+    private static final float FIRST_HEADER_H  = 44f;  // capçalera base (1 línia de desc.)
+    private static final float DESC_LINE_H     = 11f;  // descriptionSize(9) + gap(2)
     private static final float SHORT_HEADER_H  = 18f;
     private static final float ROW_GAP         = 6f;
     private static final float MEASURE_LABEL_H = 10f;
@@ -138,8 +139,11 @@ public class DodecagramPdfPrinter {
 
         // PDF layout
         float pdfUsableW = PAGE_W - 2 * MARGIN;
+        String desc = nullSafe(score.getDescription());
+        int descLineCount = desc.isEmpty() ? 0 : pdf.wrapLines(desc, pdfUsableW).size();
+        float firstHeaderH = FIRST_HEADER_H + Math.max(0, descLineCount - 1) * DESC_LINE_H;
         float scaleX     = pdfUsableW / (keyWidthPx + fixedSlicePx);
-        float availFirst = PAGE_H - 2 * MARGIN - FIRST_HEADER_H;
+        float availFirst = PAGE_H - 2 * MARGIN - firstHeaderH;
         int   chordH     = chordImg.getHeight();
         int   gridH      = gridImg.getHeight();
         int   lyricsH    = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
@@ -190,10 +194,9 @@ public class DodecagramPdfPrinter {
                     if (pdfPageNum == 1) {
                         pdf.drawTitle(MARGIN, yPos - 16, nullSafe(score.getTitle()));
                         pdf.drawAuthor(MARGIN, yPos - 30, nullSafe(score.getAuthor()));
-                        String desc = nullSafe(score.getDescription());
                         if (!desc.isEmpty())
-                            pdf.drawDescription(MARGIN, yPos - 42, desc);
-                        yPos -= FIRST_HEADER_H;
+                            pdf.drawDescription(MARGIN, yPos - 42, desc, pdfUsableW);
+                        yPos -= firstHeaderH;
                     } else {
                         pdf.drawPageHeader(PAGE_W - MARGIN, yPos - 12,
                                 nullSafe(score.getTitle()) + "  p." + pdfPageNum);

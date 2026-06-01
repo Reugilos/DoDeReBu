@@ -222,7 +222,11 @@ public class MyXiloKey extends MyComponent {
         Font prevFont = g.getFont();
         int keyFontSize = Math.max(8, (int)(height * 0.65));
         if (keyFontSize != prevFont.getSize()) g.setFont(prevFont.deriveFont((float) keyFontSize));
-        g.setColor(activeChannels.isEmpty() ? ColorSets.getGridSquareFontColor(this.midi) : java.awt.Color.BLACK);
+        // Keyboard esquerre (doNotHighlight=false): quan la tecla sona → text negre sobre fons blanc.
+        // Keyboard dret (doNotHighlight=true): la tecla NO es posa blanca, i el text
+        // ha de mantenir el color normal (no canviar a negre quan sona).
+        boolean litAndShouldChangeText = !activeChannels.isEmpty() && !this.doNotHighlight;
+        g.setColor(litAndShouldChangeText ? java.awt.Color.BLACK : ColorSets.getGridSquareFontColor(this.midi));
         g.drawString(text, (float) (screenPosX), posY);
         g.setFont(prevFont);
         this.slide.draw(g);

@@ -7,6 +7,8 @@ package dodecagraphone.ui;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 
@@ -135,9 +137,46 @@ public class PdfDrawKit {
         drawText(authorFont, authorSize, authorColor, x, y, text);
     }
 
-    /** Descripció de la partitura (pàgina 1). */
-    public void drawDescription(float x, float y, String text) throws IOException {
-        drawText(descriptionFont, descriptionSize, descriptionColor, x, y, text);
+    /**
+     * Descripció de la partitura (pàgina 1), amb wrapping automàtic.
+     * @param maxWidth amplada màxima disponible en punts PDF
+     * @return alçada total usada (nombre de línies × alçada de línia)
+     */
+    public float drawDescription(float x, float y, String text, float maxWidth) throws IOException {
+        if (text == null || text.isEmpty()) return 0f;
+        List<String> lines = wrapLines(text, maxWidth);
+        float lineH = descriptionSize + 2f;
+        for (String line : lines) {
+            drawText(descriptionFont, descriptionSize, descriptionColor, x, y, line);
+            y -= lineH;
+        }
+        return lines.size() * lineH;
+    }
+
+    /**
+     * Divideix {@code text} en línies que caben dins de {@code maxWidth} punts,
+     * respectant salts de línia explícits ('\n').
+     */
+    public List<String> wrapLines(String text, float maxWidth) throws IOException {
+        List<String> result = new ArrayList<>();
+        if (text == null || text.isEmpty()) return result;
+        for (String paragraph : sanitize(text).split("\n")) {
+            String[] words = paragraph.split(" +");
+            StringBuilder current = new StringBuilder();
+            for (String word : words) {
+                if (word.isEmpty()) continue;
+                String candidate = current.length() == 0 ? word : current + " " + word;
+                float w = descriptionFont.getStringWidth(candidate) / 1000f * descriptionSize;
+                if (w > maxWidth && current.length() > 0) {
+                    result.add(current.toString());
+                    current = new StringBuilder(word);
+                } else {
+                    current = new StringBuilder(candidate);
+                }
+            }
+            if (current.length() > 0) result.add(current.toString());
+        }
+        return result;
     }
 
     /**
