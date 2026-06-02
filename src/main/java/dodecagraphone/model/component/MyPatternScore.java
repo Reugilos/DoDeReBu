@@ -748,7 +748,7 @@ public class MyPatternScore extends MyGridScore {
      * In metallophone mode: raw grid range. Otherwise: instrument range adjusted
      * by displayOffset, lo clamped to grid, hi unclamped.
      */
-    protected int[] getLeadInstrumentVisualRange() {
+    public int[] getLeadInstrumentVisualRange() {
         if (ToneRange.isMetallophone()) {
             return new int[]{ToneRange.getLowestMidi(), ToneRange.getHighestMidi()};
         }

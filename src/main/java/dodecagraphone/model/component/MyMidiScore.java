@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 
 /**
@@ -382,6 +383,7 @@ public class MyMidiScore extends MyExercise {
             return;
         }
         Arrays.fill(loadChannelDisplayOffset, 0);
+        boolean choiceTransposed = false; // s'aplica la transposició només al primer PROGRAM_CHANGE amb metadata
         boolean ok = this.analyzeMidiHeader(sequence);
         if (!ok) {
             this.controller.updateTextOfButtons();
@@ -427,6 +429,29 @@ public class MyMidiScore extends MyExercise {
             mixerTrack.setnNotes(0);
             if (LOCAL_VERBOSE) {
                 System.out.println("Processant pista " + (tr - first));
+            }
+
+            // Pre-scan: aplica la transposició de choice/midiKey abans del primer NOTE_ON.
+            // El PROGRAM_CHANGE pot estar al mateix tick que la primera nota i aparèixer després.
+            if (!choiceTransposed && mixerTrack.isDisplayOffsetFromMetadata()) {
+                for (int j = 0; j < track.size(); j++) {
+                    MidiMessage msg = track.get(j).getMessage();
+                    if (msg instanceof ShortMessage) {
+                        ShortMessage sm2 = (ShortMessage) msg;
+                        if (sm2.getCommand() == ShortMessage.PROGRAM_CHANGE) {
+                            int instr2 = sm2.getData1();
+                            int chan2  = sm2.getChannel();
+                            int newOff = InstrumentRange.calcDisplayOffset(instr2, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                            int shift = newOff - mixerTrack.getDisplayOffset();
+                            if (shift != 0) transposeChoiceAndKey(shift);
+                            // Actualitza l'offset del canal ABANS del primer NOTE_ON
+                            mixerTrack.setDisplayOffset(newOff);
+                            if (chan2 >= 0 && chan2 < 16) loadChannelDisplayOffset[chan2] = newOff;
+                            choiceTransposed = true;
+                            break;
+                        }
+                    }
+                }
             }
 
             setCurrentWriteCol(0);
@@ -488,15 +513,22 @@ public class MyMidiScore extends MyExercise {
                             int instr = ((ShortMessage) message).getData1();
                             SoundWithMidi.assignInstToChannel(channel, instr);
                             SoundWithMidi.runProgramChange(channel, instr);
-                            // Recalcula sempre si: (a) no hi ha metadata, o (b) la metadata té offset=0,
-                            // que pot ser un fitxer de metallòfon (on offset=0 era correcte però ara no ho és)
-                            // o un fitxer antic sense displayOffset. Per a instruments que necessiten offset≠0
-                            // (p.ex. glock), el càlcul donarà el valor correcte; per a piano (rang ample),
-                            // tornarà 0, que és igualment correcte.
-                            if (!mixerTrack.isDisplayOffsetFromMetadata() || mixerTrack.getDisplayOffset() == 0) {
-                                int offset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
-                                mixerTrack.setDisplayOffset(offset);
-                                loadChannelDisplayOffset[channel] = offset;
+                            // Recalcula sempre l'offset per al grid actual (lowestMidi/highestMidi).
+                            // L'offset de la metadata era vàlid per al grid en el moment de desar,
+                            // però pot ser incorrecte si el mode ha canviat (ex. metallòfon ↔ estàndard).
+                            {
+                                int newOffset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                                // Si el track tenia offset de metadata, la diferència revela el shift de MIDDLE_C.
+                                // Apliquem la transposició al choice list i midiKey (una sola vegada).
+                                if (!choiceTransposed && mixerTrack.isDisplayOffsetFromMetadata()) {
+                                    int shift = newOffset - mixerTrack.getDisplayOffset();
+                                    if (shift != 0) {
+                                        transposeChoiceAndKey(shift);
+                                    }
+                                    choiceTransposed = true;
+                                }
+                                mixerTrack.setDisplayOffset(newOffset);
+                                loadChannelDisplayOffset[channel] = newOffset;
                             }
                             break;
                         default:
@@ -1556,6 +1588,16 @@ public class MyMidiScore extends MyExercise {
     
     private long noteKey(int pitch, int channel, int track) {
         return ((long) track << 16) | ((long) channel << 8) | (long) (pitch & 0x7F);
+    }
+
+    private void transposeChoiceAndKey(int shift) {
+        if (this.choice.getChoiceList() != null && !this.choice.getChoiceList().isEmpty()) {
+            List<Integer> transposed = this.choice.getChoiceList().stream()
+                    .map(n -> n + shift)
+                    .collect(Collectors.toList());
+            this.choice.setChoiceList(transposed);
+        }
+        this.midiKey += shift;
     }
 
     private void processNoteOff(long key, long tick) {
