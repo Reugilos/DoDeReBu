@@ -166,6 +166,7 @@ public class MyController {
     // Clipboard
     private List<ClipNote> clipboard = null;
     private boolean clipboardMultiTrack = false;
+    private boolean clipboardTipVisible = false;
     // PASTE mode state
     private boolean pendingPaste = false;
     private int pasteCurrentRow = -1;
@@ -371,7 +372,17 @@ public class MyController {
     public void showClipboardTip() {
         double tipX = Settings.getScreenWidth() / 2.0;
         double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
+        this.buttons.hideTip();
         this.buttons.showCustomTip(I18n.t("clipboard.full.tip"), tipX, tipY);
+        this.clipboardTipVisible = true;
+        this.lastTipButton = -1;
+    }
+
+    public void clearClipboardTip() {
+        if (clipboardTipVisible) {
+            clipboardTipVisible = false;
+            this.buttons.hideTip();
+        }
     }
 
     /**
@@ -1526,6 +1537,7 @@ public class MyController {
      * @param shiftDown true if the Shift key is held (erase mode)
      */
     public void onMousePressed(double posX, double posY, boolean shiftDown, boolean ctrlDown, boolean altDown) {
+        clipboardTipVisible = false;
         this.buttons.hideTip();
         lastTipButton = -1;
         lastTipKeyRow = -1;
@@ -2067,6 +2079,7 @@ public class MyController {
     private int lastTipGridBeatCol = -1;
 
     public void onMouseMoved(double posX, double posY) {
+        if (clipboardTipVisible) return;
         int button = this.buttons.whichButton(posX, posY);
         if (button != -1) {
             if (button != lastTipButton) {

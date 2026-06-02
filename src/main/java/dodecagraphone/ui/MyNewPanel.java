@@ -359,7 +359,15 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             this.repinta(true);
             return;
         }
+        controller.clearClipboardTip();
         controller.getButtons().hideTip();
+        // Escape: desselecciona
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            controller.clearSelection();
+            controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+            this.repinta(true);
+            return;
+        }
         // Enter: col·loca el canvi pendent (scoreChange o column op) al playBar
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             controller.clearSelection();
