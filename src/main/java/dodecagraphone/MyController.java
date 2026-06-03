@@ -167,6 +167,8 @@ public class MyController {
     private List<ClipNote> clipboard = null;
     private boolean clipboardMultiTrack = false;
     private boolean clipboardTipVisible = false;
+    /** Instant (nanoTime) en què va acabar l'última reproducció. S'usa per detectar idle llarg. */
+    private volatile long lastPlayEndNanos = 0;
     // PASTE mode state
     private boolean pendingPaste = false;
     private int pasteCurrentRow = -1;
@@ -2212,6 +2214,15 @@ public class MyController {
         boolean[] metroIsMeasure = new boolean[metroBufSize];
         allPurposeScore.computeBeatMeasureLines(metroBufSize, metroIsBeat, metroIsMeasure);
         Thread playbackThread = new Thread(() -> {
+            // Warmup de l'àudio: si fa més de 30 s que no s'ha reproduït res,
+            // el driver d'àudio pot estar en repòs i introduir ~2 compassos de
+            // latència inicial. Tocar una nota inaudible (vel=1, canal de percussió)
+            // premia el pipeline i el sleep dona temps al driver a despertar-se.
+            long idleNanos = System.nanoTime() - lastPlayEndNanos;
+            if (lastPlayEndNanos == 0 || idleNanos > 30_000_000_000L) { // > 30 s
+                SoundWithMidi.playMetronomeTick(SoundWithMidi.METRONOME_NOTE_WEAK, 1);
+                try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
+            }
             long nextStep = System.nanoTime();
             // long nanosPerStep = (long) MyTempo.getNanosPerSquareGrid(); // o calcula-ho
 //            Utilities.printOutWithPriority(true,"MyController::play():");
@@ -2269,6 +2280,14 @@ public class MyController {
                 while (System.nanoTime() < nextStep) {
                     Thread.onSpinWait();
                 }
+            }
+            lastPlayEndNanos = System.nanoTime();
+        });
+        playbackThread.start();
+    }
+//  ── old_play (codi comentat) ──────────────────────────────────────────────────
+
+//    public void old_play_desglossat_2() {
 //                long nanosPerSquare = (long) Math.floor(MyTempo.getNanosPerSquareGrid());
 //                long sleepTime = nanosPerSquare - this.cam.getTimer().elapsedNanos();
 //                if (sleepTime > 0) {
@@ -2284,18 +2303,11 @@ public class MyController {
 //                long residualTime = nanosPerSquare - this.cam.getTimer().elapsedNanos();
 //                Utilities.printOutWithPriority(1,"MyController::play(): residual time = " + residualTime);
 //                cam.getTimer().reset();
-//            
-//        
-////                nextStep += (long) MyTempo.getNanosPerSquareGrid(); 
+//
+//
+////                nextStep += (long) MyTempo.getNanosPerSquareGrid();
 ////                long sleepTime = nextStep - System.nanoTime();
-//                
-            }
-        });
-        playbackThread.start();
-//        System.out.println("MyController::play, playBarCol = "+cam.getPlayBar()+" nColsCam = "+Settings.getnColsCam()+
-//                " currentCol = "+this.allPurposeScore.getCurrentCol()+
-//                " delay = "+this.allPurposeScore.getDelay(!this.allPurposeScore.isUseScreenKeyboardRight()));
-    }
+//
 
 //    public void old_play_desglossat() {
 //        this.cam.play();
