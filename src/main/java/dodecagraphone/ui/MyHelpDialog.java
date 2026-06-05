@@ -407,7 +407,6 @@ public class MyHelpDialog {
             { "ui.language",                          I18n.t("help.config.language.desc") },
             { "isMetallophone",                       I18n.t("help.config.metallophone.desc") },
             { "lowestMidi / highestMidi",             I18n.t("help.config.midirange.desc") },
-            { "tipsVisible",                          I18n.t("help.config.tips.desc") },
             { "screenWidthRatio / screenHeightRatio", I18n.t("help.config.window.desc") },
             { "nMeasuresCam",                         I18n.t("help.config.camera.desc") },
             { "nColsQuarter",                         I18n.t("help.config.resolution.desc") },
