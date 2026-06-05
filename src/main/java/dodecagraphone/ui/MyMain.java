@@ -7,6 +7,7 @@ package dodecagraphone.ui;
 
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import java.io.IOException;
 import java.util.Locale;
 import javax.swing.UIManager;
 
@@ -41,6 +42,10 @@ public class MyMain {
         AppConfig.get().init();
         String langTag = AppConfig.get().get("ui.language", "ca");
         I18n.initFromLanguageTag(langTag);
+        // Reescriu el config amb comentaris localitzats (I18n ja inicialitzat).
+        // Necessari perquè installUserConfigIfMissing no pot traduir els #i18n:
+        // abans que I18n estigui llest.
+        try { AppConfig.get().save(); } catch (IOException ignored) {}
         Locale.setDefault(I18n.getLocale());
         JComponent.setDefaultLocale(I18n.getLocale());
 
