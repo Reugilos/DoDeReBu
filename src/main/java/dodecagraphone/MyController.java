@@ -727,14 +727,15 @@ public class MyController {
         int fontSize = Math.max(8, (int)(Settings.getRowHeight() * 0.85));
         Font font = new Font("Dialog", Font.BOLD, fontSize);
         g.setFont(font);
-        if(this.isNeedsDrawing()){
-            Utilities.printOutWithPriority(5, "MyController::redraw: count = " + count3++);
-            g.setColor(Color.WHITE);
-            g.fillRect(0, 0, pw, ph);
-            drawStripsBackground(g);
-            this.screen.draw(g);
-//            System.out.println("MyController::redraw(): "+count3++);
-        }
+        // Sempre blit·ejem el buffer offscreen (ja actualitzat) a la pantalla.
+        // needsDrawing controlava si es dibuixava, però això deixava la pantalla
+        // en blanc en restaurar la finestra o obrir diàlegs (OS repaint sense
+        // que needsDrawing fos true). El buffer offscreen és barat de copiar.
+        Utilities.printOutWithPriority(5, "MyController::redraw: count = " + count3++);
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, pw, ph);
+        drawStripsBackground(g);
+        this.screen.draw(g);
         this.setNeedsDrawing(false);
 //        aux++;
         //System.out.flush();
@@ -1823,6 +1824,7 @@ public class MyController {
         double clampedX  = selAutoScrollDir > 0 ? gridRight - 1 : gridLeft + 1;
         int row = allPurposeScore.whichRow(clampedX, lastSelectDragY);
         if (row != -1) selEndRow = row;
+        updateTextOfButtons();
         allPurposeScore.drawCurrentCamInOffscreen();
         getUi().getPanel().repinta(true);
     }

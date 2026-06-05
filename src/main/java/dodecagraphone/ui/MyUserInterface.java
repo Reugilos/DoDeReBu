@@ -71,17 +71,27 @@ public class MyUserInterface extends JFrame {
             bounds.y = workArea.y + workArea.height - bounds.height;
         setBounds(bounds);
 
-        this.setVisible(true);
-        // Maximitzem DESPRÉS de setVisible perquè Windows guardi les restored bounds
-        // (del setBounds anterior) i les apliqui quan l'usuari torni al mode finestra.
-        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        // Inicialitzem Settings amb les dimensions reals del panel maximitzat
+        // ABANS de setVisible, perquè el primer paint ja trobi els buffers
+        // offscreen al tamany correcte i no hi hagi flash de tamany petit.
+        // Els insets (títol + vores) ja els coneixem del pack().
+        java.awt.Insets insets = getInsets();
+        int panelW = workArea.width  - insets.left - insets.right;
+        int panelH = workArea.height - insets.top  - insets.bottom;
+        if (panelW > 0 && panelH > 0) {
+            Settings.setScreenPixelDimensions(panelW, panelH);
+            controller.onScreenResized();
+        }
 
-        // Un cop la finestra és visible i maximitzada, forcem el reposicionament
-        // amb les dimensions reals del panell (componentResized pot no haver disparat)
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        this.setVisible(true);
+
+        // Correcció final amb les dimensions reals del panel (per si els insets
+        // estimats diferien lleugerament de les dimensions definitives).
         SwingUtilities.invokeLater(() -> {
             int w = panel.getWidth();
             int h = panel.getHeight();
-            if (w > 0 && h > 0) {
+            if (w > 0 && h > 0 && (w != panelW || h != panelH)) {
                 Settings.setScreenPixelDimensions(w, h);
                 controller.onScreenResized();
             }
