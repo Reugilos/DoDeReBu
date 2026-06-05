@@ -1803,15 +1803,17 @@ public class MyController {
         boolean left = !allPurposeScore.isUseScreenKeyboardRight();
         int initCol = Settings.getInitialCurrentCol(left, allPurposeScore);
         if (selAutoScrollDir > 0) {
-            // Scroll dreta: mostrar columnes posteriors
-            if (allPurposeScore.getCurrentCol() > initCol) {
-                allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
+            // Scroll dreta: augmentar currentCol mostra columnes posteriors
+            // (mateix comportament que onPrevColButtonPressed)
+            if (allPurposeScore.getCurrentCol() < allPurposeScore.getNColsBuffer() - 1) {
+                allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
                 selEndCol = Math.min(selEndCol + 1, allPurposeScore.getNColsBuffer() - 1);
             }
         } else {
-            // Scroll esquerra: mostrar columnes anteriors
-            if (allPurposeScore.getCurrentCol() < allPurposeScore.getNColsBuffer() - 1) {
-                allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
+            // Scroll esquerra: disminuir currentCol mostra columnes anteriors
+            // (mateix comportament que onNextColButtonPressed)
+            if (allPurposeScore.getCurrentCol() > initCol) {
+                allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
                 selEndCol = Math.max(selEndCol - 1, 0);
             }
         }
@@ -1822,7 +1824,7 @@ public class MyController {
         int row = allPurposeScore.whichRow(clampedX, lastSelectDragY);
         if (row != -1) selEndRow = row;
         allPurposeScore.drawCurrentCamInOffscreen();
-        drawFull(true);
+        getUi().getPanel().repinta(true);
     }
 
     public void onMouseReleased(double posX, double posY) {
