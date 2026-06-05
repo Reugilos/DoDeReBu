@@ -67,6 +67,7 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.Track;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 /**
  * [CA] Controlador principal de l'aplicació DoDeReBu. Gestiona tota la lògica
@@ -163,6 +164,10 @@ public class MyController {
     private int selEndRow   = -1;
     private int selEndCol   = -1;
     private boolean selectionActive = false;
+    // Auto-scroll durant SELECT drag
+    private Timer    selAutoScrollTimer = null;
+    private int      selAutoScrollDir   = 0;   // +1 = dreta, -1 = esquerra
+    private double   lastSelectDragY    = 0;   // última Y del ratolí en SELECT drag
     // Clipboard
     private List<ClipNote> clipboard = null;
     private boolean clipboardMultiTrack = false;
@@ -1549,7 +1554,18 @@ public class MyController {
             this.needsSaving = true;
         }
 
-        /* Qualsevol clic sense Ctrl deselecciona la selecció activa.
+        /* Check MyButton PRIMER — els botons han de funcionar sempre, fins i tot
+           quan hi ha un canvi pendent. A més, els clics sobre botons no han
+           d'esborrar la selecció activa (l'usuari pot navegar sense perdre-la). */
+        int button = this.buttons.whichButton(posX, posY);
+        if (button != -1) {
+            this.buttons.onButtonPressed(button);
+            this.lastButtonPressed = button;
+            this.buttons.setModified(true);
+            return;
+        }
+
+        /* Qualsevol clic sense Ctrl FORA DELS BOTONS deselecciona la selecció activa.
            Guardem si érem en selecció per consumir el clic a la graella
            sense afegir nota. */
         boolean wasDeselecting = !ctrlDown && selectionActive;
@@ -1560,16 +1576,6 @@ public class MyController {
             this.allPurposeScore.drawCurrentCamInOffscreen();
             MyNewPanel panel = this.ui.getPanel();
             panel.paintImmediately(0, 0, panel.getWidth(), panel.getHeight());
-        }
-
-        /* Check MyButton PRIMER — els botons han de funcionar sempre, fins i tot
-           quan hi ha un canvi pendent. */
-        int button = this.buttons.whichButton(posX, posY);
-        if (button != -1) {
-            this.buttons.onButtonPressed(button);
-            this.lastButtonPressed = button;
-            this.buttons.setModified(true);
-            return;
         }
 
         /* Col·locar canvi pendent: qualsevol clic a la zona de la càmera col·loca
@@ -1776,6 +1782,49 @@ public class MyController {
      * @param posX
      * @param posY
      */
+    private void startSelectAutoScroll(int dir) {
+        if (selAutoScrollTimer != null && selAutoScrollTimer.isRunning()
+                && selAutoScrollDir == dir) return;
+        stopSelectAutoScroll();
+        selAutoScrollDir = dir;
+        selAutoScrollTimer = new Timer(60, e -> doSelectAutoScroll());
+        selAutoScrollTimer.start();
+    }
+
+    private void stopSelectAutoScroll() {
+        if (selAutoScrollTimer != null) {
+            selAutoScrollTimer.stop();
+            selAutoScrollTimer = null;
+        }
+    }
+
+    private void doSelectAutoScroll() {
+        if (dragMode != DragMode.SELECT) { stopSelectAutoScroll(); return; }
+        boolean left = !allPurposeScore.isUseScreenKeyboardRight();
+        int initCol = Settings.getInitialCurrentCol(left, allPurposeScore);
+        if (selAutoScrollDir > 0) {
+            // Scroll dreta: mostrar columnes posteriors
+            if (allPurposeScore.getCurrentCol() > initCol) {
+                allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() - 1);
+                selEndCol = Math.min(selEndCol + 1, allPurposeScore.getNColsBuffer() - 1);
+            }
+        } else {
+            // Scroll esquerra: mostrar columnes anteriors
+            if (allPurposeScore.getCurrentCol() < allPurposeScore.getNColsBuffer() - 1) {
+                allPurposeScore.setCurrentCol(allPurposeScore.getCurrentCol() + 1);
+                selEndCol = Math.max(selEndCol - 1, 0);
+            }
+        }
+        // Actualitza fila si el ratolí segueix dins del grid verticalment
+        double gridLeft  = cam.getScreenX(0);
+        double gridRight = gridLeft + cam.getWidth();
+        double clampedX  = selAutoScrollDir > 0 ? gridRight - 1 : gridLeft + 1;
+        int row = allPurposeScore.whichRow(clampedX, lastSelectDragY);
+        if (row != -1) selEndRow = row;
+        allPurposeScore.drawCurrentCamInOffscreen();
+        drawFull(true);
+    }
+
     public void onMouseReleased(double posX, double posY) {
         /* XiloKey. */
         if (this.lastXiloKeyPressed != -1) {
@@ -1788,6 +1837,7 @@ public class MyController {
         /* MyGridSquare. */
         if (this.lastRowPressed != -1) {
             if (dragMode == DragMode.SELECT) {
+                stopSelectAutoScroll();
                 dragMode = DragMode.NONE;
                 this.lastRowPressed = -1;
                 this.lastColPressed = -1;
@@ -1957,13 +2007,28 @@ public class MyController {
         if (dragMode == DragMode.NONE) return;
 
         if (dragMode == DragMode.SELECT) {
-            int newRow = this.allPurposeScore.whichRow(posX, posY);
-            int newCol = this.allPurposeScore.whichCol();
-            if (newRow == -1 || newCol == -1) return;
-            showBeatColTip(newCol, posX, posY);
-            selEndRow = newRow;
-            selEndCol = newCol;
-            this.drawFull(true);
+            lastSelectDragY = posY;
+            double gridLeft  = cam.getScreenX(0);
+            double gridRight = gridLeft + cam.getWidth();
+            boolean outsideLeft  = posX < gridLeft;
+            boolean outsideRight = posX > gridRight;
+
+            if (outsideLeft || outsideRight) {
+                // Actualitza la fila si el ratolí segueix dins del grid verticalment
+                int newRow = this.allPurposeScore.whichRow(
+                        outsideLeft ? gridLeft + 1 : gridRight - 1, posY);
+                if (newRow != -1) selEndRow = newRow;
+                startSelectAutoScroll(outsideRight ? +1 : -1);
+            } else {
+                stopSelectAutoScroll();
+                int newRow = this.allPurposeScore.whichRow(posX, posY);
+                int newCol = this.allPurposeScore.whichCol();
+                if (newRow == -1 || newCol == -1) return;
+                showBeatColTip(newCol, posX, posY);
+                selEndRow = newRow;
+                selEndCol = newCol;
+                this.drawFull(true);
+            }
             return;
         }
 
