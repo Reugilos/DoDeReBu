@@ -56,6 +56,7 @@ public class MyMidiScore extends MyExercise {
     // Mantindrem un mapa per seguir les notes actives (NOTE_ON) fins que es trobi el corresponent NOTE_OFF
     private Map<Long, NoteInfo> activeNotes = new HashMap<>();
     private int[] loadChannelDisplayOffset = new int[16];
+    private int outOfRangeCount = 0;
     //private MyMixer mixer;
 //    private Map<Integer, Boolean> activeChannels = new HashMap<>();
 
@@ -355,7 +356,10 @@ public class MyMidiScore extends MyExercise {
      *
      * @param fitxer [CA] ruta al fitxer MIDI / [EN] path to the MIDI file
      */
+    public int getOutOfRangeCount() { return outOfRangeCount; }
+
     public void readMidiScore(String fitxer) {
+        outOfRangeCount = 0;
         // defaults;
         this.choice.setNoneChoice();
         this.midiKey = ToneRange.getDefaultKey();
@@ -1083,9 +1087,11 @@ public class MyMidiScore extends MyExercise {
                 for (MyLyrics.LyricSegment seg : entry.getValue()) {
                     if (seg.text == null || seg.text.isEmpty()) continue;
                     long tick = (long) seg.col * ticksPerCol;
-                    // Standard Lyric Event (0xFF 0x05) al track MIDI corresponent
+                    // Standard Lyric Event (0xFF 0x05) al track MIDI corresponent,
+                    // només si el track té notes (evita confusió en lectors externs com MuseScore).
                     Track lMidiTrack = trackMap.get(lTrackId);
-                    if (lMidiTrack != null) {
+                    MyTrack mxTrack = controller.getMixer().getTrackFromId(lTrackId);
+                    if (lMidiTrack != null && mxTrack != null && !mxTrack.isEmpty()) {
                         MetaMessage lyricMsg = new MetaMessage();
                         byte[] ld = seg.text.getBytes(StandardCharsets.UTF_8);
                         try { lyricMsg.setMessage(0x05, ld, ld.length); lMidiTrack.add(new MidiEvent(lyricMsg, tick)); }
@@ -1615,6 +1621,9 @@ public class MyMidiScore extends MyExercise {
 //                int rectifiedPitch = noteInfo.getPitch() + 12 * ToneRange.getOctavesUp() + offset;  // OLD: octavesUp eliminat
                 int rectifiedPitch = noteInfo.getPitch() + offset;
 //                if (Settings.IS_BU) rectifiedPitch = noteInfo.getPitch();  // BUG: anul·lava l'offset sempre
+                if (rectifiedPitch < ToneRange.getLowestMidi() || rectifiedPitch > ToneRange.getHighestMidi()) {
+                    outOfRangeCount++;
+                }
                 placeNote(rectifiedPitch, ncols, false, false, chan, noteInfo.getTrack(), noteInfo.getVelocity());
             }
         }

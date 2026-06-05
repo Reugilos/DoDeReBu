@@ -3782,6 +3782,14 @@ public class MyController {
             int estimatedCols = estimateLastColFromMidi(fitxer);
             allPurposeScore.setNColsBuffer(computeInitialBufferSize(Math.max(0, estimatedCols)));
             allPurposeScore.readMidiScore(fitxer);
+            int outOfRange = allPurposeScore.getOutOfRangeCount();
+            if (outOfRange > 0) {
+                String msg = I18n.f("load.outOfRange.warning", outOfRange)
+                        + (ToneRange.isMetallophone() ? "\n" + I18n.t("load.outOfRange.metallofonHint") : "");
+                JOptionPane.showMessageDialog(null, msg,
+                        I18n.t("load.outOfRange.title"),
+                        JOptionPane.WARNING_MESSAGE);
+            }
             resetDrumsMode();
             resetTremolo();
             for (MyTrack t : this.mixer.getTracks()) {
