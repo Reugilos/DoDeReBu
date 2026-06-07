@@ -1991,8 +1991,15 @@ public class MyGridScore extends MyComponent {
         this.baseNColsBeat     = nColsBeat;
         this.baseNBeatsMeasure = nBeatsMeasure;
         this.baseBeatFigure    = beatFig;
-        // Calcula i congela el nombre de columnes per pàgina (valor fix per a la navegació)
+        // Actualitza Settings i la càmera perquè el layout (colWidth, nColsCam)
+        // reflecteixi sempre el compàs base, no el compàs del playbar actual.
+        Settings.setnBeatsMeasure(nBeatsMeasure);
+        Settings.setBeatFigure(beatFig);
+        Settings.updateNColsBeat();
         if (cam != null) {
+            int firstColToDraw = Math.max(0, getCurrentCol() - cam.getnCols());
+            cam.setnCols(Settings.getnColsCam());
+            setCurrentCol(firstColToDraw + cam.getnCols());
             this.fixedColsPerPage = getNumColsPage();
         }
     }

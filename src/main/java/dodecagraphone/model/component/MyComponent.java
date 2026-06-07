@@ -264,6 +264,17 @@ public abstract class MyComponent {
     }
 
     /**
+     * [CA] Estableix el nombre de columnes del component.
+     * <p>
+     * [EN] Sets the number of columns of the component.
+     *
+     * @param nCols [CA] nombre de columnes / [EN] number of columns
+     */
+    public void setnCols(int nCols) {
+        this.nCols = nCols;
+    }
+
+    /**
      * [CA] Retorna el nombre de files del component.
      * <p>
      * [EN] Returns the number of rows of the component.

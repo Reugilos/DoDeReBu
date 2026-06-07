@@ -987,9 +987,14 @@ public class MyController {
         int r2 = Math.max(selStartRow, selEndRow);
         int c1 = Math.min(selStartCol, selEndCol);
         int c2 = Math.max(selStartCol, selEndCol);
-        int res = MyDialogs.demanaConfirmacio(
-                I18n.t("copy.allTracks.confirm"), I18n.t("copy.allTracks.title"));
-        clipboardMultiTrack = (res == javax.swing.JOptionPane.YES_OPTION);
+        long activeTracks = mixer.getTracks().stream().filter(t -> !t.isDeleted()).count();
+        if (activeTracks > 1) {
+            int res = MyDialogs.demanaConfirmacio(
+                    I18n.t("copy.allTracks.confirm"), I18n.t("copy.allTracks.title"));
+            clipboardMultiTrack = (res == javax.swing.JOptionPane.YES_OPTION);
+        } else {
+            clipboardMultiTrack = false;
+        }
         clipboard = new ArrayList<>();
         if (clipboardMultiTrack) {
             for (int row = r1; row <= r2; row++) {
@@ -1070,9 +1075,15 @@ public class MyController {
         int c1 = Math.min(selStartCol, selEndCol);
         int c2 = Math.max(selStartCol, selEndCol);
         int selWidth = c2 - c1 + 1;
-        int res = MyDialogs.demanaConfirmacio(
-                I18n.t("copy.allTracks.confirm"), I18n.t("copy.allTracks.title"));
-        boolean allTracks = (res == javax.swing.JOptionPane.YES_OPTION);
+        long activeTracksR = mixer.getTracks().stream().filter(t -> !t.isDeleted()).count();
+        boolean allTracks;
+        if (activeTracksR > 1) {
+            int res = MyDialogs.demanaConfirmacio(
+                    I18n.t("copy.allTracks.confirm"), I18n.t("copy.allTracks.title"));
+            allTracks = (res == javax.swing.JOptionPane.YES_OPTION);
+        } else {
+            allTracks = false;
+        }
         mouseSequence = new MouseSequence(this);
         if (!toEnd) {
             pasteSelectionCopy(r1, r2, c1, c2, c2 + 1, c2 + selWidth, allTracks);
@@ -2439,7 +2450,7 @@ public class MyController {
         this.updateTextOfButtons();
         this.myChordSymbolLine.setNeedsDrawing(true);
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
-        this.allPurposeScore.drawCurrentCamInOffscreen();
+        this.allPurposeScore.drawFullGridinOffscreen();
         this.getUi().getPanel().repinta(true);
     }
 
@@ -3629,8 +3640,11 @@ public class MyController {
             MyTempo.setTempo(pendingChange.tempo);
         }
         pendingChange = null;
-        // Si el canvi és a la columna 0 actualitzem també la base de timing
-        if (col == 0) allPurposeScore.freezeBaseTimingParams();
+        // Si el canvi és a la columna 0 actualitzem també la base de timing i la doble barra
+        if (col == 0) {
+            allPurposeScore.freezeBaseTimingParams();
+            allPurposeScore.updateStopMarker();
+        }
         // Tanca el diàleg informatiu
         if (pendingChangeDialog != null) {
             pendingChangeDialog.dispose();
@@ -3698,8 +3712,10 @@ public class MyController {
                 : ToneRange.getDefaultMode());
         // Compàs: sempre apliquem un valor (el del canvi o el base), per garantir
         // que tornar enrere restauri el compàs original i no deixi el canvi encallat.
-        // NO actualitzem Settings.nBeatsMeasure ni Settings.nColsBeat perquè canviarien
-        // getnColsCam() i getColWidth(); computeBeatMeasureLines() usa baseNColsBeat.
+        // NO actualitzem Settings.nBeatsMeasure ni Settings.nColsBeat: el layout
+        // (colWidth, nColsCam) es basa sempre en el compàs base (col 0), gestionat
+        // per freezeBaseTimingParams(). Això garanteix colWidth constant en partitures
+        // amb canvis de compàs mid-score.
         allPurposeScore.setNumBeatsMeasure(sc.nBeatsMeasure != null
                 ? sc.nBeatsMeasure
                 : allPurposeScore.getBaseNBeatsMeasure());

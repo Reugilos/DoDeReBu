@@ -18,7 +18,9 @@ import dodecagraphone.ui.Utilities;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.swing.JOptionPane;
 
 /**
@@ -38,6 +40,7 @@ public class MyChoice {
 
     private List<Integer> choice;
     private boolean selecting = false;
+    private boolean extendedToFullRange = false;
     private MyController controller;
 
     /**
@@ -244,11 +247,39 @@ public class MyChoice {
      * @param step [CA] nombre de semitons a transposar (positiu cap amunt, negatiu cap avall) / [EN] semitones to transpose (positive up, negative down)
      */
     public void transposeChoice(int step){
-        if (choice!=null && !choice.isEmpty()){
-            for (int i=0;i<this.choice.size();i++){
-                choice.set(i,choice.get(i)+ step);
+        if (choice != null && !choice.isEmpty()){
+            for (int i = 0; i < this.choice.size(); i++){
+                choice.set(i, choice.get(i) + step);
+            }
+            // Si estava estès a tot el teclat, re-extendre des de les classes
+            // de to actuals perquè les vores segueixin cobertes.
+            if (extendedToFullRange) {
+                reExtendFromCurrentPitchClasses();
             }
         }
+    }
+
+    /**
+     * [CA] Re-extén l'elecció a tot el rang del teclat a partir de les classes
+     * de to actuals. Usada després de transposar una elecció "full range".
+     * <p>
+     * [EN] Re-extends the choice to the full keyboard range from the current
+     * pitch classes. Used after transposing a full-range choice.
+     */
+    private void reExtendFromCurrentPitchClasses() {
+        Set<Integer> pitchClasses = new HashSet<>();
+        for (int v : choice) {
+            pitchClasses.add(((v % 12) + 12) % 12);
+        }
+        int lo = ToneRange.getLowestMidi();
+        int hi = ToneRange.getHighestMidi();
+        List<Integer> newChoice = new ArrayList<>();
+        for (int midi = lo - 12; midi <= hi + 12; midi++) {
+            if (pitchClasses.contains(((midi % 12) + 12) % 12)) {
+                newChoice.add(midi);
+            }
+        }
+        choice = newChoice; // ja ordenat per la iteració ascendent
     }
 
     /**
@@ -311,6 +342,7 @@ public class MyChoice {
      */
     public void setNoneChoice() {
         this.choice = new ArrayList<>();
+        extendedToFullRange = false;
         this.controller.getKeyboard().setShowChoice(true);
     }
 
@@ -320,6 +352,7 @@ public class MyChoice {
      * [EN] Sets the choice as the diatonic major scale (intervals: 0,2,4,5,7,9,11,12).
      */
     public void setDiatonicScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -330,6 +363,7 @@ public class MyChoice {
      * [EN] Sets the choice as the first 5 notes of the major scale (intervals: 0,2,4,5,7).
      */
     public void setFirstFiveScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -340,7 +374,9 @@ public class MyChoice {
      * [EN] Sets the choice as the full major scale (intervals: 0,2,4,5,7,9,11,12).
      */
     public void setMajorScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12}));
+        extendedToFullRange = false;
         this.controller.getKeyboard().setShowChoice(true);
     }
 
@@ -350,12 +386,16 @@ public class MyChoice {
      * [EN] Extends the current choice to the full available range by replicating it in upper and lower octaves.
      */
     public void extendChoiceToFullRange(){
-        List<Integer> currentChoice = choice;
+        List<Integer> currentChoice = new ArrayList<>(choice);
         choice.addAll(Utilities.listPlusConst(currentChoice, 12));
         choice.addAll(Utilities.listPlusConst(currentChoice, 24));
         choice.addAll(Utilities.listPlusConst(currentChoice, -12));
         choice.addAll(Utilities.listPlusConst(currentChoice, -24));
+        extendedToFullRange = true;
     }
+
+    public boolean isExtendedToFullRange() { return extendedToFullRange; }
+    public void setExtendedToFullRange(boolean v) { extendedToFullRange = v; }
 
     /**
      * [CA] Estableix l'elecció com l'escala major estesa a tot el rang.
@@ -363,6 +403,7 @@ public class MyChoice {
      * [EN] Sets the choice as the major scale extended to the full range.
      */
     public void setFullRangeMajorScaleChoice(){
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 11, 12}));
         extendChoiceToFullRange();
         this.controller.getKeyboard().setShowChoice(true);
@@ -374,6 +415,7 @@ public class MyChoice {
      * [EN] Sets the choice as the minor scale extended to the full range.
      */
     public void setFullRangeMinorScaleChoice(){
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 8, 10, 12}));
         extendChoiceToFullRange();
         this.controller.getKeyboard().setShowChoice(true);
@@ -385,6 +427,7 @@ public class MyChoice {
      * [EN] Sets the choice as the full chromatic scale.
      */
     public void setChromaticScaleChoice(){
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
             17, 18, 19, 20, 21, 22, 23, 24, 25}));
         this.controller.getKeyboard().setShowChoice(true);
@@ -396,6 +439,7 @@ public class MyChoice {
      * [EN] Sets the choice as the natural minor scale (intervals: 0,2,3,5,7,8,10,12).
      */
     public void setMinorScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 8, 10, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -406,6 +450,7 @@ public class MyChoice {
      * [EN] Sets the choice as the harmonic minor scale (intervals: 0,2,3,5,7,8,11,12).
      */
     public void setHarmonicMinorScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 8, 11, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -416,6 +461,7 @@ public class MyChoice {
      * [EN] Sets the choice as the pentatonic scale (intervals: 0,2,4,7,9,10).
      */
     public void setPentatonicScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 7, 9, 10}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -426,6 +472,7 @@ public class MyChoice {
      * [EN] Sets the choice as the major pentatonic scale (intervals: 0,2,4,7,9,12).
      */
     public void setPentatonicMajorScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 7, 9, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -436,6 +483,7 @@ public class MyChoice {
      * [EN] Sets the choice as the blues scale (intervals: 0,3,5,6,7,10,12).
      */
     public void setBluesScaleChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 5, 6, 7, 10, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -446,6 +494,7 @@ public class MyChoice {
      * [EN] Sets the choice as the major chord (intervals: 0,4,7,12).
      */
     public void setMajorChordChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 7, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -456,6 +505,7 @@ public class MyChoice {
      * [EN] Sets the choice as the minor chord (intervals: 0,3,7,12).
      */
     public void setMinorChordChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 7, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -466,6 +516,7 @@ public class MyChoice {
      * [EN] Sets the choice as the diminished chord (intervals: 0,3,6,12).
      */
     public void setDiminishedChordChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 6, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -476,6 +527,7 @@ public class MyChoice {
      * [EN] Sets the choice as the augmented chord (intervals: 0,4,8,12).
      */
     public void setAugmentedChordChoice() {
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 8, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -504,6 +556,7 @@ public class MyChoice {
             parsedList.add(Integer.parseInt(part.trim()));
         }
 
+        extendedToFullRange = false;
         this.choice = parsedList;
         Collections.sort(this.choice);
         this.controller.getKeyboard().setShowChoice(true);
@@ -521,6 +574,7 @@ public class MyChoice {
     public void setIntervalChoice(int interval) {
         while (interval>12) interval-=12;
         while (interval<-12) interval+=12;
+        extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, interval}));
         Collections.sort(choice);
         this.controller.getKeyboard().setShowChoice(true);
@@ -532,6 +586,7 @@ public class MyChoice {
      * [EN] Sets the default choice defined in {@code Settings.DEFAULT_CHOICE}.
      */
     public void setDefaultChoice() {
+        extendedToFullRange = false;
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_CHOICE));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -542,6 +597,7 @@ public class MyChoice {
      * [EN] Sets the two-octave default choice defined in {@code Settings.DEFAULT_CHOICE_2OCTAVES}.
      */
     public void setDefaultChoice2Octaves() {
+        extendedToFullRange = false;
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_CHOICE_2OCTAVES));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -552,6 +608,7 @@ public class MyChoice {
      * [EN] Sets the default minor choice defined in {@code Settings.DEFAULT_MINOR_CHOICE}.
      */
     public void setDefaultMinorChoice() {
+        extendedToFullRange = false;
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_MINOR_CHOICE));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -562,6 +619,7 @@ public class MyChoice {
      * [EN] Sets the two-octave default minor choice defined in {@code Settings.DEFAULT_MINOR_CHOICE_2OCTAVES}.
      */
     public void setDefaultMinorChoice2Octaves() {
+        extendedToFullRange = false;
         this.choice = new ArrayList<>(Arrays.asList(Settings.DEFAULT_MINOR_CHOICE_2OCTAVES));
         this.controller.getKeyboard().setShowChoice(true);
     }
@@ -585,6 +643,7 @@ public class MyChoice {
      * @param choice [CA] nova llista de valors MIDI / [EN] new list of MIDI values
      */
     public void setChoiceList(List<Integer> choice) {
+        extendedToFullRange = false;
         this.choice = new ArrayList<>(choice);
     }
 }

@@ -267,10 +267,12 @@ public class MyPatternScore extends MyGridScore {
 
         int colsPerMeasure = Settings.getnColsBeat() * getNumBeatsMeasure();
         if (colsPerMeasure <= 0) colsPerMeasure = 1;
+        int minStopCol = Settings.getnColsCam(); // sempre almenys una pàgina
         if (endOfScore <= 0) {
-            stopCol = colsPerMeasure;
+            stopCol = minStopCol;
         } else {
             stopCol = ((endOfScore + colsPerMeasure - 1) / colsPerMeasure) * colsPerMeasure;
+            stopCol = Math.max(stopCol, minStopCol);
             stopCol = Math.min(stopCol, getNumCols());
         }
     }

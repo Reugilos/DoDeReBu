@@ -1294,9 +1294,11 @@ public class MyMidiScore extends MyExercise {
                             String raw = text.substring(7).replaceAll("[\\[\\] ]", "");
                             String[] tokens = raw.split(",");
                             Integer[] ch = Arrays.stream(tokens)
-                                    .map(Integer::parseInt) // no cal mapToInt, ja és Integer
-                                    .toArray(Integer[]::new); // crea Integer[] 
+                                    .map(Integer::parseInt)
+                                    .toArray(Integer[]::new);
                             this.choice.setChoiceList(Arrays.asList(ch));
+                        } else if (text.startsWith("choiceExtended=")) {
+                            this.choice.setExtendedToFullRange(Boolean.parseBoolean(text.substring(15)));
                         } else if (text.startsWith("midiKey=")) {
 //                            this.midiKey = Integer.parseInt(text.substring(8))+12*ToneRange.getOctavesUp();  // OLD: eliminat
                             this.midiKey = Integer.parseInt(text.substring(8));
@@ -1504,6 +1506,7 @@ public class MyMidiScore extends MyExercise {
 
             if (this.choice.getChoiceList() != null && !this.choice.getChoiceList().isEmpty()) {
                 addTextMeta(metaTrack, "choice=" + Arrays.toString(this.choice.getChoiceList().toArray()));
+                addTextMeta(metaTrack, "choiceExtended=" + this.choice.isExtendedToFullRange());
             }
             addTextMeta(metaTrack, "midiKey=" + this.midiKey);
             addTextMeta(metaTrack, "scaleMode=" + this.scaleMode);
