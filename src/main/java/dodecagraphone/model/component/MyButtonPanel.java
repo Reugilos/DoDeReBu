@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model.component;
 
@@ -552,6 +552,19 @@ public class MyButtonPanel extends MyComponent {
             togg.toggle();
         }
         this.controller.onPlayButtonPressed(togg);
+    }
+
+    public void resetFitAnacrusisButton() {
+        setFitAnacrusisButton(false);
+    }
+
+    public void setFitAnacrusisButton(boolean value) {
+        MyButton b = this.buttons.get(this.id_FitAnacrusisButton);
+        if (b instanceof MyToggle) {
+            MyToggle tog = (MyToggle) b;
+            if (tog.isPressed() != value) tog.toggle();
+        }
+        Settings.setFitAnacrusis(value);
     }
 
     /**

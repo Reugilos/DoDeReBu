@@ -3356,6 +3356,7 @@ public class MyController {
             detectAnacrusis();
         }
         Settings.setFitAnacrusis(togg.isPressed());
+        this.allPurposeScore.setFitAnacrusisScore(togg.isPressed());
         this.allPurposeScore.drawFullGridinOffscreen();
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
         this.myLyrics.setNeedsDrawing(true);
@@ -4048,6 +4049,8 @@ public class MyController {
                 sc0fix.tempo = midiTempo;
             }
             MyTempo.setTempo(sc0fix.tempo);
+            // Aplica fitAnacrusis desat al MIDI (sincronitza Settings i el botó).
+            this.buttons.setFitAnacrusisButton(this.allPurposeScore.isFitAnacrusisScore());
             this.allPurposeScore.initOffscreen();
             this.myChordSymbolLine.initOffscreen();
             // Sincronitza el track de visualització de lletres al primer que en té.

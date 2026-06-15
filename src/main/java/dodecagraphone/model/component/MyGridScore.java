@@ -125,6 +125,10 @@ public class MyGridScore extends MyComponent {
      */
     protected boolean showNoteNames;
     /**
+     * When set, the anacrusis is fitted to fill the first page.
+     */
+    protected boolean fitAnacrusis;
+    /**
      * Whwen set, note names are written in Mobile Do
      */
     protected boolean useMobileDo;
@@ -672,6 +676,9 @@ public class MyGridScore extends MyComponent {
     public void setShowNoteNames(boolean showNoteNames) {
         this.showNoteNames = showNoteNames;
     }
+
+    public boolean isFitAnacrusisScore() { return fitAnacrusis; }
+    public void setFitAnacrusisScore(boolean v) { this.fitAnacrusis = v; }
 
     /**
      * getter.

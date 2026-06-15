@@ -114,7 +114,7 @@ Ctrl+Z usa `drawCurrentCamInOffscreen()` (ràpid). **No** usar `drawFullGridinOf
 `getMeasureAndBeatAt` comença en compàs `0` si `hasAnacrusis`, en `1` si no. Independentment del flag `fitAnacrusis`.
 
 ### Fit anacrusis (botó Encabir/Fit)
-`Settings.fitAnacrusis` **no es persisteix** al config; sempre arrenca com a `false`.
+`Settings.fitAnacrusis` es persisteix al fitxer MIDI (text meta `fitAnacrusis=`). El valor per defecte és `false`. En carregar un MIDI, `loadScore()` aplica el valor via `buttons.setFitAnacrusisButton(allPurposeScore.isFitAnacrusisScore())`. Quan l'usuari prem el botó, `onFitAnacrusisButtonPressed` actualitza `Settings` i `allPurposeScore.fitAnacrusis`.
 Quan `fitAnacrusis && hasAnacrusis` a la primera pàgina, `draw()` estén `lastColToDraw` en un compàs extra (`nBeatsMeasure * nColsBeat`) → Java2D escala la imatge més ampla al mateix ample → columnes visuals més estretes.
 
 `MyGridScore.getCol()` compensa aquesta compressió: si `fitAnacrusis && hasAnacrusis && firstColToDraw == 0` (keyboard esquerre), usa:

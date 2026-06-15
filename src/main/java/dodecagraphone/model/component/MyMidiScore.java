@@ -365,6 +365,7 @@ public class MyMidiScore extends MyExercise {
         this.midiKey = ToneRange.getDefaultKey();
         this.usePentagramaStrips = true;
         this.showNoteNames = true;
+        this.fitAnacrusis = false;
         this.useMobileDo = false;
         this.useScreenKeyboardRight = false;
         this.setDefaultDelay();
@@ -727,6 +728,7 @@ public class MyMidiScore extends MyExercise {
                                 || text.startsWith("scaleMode=")
                                 || text.startsWith("usePentagramaStrips=")
                                 || text.startsWith("showNoteNames=")
+                                || text.startsWith("fitAnacrusis=")
                                 || text.startsWith("useMobileDo=")
                                 || text.startsWith("useScreenKeyboardRight=")
                                 || text.startsWith("description=")
@@ -1338,6 +1340,8 @@ public class MyMidiScore extends MyExercise {
                         } else if (text.startsWith("showNoteNames=")) {
                             String sub = text.substring(14); // ara
                             this.showNoteNames = Boolean.parseBoolean(sub);
+                        } else if (text.startsWith("fitAnacrusis=")) {
+                            this.fitAnacrusis = Boolean.parseBoolean(text.substring(13));
                         } else if (text.startsWith("useMobileDo=")) {
                             this.useMobileDo = Boolean.parseBoolean(text.substring(12));
                         } else if (text.startsWith("useScreenKeyboardRight=")) {
@@ -1542,6 +1546,7 @@ public class MyMidiScore extends MyExercise {
             addTextMeta(metaTrack, "scaleMode=" + this.scaleMode);
             addTextMeta(metaTrack, "usePentagramaStrips=" + this.usePentagramaStrips);
             addTextMeta(metaTrack, "showNoteNames=" + this.showNoteNames);
+            addTextMeta(metaTrack, "fitAnacrusis=" + this.fitAnacrusis);
             addTextMeta(metaTrack, "useMobileDo=" + this.useMobileDo);
             addTextMeta(metaTrack, "useScreenKeyboardRight=" + this.useScreenKeyboardRight);
 //            addTextMeta(metaTrack, "showMutted=" + this.showMutted);
