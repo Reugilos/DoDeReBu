@@ -3358,6 +3358,8 @@ public class MyController {
         Settings.setFitAnacrusis(togg.isPressed());
         this.allPurposeScore.drawFullGridinOffscreen();
         this.myChordSymbolLine.drawFullChordLineInOffscreen();
+        this.myLyrics.setNeedsDrawing(true);
+        this.myLyrics.drawFullLyricsInOffscreen();
         this.drawFull(true);
     }
 

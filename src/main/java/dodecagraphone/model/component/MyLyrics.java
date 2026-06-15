@@ -721,12 +721,16 @@ public class MyLyrics extends MyComponent {
 
             int numCols = score.getNumCols();
 
-            // Committed lyrics for the current display track
-            List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
-            if (segs != null && !segs.isEmpty()) {
-                offscreenGraphics.setColor(Color.BLACK);
-                for (LyricSegment seg : segs) {
-                    drawSegment(seg, offscreenGraphics);
+            // Committed lyrics for the current display track.
+            // Quan el fit comprimeix la vista (getFitScaleX()<1), el text confirmat es
+            // dibuixa en screen-space a draw() per evitar text borrós per la compressió offscreen.
+            if (getFitScaleX() >= 1.0) {
+                List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
+                if (segs != null && !segs.isEmpty()) {
+                    offscreenGraphics.setColor(Color.BLACK);
+                    for (LyricSegment seg : segs) {
+                        drawSegment(seg, offscreenGraphics);
+                    }
                 }
             }
 
@@ -866,11 +870,9 @@ public class MyLyrics extends MyComponent {
                     x1, y1, x1 + w, y1 + h,
                     x2, 0, x2 + w2, h);
 
-            // Preview en screen-space quan fit actiu: evita text borrós per compressió.
-            double fitScaleXPreview = getFitScaleX();
-            if (editMode && editBuffer.length() > 0
-                    && editTrack == displayTrackId
-                    && fitScaleXPreview < 1.0) {
+            // Text en screen-space quan fit actiu: evita text borrós per la compressió offscreen.
+            double fitScaleXScreen = getFitScaleX();
+            if (fitScaleXScreen < 1.0) {
                 Shape prevClip = g.getClip();
                 java.awt.Font prevFont = g.getFont();
                 Color prevColor = g.getColor();
@@ -878,17 +880,35 @@ public class MyLyrics extends MyComponent {
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                         RenderingHints.VALUE_ANTIALIAS_ON);
                 g.setFont(offscreenGraphics.getFont());
-                g.setColor(Color.DARK_GRAY);
-                FontMetrics fmPrev = g.getFontMetrics();
+                FontMetrics fmScreen = g.getFontMetrics();
                 double rowH = Settings.getRowHeight();
-                int previewX = colToScreenX(editCursorCol) + 2;
-                int textY = (int) Math.round(screenPosY + previewRow * rowH
-                        + (rowH + fmPrev.getAscent() - fmPrev.getDescent()) / 2.0);
-                java.awt.geom.AffineTransform oldAt = g.getTransform();
-                g.translate(previewX, textY);
-                g.scale(fitScaleXPreview, 1.0);
-                g.drawString(editBuffer.toString(), 0, 0);
-                g.setTransform(oldAt);
+                // Segments confirmats
+                List<LyricSegment> segsScreen = lyricsByTrack.get(displayTrackId);
+                if (segsScreen != null) {
+                    g.setColor(Color.BLACK);
+                    for (LyricSegment seg : segsScreen) {
+                        int segX = colToScreenX(seg.col) + 2;
+                        int segY = (int) Math.round(screenPosY + seg.row * rowH
+                                + (rowH + fmScreen.getAscent() - fmScreen.getDescent()) / 2.0);
+                        java.awt.geom.AffineTransform oldAt = g.getTransform();
+                        g.translate(segX, segY);
+                        g.scale(fitScaleXScreen, 1.0);
+                        g.drawString(seg.text, 0, 0);
+                        g.setTransform(oldAt);
+                    }
+                }
+                // Preview (text en curs d'edició)
+                if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {
+                    g.setColor(Color.DARK_GRAY);
+                    int previewX = colToScreenX(editCursorCol) + 2;
+                    int textY = (int) Math.round(screenPosY + previewRow * rowH
+                            + (rowH + fmScreen.getAscent() - fmScreen.getDescent()) / 2.0);
+                    java.awt.geom.AffineTransform oldAt = g.getTransform();
+                    g.translate(previewX, textY);
+                    g.scale(fitScaleXScreen, 1.0);
+                    g.drawString(editBuffer.toString(), 0, 0);
+                    g.setTransform(oldAt);
+                }
                 g.setFont(prevFont);
                 g.setColor(prevColor);
                 g.setClip(prevClip);
