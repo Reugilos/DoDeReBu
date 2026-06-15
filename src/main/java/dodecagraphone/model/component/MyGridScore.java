@@ -1178,6 +1178,14 @@ public class MyGridScore extends MyComponent {
             int ccol = getCurrentCol();
             int firstDrawCol = Math.max(0, ccol - Settings.getnColsCam());
             int lastDrawCol = ccol;//Math.min(ccol-delay, nCols);
+            // Quan fit+anacrusis és actiu, la vista mostra un compàs extra;
+            // cal redibuixar totes les columnes visibles perquè el drag sigui correcte.
+            if (!this.isUseScreenKeyboardRight()
+                    && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()
+                    && firstDrawCol == 0) {
+                int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                lastDrawCol = Math.min(lastDrawCol + extraCols, nCols);
+            }
 
             //------------------------------------
             boolean left = !this.isUseScreenKeyboardRight();
