@@ -1,11 +1,12 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.teclesControl;
 
 import dodecagraphone.MyController;
+import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.component.MyComponent;
 import dodecagraphone.model.component.MyGridSquare;
 import dodecagraphone.model.mixer.MyTrack;
@@ -101,8 +102,25 @@ public class MouseSequence extends Event {
         }
     }
 
+    private static class ChordChange {
+        final int col;
+        final Chord before;
+        ChordChange(int col, Chord before) { this.col = col; this.before = before; }
+    }
+
+    private static class LyricChange {
+        final int col;
+        final int trackId;
+        final String before; // text que hi havia (per desfer); no null
+        LyricChange(int col, int trackId, String before) {
+            this.col = col; this.trackId = trackId; this.before = before;
+        }
+    }
+
     private MyController controller;
     private final List<Change> changes = new ArrayList<>();
+    private final List<ChordChange> chordChanges = new ArrayList<>();
+    private final List<LyricChange> lyricChanges = new ArrayList<>();
 
     /**
      * [CA] Crea una nova seqüència de ratolí associada al controlador indicat.
@@ -124,7 +142,17 @@ public class MouseSequence extends Event {
      * @return [CA] {@code true} si no hi ha canvis / [EN] {@code true} if there are no changes
      */
     public boolean isEmpty() {
-        return changes.isEmpty();
+        return changes.isEmpty() && chordChanges.isEmpty() && lyricChanges.isEmpty();
+    }
+
+    /** Registra l'eliminació d'un acord per a undo/redo del cut. */
+    public void addChordRemove(int col, Chord before) {
+        chordChanges.add(new ChordChange(col, before));
+    }
+
+    /** Registra l'eliminació d'una síl·laba de lletra per a undo/redo del cut. */
+    public void addLyricRemove(int col, int trackId, String before) {
+        lyricChanges.add(new LyricChange(col, trackId, before));
     }
 
     /**
@@ -236,6 +264,20 @@ public class MouseSequence extends Event {
                         lastChange.visible, lastChange.muted, lastChange.linked, lastChange.dotted);
             }
         }
+        // Redo chord removals (re-remove chords that were cut)
+        if (!chordChanges.isEmpty()) {
+            for (ChordChange cc : chordChanges) {
+                controller.getAllPurposeScore().removeChordSymbol(cc.col);
+            }
+            controller.redrawChordLine();
+        }
+        // Redo lyric removals (re-remove lyrics that were cut)
+        if (!lyricChanges.isEmpty()) {
+            for (LyricChange lc : lyricChanges) {
+                controller.getMyLyrics().removeLyric(lc.col, lc.trackId);
+            }
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
+        }
     }
 
     /**
@@ -248,8 +290,12 @@ public class MouseSequence extends Event {
         for (int i = changes.size() - 1; i >= 0; i--) {
             Change c = changes.get(i);
             if (c.isLinkChange) {
-                applyLinkState(c.square, c.channel, c.trackId, c.velocity, c.visible, c.muted, c.dotted, c.linkedBefore);
-                c.square.updateState();
+                MyGridSquare actual = controller.getAllPurposeScore()
+                        .getGridSquare(c.square.getScoreRow(), c.square.getScoreCol());
+                if (actual != null) {
+                    applyLinkState(actual, c.channel, c.trackId, c.velocity, c.visible, c.muted, c.dotted, c.linkedBefore);
+                    actual.updateState();
+                }
                 continue;
             }
             MyTrack track = this.controller.getMixer().getTrackFromId(c.trackId);
@@ -267,6 +313,22 @@ public class MouseSequence extends Event {
                         c.channel, c.trackId, c.velocity, c.visible, c.muted, c.linked, c.dotted);
             }
             c.square.updateState();
+        }
+        // Undo chord removals (restore chords that were cut)
+        if (!chordChanges.isEmpty()) {
+            for (int i = chordChanges.size() - 1; i >= 0; i--) {
+                ChordChange cc = chordChanges.get(i);
+                controller.getAllPurposeScore().placeChordSymbol(cc.before, cc.col);
+            }
+            controller.redrawChordLine();
+        }
+        // Undo lyric removals (restore lyrics that were cut)
+        if (!lyricChanges.isEmpty()) {
+            for (int i = lyricChanges.size() - 1; i >= 0; i--) {
+                LyricChange lc = lyricChanges.get(i);
+                controller.getMyLyrics().setLyric(lc.col, lc.trackId, lc.before);
+            }
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
         }
     }
 }

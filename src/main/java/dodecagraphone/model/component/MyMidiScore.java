@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model.component;
 
@@ -673,6 +673,9 @@ public class MyMidiScore extends MyExercise {
                                 else if (p.startsWith("nBeatsMeasure=")) csc.nBeatsMeasure = Integer.parseInt(p.substring(14));
                                 else if (p.startsWith("beatFigure="))   csc.beatFigure = Integer.parseInt(p.substring(11));
                                 else if (p.startsWith("nColsQuarter=")) csc.nColsQuarter = Integer.parseInt(p.substring(13));
+                                else if (p.startsWith("nMeasuresCam="))  csc.nMeasuresCam  = Integer.parseInt(p.substring(13));
+                                else if (p.startsWith("measurePhase="))  csc.measurePhase  = Integer.parseInt(p.substring(13));
+                                else if (p.startsWith("colInBeatPhase=")) csc.colInBeatPhase = Integer.parseInt(p.substring(15));
                                 else if (p.startsWith("vel:")) {
                                     int eq = p.indexOf('=');
                                     if (eq > 4) {
@@ -785,6 +788,16 @@ public class MyMidiScore extends MyExercise {
                 sc0.tempo = MyTempo.getTempo(); // valor fixat per analyzeMidiHeader
             }
             MyTempo.setTempo(sc0.tempo);
+        }
+        // Elimina tracks fantasma: buits (nNotes==0) i sense contingut útil.
+        this.controller.getMixer().removeEmptyTracks();
+        // Neteja entrades de lyrics per tracks que ja no existeixen o estan eliminats.
+        if (this.controller.getMyLyrics() != null) {
+            this.controller.getMyLyrics().getLyricsByTrack().entrySet()
+                .removeIf(e -> {
+                    MyTrack t = this.controller.getMixer().getTrackFromId(e.getKey());
+                    return t == null || t.isDeleted();
+                });
         }
         this.controller.updateTextOfButtons();
         this.initOffscreen();
@@ -1084,6 +1097,8 @@ public class MyMidiScore extends MyExercise {
         if (lyrics != null) {
             for (Map.Entry<Integer, List<MyLyrics.LyricSegment>> entry : lyrics.getLyricsByTrack().entrySet()) {
                 int lTrackId = entry.getKey();
+                MyTrack lMxTrackCheck = controller.getMixer().getTrackFromId(lTrackId);
+                if (lMxTrackCheck == null || lMxTrackCheck.isDeleted()) continue;
                 for (MyLyrics.LyricSegment seg : entry.getValue()) {
                     if (seg.text == null || seg.text.isEmpty()) continue;
                     long tick = (long) seg.col * ticksPerCol;
@@ -1119,6 +1134,9 @@ public class MyMidiScore extends MyExercise {
             if (csc.nBeatsMeasure != null) sbCm.append("::nBeatsMeasure=").append(csc.nBeatsMeasure);
             if (csc.beatFigure != null)    sbCm.append("::beatFigure=").append(csc.beatFigure);
             if (csc.nColsQuarter != null)  sbCm.append("::nColsQuarter=").append(csc.nColsQuarter);
+            if (csc.nMeasuresCam  != null)  sbCm.append("::nMeasuresCam=").append(csc.nMeasuresCam);
+            if (csc.measurePhase  != null)  sbCm.append("::measurePhase=").append(csc.measurePhase);
+            if (csc.colInBeatPhase != null) sbCm.append("::colInBeatPhase=").append(csc.colInBeatPhase);
             for (java.util.Map.Entry<Integer, Integer> ve : csc.trackVelocities.entrySet()) {
                 sbCm.append("::vel:").append(ve.getKey()).append("=").append(ve.getValue());
             }
@@ -1176,9 +1194,8 @@ public class MyMidiScore extends MyExercise {
                 byte[] data = msg.getMessage();
                 int status = data[0] & 0xFF;
                 // Missatges de canal van de 0x80 a 0xEF
-                if (status >= 0x80 && status <= 0xEF) {
-//                if (status >= 0x80 && status < 0xA0) { note on and off
-                    return false; // Hi ha notes o controladors, no és metatrack
+                if (status >= 0x80 && status < 0xA0) { // NOTE_ON (0x90) i NOTE_OFF (0x80)
+                    return false; // Hi ha notes, no és metatrack
                 }
             }
         }
@@ -1259,6 +1276,17 @@ public class MyMidiScore extends MyExercise {
                         timeSignature = numerator + "/" + denominator;
                         this.setNumBeatsMeasure(numerator);
                         this.setBeatFigure(denominator);
+                        // Desa al changeMap perquè fitxers MIDI estàndard (sense
+                        // CHANGEMAP text) tinguin nBeatsMeasure visible a la chord line
+                        // i al diàleg de compàs. El CHANGEMAP (si n'hi ha) s'analitza
+                        // DESPRÉS i sobreescriu via mergeFrom si cal.
+                        int tpCol = getTicksPerCol();
+                        int tsCol = (tpCol > 0) ? (int)(event.getTick() / tpCol) : 0;
+                        java.util.TreeMap<Integer, MyGridScore.ScoreChange> cm = this.getChangeMap();
+                        MyGridScore.ScoreChange tsSC = cm.get(tsCol);
+                        if (tsSC == null) { tsSC = new MyGridScore.ScoreChange(); cm.put(tsCol, tsSC); }
+                        if (tsSC.nBeatsMeasure == null) tsSC.nBeatsMeasure = numerator;
+                        if (tsSC.beatFigure    == null) tsSC.beatFigure    = denominator;
                         if (LOCAL_VERBOSE) {
                             System.out.println("Time Signature: " + timeSignature);
                         }
@@ -1317,7 +1345,9 @@ public class MyMidiScore extends MyExercise {
 //                        } else if (text.startsWith("delay=")) {
 //                            this.delay = Integer.parseInt(text.substring(6));
                         } else if (text.startsWith("nMeasuresCam=")) {
-                            Settings.setnMeasuresCam(Integer.parseInt(text.substring(13)));
+                            // Text event legacy: nMeasuresCam era un global poc fiable.
+                            // No s'aplica: loadScore llegeix nMeasuresCam del CHANGEMAP (format nou).
+                            // Si el fitxer no té CHANGEMAP amb nMeasuresCam, s'usa el defecte (4).
                         } else if (text.startsWith("nColsQuarter=")) {
                             Settings.setnColsQuarter(Integer.parseInt(text.substring(13)));
                             Settings.updateNColsBeat();
@@ -1516,7 +1546,6 @@ public class MyMidiScore extends MyExercise {
             addTextMeta(metaTrack, "useScreenKeyboardRight=" + this.useScreenKeyboardRight);
 //            addTextMeta(metaTrack, "showMutted=" + this.showMutted);
 //            addTextMeta(metaTrack, "delay=" + this.delay);
-            addTextMeta(metaTrack, "nMeasuresCam=" + Settings.getnMeasuresCam());
             addTextMeta(metaTrack, "nColsQuarter=" + Settings.getnColsQuarter());
 //            int ntr = 0;
 //            for (int tr = 0; tr < this.controller.getMixer().getnTracks(); tr++) {

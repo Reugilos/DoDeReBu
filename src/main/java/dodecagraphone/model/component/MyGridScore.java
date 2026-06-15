@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model.component;
 
@@ -175,6 +175,13 @@ public class MyGridScore extends MyComponent {
         /** Nombre de columnes per beat (calculat a partir de nColsQuarter i beatFigure). */
         public Integer nColsBeat;
         public Integer nMeasuresCam;
+        /**
+         * Fase del comptador de beat en arribar a aquesta columna (null = reinicia a 0).
+         * Usada per fixar les posicions de les barres de compàs després d'inserir columnes.
+         */
+        public Integer measurePhase;
+        /** Fase del comptador de col-dins-beat en arribar a aquesta columna (null = reinicia a 0). */
+        public Integer colInBeatPhase;
         public final Map<Integer, Integer> trackVelocities = new HashMap<>();
 
         /**
@@ -191,6 +198,8 @@ public class MyGridScore extends MyComponent {
             if (other.nColsQuarter != null)  this.nColsQuarter = other.nColsQuarter;
             if (other.nColsBeat != null)     this.nColsBeat = other.nColsBeat;
             if (other.nMeasuresCam != null)  this.nMeasuresCam = other.nMeasuresCam;
+            if (other.measurePhase != null)  this.measurePhase = other.measurePhase;
+            if (other.colInBeatPhase != null) this.colInBeatPhase = other.colInBeatPhase;
             this.trackVelocities.putAll(other.trackVelocities);
         }
     }
@@ -1981,21 +1990,37 @@ public class MyGridScore extends MyComponent {
         int nColsBeat     = Settings.getnColsBeat();
         int nBeatsMeasure = this.numBeatsMeasure;
         int beatFig       = this.beatFigure;
-        // Si hi ha un canvi a la col 0, aplica'l sobre la base
+        // Si hi ha un canvi a la col 0, aplica'l sobre la base.
+        // Fallback: en fitxers MIDI estàndard el 0x58 pot caure a tsCol > 0 (anacrusa
+        // o primer tick no nul). En aquest cas, changeMap.get(0) és null però el primer
+        // SC del changeMap conté els paràmetres de compàs que cal usar com a base.
         ScoreChange sc0 = changeMap.get(0);
+        if (sc0 == null || (sc0.nColsBeat == null && sc0.nBeatsMeasure == null && sc0.beatFigure == null)) {
+            for (ScoreChange sc : changeMap.values()) {
+                if (sc.nBeatsMeasure != null || sc.nColsBeat != null || sc.beatFigure != null) {
+                    sc0 = sc;
+                    break;
+                }
+            }
+        }
+        boolean nColsBeatExplicit = false;
         if (sc0 != null) {
-            if (sc0.nColsBeat     != null) nColsBeat     = sc0.nColsBeat;
+            if (sc0.nColsBeat     != null) { nColsBeat = sc0.nColsBeat; nColsBeatExplicit = true; }
             if (sc0.nBeatsMeasure != null) nBeatsMeasure = sc0.nBeatsMeasure;
             if (sc0.beatFigure    != null) beatFig       = sc0.beatFigure;
         }
-        this.baseNColsBeat     = nColsBeat;
         this.baseNBeatsMeasure = nBeatsMeasure;
         this.baseBeatFigure    = beatFig;
         // Actualitza Settings i la càmera perquè el layout (colWidth, nColsCam)
         // reflecteixi sempre el compàs base, no el compàs del playbar actual.
+        // Si sc0 té nColsQuarter explícit, l'aplica a Settings abans d'updateNColsBeat
+        // per evitar usar el nColsQuarter del fitxer anterior (bug de re-càrrega).
+        if (sc0 != null && sc0.nColsQuarter != null) Settings.setnColsQuarter(sc0.nColsQuarter);
         Settings.setnBeatsMeasure(nBeatsMeasure);
         Settings.setBeatFigure(beatFig);
         Settings.updateNColsBeat();
+        // baseNColsBeat: si era explícit al sc0, usa'l; sinó, usa el valor actualitzat.
+        this.baseNColsBeat = nColsBeatExplicit ? nColsBeat : Settings.getnColsBeat();
         if (cam != null) {
             int firstColToDraw = Math.max(0, getCurrentCol() - cam.getnCols());
             cam.setnCols(Settings.getnColsCam());
@@ -2005,6 +2030,7 @@ public class MyGridScore extends MyComponent {
     }
 
     public int getBaseNBeatsMeasure() { return baseNBeatsMeasure; }
+    public int getBaseNColsBeat()     { return baseNColsBeat; }
     public int getBaseBeatFigure()    { return (baseBeatFigure > 0) ? baseBeatFigure : beatFigure; }
 
     public int getBaseColsPerMeasure() {
@@ -2054,6 +2080,11 @@ public class MyGridScore extends MyComponent {
      */
     public int getFixedColsPerPage() {
         return (fixedColsPerPage > 0) ? fixedColsPerPage : getNumColsPage();
+    }
+
+    /** Recalcula fixedColsPerPage amb la mida de pàgina actual. */
+    public void refreshFixedColsPerPage() {
+        fixedColsPerPage = getNumColsPage();
     }
 
 //    /**
@@ -2498,11 +2529,22 @@ public class MyGridScore extends MyComponent {
             // Aplica canvis de compàs registrats exactament en aquesta columna
             ScoreChange sc = changeMap.get(col);
             if (sc != null) {
+                boolean hasMeterChange = (sc.nColsBeat != null || sc.nBeatsMeasure != null
+                                          || sc.nColsQuarter != null);
                 if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
                 if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
-                // Reinicia els comptadors al punt de canvi
-                colInBeat     = 0;
-                beatInMeasure = 0;
+                if (hasMeterChange) {
+                    // Canvi explícit de compàs: reinicia a (0,0).
+                    // Ignora measurePhase/colInBeatPhase que podrien haver quedat
+                    // d'una correcció d'inserció anterior a la mateixa columna.
+                    colInBeat     = 0;
+                    beatInMeasure = 0;
+                } else {
+                    // SC de fase pura (de fixBarlinePhasesAfterInsert):
+                    // usa la fase guardada per preservar l'alineació de barres.
+                    colInBeat     = (sc.colInBeatPhase != null) ? sc.colInBeatPhase : 0;
+                    beatInMeasure = (sc.measurePhase   != null) ? sc.measurePhase   : 0;
+                }
             }
 
             if (colInBeat == 0) {

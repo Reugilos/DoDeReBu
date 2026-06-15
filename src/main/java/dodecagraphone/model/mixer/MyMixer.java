@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model.mixer;
 
@@ -792,6 +792,7 @@ public class MyMixer {
         } else if (index == this.getDrumsTrackId()){
             track = this.getDrumsTrack();
         } else {
+            if (index < 0 || index >= tracks.size()) return null;
             track = tracks.get(index);
         }
         return track;
@@ -901,6 +902,28 @@ public class MyMixer {
 //        }
 
         // Reassignem ID als MyTrack restants si és important
+        for (int i = 0; i < tracks.size(); i++) {
+            tracks.get(i).setSelected(i == currentTrack);
+        }
+    }
+
+    /**
+     * [CA] Elimina de la llista els tracks buits (nNotes==0, no nous) carregats des de fitxer.
+     * Després reassigna IDs i selecciona l'últim track vàlid.
+     * <p>
+     * [EN] Removes ghost tracks (nNotes==0, not new) loaded from file, then reassigns
+     * IDs and selects the last valid track.
+     */
+    public void removeEmptyTracks() {
+        for (MyTrack t : tracks) {
+            if (t.getnNotes() <= 0 && !t.isIsNew()) {
+                t.setDeleted(true);
+                t.setVisible(false);
+            }
+        }
+        int n = tracks.size() - 1;
+        while (n >= 0 && tracks.get(n).isDeleted()) n--;
+        currentTrack = n;
         for (int i = 0; i < tracks.size(); i++) {
             tracks.get(i).setSelected(i == currentTrack);
         }

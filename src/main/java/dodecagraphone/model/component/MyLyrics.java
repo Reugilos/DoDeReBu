@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model.component;
 
@@ -104,7 +104,22 @@ public class MyLyrics extends MyComponent {
      */
     public int whichCol(double screenX, double screenY) {
         if (this.contains(screenX, screenY)) {
-            int col = controller.getAllPurposeScore().getCol(screenX);
+            boolean left = !score.isUseScreenKeyboardRight();
+            int col;
+            if (left) {
+                int ccol = score.getCurrentCol();
+                int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
+                int lastColToDraw  = ccol;
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
+                }
+                double relX = screenX - screenPosX;
+                int visibleCols = lastColToDraw - firstColToDraw;
+                col = firstColToDraw + (int)(relX * visibleCols / (Settings.getColWidth() * Settings.getnColsCam()));
+            } else {
+                col = controller.getAllPurposeScore().getCol(screenX);
+            }
             col = Math.max(0, Math.min(col, score.getNumCols() - 1));
             return col;
         }
@@ -336,8 +351,13 @@ public class MyLyrics extends MyComponent {
      * committed store (it will be re-added on commit).
      */
     public void startEdit(int col, int track, double clickScreenX) {
-        // Snap to the nearest note start at or before the clicked column
+        // Snap to the nearest note start at or before the clicked column.
+        // Si no n'hi ha cap cap enrere (anacrusis buida), prova cap endavant.
         int noteCol = findNoteAtOrBefore(col, track);
+        if (noteCol < 0) {
+            noteCol = findNextCol(col - 1);  // col-1 perquè findNextCol comença a fromCol+1
+            if (noteCol >= score.getNumCols()) noteCol = -1;
+        }
         if (noteCol < 0) {
             MyDialogs.mostraMissatge(
                     I18n.t("myLyrics.noNotesBefore.warning"),
@@ -605,17 +625,30 @@ public class MyLyrics extends MyComponent {
      * @param col  score column
      * @return screen X in panel coordinates
      */
+    private double getFitScaleX() {
+        if (!score.isUseScreenKeyboardRight()
+                && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
+            int ccol = score.getCurrentCol();
+            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
+            if (firstColToDraw == 0) {
+                int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                int lastColToDraw = Math.min(ccol + extraCols, score.getNumCols());
+                int visibleCols = lastColToDraw - firstColToDraw;
+                if (visibleCols > 0) return (double) Settings.getnColsCam() / visibleCols;
+            }
+        }
+        return 1.0;
+    }
+
     private int colToScreenX(int col) {
         boolean left = !score.isUseScreenKeyboardRight();
         int ccol = score.getCurrentCol();
         if (left) {
             int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
+            double scaleX = getFitScaleX();
             return (int) Math.round(screenPosX
-                    + (col - firstColToDraw) * Settings.getColWidth());
+                    + (col - firstColToDraw) * Settings.getColWidth() * scaleX);
         } else {
-            // Teclat dret: mateixa fórmula que draw() perquè el cursor quedi alineat.
-            // screenPosX = 0 (càmera esquerra); s'afegeix firstCamColIn per compensar
-            // l'espai buit a l'inici quan ccol < nColsCam.
             int firstCamColIn  = Math.max(0, Settings.getnColsCam() - ccol);
             int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
             return (int) Math.round(screenPosX
@@ -697,9 +730,12 @@ public class MyLyrics extends MyComponent {
                 }
             }
 
-            // Preview: text currently being typed (shown in dark-grey)
+            // Preview: text currently being typed (shown in dark-grey).
+            // Quan el fit comprimeix la vista (getFitScaleX()<1), el preview es dibuixa
+            // en screen-space a draw() per evitar text borrós per la compressió offscreen.
             if (editMode && editBuffer.length() > 0
-                    && editTrack == displayTrackId) {
+                    && editTrack == displayTrackId
+                    && getFitScaleX() >= 1.0) {
                 offscreenGraphics.setColor(Color.DARK_GRAY);
                 LyricSegment preview = new LyricSegment(
                         editCursorCol, editTrack,
@@ -830,6 +866,34 @@ public class MyLyrics extends MyComponent {
                     x1, y1, x1 + w, y1 + h,
                     x2, 0, x2 + w2, h);
 
+            // Preview en screen-space quan fit actiu: evita text borrós per compressió.
+            double fitScaleXPreview = getFitScaleX();
+            if (editMode && editBuffer.length() > 0
+                    && editTrack == displayTrackId
+                    && fitScaleXPreview < 1.0) {
+                Shape prevClip = g.getClip();
+                java.awt.Font prevFont = g.getFont();
+                Color prevColor = g.getColor();
+                g.clipRect(x1, y1, w, h);
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setFont(offscreenGraphics.getFont());
+                g.setColor(Color.DARK_GRAY);
+                FontMetrics fmPrev = g.getFontMetrics();
+                double rowH = Settings.getRowHeight();
+                int previewX = colToScreenX(editCursorCol) + 2;
+                int textY = (int) Math.round(screenPosY + previewRow * rowH
+                        + (rowH + fmPrev.getAscent() - fmPrev.getDescent()) / 2.0);
+                java.awt.geom.AffineTransform oldAt = g.getTransform();
+                g.translate(previewX, textY);
+                g.scale(fitScaleXPreview, 1.0);
+                g.drawString(editBuffer.toString(), 0, 0);
+                g.setTransform(oldAt);
+                g.setFont(prevFont);
+                g.setColor(prevColor);
+                g.setClip(prevClip);
+            }
+
             // Línies de beat i compàs en screen-space per evitar que desapareguin
             // quan l'imatge s'escala amb fit-anacrusis.
             {
@@ -896,7 +960,11 @@ public class MyLyrics extends MyComponent {
                     : g.getFontMetrics();
             // Only measure the text to the LEFT of the cursor (not the full buffer)
             int safePos = Math.min(editCursorCharPos, editBuffer.length());
-            int typedPx = fm.stringWidth(editBuffer.substring(0, safePos));
+            int typedPxRaw = fm.stringWidth(editBuffer.substring(0, safePos));
+            // Aplica la mateixa scaleX que colToScreenX perquè el cursor coincideixi
+            // amb el text comprimit pel fit (sense comprimir quedaria fora del text).
+            double fitScaleX = getFitScaleX();
+            int typedPx = (int) Math.round(typedPxRaw * fitScaleX);
             int cursorX  = colToScreenX(editCursorCol) + 2 + typedPx;
             int cursorY1 = (int) Math.round(screenPosY + previewRow * rowH) + 2;
             int cursorY2 = (int) Math.round(screenPosY + (previewRow + 1) * rowH) - 2;

@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone;
 
@@ -34,6 +34,8 @@ import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.teclesControl.ChordEvent;
+import dodecagraphone.teclesControl.ClipChord;
+import dodecagraphone.teclesControl.ClipLyric;
 import dodecagraphone.teclesControl.ClipNote;
 import dodecagraphone.teclesControl.ColumnEvent;
 import dodecagraphone.teclesControl.Event;
@@ -170,6 +172,8 @@ public class MyController {
     private double   lastSelectDragY    = 0;   // última Y del ratolí en SELECT drag
     // Clipboard
     private List<ClipNote> clipboard = null;
+    private List<ClipChord> clipboardChords = new ArrayList<>();
+    private List<ClipLyric> clipboardLyrics = new ArrayList<>();
     private boolean clipboardMultiTrack = false;
     private boolean clipboardTipVisible = false;
     /** Instant (nanoTime) en què va acabar l'última reproducció. S'usa per detectar idle llarg. */
@@ -995,6 +999,29 @@ public class MyController {
         } else {
             clipboardMultiTrack = false;
         }
+        // Copia accords i lletres si el track actual és el chord track o si és multi-track
+        clipboardChords = new ArrayList<>();
+        clipboardLyrics = new ArrayList<>();
+        boolean includeChords = clipboardMultiTrack
+                || this.mixer.getCurrentTrackId() == this.mixer.getChordTrackId();
+        if (includeChords) {
+            for (Map.Entry<Integer, Chord> entry : allPurposeScore.getChordSimbolLine().entrySet()) {
+                int col = entry.getKey();
+                if (col >= c1 && col <= c2) {
+                    clipboardChords.add(new ClipChord(col - c1, entry.getValue()));
+                }
+            }
+            // Copia lletres de tots els tracks de la zona seleccionada
+            for (Map.Entry<Integer, List<MyLyrics.LyricSegment>> entry
+                    : myLyrics.getLyricsByTrack().entrySet()) {
+                int trackId = entry.getKey();
+                for (MyLyrics.LyricSegment seg : entry.getValue()) {
+                    if (seg.col >= c1 && seg.col <= c2) {
+                        clipboardLyrics.add(new ClipLyric(seg.col - c1, trackId, seg.text));
+                    }
+                }
+            }
+        }
         clipboard = new ArrayList<>();
         if (clipboardMultiTrack) {
             for (int row = r1; row <= r2; row++) {
@@ -1061,6 +1088,30 @@ public class MyController {
                     removeNoteAtCell(row, col);
                 }
             }
+        }
+        // Elimina accords de la selecció si n'hi ha al clipboard
+        if (!clipboardChords.isEmpty()) {
+            for (ClipChord cc : clipboardChords) {
+                int col = c1 + cc.colOffset;
+                Chord existing = allPurposeScore.getChordSimbolLine().get(col);
+                if (existing != null) {
+                    mouseSequence.addChordRemove(col, existing);
+                    allPurposeScore.removeChordSymbol(col);
+                }
+            }
+            redrawChordLine();
+        }
+        // Elimina lletres de la selecció si n'hi ha al clipboard
+        if (!clipboardLyrics.isEmpty()) {
+            for (ClipLyric cl : clipboardLyrics) {
+                int col = c1 + cl.colOffset;
+                String existing = myLyrics.getLyric(col, cl.trackId);
+                if (existing != null) {
+                    mouseSequence.addLyricRemove(col, cl.trackId, existing);
+                    myLyrics.removeLyric(col, cl.trackId);
+                }
+            }
+            myLyrics.drawFullLyricsInOffscreen();
         }
         if (!mouseSequence.isEmpty()) afegirEvent(mouseSequence);
         mouseSequence = null;
@@ -1333,9 +1384,43 @@ public class MyController {
             placed.add(n);
         }
         this.allPurposeScore.updateStopMarker();
-        if (!placed.isEmpty()) {
+        // Enganxa accords (si n'hi ha al clipboard) i registra-ho per a undo
+        Map<Integer, Chord> newChordsMap = new java.util.LinkedHashMap<>();
+        Map<Integer, Chord> oldChordsMap = new java.util.LinkedHashMap<>();
+        if (!clipboardChords.isEmpty()) {
+            for (ClipChord cc : clipboardChords) {
+                int col = anchorCol + cc.colOffset;
+                if (col < 0 || col >= this.allPurposeScore.getNumCols()) continue;
+                oldChordsMap.put(col, allPurposeScore.getChordSimbolLine().get(col));
+                allPurposeScore.placeChordSymbol(cc.chord, col);
+                newChordsMap.put(col, cc.chord);
+            }
+            redrawChordLine();
+        }
+        // Enganxa lletres (si n'hi ha al clipboard) i registra-ho per a undo
+        List<ClipLyric> newLyricsList = new ArrayList<>();
+        List<ClipLyric> oldLyricsList = new ArrayList<>();
+        boolean pasteLyrics = !clipboardLyrics.isEmpty()
+                && MyDialogs.demanaConfirmacio(
+                        I18n.t("paste.lyrics.confirm"),
+                        I18n.t("paste.lyrics.title")) == javax.swing.JOptionPane.YES_OPTION;
+        if (pasteLyrics) {
+            for (ClipLyric cl : clipboardLyrics) {
+                int col = anchorCol + cl.colOffset;
+                if (col < 0 || col >= this.allPurposeScore.getNumCols()) continue;
+                String oldText = myLyrics.getLyric(col, cl.trackId);
+                if (oldText != null) {
+                    oldLyricsList.add(new ClipLyric(col - anchorCol, cl.trackId, oldText));
+                }
+                myLyrics.setLyric(col, cl.trackId, cl.text);
+                newLyricsList.add(new ClipLyric(col - anchorCol, cl.trackId, cl.text));
+            }
+            myLyrics.drawFullLyricsInOffscreen();
+        }
+        if (!placed.isEmpty() || !newChordsMap.isEmpty() || !newLyricsList.isEmpty()) {
             afegirEvent(new PasteEvent(this, placed, anchorRow, anchorCol,
-                    pasteCh, pasteTr, clipboardMultiTrack));
+                    pasteCh, pasteTr, clipboardMultiTrack, newChordsMap, oldChordsMap,
+                    newLyricsList, oldLyricsList));
         }
         this.needsSaving = true;
     }
@@ -3379,17 +3464,15 @@ public class MyController {
     }
 
     private MeterData inputMeterDialog(MeterData defaultValue) {
-        Component parentComponent = this.getUi(); // o un JFrame/JPanel real
-
-        MeterData selection
-                = MeterDialog.show(
-                        parentComponent,
-                        defaultValue.meterType,
-                        defaultValue.meterPattern,
-                        ""
-                );
-
-        return selection;
+        Component parentComponent = this.getUi();
+        int currentNMeasuresCam = Settings.getnMeasuresCam();
+        return MeterDialog.show(
+                parentComponent,
+                defaultValue.meterType,
+                defaultValue.meterPattern,
+                "",
+                currentNMeasuresCam
+        );
     }
 
     public void onTimeSignatureButtonPressed(MyButton togg) {
@@ -3425,6 +3508,9 @@ public class MyController {
         sc.beatFigure    = newBeatFigure;
         sc.nColsQuarter  = newNColsQuarter;
         sc.nColsBeat     = newNColsBeat;
+        sc.nMeasuresCam  = selection.nMeasuresCam;
+        // NO canviem Settings.nMeasuresCam aquí: ho farà applyChangesAt quan el canvi
+        // es col·loqui. Canviar-lo ara desincronitzaria getColWidth() de cam.nCols.
         setPendingChange(sc, I18n.t("scoreChange.timeSignature"));
         togg.setPressed(false);
     }
@@ -3643,6 +3729,15 @@ public class MyController {
         // Si el canvi és a la columna 0 actualitzem també la base de timing i la doble barra
         if (col == 0) {
             allPurposeScore.freezeBaseTimingParams();
+            // Sincronitza numBeatsMeasure amb el nou compàs base abans de calcular stopCol
+            // (freezeBaseTimingParams no actualitza numBeatsMeasure, ho fa applyChangesAt,
+            // però applyChangesAt s'executa més tard, dins updateTextOfButtons).
+            // Patró idèntic al de loadScore (línies 3903-3913).
+            MyGridScore.ScoreChange sc0bm = allPurposeScore.getEffectiveChange(0);
+            if (sc0bm != null) {
+                if (sc0bm.nBeatsMeasure != null) allPurposeScore.setNumBeatsMeasure(sc0bm.nBeatsMeasure);
+                if (sc0bm.beatFigure    != null) allPurposeScore.setBeatFigure(sc0bm.beatFigure);
+            }
             allPurposeScore.updateStopMarker();
         }
         // Tanca el diàleg informatiu
@@ -3657,6 +3752,20 @@ public class MyController {
         this.cam.drawFullCamInOffscreen();
         this.statusLine.setText(scoreStatusText());
         this.updateTextOfButtons();
+        // applyChangesAt (cridat des d'updateTextOfButtons) pot haver canviat nMeasuresCam.
+        // Si getnColsCam() difereix de cam.getnCols(), redimensionem la càmera.
+        // Nota: freezeBaseTimingParams (per col==0) fa el resize des de Settings.nBeatsMeasure
+        // base; aquí resolem el cas general (col>0 i/o nMeasuresCam canviat).
+        int newNCols = Settings.getnColsCam();
+        if (cam != null && cam.getnCols() != newNCols) {
+            int firstColToDraw = Math.max(0, allPurposeScore.getCurrentCol() - cam.getnCols());
+            cam.setnCols(newNCols);
+            allPurposeScore.setCurrentCol(firstColToDraw + newNCols);
+            allPurposeScore.refreshFixedColsPerPage();
+            // Redibuixa els offscreens amb el nou layout
+            allPurposeScore.drawFullGridinOffscreen();
+            redrawChordLine();
+        }
         this.drawFull(true);
         return true;
     }
@@ -3858,12 +3967,18 @@ public class MyController {
             saveChordMidiChoice = null;
             this.stop();
             this.buttons.stopPlayButton();
+            this.buttons.resetFitAnacrusisButton();
             this.exercisesOn = false;
             this.buttons.updateCurrentExerciseButton("");
             this.updateTextOfButtons();
             allPurposeScore.resetAllPurposeScore();
             this.myLyrics.clear();
             this.mixer = new MyMixer(this);
+            // Reset compàs i compassos per pantalla per defecte: si el MIDI no té
+            // l'entrada al changeMap, s'usa el valor correcte en lloc del de la
+            // partitura anterior (p. ex. ¾ persistiria en carregar un 4/4 sense marca).
+            this.allPurposeScore.timeSignature2Params("4/4");
+            Settings.setnMeasuresCam(4);
             int estimatedCols = estimateLastColFromMidi(fitxer);
             allPurposeScore.setNColsBuffer(computeInitialBufferSize(Math.max(0, estimatedCols)));
             allPurposeScore.readMidiScore(fitxer);
@@ -3880,8 +3995,43 @@ public class MyController {
             for (MyTrack t : this.mixer.getTracks()) {
                 if (!t.isDeleted()) t.setAudible(true);
             }
-            allPurposeScore.updateStopMarker();
+            // Aplica nBeatsMeasure del changeMap abans de calcular stopCol:
+            // readMidiScore omple el changeMap però no crida applyChangesAt, de manera
+            // que numBeatsMeasure encara té el valor del reset (binari per defecte).
+            // Sense aquesta correcció, updateStopMarker calcula stopCol amb el compàs
+            // incorrecte i la doble barra de final apareix desplaçada en ritme ternari.
+            // Sincronitza numBeatsMeasure amb el compàs del fitxer perquè tant
+            // freezeBaseTimingParams com updateStopMarker usin el valor correcte.
+            // IMPORTANT: en fitxers MIDI estàndard amb anacrusa, el 0x58 pot caure a
+            // tsCol > 0 (no al col 0). En tal cas getEffectiveChange(0) retorna nBeatsMeasure=null.
+            // Fallback: busca el primer SC del changeMap amb dades de compàs.
+            MyGridScore.ScoreChange sc0bm = allPurposeScore.getEffectiveChange(0);
+            if (sc0bm == null || (sc0bm.nBeatsMeasure == null && sc0bm.beatFigure == null)) {
+                for (MyGridScore.ScoreChange sc : allPurposeScore.getChangeMap().values()) {
+                    if (sc.nBeatsMeasure != null || sc.beatFigure != null) { sc0bm = sc; break; }
+                }
+            }
+            if (sc0bm != null) {
+                if (sc0bm.nBeatsMeasure != null) allPurposeScore.setNumBeatsMeasure(sc0bm.nBeatsMeasure);
+                if (sc0bm.beatFigure    != null) allPurposeScore.setBeatFigure(sc0bm.beatFigure);
+            }
+            // Llegeix nMeasuresCam del CHANGEMAP SC col 0 (format nou, guardat per newScore/save).
+            // El text event legacy "nMeasuresCam=N" (format antic) s'ignora perquè podia
+            // contenir valors incorrectes de sessions anteriors.
+            // Si el fitxer no té nMeasuresCam al CHANGEMAP, s'usa el defecte (4).
+            {
+                int nmc = Settings.DEFAULT_NMEASURES_CAM;
+                MyGridScore.ScoreChange sc0nmc = allPurposeScore.getChangeMap().get(0);
+                if (sc0nmc != null && sc0nmc.nMeasuresCam != null) {
+                    nmc = sc0nmc.nMeasuresCam;
+                }
+                Settings.setnMeasuresCam(nmc);
+            }
+            // ORDRE IMPORTANT: freezeBaseTimingParams primer perquè actualitza
+            // Settings.nBeatsMeasure i getnColsCam(); updateStopMarker ho necessita
+            // per calcular minStopCol correctament (evita usar 4/4 en scores ternaris).
             allPurposeScore.freezeBaseTimingParams();
+            allPurposeScore.updateStopMarker();
             // Assegura que el changeMap té el tempo inicial del fitxer al col 0.
             // analyzeMidiHeader (dins readMidiScore) ja ha fixat MyTempo al tempo MIDI.
             // Si no hi ha cap entrada de tempo al col 0, n'afegim una implícita perquè
@@ -3924,6 +4074,7 @@ public class MyController {
         allPurposeScore.resetAllPurposeScore(); //new MyAllPurposeScore(this);
         this.allPurposeScore.clearScore();  // buida notes, acords i missatges
         Settings.setHasAnacrusis(false);
+        this.buttons.resetFitAnacrusisButton();
         this.myLyrics.clear();
         this.stop();
         this.buttons.stopPlayButton();
@@ -3932,11 +4083,14 @@ public class MyController {
         Settings.setnMeasuresCam(4);
         // Restaura el compàs per defecte (4/4) i recalcula nColsBeat
         this.allPurposeScore.timeSignature2Params("4/4");
-        // Marques per defecte a la columna 0 (tempo i tonalitat)
+        // Marques per defecte a la columna 0 (tempo, tonalitat i compàs)
         MyGridScore.ScoreChange defaultMarks = new MyGridScore.ScoreChange();
-        defaultMarks.tempo    = Settings.getDefaultTempo();
-        defaultMarks.midiKey  = ToneRange.getDefaultKey();
-        defaultMarks.scaleMode = 'M'; // per defecte Major
+        defaultMarks.tempo        = Settings.getDefaultTempo();
+        defaultMarks.midiKey      = ToneRange.getDefaultKey();
+        defaultMarks.scaleMode    = 'M'; // per defecte Major
+        defaultMarks.nBeatsMeasure = allPurposeScore.getNumBeatsMeasure();
+        defaultMarks.beatFigure    = allPurposeScore.getBeatFigure();
+        defaultMarks.nMeasuresCam  = Settings.getnMeasuresCam();
         this.allPurposeScore.setScoreChange(0, defaultMarks);
         MyTempo.setTempo(Settings.getDefaultTempo());
         allPurposeScore.freezeBaseTimingParams();
@@ -3988,7 +4142,6 @@ public class MyController {
         // The user sets them by editing config.properties while the app is closed.
         // Saving them here would overwrite manual edits made between runs.
         AppConfig.get().set("autoCorrect", "" + Settings.isAutoCorrect());
-        AppConfig.get().set("nMeasuresCam", "" + Settings.getnMeasuresCam());
         AppConfig.get().set("nColsQuarter", "" + Settings.getnColsQuarter());
         AppConfig.get().set("nColsScore", "" + Settings.getnColsScore());
         AppConfig.get().set("isMetallophone", "" + ToneRange.isMetallophone());
@@ -4219,6 +4372,8 @@ public class MyController {
         }
         allPurposeScore.drawFullGridinOffscreen();
         redrawChordLine();
+        myLyrics.setNeedsDrawing(true);
+        myLyrics.drawFullLyricsInOffscreen();
         if (this.getUi() != null && this.getUi().getPanel() != null) {
             this.getUi().getPanel().repinta(true);
         }
@@ -4259,6 +4414,76 @@ public class MyController {
     /** Inserts n columns at col, extending notes that span the insertion point. */
     public void insertNColumnsAt(int col, int n) {
         for (int i = 0; i < n; i++) insertColumnAt(col);
+        fixBarlinePhasesAfterInsert(col, n);
+    }
+
+    /**
+     * Després d'inserir N columnes a col, afegeix un ScoreChange a col+n que
+     * reinicia el comptador de barres al punt de fase que tenia col originalment.
+     * Això evita que les barres de compàs es desplacin cap a posicions incorrectes.
+     */
+    private void fixBarlinePhasesAfterInsert(int col, int n) {
+        // Computa la fase (beatInMeasure, colInBeat) que tenia 'col' just ABANS
+        // de la inserció. Entrées < col no s'han desplaçat; les >= col estan a >= col+n.
+        int curNColsBeat     = (allPurposeScore.getBaseNColsBeat()    > 0)
+                ? allPurposeScore.getBaseNColsBeat()    : Settings.getnColsBeat();
+        int curNBeatsMeasure = (allPurposeScore.getBaseNBeatsMeasure() > 0)
+                ? allPurposeScore.getBaseNBeatsMeasure() : allPurposeScore.getNumBeatsMeasure();
+        int colInBeat = 0;
+        int beatInMeasure = 0;
+        for (int c = 0; c <= col; c++) {
+            MyGridScore.ScoreChange sc = allPurposeScore.getChangeMap().get(c);
+            if (sc != null) {
+                boolean hasMeterChange = (sc.nColsBeat != null || sc.nBeatsMeasure != null
+                                          || sc.nColsQuarter != null);
+                if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
+                if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
+                if (hasMeterChange) {
+                    // Canvi explícit de compàs: el comptador sempre comença a (0,0)
+                    colInBeat     = 0;
+                    beatInMeasure = 0;
+                } else {
+                    // SC de fase pura: usa la fase guardada
+                    colInBeat     = (sc.colInBeatPhase != null) ? sc.colInBeatPhase : 0;
+                    beatInMeasure = (sc.measurePhase   != null) ? sc.measurePhase   : 0;
+                }
+            }
+            if (c < col) {
+                colInBeat++;
+                if (colInBeat >= curNColsBeat) {
+                    colInBeat = 0;
+                    beatInMeasure++;
+                    if (beatInMeasure >= curNBeatsMeasure) beatInMeasure = 0;
+                }
+            }
+        }
+        if (curNColsBeat <= 0 || curNBeatsMeasure <= 0) return;
+
+        // Col=0 especial: la chord line sempre dibuixa una marca de fallback a col=0
+        // usant el SC que hi hagi (o els defaults si no n'hi ha). La inserció ha
+        // desplaçat el SC original de col=0 fins a col+n → duplicat visual. Ho resolem:
+        // restaurem el SC original a col=0 i netegem col+n.
+        // A més, per a col=0 NO afegim SC de fase a col+n: el comptador natural
+        // col·loca les barres des de col=0 (cada colsPerMeasure), que és exactament
+        // el que vol l'usuari quan insereix a l'inici de la partitura.
+        if (col == 0) {
+            MyGridScore.ScoreChange sc0 = allPurposeScore.getChangeMap().get(n);
+            if (sc0 != null) {
+                allPurposeScore.setScoreChange(0, sc0);
+                allPurposeScore.getChangeMap().remove(n);
+            }
+            return; // barres naturals des de col=0: no cal cap SC addicional
+        }
+
+        // Col > 0: afegim/fusionem un ScoreChange a col+n amb la fase exacta de 'col',
+        // de manera que el comptador de barres reprengui correctament des del
+        // contingut original (que ha quedat desplaçat a partir de col+n).
+        int fixCol = col + n;
+        MyGridScore.ScoreChange existing = allPurposeScore.getChangeMap().get(fixCol);
+        if (existing == null) existing = new MyGridScore.ScoreChange();
+        existing.measurePhase   = beatInMeasure;
+        existing.colInBeatPhase = colInBeat;
+        allPurposeScore.setScoreChange(fixCol, existing);
     }
 
     /** Inserts n truly empty columns at col (used in undo-of-delete). */

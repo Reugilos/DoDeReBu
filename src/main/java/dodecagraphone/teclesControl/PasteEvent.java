@@ -1,17 +1,20 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.teclesControl;
 
 import dodecagraphone.MyController;
+import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.component.MyAllPurposeScore;
 import dodecagraphone.model.component.MyComponent;
 import dodecagraphone.model.component.MyGridSquare;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.ui.Settings;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * [CA] Event undo/redo per a l'operació d'enganxar notes (paste). {@code refer()}
@@ -38,6 +41,14 @@ public class PasteEvent extends Event {
     private final int targetCh;
     private final int targetTr;
     private final boolean multiTrack;
+    /** Accords a enganxar: col absoluta → nou acord. Buit si no hi ha accords. */
+    private final Map<Integer, Chord> newChords;
+    /** Accords que hi havia abans del paste: col absoluta → acord antic (null=no n'hi havia). */
+    private final Map<Integer, Chord> oldChords;
+    /** Lletres noves enganxades (col relativa a l'ancoratge). Buit si no n'hi ha. */
+    private final List<ClipLyric> newLyrics;
+    /** Lletres que hi havia abans del paste (per a desfer). Buit si no n'hi havia. */
+    private final List<ClipLyric> oldLyrics;
 
     /**
      * [CA] Crea un nou event de paste.
@@ -55,6 +66,24 @@ public class PasteEvent extends Event {
     public PasteEvent(MyController controller, List<ClipNote> notes,
                       int anchorRow, int anchorCol, int targetCh, int targetTr,
                       boolean multiTrack) {
+        this(controller, notes, anchorRow, anchorCol, targetCh, targetTr, multiTrack,
+             Collections.emptyMap(), Collections.emptyMap(),
+             Collections.emptyList(), Collections.emptyList());
+    }
+
+    public PasteEvent(MyController controller, List<ClipNote> notes,
+                      int anchorRow, int anchorCol, int targetCh, int targetTr,
+                      boolean multiTrack,
+                      Map<Integer, Chord> newChords, Map<Integer, Chord> oldChords) {
+        this(controller, notes, anchorRow, anchorCol, targetCh, targetTr, multiTrack,
+             newChords, oldChords, Collections.emptyList(), Collections.emptyList());
+    }
+
+    public PasteEvent(MyController controller, List<ClipNote> notes,
+                      int anchorRow, int anchorCol, int targetCh, int targetTr,
+                      boolean multiTrack,
+                      Map<Integer, Chord> newChords, Map<Integer, Chord> oldChords,
+                      List<ClipLyric> newLyrics, List<ClipLyric> oldLyrics) {
         this.controller = controller;
         this.notes      = notes;
         this.anchorRow  = anchorRow;
@@ -62,6 +91,10 @@ public class PasteEvent extends Event {
         this.targetCh   = targetCh;
         this.targetTr   = targetTr;
         this.multiTrack = multiTrack;
+        this.newChords  = newChords;
+        this.oldChords  = oldChords;
+        this.newLyrics  = newLyrics;
+        this.oldLyrics  = oldLyrics;
     }
 
     /**
@@ -92,6 +125,18 @@ public class PasteEvent extends Event {
             if (col + 1 > score.getLastColWritten()) score.setLastColWritten(col + 1);
         }
         score.updateStopMarker();
+        if (!newChords.isEmpty()) {
+            for (Map.Entry<Integer, Chord> e : newChords.entrySet()) {
+                score.placeChordSymbol(e.getValue(), e.getKey());
+            }
+            controller.redrawChordLine();
+        }
+        if (!newLyrics.isEmpty()) {
+            for (ClipLyric cl : newLyrics) {
+                controller.getMyLyrics().setLyric(anchorCol + cl.colOffset, cl.trackId, cl.text);
+            }
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
+        }
     }
 
     /**
@@ -121,5 +166,26 @@ public class PasteEvent extends Event {
             if (sq != null) sq.updateState();
         }
         score.updateStopMarker();
+        if (!oldChords.isEmpty()) {
+            for (Map.Entry<Integer, Chord> e : oldChords.entrySet()) {
+                if (e.getValue() != null) {
+                    score.placeChordSymbol(e.getValue(), e.getKey());
+                } else {
+                    score.removeChordSymbol(e.getKey());
+                }
+            }
+            controller.redrawChordLine();
+        }
+        if (!newLyrics.isEmpty() || !oldLyrics.isEmpty()) {
+            // Primer elimina les lletres que vam enganxar
+            for (ClipLyric cl : newLyrics) {
+                controller.getMyLyrics().removeLyric(anchorCol + cl.colOffset, cl.trackId);
+            }
+            // Després restaura les que hi havia abans
+            for (ClipLyric cl : oldLyrics) {
+                controller.getMyLyrics().setLyric(anchorCol + cl.colOffset, cl.trackId, cl.text);
+            }
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
+        }
     }
 }
