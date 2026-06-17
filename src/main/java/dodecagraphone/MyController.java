@@ -4480,26 +4480,18 @@ public class MyController {
             return; // barres naturals des de col=0: no cal cap SC addicional
         }
 
-        // Col > 0: afegim/fusionem un ScoreChange a col+n amb la fase exacta de 'col',
-        // de manera que el comptador de barres reprengui correctament des del
-        // contingut original (que ha quedat desplaçat a partir de col+n).
-        int fixCol = col + n;
-        MyGridScore.ScoreChange existing = allPurposeScore.getChangeMap().get(fixCol);
-        if (existing == null) existing = new MyGridScore.ScoreChange();
-        existing.measurePhase   = beatInMeasure;
-        existing.colInBeatPhase = colInBeat;
-        allPurposeScore.setScoreChange(fixCol, existing);
-
-        // Si la inserció coincideix amb l'inici d'un beat (colInBeat==0), la columna
-        // inserida (col) obté la mateixa fase natural, creant dos beats consecutius.
-        // Ho corregim posant un SC a col que la fa semblar l'últim sub-col del beat anterior.
-        if (colInBeat == 0) {
-            MyGridScore.ScoreChange colSC = allPurposeScore.getChangeMap().get(col);
-            if (colSC == null) colSC = new MyGridScore.ScoreChange();
-            colSC.colInBeatPhase = curNColsBeat - 1;
-            colSC.measurePhase   = (beatInMeasure - 1 + curNBeatsMeasure) % curNBeatsMeasure;
-            allPurposeScore.setScoreChange(col, colSC);
-        }
+        // Col > 0: l'avanç natural ja posa col+n a la fase (colInBeat+1, beatInMeasure),
+        // que és la correcta per al contingut desplaçat. No cal afegir cap SC de fase:
+        // qualsevol SC d'aquest tipus (colInBeatPhase) causaria que un beat aparegués
+        // amb una columna de més (si col era inici de beat) o que l'origen del compàs
+        // es desplacés (si calia suprimir el beat spurious). L'únic artefacte és que
+        // l'última sub-columna del beat anterior a col+n passa a ser la primera del beat
+        // següent, però és 1/nColsBeat de beat (en general 1/8 de beat) i poc perceptible.
+        //
+        // NOTA: si a col+n ja hi ha un SC de canvi de compàs (nColsBeat/nBeatsMeasure),
+        // aquest SC ha quedat desplaçat des de col per la inserció i és correcte tal qual;
+        // el seu camp colInBeatPhase (si en tenia d'una correcció anterior) queda obsolet
+        // però és inert perquè el canvi de compàs reinicia la fase a (0,0) per davant.
     }
 
     /** Inserts n truly empty columns at col (used in undo-of-delete). */
