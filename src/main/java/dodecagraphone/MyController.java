@@ -4489,6 +4489,17 @@ public class MyController {
         existing.measurePhase   = beatInMeasure;
         existing.colInBeatPhase = colInBeat;
         allPurposeScore.setScoreChange(fixCol, existing);
+
+        // Si la inserció coincideix amb l'inici d'un beat (colInBeat==0), la columna
+        // inserida (col) obté la mateixa fase natural, creant dos beats consecutius.
+        // Ho corregim posant un SC a col que la fa semblar l'últim sub-col del beat anterior.
+        if (colInBeat == 0) {
+            MyGridScore.ScoreChange colSC = allPurposeScore.getChangeMap().get(col);
+            if (colSC == null) colSC = new MyGridScore.ScoreChange();
+            colSC.colInBeatPhase = curNColsBeat - 1;
+            colSC.measurePhase   = (beatInMeasure - 1 + curNBeatsMeasure) % curNBeatsMeasure;
+            allPurposeScore.setScoreChange(col, colSC);
+        }
     }
 
     /** Inserts n truly empty columns at col (used in undo-of-delete). */
