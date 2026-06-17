@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model.component;
 
@@ -129,7 +129,33 @@ public class MyStatusLine extends MyComponent{
             g.setColor(Color.GRAY);
             g.fillRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
             g.setColor(java.awt.Color.WHITE);
-            g.drawString(getFullText(), (int)(screenPosX+10), (int)(screenPosY+10+Settings.getRowHeight()));
 
+            String full = getFullText();
+            int maxWidth = (int) width - 20;
+            java.awt.FontMetrics fm = g.getFontMetrics();
+            int lineH = fm.getHeight();
+            int baseY = (int)(screenPosY + 4 + lineH);
+
+            if (fm.stringWidth(full) <= maxWidth) {
+                g.drawString(full, (int)(screenPosX + 10), baseY);
+            } else {
+                // Cerca el tall de paraula més proper al centre
+                String[] words = full.split(" ");
+                StringBuilder line1 = new StringBuilder();
+                int splitIdx = 0;
+                for (int i = 0; i < words.length; i++) {
+                    String candidate = (line1.length() == 0 ? "" : line1 + " ") + words[i];
+                    if (fm.stringWidth(candidate) > maxWidth && i > 0) break;
+                    line1 = new StringBuilder(candidate);
+                    splitIdx = i + 1;
+                }
+                StringBuilder line2 = new StringBuilder();
+                for (int i = splitIdx; i < words.length; i++) {
+                    if (line2.length() > 0) line2.append(" ");
+                    line2.append(words[i]);
+                }
+                g.drawString(line1.toString(), (int)(screenPosX + 10), baseY);
+                g.drawString(line2.toString(), (int)(screenPosX + 10), baseY + lineH);
+            }
     }
 }

@@ -1793,7 +1793,11 @@ public class MyController {
 
             showBeatColTip(col, posX, posY);
             MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
-            if (ctrlDown && shiftDown && sq != null && sq.isSqVisible()) {
+            int moveCurCh = this.mixer.getCurrentChannelOfCurrentTrack();
+            int moveCurTr = this.mixer.getCurrentTrackId();
+            boolean currentTrackHasNoteHere = sq != null && sq.getPoliNotes().stream()
+                    .anyMatch(n -> n.getChannel() == moveCurCh && n.getTrack() == moveCurTr && n.isVisible());
+            if (ctrlDown && shiftDown && currentTrackHasNoteHere) {
                 // MOVE mode: capture the whole note and prepare for live drag
                 int headCol = findNoteHeadCol(row, col);
                 int tailCol = findNoteTailCol(row, col);
@@ -1803,8 +1807,8 @@ public class MyController {
                 moveNoteLength = tailCol - headCol + 1;
                 moveCurrentHeadCol = headCol;
                 moveClickOffset = col - headCol;
-                moveCh = this.mixer.getCurrentChannelOfCurrentTrack();
-                moveTr = this.mixer.getCurrentTrackId();
+                moveCh = moveCurCh;
+                moveTr = moveCurTr;
                 captureNoteData(row, headCol, moveNoteLength, moveCh, moveTr);
                 dragMode = DragMode.MOVE;
                 mouseSequence = null;
@@ -1815,7 +1819,7 @@ public class MyController {
                 int curTr = this.mixer.getCurrentTrackId();
                 boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
                     .anyMatch(n -> n.getChannel() == curCh && n.getTrack() == curTr && n.isVisible());
-                if (shiftDown) {
+                if (shiftDown && !ctrlDown) {
                     dragMode = DragMode.ERASE;
                     this.turningOn = false;
                     removeNoteAtCell(row, col);
@@ -2530,6 +2534,11 @@ public class MyController {
     }
 
     public void transpose(int step) {
+        pilaEvents.afegirEvent(new dodecagraphone.teclesControl.TransposeEvent(this, step));
+        transposeWithoutUndo(step);
+    }
+
+    public void transposeWithoutUndo(int step) {
         this.allPurposeScore.transpose(step);
         this.needsSaving = true;
         this.updateTextOfButtons();
@@ -3170,7 +3179,7 @@ public class MyController {
 
     public void onAuthorButtonPressed(MyButton togg) {
         String author = this.allPurposeScore.getAuthor();
-        author = MyDialogs.mostraInputDialog(I18n.t("MyController.score.author.prompt"), I18n.t("MyController.score.author.label"), author);
+        author = MyDialogs.mostraInputDialogAllowEmpty(I18n.t("MyController.score.author.prompt"), I18n.t("MyController.score.author.label"), author);
         if (author != null) {
             this.allPurposeScore.setAuthor(author);
         }
@@ -3181,7 +3190,7 @@ public class MyController {
 
     public void onDescriptionButtonPressed(MyButton togg) {
         String descr = this.allPurposeScore.getDescription();
-        descr = MyDialogs.mostraInputDialog(I18n.t("MyController.score.description.prompt"), I18n.t("MyController.score.description.label"), descr);
+        descr = MyDialogs.mostraInputDialogAllowEmpty(I18n.t("MyController.score.description.prompt"), I18n.t("MyController.score.description.label"), descr);
         if (descr != null) {
             this.allPurposeScore.setDescription(descr);
         }
@@ -3806,12 +3815,12 @@ public class MyController {
         MyGridScore.ScoreChange sc = allPurposeScore.getEffectiveChange(col);
         // Apliquem sempre un valor (el del canvi o el per defecte), igual que fem amb
         // el compàs, perquè tornar enrere restauri els valors anteriors a la marca.
-        // Fora de reproducció: setTempo sincronitza scoreTempo i playbackTempo amb la
-        // marca efectiva, de manera que el botó sempre mostra el tempo de la partitura.
-        // Durant la reproducció amb marca explícita: setTempo (la marca substitueix Spd+).
-        // Durant la reproducció sense marca explícita: setScoreTempo preserva Spd+/Spd-.
+        // Amb marca explícita de tempo: setTempo reseteja scoreTempo i playbackTempo
+        // (la marca de partitura substitueix qualsevol ajust Spd+/Spd-).
+        // Sense marca explícita: setScoreTempo preserva playbackTempo (Spd+/Spd-
+        // funciona tant fora com durant la reproducció).
         int resolvedTempo = sc.tempo != null ? sc.tempo : Settings.DEFAULT_TEMPO;
-        if (!cam.isPlaying() || sc.tempo != null) {
+        if (sc.tempo != null) {
             MyTempo.setTempo(resolvedTempo);
         } else {
             MyTempo.setScoreTempo(resolvedTempo);

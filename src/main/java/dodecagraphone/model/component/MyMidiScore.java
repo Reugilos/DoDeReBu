@@ -803,11 +803,6 @@ public class MyMidiScore extends MyExercise {
         }
         this.controller.updateTextOfButtons();
         this.initOffscreen();
-        if (ToneRange.isMetallophone()){
-            // Força el Glockenspiel (prog 9) com a veu del metallòfon en carregar.
-            SoundWithMidi.assignInstToChannel(this.controller.getMixer().getCurrentChannelOfCurrentTrack(),9);
-            SoundWithMidi.runProgramChange(this.controller.getMixer().getCurrentChannelOfCurrentTrack(),9);
-        }
     }
     
     private long getLastTick(Track track) {
@@ -1516,24 +1511,21 @@ public class MyMidiScore extends MyExercise {
         }
 
         String descr = this.getDescription();
-        if (descr != null && !descr.isEmpty()) {
-            try {
-                addTextMeta(metaTrack, "description=" + descr);
-            } catch (Exception e) { e.printStackTrace(); }
-        }
+        if (descr == null) descr = "";
+        try {
+            addTextMeta(metaTrack, "description=" + descr);
+        } catch (Exception e) { e.printStackTrace(); }
 
         String autor = this.getAuthor();
-        if (autor != null && !autor.isEmpty()) {
-            MetaMessage authorMsg = new MetaMessage();
-            byte[] data = ("AUTHOR:" + autor).getBytes(StandardCharsets.UTF_8);
-            //byte[] data = ("AUTHOR" + autor).getBytes(StandardCharsets.UTF_8);
-            try {
-                authorMsg.setMessage(0x02, data, data.length);
-            } catch (InvalidMidiDataException e) {
-                e.printStackTrace();
-            }
-            metaTrack.add(new MidiEvent(authorMsg, 0));
+        if (autor == null) autor = "";
+        MetaMessage authorMsg = new MetaMessage();
+        byte[] data = ("AUTHOR:" + autor).getBytes(StandardCharsets.UTF_8);
+        try {
+            authorMsg.setMessage(0x02, data, data.length);
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
         }
+        metaTrack.add(new MidiEvent(authorMsg, 0));
 
         // --- Text Events amb la configuració interna ---
         try {
