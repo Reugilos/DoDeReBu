@@ -877,28 +877,29 @@ public class MyMidiScore extends MyExercise {
         Track metaTrack = sequence.createTrack();
         buildMidiHeader(metaTrack);
 
+        // Prepara el key signature meta-event per replicar-lo a totes les pistes
+        // (MuseScore ignora el conductor track 0 per a la tonalitat).
+        int ksKeyIndex = ToneRange.getKeySignatureIndex(this.midiKey, this.scaleMode);
+        int ksScale = (this.scaleMode == 'M') ? 0 : 1;
+        byte[] ksDataShared = new byte[]{(byte) ksKeyIndex, (byte) ksScale};
+
         // Crear pistes per a cada pista del mixer
         Map<Integer, Track> trackMap = new HashMap<>();
         for (int tr = 0; tr < this.controller.getMixer().getnTracks(); tr++) {
             Track str=null;
             if (this.controller.getMixer().isTrackVisible(tr)) {
                 str = sequence.createTrack();
+                // Afegim el key signature com a primer event de cada pista de melodia,
+                // abans de qualsevol altra dada, perquè MuseScore el llegeixi correctament.
+                MetaMessage ksMsg = new MetaMessage();
+                try {
+                    ksMsg.setMessage(0x59, ksDataShared, 2);
+                } catch (InvalidMidiDataException e) {
+                    e.printStackTrace();
+                }
+                str.add(new MidiEvent(ksMsg, 0));
                 trackMap.put(tr, str);
                 saveTrackData(this.controller.getMixer().getTrackFromId(tr), str);
-                if (tr == 0) { // MuseScore no llegeix el metaData del metaTrack. Aquí replico el key signature i l'instrument, però caldria replicar tot.
-                    int keyIndex = ToneRange.getKeySignatureIndex(this.midiKey, this.scaleMode);
-                    int scale = (this.scaleMode == 'M') ? 0 : 1;
-                    byte[] ksData = new byte[]{(byte) keyIndex, (byte) scale};
-                    MetaMessage ksMsg = new MetaMessage();
-                    try {
-                        ksMsg.setMessage(0x59, ksData, 2);
-                    } catch (InvalidMidiDataException e) {
-                        e.printStackTrace();
-                    }
-                    if (str != null) {
-                        str.add(new MidiEvent(ksMsg, 0));
-                    }
-                }
             }
         }
 
@@ -907,6 +908,9 @@ public class MyMidiScore extends MyExercise {
             MyTrack chordTrack = this.controller.getMixer().getTrackFromId(tr);
             if (chordTrack != null) {
                 Track str = sequence.createTrack();
+                MetaMessage ksMsg = new MetaMessage();
+                try { ksMsg.setMessage(0x59, ksDataShared, 2); } catch (InvalidMidiDataException e) { e.printStackTrace(); }
+                str.add(new MidiEvent(ksMsg, 0));
                 trackMap.put(tr, str);
                 saveTrackData(chordTrack, str);
             }
@@ -916,6 +920,9 @@ public class MyMidiScore extends MyExercise {
         MyTrack drumsTrack = this.controller.getMixer().getTrackFromId(drumsTrId);
         if (drumsTrack != null) {
             Track str = sequence.createTrack();
+            MetaMessage ksMsg = new MetaMessage();
+            try { ksMsg.setMessage(0x59, ksDataShared, 2); } catch (InvalidMidiDataException e) { e.printStackTrace(); }
+            str.add(new MidiEvent(ksMsg, 0));
             trackMap.put(drumsTrId, str);
             saveTrackData(drumsTrack, str);
         }
