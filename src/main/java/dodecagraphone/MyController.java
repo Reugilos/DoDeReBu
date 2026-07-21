@@ -1878,11 +1878,13 @@ public class MyController {
     }
 
     /**
-     * On mouse released, checks if a XiloKey or MyGridSquare has been released
-     * and stops it.
+     * [CA] Inicia (o reinicia, si canvia de direcció) el temporitzador d'auto-scroll
+     * de la càmera mentre s'arrossega una selecció a prop de la vora de la graella.
+     * <p>
+     * [EN] Starts (or restarts, if the direction changes) the camera auto-scroll
+     * timer while a selection is being dragged near the edge of the grid.
      *
-     * @param posX
-     * @param posY
+     * @param dir [CA] direcció del desplaçament: positiu = dreta, negatiu = esquerra / [EN] scroll direction: positive = right, negative = left
      */
     private void startSelectAutoScroll(int dir) {
         if (selAutoScrollTimer != null && selAutoScrollTimer.isRunning()
@@ -2224,8 +2226,11 @@ public class MyController {
     }
     
     /**
-     * On mouse pressed, checks if a XiloKey or a MyGridSquare or a MyButton has
-     * been pressed and activates it.
+     * [CA] Actualment no fa res: reservat per a una futura gestió del clic dret
+     * (a diferència de {@code onMousePressed}, que sí que gestiona clic esquerre).
+     * <p>
+     * [EN] Currently a no-op: reserved for future right-click handling (unlike
+     * {@code onMousePressed}, which does handle the left click).
      *
      * @param posX
      * @param posY
@@ -2234,8 +2239,10 @@ public class MyController {
     }
 
     /**
-     * On mouse released, checks if a XiloKey or MyGridSquare has been released
-     * and stops it.
+     * [CA] Actualment no fa res: reservat per a una futura gestió de l'alliberament
+     * del clic dret.
+     * <p>
+     * [EN] Currently a no-op: reserved for future right-click-release handling.
      *
      * @param posX
      * @param posY

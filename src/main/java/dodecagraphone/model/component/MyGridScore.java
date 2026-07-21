@@ -692,10 +692,10 @@ public class MyGridScore extends MyComponent {
 
     /**
      * [CA] Compatibilitat: {@code true} si es mostra qualsevol informació de nota
-     * (nom, interval o grau), {@code false} si està amagada.
+     * (nom, interval, grau o nom anglosaxó), {@code false} si està amagada.
      * <p>
      * [EN] Compatibility: {@code true} if any note information is shown
-     * (name, interval or degree), {@code false} if hidden.
+     * (name, interval, degree or Anglo-Saxon name), {@code false} if hidden.
      *
      * @return
      */
@@ -717,13 +717,15 @@ public class MyGridScore extends MyComponent {
     /**
      * [CA] Retorna l'etiqueta a escriure a la cel·la de la nota MIDI donada, segons
      * {@code noteDisplayMode}: nom (mode NAMES), interval en semitons 0..11 (mode
-     * INTERV) o grau diatònic amb alteració (mode DEGREE), sempre relatius a la
-     * tonalitat actual ({@code getMidiKey()}).
+     * INTERV) o grau diatònic amb alteració (mode DEGREE) relatius a la tonalitat
+     * actual ({@code getMidiKey()}), o nom anglosaxó absolut (mode ANGLO, p.ex. "Eb",
+     * independent de la tonalitat).
      * <p>
      * [EN] Returns the label to write in the given MIDI note's square, according to
      * {@code noteDisplayMode}: name (NAMES mode), interval in semitones 0..11
-     * (INTERV mode) or diatonic degree with alteration (DEGREE mode), always
-     * relative to the current key ({@code getMidiKey()}).
+     * (INTERV mode) or diatonic degree with alteration (DEGREE mode), relative to
+     * the current key ({@code getMidiKey()}), or absolute Anglo-Saxon name (ANGLO
+     * mode, e.g. "Eb", independent of the key).
      *
      * @param midi [CA] valor MIDI de la nota / [EN] MIDI note value
      * @return [CA] etiqueta a mostrar / [EN] label to display
@@ -1575,10 +1577,17 @@ public class MyGridScore extends MyComponent {
     }
     
     /**
-     * Draws the score: each visible grid square, the beat lines and the measure
-     * lines.
+     * [CA] NO redibuixa cap element individual: només copia (blit) la porció
+     * visible del buffer offscreen (ja renderitzat per {@code drawFullGridinOffscreen()}
+     * o {@code drawCurrentCamInOffscreen()}) a la pantalla, segons la posició de
+     * la càmera.
+     * <p>
+     * [EN] Does NOT redraw any individual element: it only copies (blits) the
+     * visible portion of the offscreen buffer (already rendered by
+     * {@code drawFullGridinOffscreen()} or {@code drawCurrentCamInOffscreen()}) to
+     * the screen, according to the camera position.
      *
-     * @param g
+     * @param g [CA] context gràfic de pantalla / [EN] screen graphics context
      */
     @Override
     public void draw(Graphics2D g) {

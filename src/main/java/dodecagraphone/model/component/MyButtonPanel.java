@@ -663,10 +663,11 @@ public class MyButtonPanel extends MyComponent {
     }
 
     /**
-     * A specific method to programmatically activate the penta-vs-choice
-     * button.
+     * [CA] Sincronitza el botó Penta/Plantilla amb l'estat actual del programa.
+     * <p>
+     * [EN] Synchronizes the Penta/Template button with the program's current state.
      *
-     * @param penta
+     * @param penta [CA] {@code true} si es mostren les franges de pentagrama / [EN] {@code true} if pentagram strips are shown
      */
     public void setPentaVsChoiceButton(boolean penta) {
         this.setModified(true);
@@ -675,10 +676,13 @@ public class MyButtonPanel extends MyComponent {
     }
 
     /**
-     * A specific method to programmatically activate the penta-vs-choice
-     * button.
+     * [CA] Sincronitza el botó Esquerra/Dreta (posició del teclat) amb l'estat
+     * actual del programa.
+     * <p>
+     * [EN] Synchronizes the Left/Right button (keyboard position) with the
+     * program's current state.
      *
-     * @param left
+     * @param right [CA] {@code true} si el teclat és a la dreta / [EN] {@code true} if the keyboard is on the right
      */
     public void setLeftVsRightButton(boolean right) {
         this.setModified(true);
@@ -687,10 +691,17 @@ public class MyButtonPanel extends MyComponent {
     }
 
     /**
-     * A specific method to programmatically activate the penta-vs-choice
-     * button.
+     * [CA] Sincronitza el botó circular Names/Interv/Degree/Anglo/Hide amb l'estat
+     * actual del programa, fixant-lo directament a l'índex {@code noteDisplayMode}
+     * (un de {@code MyGridScore.NOTE_DISPLAY_*}, que coincideix amb l'ordre dels
+     * estats del botó).
+     * <p>
+     * [EN] Synchronizes the Names/Interv/Degree/Anglo/Hide circular button with the
+     * program's current state, setting it directly to index {@code noteDisplayMode}
+     * (one of {@code MyGridScore.NOTE_DISPLAY_*}, which matches the button's state
+     * order).
      *
-     * @param penta
+     * @param noteDisplayMode [CA] mode de visualització de notes actual / [EN] current note display mode
      */
     public void setNamesVsHideButton(int noteDisplayMode) {
         this.setModified(true);
@@ -699,10 +710,13 @@ public class MyButtonPanel extends MyComponent {
     }
     
     /**
-     * A specific method to programmatically activate the penta-vs-choice
-     * button.
+     * [CA] Sincronitza el botó Absolut/Mòbil (do mòbil) amb l'estat actual del
+     * programa.
+     * <p>
+     * [EN] Synchronizes the Absolute/Mobile (movable do) button with the
+     * program's current state.
      *
-     * @param penta
+     * @param mobile [CA] {@code true} si el do mòbil és actiu / [EN] {@code true} if movable do is active
      */
     public void setMobileDoVsAbsoluteButton(boolean mobile) {
         this.setModified(true);

@@ -57,17 +57,6 @@ public class MyExercise extends MyPatternScore {
     }
 
     /**
-     * [CA] Estableix la família d'exercicis.
-     * <p>
-     * [EN] Sets the exercise family.
-     *
-     * @param family [CA] nova família d'exercicis / [EN] new exercise family
-     */
-    public void setExerciseFamily(MyExerciseFamily family){
-        this.family = family;
-    }
-
-    /**
      * [CA] Retorna si és la primera vegada que s'executa l'exercici.
      * <p>
      * [EN] Returns whether it is the first time the exercise runs.
