@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.model;
 

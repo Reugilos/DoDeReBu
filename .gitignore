@@ -37,3 +37,16 @@ prova.mid
 .idea/
 *.iml
 .vscode/
+
+# Claude Code (sessions, worktrees) / Claude Code (sessions, worktrees)
+.claude/
+
+# Configuració local generada (rutes de màquina) / Local generated config (machine paths)
+config/
+
+# Material personal de treball, no part del projecte públic / Personal working material, not part of the public project
+Dodecagrams/
+OtherSongs/
+Prompts/
+SongsInBooklet - bkp/
+messages_ca_original_temp.properties

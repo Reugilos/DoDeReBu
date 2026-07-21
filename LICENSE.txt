@@ -1,21 +1,259 @@
-MIT License
+================================================================================
+  DoDeReBu_App v4.0
+  Copyright (c) 2025 Pau Bofill
+================================================================================
 
-Copyright (c) 2025 Pau Bofill
+────────────────────────────────────────────────────────────────────────────────
+ENGLISH
+────────────────────────────────────────────────────────────────────────────────
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+PolyForm Noncommercial License 1.0.0
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Copyright Notice: Copyright (c) 2025 Pau Bofill
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Full license text: https://polyformproject.org/licenses/noncommercial/1.0.0
+
+---
+
+# Acceptance
+
+In order to get any license under these terms, you must agree to them as both
+strict obligations and conditions to all your licenses.
+
+# Copyright License
+
+The licensor grants you a copyright license for the software to do everything
+you might do with the software that would otherwise infringe the licensor's
+copyright in it for any permitted purpose.  However, you may only distribute
+the software according to Distribution License below, and you may not use the
+software to provide services to others for a fee or assessment without a
+separate commercial license.
+
+# Permitted Purposes
+
+Any noncommercial purpose is a permitted purpose.
+
+# Distribution License
+
+The licensor grants you an additional copyright license to distribute copies of
+the software.  Your license to distribute covers distributing the software with
+changes and new works permitted by Change License below.
+
+# Notices
+
+You must ensure that anyone who gets a copy of any part of the software from
+you also gets a copy of these terms or the URL for them above, as well as
+copies of any plain-text lines beginning with "Required Notice:" that the
+licensor provided with the software.  For example:
+
+Required Notice: Copyright (c) 2025 Pau Bofill
+
+# Change License
+
+The licensor grants you an additional copyright license to make changes and new
+works based on the software for any permitted purpose.
+
+# Patent License
+
+The licensor grants you a patent license for the software that covers patent
+claims the licensor can license, or becomes able to license, that you would
+infringe by using the software.
+
+# Noncommercial Organizations
+
+Use by any charitable organization, educational institution, public research
+organization, public safety or health organization, environmental protection
+organization, or government institution is use for a permitted purpose
+regardless of the source of funding or obligations resulting from the funding.
+
+# Fair Use
+
+You may have "fair use" rights for the software under the law.  These terms do
+not limit them.
+
+# No Other Rights
+
+These terms do not allow you to sublicense or transfer any of your licenses to
+anyone else, or prevent the licensor from granting licenses to anyone else.
+These terms do not imply any other licenses.
+
+# Patent Defense
+
+If you make any written claim that the software infringes or contributes to
+infringement of any patent, your patent license for the software granted under
+these terms ends immediately.  If your company makes such a claim, your patent
+license ends immediately for work on behalf of your company.
+
+# Violations
+
+The first time you are notified in writing that you have violated any of these
+terms, or done anything with the software not covered by your licenses, your
+licenses can nonetheless continue if you come into full compliance with these
+terms, and take practical steps to correct past violations, within 32 days of
+receiving notice.  Otherwise, all your licenses end immediately.
+
+# No Liability
+
+As far as the law allows, the software comes as is, without any warranty or
+condition, and the licensor will not be liable to you for any damages arising
+out of these terms or the use or nature of the software, under any kind of
+legal claim.
+
+# Definitions
+
+The *licensor* is the individual or entity offering these terms, and the
+*software* is the software the licensor makes available under these terms.
+
+*You* refers to the individual or entity agreeing to these terms.
+
+*Your company* is any legal entity, sole proprietorship, or other kind of
+organization that you work for, plus all organizations that have control over,
+are under the control of, or are under common control with that organization.
+*Control* means ownership of substantially all the assets of an entity, or the
+power to direct its management and policies by vote, contract, or otherwise.
+Control can be direct or indirect.
+
+*Your licenses* are all the licenses granted to you for the software under
+these terms.
+
+*Use* means anything you do with the software requiring one of your licenses.
+
+*Trademark* means trademarks, service marks, and similar rights.
+
+
+────────────────────────────────────────────────────────────────────────────────
+CATALÀ
+────────────────────────────────────────────────────────────────────────────────
+
+Llicència PolyForm Noncommercial 1.0.0
+
+Avís de copyright: Copyright (c) 2025 Pau Bofill
+
+Aquest programari està llicenciat sota la PolyForm Noncommercial License 1.0.0.
+Text complet de la llicència: https://polyformproject.org/licenses/noncommercial/1.0.0
+
+Nota: La traducció al català que segueix és orientativa. En cas de discrepància,
+preval el text en anglès que figura més amunt.
+
+---
+
+# Acceptació
+
+Per obtenir qualsevol llicència en virtut d'aquests termes, heu d'acceptar-los
+tant com a obligacions estrictes com a condicions de totes les vostres
+llicències.
+
+# Llicència de copyright
+
+El llicenciant us atorga una llicència de copyright sobre el programari per fer
+tot allò que podríeu fer amb el programari que d'altra manera infringiria el
+copyright del llicenciant, per a qualsevol finalitat permesa. No obstant això,
+només podeu distribuir el programari d'acord amb la Llicència de distribució
+que s'indica a continuació, i no podeu utilitzar el programari per prestar
+serveis a tercers a canvi d'una tarifa o remuneració sense una llicència
+comercial separada.
+
+# Finalitats permeses
+
+Qualsevol finalitat no comercial és una finalitat permesa.
+
+# Llicència de distribució
+
+El llicenciant us atorga una llicència de copyright addicional per distribuir
+còpies del programari. La vostra llicència de distribució inclou la distribució
+del programari amb els canvis i les noves obres permesos per la Llicència de
+modificació que figura a continuació.
+
+# Avisos
+
+Heu de garantir que qualsevol persona que rebi una còpia de qualsevol part del
+programari de la vostra part també rebi una còpia d'aquests termes o la seva
+URL indicada més amunt, així com còpies de qualsevol línia de text net que
+comenci amb "Required Notice:" que el llicenciant hagi proporcionat amb el
+programari. Per exemple:
+
+Required Notice: Copyright (c) 2025 Pau Bofill
+
+# Llicència de modificació
+
+El llicenciant us atorga una llicència de copyright addicional per fer canvis i
+noves obres basades en el programari per a qualsevol finalitat permesa.
+
+# Llicència de patents
+
+El llicenciant us atorga una llicència de patents sobre el programari que
+cobreix les reivindicacions de patents que el llicenciant pot llicenciar, o
+arribi a poder llicenciar, que infringiríeu en utilitzar el programari.
+
+# Organitzacions no comercials
+
+L'ús per part de qualsevol organització benèfica, institució educativa,
+organització de recerca pública, organització de seguretat o salut pública,
+organització de protecció del medi ambient o institució governamental és un ús
+per a una finalitat permesa, independentment de la font de finançament o de les
+obligacions derivades d'aquest.
+
+# Ús legítim
+
+Podeu tenir drets d'"ús legítim" sobre el programari en virtut de la llei.
+Aquests termes no els limiten.
+
+# Cap altre dret
+
+Aquests termes no us permeten sublicenciar ni transferir cap de les vostres
+llicències a cap altra persona, ni impedeixen que el llicenciant atorgui
+llicències a qualsevol altra persona. Aquests termes no impliquen cap altra
+llicència.
+
+# Defensa de patents
+
+Si feu qualsevol afirmació escrita que el programari infringeix o contribueix a
+la infracció de qualsevol patent, la vostra llicència de patents per al
+programari atorgada en virtut d'aquests termes finalitza immediatament. Si la
+vostra empresa fa tal afirmació, la vostra llicència de patents finalitza
+immediatament per a la feina feta en nom de la vostra empresa.
+
+# Infraccions
+
+La primera vegada que se us notifiqui per escrit que heu infringit qualsevol
+d'aquests termes, o que heu fet qualsevol cosa amb el programari no coberta per
+les vostres llicències, les vostres llicències poden continuar si compliu
+plenament aquests termes i preneu mesures pràctiques per corregir les
+infraccions passades, dins dels 32 dies posteriors a la recepció de la
+notificació. En cas contrari, totes les vostres llicències finalitzen
+immediatament.
+
+# Sense responsabilitat
+
+En la mesura que la llei ho permeti, el programari es lliura tal com és, sense
+cap garantia ni condició, i el llicenciant no serà responsable davant vostre per
+cap dany derivat d'aquests termes o de l'ús o la naturalesa del programari, sota
+cap tipus de reclamació legal.
+
+# Definicions
+
+El *llicenciant* és l'individu o entitat que ofereix aquests termes, i el
+*programari* és el programari que el llicenciant posa a disposició en virtut
+d'aquests termes.
+
+*Vós* fa referència a l'individu o entitat que accepta aquests termes.
+
+*La vostra empresa* és qualsevol entitat jurídica, empresa unipersonal o altre
+tipus d'organització per a la qual treballeu, a més de totes les organitzacions
+que tinguin el control de, estiguin sota el control de, o estiguin sota el
+control comú d'aquesta organització. *Control* significa la propietat de
+substancialment tots els actius d'una entitat, o el poder de dirigir la seva
+gestió i polítiques mitjançant vot, contracte o d'altra manera. El control pot
+ser directe o indirecte.
+
+*Les vostres llicències* són totes les llicències que se us atorguen per al
+programari en virtut d'aquests termes.
+
+*Ús* significa qualsevol cosa que feu amb el programari que requereixi una de
+les vostres llicències.
+
+*Marca comercial* significa marques comercials, marques de servei i drets
+similars.
+
+================================================================================

@@ -1,12 +1,17 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.ui;
 
 import java.awt.Component;
 import java.util.List;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 
 /**
  * [CA] Diàleg de selecció de compàs. Mostra un {@link MultiOptionDialog} per
@@ -63,20 +68,24 @@ public class MeterDialog {
 		public final MeterPattern meterPattern;
 		/** [CA] Text lliure quan meterPattern == OTHER / [EN] Free text when meterPattern == OTHER */
 		public final String otherText; // only when meterPattern == OTHER
+		/** [CA] Nombre de compassos per pantalla / [EN] Number of measures per screen */
+		public final int nMeasuresCam;
 
 		/**
 		 * [CA] Crea un nou MeterData.
 		 * <p>
 		 * [EN] Creates a new MeterData.
 		 *
-		 * @param meterType    [CA] Tipus de compàs / [EN] Meter type
-		 * @param meterPattern [CA] Patró del compàs / [EN] Meter pattern
-		 * @param otherText    [CA] Text lliure (null si no és OTHER) / [EN] Free text (null if not OTHER)
+		 * @param meterType     [CA] Tipus de compàs / [EN] Meter type
+		 * @param meterPattern  [CA] Patró del compàs / [EN] Meter pattern
+		 * @param otherText     [CA] Text lliure (null si no és OTHER) / [EN] Free text (null if not OTHER)
+		 * @param nMeasuresCam  [CA] Compassos per pantalla / [EN] Measures per screen
 		 */
-		public MeterData(MeterType meterType, MeterPattern meterPattern, String otherText) {
+		public MeterData(MeterType meterType, MeterPattern meterPattern, String otherText, int nMeasuresCam) {
 			this.meterType = meterType;
 			this.meterPattern = meterPattern;
 			this.otherText = otherText;
+			this.nMeasuresCam = nMeasuresCam;
 		}
 
 		/**
@@ -110,7 +119,8 @@ public class MeterDialog {
 			Component parent,
 			MeterType defaultMeterType,
 			MeterPattern defaultMeterPattern,
-			String defaultTimeSignatureText
+			String defaultTimeSignatureText,
+			int defaultNMeasuresCam
 	) {
 		MultiOptionDialog.GroupSpec<MeterType> typeGroup =
 				new MultiOptionDialog.GroupSpec<>(
@@ -153,17 +163,33 @@ public class MeterDialog {
 
 		if (result == null) return null;
 
+		MeterData meterData;
 		MultiOptionDialog.Selection tsSel = result.get("timeSignature");
 		if (tsSel != null && tsSel.isOther) {
 			MeterData parsed = timeSignature2MeterData(tsSel.otherText);
-			if (parsed != null) return parsed;
-			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, tsSel.otherText);
+			meterData = (parsed != null) ? parsed
+					: new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, tsSel.otherText, defaultNMeasuresCam);
+		} else {
+			MeterType meterType = result.getValue("type", MeterType.class);
+			MeterPattern meterPattern = result.getValue("pattern", MeterPattern.class);
+			meterData = new MeterData(meterType, meterPattern, null, defaultNMeasuresCam);
 		}
 
-		MeterType meterType = result.getValue("type", MeterType.class);
-		MeterPattern meterPattern = result.getValue("pattern", MeterPattern.class);
+		// Spinner per al nombre de compassos per pantalla
+		JSpinner spinner = new JSpinner(new SpinnerNumberModel(
+				Math.max(1, meterData.nMeasuresCam), 1, 16, 1));
+		JPanel panel = new JPanel();
+		panel.add(new JLabel(I18n.t("dialog.meter.nMeasuresCam") + "  "));
+		panel.add(spinner);
+		int opt = JOptionPane.showConfirmDialog(
+				parent, panel,
+				I18n.t("dialog.meter.title"),
+				JOptionPane.OK_CANCEL_OPTION,
+				JOptionPane.PLAIN_MESSAGE);
+		if (opt != JOptionPane.OK_OPTION) return null;
 
-		return new MeterData(meterType, meterPattern, null);
+		int nMeasuresCam = (Integer) spinner.getValue();
+		return new MeterData(meterData.meterType, meterData.meterPattern, meterData.otherText, nMeasuresCam);
 	}
 
 	/**
@@ -228,7 +254,7 @@ public class MeterDialog {
 
 		String[] parts = ts.split("/");
 		if (parts.length != 2) {
-			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, ts);
+			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, ts, 4);
 		}
 
 		int numerator;
@@ -237,7 +263,7 @@ public class MeterDialog {
 			numerator = Integer.parseInt(parts[0].trim());
 			denominator = Integer.parseInt(parts[1].trim());
 		} catch (NumberFormatException ex) {
-			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, ts);
+			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, ts, 4);
 		}
 
 		MeterType meterType;
@@ -246,7 +272,7 @@ public class MeterDialog {
 		} else if (numerator == 2 || numerator == 3 || numerator == 4) {
 			meterType = MeterType.SIMPLE;
 		} else {
-			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, numerator + "/" + denominator);
+			return new MeterData(MeterType.SIMPLE, MeterPattern.OTHER, numerator + "/" + denominator, 4);
 		}
 
 		MeterPattern meterPattern;
@@ -261,6 +287,6 @@ public class MeterDialog {
 		}
 
 		String otherText = (meterPattern == MeterPattern.OTHER) ? (numerator + "/" + denominator) : null;
-		return new MeterData(meterType, meterPattern, otherText);
+		return new MeterData(meterType, meterPattern, otherText, 4);
 	}
 }

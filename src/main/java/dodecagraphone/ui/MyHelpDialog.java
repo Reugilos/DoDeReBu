@@ -1,7 +1,7 @@
 /*
- * MIT License
- * Copyright (c) 2024-2026 Pau Bofill, Claude IA
- * Llicència completa: LICENSE (arrel del projecte)
+ * PolyForm Noncommercial License 1.0.0
+ * Copyright (c) 2024-2026 Pau Bofill. Powered by Claude AI.
+ * Full license / Llicència completa: LICENSE (project root / arrel del projecte)
  */
 package dodecagraphone.ui;
 
@@ -58,7 +58,7 @@ public class MyHelpDialog {
         dialog = new JDialog(owner, I18n.t("help.dialog.title"), false);
         dialog.setLayout(new BorderLayout());
 
-        pane = new JEditorPane("text/html", buildHtml());
+        pane = new JEditorPane("text/html", buildHtml(owner.getTitle()));
         pane.setEditable(false);
         pane.setCaretPosition(0);
 
@@ -111,7 +111,7 @@ public class MyHelpDialog {
      *
      * @return [CA] cadena HTML de l'ajuda / [EN] HTML string for the help
      */
-    private static String buildHtml() {
+    private static String buildHtml(String appTitle) {
         String bg     = "#f8f8f8";
         String hdrBg  = "#2a6099";
         String hdrFg  = "#ffffff";
@@ -142,6 +142,7 @@ public class MyHelpDialog {
           .append("</style></head><body>");
 
         sb.append("<h1>").append(I18n.t("help.dialog.title")).append("</h1>");
+        sb.append("<p>").append(I18n.f("help.dialog.welcome", appTitle)).append("</p>");
 
         // ── Index ──────────────────────────────────────────────────────────────
         String[][] sections = {
