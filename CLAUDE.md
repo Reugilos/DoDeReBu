@@ -143,3 +143,7 @@ Maven (`pom.xml`). Java 16. Maven no és al PATH; cal obrir-lo des de NetBeans o
 02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat
 ```
 El JAR resultant va a `target/`. L'executable portable va a `portable/DoDeReBu_v4.0/`.
+
+**Ubicació dels scripts de build**: `01_baixa_jre21_FET_A_HP.bat`, `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` i `03_BuildZip.bat` ja no són a l'arrel del projecte: ara viuen a `../Complements_Bu/` (germana de `DoDeReBu_v4.0/`), fora del control de versions. **Important**: aquests scripts assumeixen que s'executen des de la carpeta del projecte (`pushd "%~dp0"`, `APP_NAME` = nom de la carpeta on és el `.bat`, rutes relatives com `target/`, `vendor/jre21/`) — si s'executen directament des de `Complements_Bu/` fallaran (`target/`, `vendor/` no hi són). Cal copiar-los (o crear un enllaç/còpia) a l'arrel de `DoDeReBu_v4.0/` abans d'executar-los, o adaptar-los per acceptar la ruta del projecte com a paràmetre.
+
+També s'han mogut a `../Complements_Bu/`: `AllSymbols.csv`, `ChordSymbols.csv` (dades de referència, no llegides en temps d'execució — `ChordSymbols.java` té les dades hardcoded), `MeMima.ttf` (no referenciat des de `src/`), `Liam/`, `Prompts/`, `SongsInBooklet - bkp/`, `portable/`, `portable_bkp/` i el zip de distribució.

@@ -27,15 +27,17 @@ la solmització mòbil de dotze sons (Do De Re Ri Mi Fa Fo So Sa La Li Ti).
 
 ## Compilació i execució
 
-El projecte es gestiona amb Maven (`pom.xml`). Per generar un executable portable
-amb JRE integrat, useu:
+El projecte es gestiona amb Maven (`pom.xml`); no té cap plugin de shade/assembly,
+així que la manera més senzilla de compilar i executar-lo és obrint el projecte amb
+un IDE compatible amb Maven (p.ex. NetBeans o IntelliJ), que resol les dependències
+(`jmusic`, `batik`, `pdfbox`) automàticament, i executant la classe principal
+`dodecagraphone.ui.MyMain`.
 
-```
-02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat
-```
-
-El `.jar` resultant es genera a `target/`; l'executable portable a
-`portable/DoDeReBu_v4.0/`. La classe principal és `dodecagraphone.ui.MyMain`.
+Per compilar des de la línia d'ordres: `mvn package` genera el `.jar` a `target/`,
+però cal afegir les dependències declarades al `pom.xml` al classpath per executar-lo
+(p.ex. amb `mvn dependency:build-classpath`). Els scripts per generar un executable
+portable amb JRE integrat són eines de build internes, no incloses en aquest
+repositori.
 
 ## Llicència
 
@@ -76,15 +78,17 @@ solmization (Do De Re Ri Mi Fa Fo So Sa La Li Ti).
 
 ## Build & run
 
-The project is managed with Maven (`pom.xml`). To generate a portable
-executable with an embedded JRE, run:
+The project is managed with Maven (`pom.xml`); it has no shade/assembly plugin,
+so the simplest way to build and run it is to open the project in a
+Maven-aware IDE (e.g. NetBeans or IntelliJ), which resolves the dependencies
+(`jmusic`, `batik`, `pdfbox`) automatically, and run the main class
+`dodecagraphone.ui.MyMain`.
 
-```
-02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat
-```
-
-The resulting `.jar` is built to `target/`; the portable executable to
-`portable/DoDeReBu_v4.0/`. The main class is `dodecagraphone.ui.MyMain`.
+To build from the command line: `mvn package` produces the `.jar` in `target/`,
+but you need to add the dependencies declared in `pom.xml` to the classpath to
+run it (e.g. with `mvn dependency:build-classpath`). The scripts that generate
+a portable executable with an embedded JRE are internal build tools, not
+included in this repository.
 
 ## License
 
