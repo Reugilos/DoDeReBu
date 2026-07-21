@@ -19,6 +19,7 @@ import dodecagraphone.model.component.MyChordSymbolLine;
 import dodecagraphone.model.component.MyLyrics;
 import dodecagraphone.model.component.MyAllPurposeScore;
 import dodecagraphone.model.component.MyButton;
+import dodecagraphone.model.component.MyCircularButton;
 import dodecagraphone.model.component.MyComponent;
 import dodecagraphone.model.component.MyGridSquare;
 import dodecagraphone.model.component.MyGridScore;
@@ -2622,11 +2623,9 @@ public class MyController {
     }
 
     public void onNamesVsHideButtonPressed(MyButton togg) {
-        // System.out.println("onNamesVsHideButtonPressed: "+togg.isPressed());
-        if (togg.isPressed()) {
-            this.getAllPurposeScore().setShowNoteNames(false);
-        } else {
-            this.getAllPurposeScore().setShowNoteNames(true);
+        if (togg instanceof MyCircularButton) {
+            int mode = ((MyCircularButton) togg).getStateIndex();
+            this.getAllPurposeScore().setNoteDisplayMode(mode);
         }
     }
 

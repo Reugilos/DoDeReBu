@@ -250,6 +250,70 @@ public class ToneRange {
     }
 
     /**
+     * [CA] Grau diatònic (amb alteració si cal) per a cada semitò 0..11 relatiu a la tònica.
+     * Convenció: sostingut per a 1 (Do), 4 (Fa) i 5 (Sol); bemoll per a 3 (Mi) i 7 (Si).
+     */
+    private static final String[] DEGREE_NAMES = {
+        "1", "#1", "2", "b3", "3", "4", "#4", "5", "#5", "6", "b7", "7"
+    };
+
+    /**
+     * [CA] Nom anglosaxó (lletra + alteració) per a cada classe de to 0..11, absolut
+     * (independent de la tonalitat). Convenció: sostingut per a Do, Fa i Sol; bemoll
+     * per a Mi i Si.
+     */
+    private static final String[] ANGLO_NAMES = {
+        "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"
+    };
+
+    /**
+     * [CA] Retorna el nom anglosaxó (p.ex. "Eb") de la nota MIDI donada. És absolut:
+     * no depèn de la tonalitat ni del do mòbil.
+     * <p>
+     * [EN] Returns the Anglo-Saxon name (e.g. "Eb") of the given MIDI note. It is
+     * absolute: it does not depend on the key or on movable-do.
+     *
+     * @param midi [CA] valor MIDI de la nota / [EN] MIDI note value
+     * @return [CA] nom anglosaxó de la nota / [EN] Anglo-Saxon name of the note
+     */
+    public static String getAngloName(int midi) {
+        int pitchClass = Math.floorMod(midi, 12);
+        return ANGLO_NAMES[pitchClass];
+    }
+
+    /**
+     * [CA] Retorna l'interval en semitons (0..11) del MIDI donat relatiu a la tònica.
+     * <p>
+     * [EN] Returns the interval in semitones (0..11) of the given MIDI relative to the tonic.
+     *
+     * @param midi    [CA] valor MIDI de la nota / [EN] MIDI note value
+     * @param midiKey [CA] valor MIDI de la tònica / [EN] MIDI value of the tonic
+     * @return [CA] interval en semitons (0..11) / [EN] interval in semitones (0..11)
+     */
+    public static String getIntervalName(int midi, int midiKey) {
+        int interval = Math.floorMod(midi - midiKey, 12);
+        return Integer.toString(interval);
+    }
+
+    /**
+     * [CA] Retorna el grau diatònic (1..7) del MIDI donat relatiu a la tònica, amb
+     * l'alteració que calgui (p.ex. "b3", "#4") quan el semitò no correspon a un grau
+     * diatònic exacte de l'escala major de referència.
+     * <p>
+     * [EN] Returns the diatonic degree (1..7) of the given MIDI relative to the tonic,
+     * with the necessary alteration (e.g. "b3", "#4") when the semitone does not match
+     * an exact diatonic degree of the reference major scale.
+     *
+     * @param midi    [CA] valor MIDI de la nota / [EN] MIDI note value
+     * @param midiKey [CA] valor MIDI de la tònica / [EN] MIDI value of the tonic
+     * @return [CA] grau diatònic amb alteració / [EN] diatonic degree with alteration
+     */
+    public static String getDegreeName(int midi, int midiKey) {
+        int interval = Math.floorMod(midi - midiKey, 12);
+        return DEGREE_NAMES[interval];
+    }
+
+    /**
      * [CA] Retorna el nom de la tonalitat (2 caràcters) per a un valor MIDI i mode donats.
      * <p>
      * [EN] Returns the key name (2 characters) for a given MIDI value and mode.

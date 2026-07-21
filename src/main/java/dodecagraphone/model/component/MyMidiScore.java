@@ -364,7 +364,7 @@ public class MyMidiScore extends MyExercise {
         this.choice.setNoneChoice();
         this.midiKey = ToneRange.getDefaultKey();
         this.usePentagramaStrips = true;
-        this.showNoteNames = true;
+        this.noteDisplayMode = NOTE_DISPLAY_NAMES;
         this.fitAnacrusis = false;
         this.useMobileDo = false;
         this.useScreenKeyboardRight = false;
@@ -728,6 +728,7 @@ public class MyMidiScore extends MyExercise {
                                 || text.startsWith("scaleMode=")
                                 || text.startsWith("usePentagramaStrips=")
                                 || text.startsWith("showNoteNames=")
+                                || text.startsWith("noteDisplayMode=")
                                 || text.startsWith("fitAnacrusis=")
                                 || text.startsWith("useMobileDo=")
                                 || text.startsWith("useScreenKeyboardRight=")
@@ -1339,9 +1340,12 @@ public class MyMidiScore extends MyExercise {
                         } else if (text.startsWith("usePentagramaStrips=")) {
                             String sub = text.substring(20); // ara si
                             this.usePentagramaStrips = Boolean.parseBoolean(sub);
+                        } else if (text.startsWith("noteDisplayMode=")) {
+                            this.noteDisplayMode = Integer.parseInt(text.substring(16));
                         } else if (text.startsWith("showNoteNames=")) {
-                            String sub = text.substring(14); // ara
-                            this.showNoteNames = Boolean.parseBoolean(sub);
+                            // Compatibilitat amb fitxers antics (camp booleà, previ al mode circular).
+                            String sub = text.substring(14);
+                            this.noteDisplayMode = Boolean.parseBoolean(sub) ? NOTE_DISPLAY_NAMES : NOTE_DISPLAY_HIDE;
                         } else if (text.startsWith("fitAnacrusis=")) {
                             this.fitAnacrusis = Boolean.parseBoolean(text.substring(13));
                         } else if (text.startsWith("useMobileDo=")) {
@@ -1544,7 +1548,7 @@ public class MyMidiScore extends MyExercise {
             addTextMeta(metaTrack, "midiKey=" + this.midiKey);
             addTextMeta(metaTrack, "scaleMode=" + this.scaleMode);
             addTextMeta(metaTrack, "usePentagramaStrips=" + this.usePentagramaStrips);
-            addTextMeta(metaTrack, "showNoteNames=" + this.showNoteNames);
+            addTextMeta(metaTrack, "noteDisplayMode=" + this.noteDisplayMode);
             addTextMeta(metaTrack, "fitAnacrusis=" + this.fitAnacrusis);
             addTextMeta(metaTrack, "useMobileDo=" + this.useMobileDo);
             addTextMeta(metaTrack, "useScreenKeyboardRight=" + this.useScreenKeyboardRight);

@@ -20,7 +20,10 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.swing.JPopupMenu;
 import javax.swing.JToolTip;
@@ -154,9 +157,18 @@ public class MyButtonPanel extends MyComponent {
                 char type = (fields[2].trim()).charAt(0);
                 int row = Integer.parseInt(fields[3].trim()) - 1;
                 int col = Integer.parseInt(fields[4].trim());
+                // TextOn: una o més claus I18n separades per "/" (botons circulars 'C':
+                // les etiquetes de les diferents opcions, en ordre). Cada clau es tradueix
+                // individualment i es torna a unir amb "/".
                 String textOn = "";
                 if (fields.length > 5 && !fields[5].trim().isEmpty()) {
-                    textOn = I18n.t(fields[5].trim());
+                    String[] keys = fields[5].trim().split("/");
+                    StringBuilder sb = new StringBuilder();
+                    for (int k = 0; k < keys.length; k++) {
+                        if (k > 0) sb.append("/");
+                        sb.append(I18n.t(keys[k].trim()));
+                    }
+                    textOn = sb.toString();
                 }
                 String textOff = (fields.length > 6 && !fields[6].trim().isEmpty()) ? I18n.t(fields[6].trim()) : "";
                 String tipText = "";
@@ -212,11 +224,14 @@ public class MyButtonPanel extends MyComponent {
                     this.buttons.put(buttonInfo.id, but = new MyButton(buttonInfo.id,
                             xPosition, yPosition, nColsB, nRowsB, this, controller, buttonInfo.textOn, buttonInfo.tipText));
                     break;
+                case 'C':
                 default:
-                    // Circular button
+                    // Botó circular: estats = TextOn (opcions separades per "/") + TextOff (estat per defecte, al final).
                     this.buttons.put(buttonInfo.id, but = new MyCircularButton(buttonInfo.id,
                             xPosition, yPosition, nColsB, nRowsB, this, controller, buttonInfo.textOn, buttonInfo.textOff, buttonInfo.tipText));
-                    ((MyCircularButton) but).setStateList(new String[]{"Simbol", "Sinomim", "Intervals", "Posicions", "Notes"});
+                    List<String> states = new ArrayList<>(Arrays.asList(buttonInfo.textOn.split("/")));
+                    if (!buttonInfo.textOff.isEmpty()) states.add(buttonInfo.textOff);
+                    ((MyCircularButton) but).setStateList(states.toArray(new String[0]));
                     break;
             }
             this.subComponents.add(but);
@@ -367,6 +382,7 @@ public class MyButtonPanel extends MyComponent {
 
         switch (buttonInfo.type) {
             case 'T':
+            case 'C':
                 butt.toggle();
                 break;
             case 'B':
@@ -624,7 +640,7 @@ public class MyButtonPanel extends MyComponent {
     public void setToggleButtonsToProgramValues() {
         this.setPentaVsChoiceButton(this.controller.getAllPurposeScore().isShowPentagramaStrips());
         this.setLeftVsRightButton(this.controller.getAllPurposeScore().isUseScreenKeyboardRight());
-        this.setNamesVsHideButton(this.controller.getAllPurposeScore().isShowNoteNames());
+        this.setNamesVsHideButton(this.controller.getAllPurposeScore().getNoteDisplayMode());
         this.setMobileDoVsAbsoluteButton(ToneRange.isMovileDo());
         this.setTipsButton(Settings.isTipsVisible());
         this.setTremoloButton(this.controller.isTremoloActive());
@@ -676,10 +692,10 @@ public class MyButtonPanel extends MyComponent {
      *
      * @param penta
      */
-    public void setNamesVsHideButton(boolean names) {
+    public void setNamesVsHideButton(int noteDisplayMode) {
         this.setModified(true);
-        MyToggle tog = (MyToggle) this.buttons.get(this.id_NamesVsHideButton);
-        if (tog != null) tog.setPressed(!names);
+        MyCircularButton but = (MyCircularButton) this.buttons.get(this.id_NamesVsHideButton);
+        if (but != null) but.setStateIndex(noteDisplayMode);
     }
     
     /**

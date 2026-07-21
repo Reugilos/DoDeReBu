@@ -120,10 +120,23 @@ public class MyGridScore extends MyComponent {
      * When set, the keyboard is displayed to the left of the screen.
      */
     protected boolean useScreenKeyboardRight;
+    /** [CA] Mostra el nom absolut/mòbil de la nota. / [EN] Shows the note's absolute/mobile name. */
+    public static final int NOTE_DISPLAY_NAMES = 0;
+    /** [CA] Mostra l'interval en semitons (0..11) relatiu a la tonalitat. / [EN] Shows the interval in semitones (0..11) relative to the key. */
+    public static final int NOTE_DISPLAY_INTERV = 1;
+    /** [CA] Mostra el grau diatònic (1..7, amb alteració) relatiu a la tonalitat. / [EN] Shows the diatonic degree (1..7, with alteration) relative to the key. */
+    public static final int NOTE_DISPLAY_DEGREE = 2;
+    /** [CA] Mostra el nom anglosaxó absolut de la nota (p.ex. "Eb"). / [EN] Shows the note's absolute Anglo-Saxon name (e.g. "Eb"). */
+    public static final int NOTE_DISPLAY_ANGLO = 3;
+    /** [CA] No mostra res sobre la nota (només el tick de nota audible). / [EN] Shows nothing on the note (only the audible-note tick). */
+    public static final int NOTE_DISPLAY_HIDE = 4;
+
     /**
-     * When set, the note names are written in their corresponding squares.
+     * When set, indicates what is written in each note's square: its name,
+     * its interval, diatonic degree or Anglo-Saxon name relative to the key
+     * (or absolute, for the Anglo-Saxon name), or nothing (hidden).
      */
-    protected boolean showNoteNames;
+    protected int noteDisplayMode;
     /**
      * When set, the anacrusis is fitted to fill the first page.
      */
@@ -257,7 +270,7 @@ public class MyGridScore extends MyComponent {
         midiKey = ToneRange.getDefaultKey(); // midi
         scaleMode = ToneRange.getDefaultMode();
         choice = new MyChoice(this.controller);
-        showNoteNames = false;
+        noteDisplayMode = NOTE_DISPLAY_HIDE;
         this.setDefaultDelay();
         usePentagramaStrips = true; // or choice based strips (false)
         chordSymbolLine = new HashMap<>();
@@ -664,17 +677,69 @@ public class MyGridScore extends MyComponent {
      *
      * @return
      */
-    public boolean isShowNoteNames() {
-        return showNoteNames;
+    public int getNoteDisplayMode() {
+        return noteDisplayMode;
     }
 
     /**
      * setter.
      *
+     * @param noteDisplayMode [CA] un de {@code NOTE_DISPLAY_NAMES/INTERV/DEGREE/ANGLO/HIDE} / [EN] one of {@code NOTE_DISPLAY_NAMES/INTERV/DEGREE/ANGLO/HIDE}
+     */
+    public void setNoteDisplayMode(int noteDisplayMode) {
+        this.noteDisplayMode = noteDisplayMode;
+    }
+
+    /**
+     * [CA] Compatibilitat: {@code true} si es mostra qualsevol informació de nota
+     * (nom, interval o grau), {@code false} si està amagada.
+     * <p>
+     * [EN] Compatibility: {@code true} if any note information is shown
+     * (name, interval or degree), {@code false} if hidden.
+     *
+     * @return
+     */
+    public boolean isShowNoteNames() {
+        return noteDisplayMode != NOTE_DISPLAY_HIDE;
+    }
+
+    /**
+     * [CA] Compatibilitat: {@code true} fixa el mode a NAMES, {@code false} el fixa a HIDE.
+     * <p>
+     * [EN] Compatibility: {@code true} sets the mode to NAMES, {@code false} sets it to HIDE.
+     *
      * @param showNoteNames
      */
     public void setShowNoteNames(boolean showNoteNames) {
-        this.showNoteNames = showNoteNames;
+        this.noteDisplayMode = showNoteNames ? NOTE_DISPLAY_NAMES : NOTE_DISPLAY_HIDE;
+    }
+
+    /**
+     * [CA] Retorna l'etiqueta a escriure a la cel·la de la nota MIDI donada, segons
+     * {@code noteDisplayMode}: nom (mode NAMES), interval en semitons 0..11 (mode
+     * INTERV) o grau diatònic amb alteració (mode DEGREE), sempre relatius a la
+     * tonalitat actual ({@code getMidiKey()}).
+     * <p>
+     * [EN] Returns the label to write in the given MIDI note's square, according to
+     * {@code noteDisplayMode}: name (NAMES mode), interval in semitones 0..11
+     * (INTERV mode) or diatonic degree with alteration (DEGREE mode), always
+     * relative to the current key ({@code getMidiKey()}).
+     *
+     * @param midi [CA] valor MIDI de la nota / [EN] MIDI note value
+     * @return [CA] etiqueta a mostrar / [EN] label to display
+     */
+    private String getNoteLabel(int midi) {
+        switch (this.noteDisplayMode) {
+            case NOTE_DISPLAY_INTERV:
+                return ToneRange.getIntervalName(midi, this.getMidiKey());
+            case NOTE_DISPLAY_DEGREE:
+                return ToneRange.getDegreeName(midi, this.getMidiKey());
+            case NOTE_DISPLAY_ANGLO:
+                return ToneRange.getAngloName(midi);
+            default:
+                String name = ToneRange.getNoteName(midi, this.getMidiKey());
+                return name.substring(0, name.length() - 1);
+        }
     }
 
     public boolean isFitAnacrusisScore() { return fitAnacrusis; }
@@ -1408,9 +1473,8 @@ public class MyGridScore extends MyComponent {
                     }
                     String name;
                     if (isFirstInTremoloGroup) {
-                        if (this.isShowNoteNames() && !hasDrumsNote) {
-                            name = ToneRange.getNoteName(midi, this.getMidiKey());
-                            name = name.substring(0, name.length() - 1);
+                        if (this.noteDisplayMode != NOTE_DISPLAY_HIDE && !hasDrumsNote) {
+                            name = this.getNoteLabel(midi);
                         } else {
                             name = "✔";
                         }
@@ -1437,9 +1501,8 @@ public class MyGridScore extends MyComponent {
                     g.fillRect((int) screenX, (int) screenY, (int) hght, (int) hght);
                     g.setColor(Color.WHITE);
                     String dotName;
-                    if (this.isShowNoteNames() && !hasDrumsNoteDot) {
-                        dotName = ToneRange.getNoteName(midi, this.getMidiKey());
-                        dotName = dotName.substring(0, dotName.length() - 1);
+                    if (this.noteDisplayMode != NOTE_DISPLAY_HIDE && !hasDrumsNoteDot) {
+                        dotName = this.getNoteLabel(midi);
                     } else {
                         dotName = "✔";
                     }

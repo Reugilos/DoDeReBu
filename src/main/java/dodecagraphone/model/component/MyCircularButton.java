@@ -118,6 +118,17 @@ public class MyCircularButton extends MyButton {
     }
 
     /**
+     * [CA] Retorna l'índex de l'estat actual dins de {@code stateList}.
+     * <p>
+     * [EN] Returns the index of the current state within {@code stateList}.
+     *
+     * @return [CA] índex de l'estat actual / [EN] current state index
+     */
+    public int getStateIndex() {
+        return stateIndex;
+    }
+
+    /**
      * [CA] Fixa un estat concret per índex.
      * <p>
      * [EN] Sets a specific state by index.
@@ -184,15 +195,16 @@ public class MyCircularButton extends MyButton {
     }
 
     /**
-     * [CA] Reseteja el botó al primer estat (índex 0).
+     * [CA] Resetejar un botó circular no fa res: com {@code MyToggle}, és un
+     * control persistent (no momentani), i el seu estat no s'ha d'alterar en
+     * alliberar el ratolí ({@code MyButtonPanel::onButtonRelesased}).
      * <p>
-     * [EN] Resets the button to the first state (index 0).
+     * [EN] Resetting a circular button does nothing: like {@code MyToggle}, it is
+     * a persistent (non-momentary) control, and its state must not change when
+     * the mouse is released ({@code MyButtonPanel::onButtonRelesased}).
      */
     @Override
     public void reset() {
-        if (stateList.isEmpty()) return;
-        this.stateIndex = 0;
-        updateVisualsFromState();
     }
 
     /* ===== Helpers ===== */

@@ -63,7 +63,7 @@ public class MyAllPurposeScore extends MyMidiScore {
         this.choice.setNoneChoice();
         this.midiKey = ToneRange.getDefaultKey();
         this.usePentagramaStrips = true;
-        this.showNoteNames = true;
+        this.noteDisplayMode = NOTE_DISPLAY_NAMES;
         this.useMobileDo = false;
         this.useScreenKeyboardRight = false;
         this.setDefaultDelay();

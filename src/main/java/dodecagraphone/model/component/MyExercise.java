@@ -165,10 +165,10 @@ public class MyExercise extends MyPatternScore {
      * @param label [CA] etiqueta de l'exercici a carregar / [EN] label of the exercise to load
      */
     public void setExercise(String label) {
-        // Preservem l'estat de l'usuari per a showNoteNames i useMobileDo.
+        // Preservem l'estat de l'usuari per a noteDisplayMode i useMobileDo.
         // usePentagramaStrips → sempre false (template) en entrar a mode exercici.
         // Els exercicis que necessiten valors diferents els sobreescriuen explícitament.
-        boolean savedShowNoteNames = this.showNoteNames;
+        int savedNoteDisplayMode = this.noteDisplayMode;
         boolean savedUseMobileDo   = this.useMobileDo;
 
         // defaults
@@ -177,7 +177,7 @@ public class MyExercise extends MyPatternScore {
         this.scaleMode = 'M';
         this.choice.setDefaultChoice();
         this.usePentagramaStrips = false;       // template per defecte en mode exercici
-        this.showNoteNames = savedShowNoteNames; // preserva la preferència de l'usuari
+        this.noteDisplayMode = savedNoteDisplayMode; // preserva la preferència de l'usuari
         this.useMobileDo   = savedUseMobileDo;
         this.useScreenKeyboardRight = false;
         this.label = label;
