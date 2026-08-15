@@ -379,6 +379,14 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             }
             return;
         }
+        // Supr: esborra la marca de canvi seleccionada (si n'hi ha cap)
+        if (e.getKeyCode() == KeyEvent.VK_DELETE) {
+            if (controller.deleteSelectedMark()) {
+                controller.redrawChordLine();
+                this.repinta(true);
+                return;
+            }
+        }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
             controller.clearSelection();
             if (controller.isPendingColumnOp()) {

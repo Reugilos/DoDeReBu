@@ -44,6 +44,7 @@ import dodecagraphone.teclesControl.MouseSequence;
 import dodecagraphone.teclesControl.MoveNoteEvent;
 import dodecagraphone.teclesControl.PasteEvent;
 import dodecagraphone.teclesControl.PilaEvents;
+import dodecagraphone.teclesControl.ScoreChangeEvent;
 import dodecagraphone.ui.AppConfig;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MeterDialog;
@@ -167,6 +168,9 @@ public class MyController {
     private int selEndRow   = -1;
     private int selEndCol   = -1;
     private boolean selectionActive = false;
+    // Marca de canvi seleccionada a la franja d'acords (-1 / null = cap)
+    private int selectedMarkCol = -1;
+    private MyChordSymbolLine.MarkKind selectedMarkKind = null;
     // Auto-scroll durant SELECT drag
     private Timer    selAutoScrollTimer = null;
     private int      selAutoScrollDir   = 0;   // +1 = dreta, -1 = esquerra
@@ -977,11 +981,36 @@ public class MyController {
     // ── Selection overlay getters (read by MyGridScore) ──────────────────────────
 
     public boolean isSelectionActive() { return selectionActive; }
-    public void clearSelection() { selectionActive = false; }
+    public void clearSelection() {
+        selectionActive = false;
+        clearMarkSelection();
+    }
     public int getSelStartRow()        { return selStartRow; }
     public int getSelStartCol()        { return selStartCol; }
     public int getSelEndRow()          { return selEndRow; }
     public int getSelEndCol()          { return selEndCol; }
+
+    // ── Selecció de marca de canvi (llegida per MyChordSymbolLine) ───────────────
+
+    /** @return columna de la marca de canvi seleccionada, o -1 si no n'hi ha cap */
+    public int getSelectedMarkCol() { return selectedMarkCol; }
+
+    /** @return tipus de la marca de canvi seleccionada, o null si no n'hi ha cap */
+    public MyChordSymbolLine.MarkKind getSelectedMarkKind() { return selectedMarkKind; }
+
+    /**
+     * [CA] Deselecciona la marca de canvi, si n'hi havia cap, i redibuixa la
+     * franja d'acords perquè el ressaltat desaparegui.
+     * <p>
+     * [EN] Deselects the change mark, if any, and redraws the chord strip so
+     * the highlight disappears.
+     */
+    public void clearMarkSelection() {
+        if (selectedMarkCol == -1 && selectedMarkKind == null) return;
+        selectedMarkCol  = -1;
+        selectedMarkKind = null;
+        redrawChordLine();
+    }
 
     // ── Copy / Cut / Paste ───────────────────────────────────────────────────────
 
@@ -1702,6 +1731,18 @@ public class MyController {
             return;
         }
 
+        /* Marca de canvi (tempo/to/volum) de la franja d'acords: el clic la
+           selecciona i queda consumit, de manera que no s'obre el diàleg
+           d'acords. Qualsevol altre clic fora d'un botó la deselecciona. */
+        MyChordSymbolLine.MarkBox mark = this.myChordSymbolLine.whichMark(posX, posY);
+        if (mark != null) {
+            this.selectedMarkCol  = mark.col;
+            this.selectedMarkKind = mark.kind;
+            this.redrawChordLine();
+            return;
+        }
+        this.clearMarkSelection();
+
         /* Check chord symbol */
         int chordCol = this.myChordSymbolLine.whichCol(posX, posY);
         // if (Settings.IS_BU) chordCol = -1;
@@ -2204,6 +2245,12 @@ public class MyController {
     }
 
     public void onDoubleClick(double posX, double posY){
+        // Doble clic sobre una marca de canvi: editar-la (el clic previ ja l'ha
+        // seleccionada des d'onMousePressed).
+        if (selectedMarkKind != null) {
+            editSelectedMark();
+            return;
+        }
         int row = this.allPurposeScore.whichRow(posX, posY);
         int col = this.allPurposeScore.whichCol();
         if (row == -1 || col == -1) return;
@@ -3723,13 +3770,17 @@ public class MyController {
             col = allPurposeScore.getFirstColOfCurrentMeasure(col);
         }
         // Si hi ha un canvi de to pendent, preguntar si cal transposar les notes.
+        int appliedTransposeStep = 0;
+        boolean appliedTransposeNotes = false;
         if (pendingTransposeStep != 0) {
             int step = pendingTransposeStep;
             pendingTransposeStep = 0;
             int res = MyDialogs.demanaConfirmacio(
                     I18n.t("keyButton.transposeConfirm"),
                     I18n.t("keyButton.transposeConfirm.title"));
-            if (res == javax.swing.JOptionPane.YES_OPTION) {
+            appliedTransposeStep  = step;
+            appliedTransposeNotes = (res == javax.swing.JOptionPane.YES_OPTION);
+            if (appliedTransposeNotes) {
                 allPurposeScore.transpose(step);
             } else {
                 // Les notes no es transposen, però el choice sí segueix la nova tonalitat
@@ -3737,13 +3788,42 @@ public class MyController {
                 allPurposeScore.updateStripsNKeyboard();
             }
         }
+        // Undo: desem l'entrada sencera abans i després del merge, no el delta,
+        // perquè el redo no perdi els camps que ja hi havia en aquella columna.
+        MyGridScore.ScoreChange oldEntry = allPurposeScore.getChangeMap().get(col);
+        oldEntry = (oldEntry == null) ? null : oldEntry.copy();
         allPurposeScore.setScoreChange(col, pendingChange);
+        MyGridScore.ScoreChange newEntry = allPurposeScore.getChangeMap().get(col);
+        afegirEvent(new ScoreChangeEvent(this, col, oldEntry,
+                (newEntry == null) ? null : newEntry.copy(),
+                appliedTransposeStep, appliedTransposeNotes));
         // Reseteja playbackTempo només si la marca és a la posició actual o abans;
         // si és posterior al playbar el tempo en viu no canvia fins que s'hi arriba.
         if (pendingChange.tempo != null && col <= getEditingCol()) {
             MyTempo.setTempo(pendingChange.tempo);
         }
         pendingChange = null;
+        // Tanca el diàleg informatiu
+        if (pendingChangeDialog != null) {
+            pendingChangeDialog.dispose();
+            pendingChangeDialog = null;
+        }
+        refreshAfterChangeMapEdit(col);
+        return true;
+    }
+
+    /**
+     * [CA] Refresc complet de l'estat i la vista després d'escriure al
+     * {@code changeMap}: base de timing (columna 0), marca de fi de partitura,
+     * franja d'acords, càmera, barra d'estat i botons.
+     * <p>
+     * [EN] Full state and view refresh after writing to the {@code changeMap}:
+     * timing base (column 0), end-of-score marker, chord strip, camera, status
+     * line and buttons.
+     *
+     * @param col [CA] columna afectada / [EN] affected column
+     */
+    private void refreshAfterChangeMapEdit(int col) {
         // Si el canvi és a la columna 0 actualitzem també la base de timing i la doble barra
         if (col == 0) {
             allPurposeScore.freezeBaseTimingParams();
@@ -3757,11 +3837,6 @@ public class MyController {
                 if (sc0bm.beatFigure    != null) allPurposeScore.setBeatFigure(sc0bm.beatFigure);
             }
             allPurposeScore.updateStopMarker();
-        }
-        // Tanca el diàleg informatiu
-        if (pendingChangeDialog != null) {
-            pendingChangeDialog.dispose();
-            pendingChangeDialog = null;
         }
         needsSaving = true;
         // Redibuixa la franja d'acords (nova marca) i la graella (línies de beat/compàs)
@@ -3785,6 +3860,202 @@ public class MyController {
             redrawChordLine();
         }
         this.drawFull(true);
+    }
+
+    /**
+     * [CA] Escriu (o esborra) l'entrada sencera del {@code changeMap} a la
+     * columna indicada i refresca la vista. A diferència del workflow de canvi
+     * pendent, no fusiona ni registra cap event: l'usen els events d'undo/redo
+     * i l'edició/esborrat de marques, que ja gestionen el seu propi event.
+     * <p>
+     * [EN] Writes (or removes) the whole {@code changeMap} entry at the given
+     * column and refreshes the view. Unlike the pending-change workflow it
+     * neither merges nor records an event: used by the undo/redo events and by
+     * mark editing/deletion, which record their own event.
+     *
+     * @param col [CA] columna de partitura / [EN] score column
+     * @param sc  [CA] entrada nova (null o buida = esborrar) / [EN] new entry (null or empty = remove)
+     */
+    public void applyScoreChangeAt(int col, MyGridScore.ScoreChange sc) {
+        allPurposeScore.putScoreChange(col, sc);
+        // El tempo en viu només segueix la marca si aquesta és a la posició
+        // actual o abans (mateix criteri que placePendingChangeAt), i només si
+        // el tempo efectiu ha canviat (així un canvi de volum o de to no
+        // descarta l'ajust Spd+/Spd-).
+        if (col <= getEditingCol()) {
+            MyGridScore.ScoreChange eff = allPurposeScore.getEffectiveChange(col);
+            int effTempo = (eff.tempo != null) ? eff.tempo : Settings.DEFAULT_TEMPO;
+            if (effTempo != MyTempo.getTempo()) {
+                MyTempo.setTempo(effTempo);
+            }
+        }
+        refreshAfterChangeMapEdit(col);
+    }
+
+    /**
+     * [CA] Aplica la transposició associada a una marca de tonalitat, sense
+     * registrar cap event (l'event de la marca ja la desfà). Si
+     * {@code notes} és fals només es transposa el {@code choice}, com fa el
+     * workflow de canvi pendent quan l'usuari respon que no vol transportar.
+     * <p>
+     * [EN] Applies the transposition associated with a key mark, without
+     * recording an event (the mark's own event reverses it). When {@code notes}
+     * is false only the {@code choice} is transposed, mirroring the
+     * pending-change workflow when the user declines transposing.
+     *
+     * @param step  [CA] semitons (positiu = amunt) / [EN] semitones (positive = up)
+     * @param notes [CA] cert per transposar també les notes / [EN] true to transpose the notes too
+     */
+    public void applyMarkTranspose(int step, boolean notes) {
+        if (notes) {
+            transposeWithoutUndo(step);
+        } else {
+            allPurposeScore.getChoice().transposeChoice(step);
+            allPurposeScore.updateStripsNKeyboard();
+        }
+    }
+
+    /**
+     * [CA] Retorna l'entrada del changeMap de la columna indicada, o una de
+     * nova amb els valors vigents per defecte quan es tracta de la columna 0
+     * (les marques inicials es dibuixen amb fallback als valors per defecte
+     * encara que el changeMap no hi tingui entrada).
+     * <p>
+     * [EN] Returns the changeMap entry at the given column, or a fresh one with
+     * the current default values when it is column 0 (initial marks are drawn
+     * with a fallback to defaults even when the changeMap has no entry there).
+     */
+    private MyGridScore.ScoreChange markEntryAt(int col) {
+        MyGridScore.ScoreChange sc = allPurposeScore.getChangeMap().get(col);
+        return (sc == null) ? new MyGridScore.ScoreChange() : sc.copy();
+    }
+
+    /**
+     * [CA] Edita la marca de canvi seleccionada: demana el nou valor amb el
+     * mateix diàleg que el botó corresponent, prefixat amb el valor actual, i
+     * l'aplica amb undo. L'edició d'una marca de to no transposa les notes:
+     * l'usuari està corregint una marca ja col·locada, no fent un canvi de to nou.
+     * <p>
+     * [EN] Edits the selected change mark: asks for the new value with the same
+     * dialog as the matching button, pre-filled with the current value, and
+     * applies it with undo support. Editing a key mark does not transpose the
+     * notes: the user is correcting an existing mark, not making a new key change.
+     */
+    public void editSelectedMark() {
+        if (selectedMarkKind == null) return;
+        int col = selectedMarkCol;
+        MyGridScore.ScoreChange oldEntry = allPurposeScore.getChangeMap().get(col);
+        oldEntry = (oldEntry == null) ? null : oldEntry.copy();
+        MyGridScore.ScoreChange newEntry = markEntryAt(col);
+
+        switch (selectedMarkKind) {
+            case TEMPO: {
+                int cur = (newEntry.tempo != null) ? newEntry.tempo : Settings.DEFAULT_TEMPO;
+                String input = MyDialogs.mostraInputDialog(
+                        I18n.t("MyController.onTempoButtonPressed.prompt"),
+                        I18n.t("MyController.onTempoButtonPressed.title"),
+                        String.valueOf(cur));
+                if (input == null) return;
+                try {
+                    int requested = Integer.parseInt(input.trim());
+                    newEntry.tempo = Math.max(0, Math.min(Settings.MAX_BPM, requested));
+                } catch (NumberFormatException e) {
+                    MyDialogs.mostraError(
+                            I18n.f("MyController.onTempoButtonPressed.invalidInput", input),
+                            I18n.t("MyController.dialog.error.title"));
+                    return;
+                }
+                break;
+            }
+            case KEY: {
+                int  curKey  = (newEntry.midiKey   != null) ? newEntry.midiKey   : ToneRange.getDefaultKey();
+                char curMode = (newEntry.scaleMode != null) ? newEntry.scaleMode : ToneRange.getDefaultMode();
+                String curName;
+                try { curName = ToneRange.getKeyName(curKey, curMode); }
+                catch (Exception e) { curName = ""; }
+                String input = MyDialogs.mostraInputDialog(
+                        I18n.t("keyButton.prompt"), I18n.t("keyButton.title"), curName);
+                if (input == null || input.isBlank()) return;
+                char mode = ToneRange.getScaleMode(input);
+                int newMidiKey = ToneRange.getMidiKey(input);
+                if (mode == ' ' || newMidiKey < 0) {
+                    MyDialogs.mostraError(
+                            I18n.f("keyButton.invalidInput", input),
+                            I18n.t("MyController.dialog.error.title"));
+                    return;
+                }
+                newEntry.midiKey   = newMidiKey;
+                newEntry.scaleMode = mode;
+                break;
+            }
+            case VOLUME: {
+                int trackId = this.getMixer().getCurrentTrackId();
+                Integer curVel = newEntry.trackVelocities.get(trackId);
+                if (curVel == null) curVel = this.getMixer().getCurrentTrack().getVelocity();
+                String input = MyDialogs.mostraInputDialog(
+                        I18n.t("MyController.onVolumeButtonPressed.prompt"),
+                        I18n.t("MyController.onVolumeButtonPressed.title"),
+                        String.valueOf(curVel));
+                if (input == null) return;
+                try {
+                    int requested = Integer.parseInt(input.trim());
+                    newEntry.trackVelocities.put(trackId, Math.max(0, Math.min(127, requested)));
+                } catch (NumberFormatException e) {
+                    MyDialogs.mostraError(
+                            I18n.f("MyController.onVolumeButtonPressed.invalidInput", input),
+                            I18n.t("MyController.dialog.error.title"));
+                    return;
+                }
+                break;
+            }
+        }
+        afegirEvent(new ScoreChangeEvent(this, col, oldEntry, newEntry));
+        applyScoreChangeAt(col, newEntry);
+    }
+
+    /**
+     * [CA] Esborra la marca de canvi seleccionada. Les marques de la columna 0
+     * són la base de la partitura i no es poden esborrar (només editar): en
+     * aquest cas es mostra un avís i no es fa res.
+     * <p>
+     * [EN] Deletes the selected change mark. Column-0 marks are the score's
+     * baseline and cannot be deleted (only edited): in that case a tip is shown
+     * and nothing happens.
+     *
+     * @return [CA] cert si hi havia una marca seleccionada (el clic/tecla queda
+     *         consumit) / [EN] true if a mark was selected (key consumed)
+     */
+    public boolean deleteSelectedMark() {
+        if (selectedMarkKind == null) return false;
+        int col = selectedMarkCol;
+        if (col == 0) {
+            double tipX = Settings.getScreenWidth() / 2.0;
+            double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
+            this.buttons.hideTip();
+            this.buttons.showCustomTip(I18n.t("mark.delete.notAtStart.tip"), tipX, tipY);
+            this.lastTipButton = -1;
+            return true;
+        }
+        MyGridScore.ScoreChange oldEntry = allPurposeScore.getChangeMap().get(col);
+        if (oldEntry == null) return true;
+        oldEntry = oldEntry.copy();
+        MyGridScore.ScoreChange newEntry = oldEntry.copy();
+        switch (selectedMarkKind) {
+            case TEMPO:
+                newEntry.tempo = null;
+                break;
+            case KEY:
+                newEntry.midiKey   = null;
+                newEntry.scaleMode = null;
+                break;
+            case VOLUME:
+                newEntry.trackVelocities.remove(this.getMixer().getCurrentTrackId());
+                break;
+        }
+        selectedMarkCol  = -1;
+        selectedMarkKind = null;
+        afegirEvent(new ScoreChangeEvent(this, col, oldEntry, newEntry));
+        applyScoreChangeAt(col, newEntry);
         return true;
     }
 

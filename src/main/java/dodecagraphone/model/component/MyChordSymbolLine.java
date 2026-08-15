@@ -81,6 +81,47 @@ public class MyChordSymbolLine extends MyComponent {
     private double cachedMarkRowH    = 0;
     private volatile boolean needsDrawing = true;
 
+    /**
+     * [CA] Tipus de marca de canvi dibuixada a la franja. El compàs no hi surt:
+     * no té caixeta pròpia i per tant no és seleccionable.
+     * <p>
+     * [EN] Kind of change mark drawn in the strip. Time signature is absent: it
+     * has no box of its own and hence is not selectable.
+     */
+    public enum MarkKind { TEMPO, KEY, VOLUME }
+
+    /**
+     * [CA] Rectangle (en coordenades de l'offscreen) d'una marca dibuixada,
+     * amb la columna i el tipus als quals correspon.
+     * <p>
+     * [EN] Rectangle (in offscreen coordinates) of a drawn mark, together with
+     * the column and kind it belongs to.
+     */
+    public static class MarkBox {
+        public final int col;
+        public final MarkKind kind;
+        public final int x, y, w, h;
+
+        MarkBox(int col, MarkKind kind, int x, int y, int w, int h) {
+            this.col  = col;
+            this.kind = kind;
+            this.x = x; this.y = y; this.w = w; this.h = h;
+        }
+    }
+
+    /**
+     * Rectangles de les marques dibuixades a l'offscreen, en ordre de dibuix.
+     * Es buida a cada {@code drawFullChordLineInOffscreen()}. Registrar els
+     * rectangles reals és més robust que recalcular-ne la geometria: l'amplada
+     * depèn de les mètriques de font i les caixes s'apilen verticalment.
+     */
+    private final List<MarkBox> markBoxes = new java.util.ArrayList<>();
+
+    /** Transformació offscreen→pantalla desada per l'últim {@code draw()}. */
+    private int    lastDrawX1 = 0, lastDrawY1 = 0, lastDrawX2 = 0;
+    private double lastDrawScaleX = 1.0;
+    private boolean lastDrawValid = false;
+
     /** Line gap in pixels between chord text lines (tighter than font leading). */
     private static final int LINE_GAP = 1;
     /** Pixels reserved at the very bottom of the chord strip for the attack triangle. */
@@ -157,6 +198,38 @@ public class MyChordSymbolLine extends MyComponent {
             return whichCol;
         }
         return -1;
+    }
+
+    /**
+     * [CA] Retorna la marca de canvi (tempo, to o volum) dibuixada sota la
+     * posició de pantalla indicada, o null si no n'hi ha cap. Converteix cada
+     * rectangle registrat a coordenades de pantalla amb la transformació que va
+     * fer servir l'últim {@code draw()} (que compensa l'escala de fit-anacrusis).
+     * El recorregut és invers perquè guanyi la marca dibuixada a sobre.
+     * <p>
+     * [EN] Returns the change mark (tempo, key or volume) drawn under the given
+     * screen position, or null if there is none. Each registered rectangle is
+     * mapped to screen coordinates with the transform used by the last
+     * {@code draw()} (which compensates for fit-anacrusis scaling). Iteration is
+     * reversed so the mark drawn on top wins.
+     *
+     * @param screenX [CA] coordenada X de pantalla / [EN] screen X coordinate
+     * @param screenY [CA] coordenada Y de pantalla / [EN] screen Y coordinate
+     * @return [CA] la marca sota el punt, o null / [EN] the mark under the point, or null
+     */
+    public MarkBox whichMark(double screenX, double screenY) {
+        if (!lastDrawValid || !this.contains(screenX, screenY)) return null;
+        for (int i = markBoxes.size() - 1; i >= 0; i--) {
+            MarkBox mb = markBoxes.get(i);
+            double sx = lastDrawX1 + (mb.x - lastDrawX2) * lastDrawScaleX;
+            double sw = mb.w * lastDrawScaleX;
+            double sy = lastDrawY1 + mb.y;
+            if (screenX >= sx && screenX < sx + sw
+                    && screenY >= sy && screenY < sy + mb.h) {
+                return mb;
+            }
+        }
+        return null;
     }
 
     /**
@@ -460,7 +533,7 @@ public class MyChordSymbolLine extends MyComponent {
      * bottom of the chord strip.  Returns the height of the drawn box.
      */
     private int drawTempoMark(int col, int bpm, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "" + bpm, COLOR_TEMPO_BG, g, offscreen, existingYOff);
+        return drawChangeMark(col, "" + bpm, COLOR_TEMPO_BG, MarkKind.TEMPO, g, offscreen, existingYOff);
     }
 
     /**
@@ -474,11 +547,11 @@ public class MyChordSymbolLine extends MyComponent {
         } catch (Exception ex) {
             text = "?";
         }
-        return drawChangeMark(col, text, COLOR_KEY_BG, g, offscreen, existingYOff);
+        return drawChangeMark(col, text, COLOR_KEY_BG, MarkKind.KEY, g, offscreen, existingYOff);
     }
 
     private int drawVolumeMark(int col, int velocity, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "v" + velocity, COLOR_VOLUME_BG, g, offscreen, existingYOff);
+        return drawChangeMark(col, "v" + velocity, COLOR_VOLUME_BG, MarkKind.VOLUME, g, offscreen, existingYOff);
     }
 
     /**
@@ -487,7 +560,7 @@ public class MyChordSymbolLine extends MyComponent {
      * the bottom edge (markers stack upward).
      * Returns the height of the box so the caller can stack further markers.
      */
-    private int drawChangeMark(int col, String text, Color bgColor,
+    private int drawChangeMark(int col, String text, Color bgColor, MarkKind kind,
                                Graphics2D g, boolean offscreen, int existingYOff) {
         Font prevFont = g.getFont();
         g.setFont(getMarkFont());
@@ -508,6 +581,21 @@ public class MyChordSymbolLine extends MyComponent {
         g.fillRect(boxX, boxY, boxW, boxH);
         g.setColor(Color.WHITE);
         g.drawString(text, boxX + pad, boxY + pad + fm.getAscent());
+
+        // Només el buffer de pantalla registra rectangles i pinta la selecció:
+        // l'exportació a PDF reutilitza aquest mètode amb un altre Graphics2D.
+        boolean toOwnBuffer = offscreen && g == offscreenGraphics;
+        if (toOwnBuffer) {
+            markBoxes.add(new MarkBox(col, kind, boxX, boxY, boxW, boxH));
+        }
+        // Marca seleccionada: contorn de contrast (groc sobre fons fosc).
+        if (toOwnBuffer && col == contr.getSelectedMarkCol() && kind == contr.getSelectedMarkKind()) {
+            Stroke savedStroke = g.getStroke();
+            g.setStroke(new BasicStroke(2f));
+            g.setColor(Color.YELLOW);
+            g.drawRect(boxX, boxY, boxW - 1, boxH - 1);
+            g.setStroke(savedStroke);
+        }
 
         g.setFont(prevFont);
         return boxH;
@@ -581,6 +669,7 @@ public class MyChordSymbolLine extends MyComponent {
     public void drawFullChordLineInOffscreen() {
         synchronized (offscreenGraphics) {
             if (!needsDrawing) return;
+            markBoxes.clear();
             // Clear background
             offscreenGraphics.setColor(Color.WHITE);
             offscreenGraphics.fillRect(0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
@@ -777,6 +866,12 @@ public class MyChordSymbolLine extends MyComponent {
 
             Utilities.printOutWithPriority(false, "MyChordSymbolLine::draw(): left=" + left + ", ccol=" + ccol
                     + ", x1=" + x1 + ", y1=" + y1 + ", w=" + w + ", h=" + h + ", x2=" + x2 + ", w2=" + w2);
+            // Desa la transformació offscreen→pantalla perquè whichMark() la pugui invertir.
+            lastDrawX1     = x1;
+            lastDrawY1     = y1;
+            lastDrawX2     = x2;
+            lastDrawScaleX = (w2 > 0) ? (double) w / w2 : 1.0;
+            lastDrawValid  = true;
             drawImageClamped(g, offscreenImage,
                     x1, y1, x1 + w, y1 + h,
                     x2, 0, x2 + w2, h);

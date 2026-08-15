@@ -219,6 +219,29 @@ public class MyGridScore extends MyComponent {
             if (other.colInBeatPhase != null) this.colInBeatPhase = other.colInBeatPhase;
             this.trackVelocities.putAll(other.trackVelocities);
         }
+
+        /**
+         * Retorna una còpia independent d'aquest ScoreChange (inclòs el mapa
+         * {@code trackVelocities}). Útil per desar l'estat en un event d'undo.
+         *
+         * @return còpia profunda
+         */
+        public ScoreChange copy() {
+            ScoreChange c = new ScoreChange();
+            c.mergeFrom(this);
+            return c;
+        }
+
+        /**
+         * @return cert si no hi ha cap camp establert (tots null i sense velocitats)
+         */
+        public boolean isEmpty() {
+            return tempo == null && midiKey == null && scaleMode == null
+                    && nBeatsMeasure == null && beatFigure == null
+                    && nColsQuarter == null && nColsBeat == null
+                    && nMeasuresCam == null && measurePhase == null
+                    && colInBeatPhase == null && trackVelocities.isEmpty();
+        }
     }
 
     /**
@@ -2457,6 +2480,25 @@ public class MyGridScore extends MyComponent {
             changeMap.put(col, existing);
         }
         existing.mergeFrom(change);
+    }
+
+    /**
+     * Substitueix l'entrada sencera del changeMap a la columna indicada.
+     * A diferència de {@link #setScoreChange}, no fusiona: el que hi hagi es
+     * descarta. Si {@code change} és null o buit, l'entrada s'elimina.
+     * <p>
+     * L'usen l'edició i l'esborrat de marques i els events d'undo/redo, que
+     * necessiten deixar la columna exactament en un estat conegut.
+     *
+     * @param col    columna de partitura
+     * @param change entrada nova (null o buida = esborrar l'entrada)
+     */
+    public void putScoreChange(int col, ScoreChange change) {
+        if (change == null || change.isEmpty()) {
+            changeMap.remove(col);
+        } else {
+            changeMap.put(col, change.copy());
+        }
     }
 
     /**

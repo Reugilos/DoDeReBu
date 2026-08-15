@@ -89,6 +89,14 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 - `MouseSequence` — seqüència d'accions de ratolí (notes).
 - `ChordEvent` (`teclesControl/ChordEvent.java`) — col·locar/esborrar un acord; crida `placeChordSymbol`/`removeChordSymbol` + `redrawChordLine()`.
 - `PasteEvent` — enganxar notes; `desfer()` té null guard si la nota ja no existeix.
+- `ScoreChangeEvent` — marques de canvi (tempo/to/volum/compàs). Desa l'entrada **sencera** del `changeMap` abans i després (no el delta), perquè el redo no perdi els camps que ja hi havia a la columna. Si la marca de to va transposar, l'event també desfà la transposició, en ordre invers a la col·locació (primer restaura l'entrada, després destransposa).
+
+### Marques de canvi: selecció, edició i esborrat
+- `MyChordSymbolLine` registra el rectangle real de cada marca dibuixada (`markBoxes`, buidada a cada `drawFullChordLineInOffscreen`) i desa la transformació offscreen→pantalla de l'últim `draw()`; `whichMark(x, y)` la inverteix (compensa l'escala de fit-anacrusis).
+- `MyController.onMousePressed` consulta `whichMark` **abans** de `myChordSymbolLine.whichCol`, altrament el clic obriria el diàleg d'acords. Un clic selecciona, doble clic edita (`editSelectedMark`), Supr esborra (`deleteSelectedMark`, a `MyNewPanel.keyPressed`).
+- Les marques de la columna 0 són editables però **no** esborrables (són la base de la partitura).
+- El compàs no té caixeta dibuixada: guanya undo, però no és seleccionable.
+- `MyGridScore.putScoreChange` **substitueix** l'entrada sencera (i l'elimina si queda buida), a diferència de `setScoreChange`, que fa merge i el segueixen usant la càrrega MIDI, el paste i el workflow de pending change.
 
 ### Autocorrect en drag ADD i EXTEND
 `processDragCell` i `onMousePressed` comproven si el track **actual** té una nota a la cel·la (stream sobre `sq.getPoliNotes()`), **no** `isSqVisible()` (global). Afecta els modes ADD, EXTEND_PENDING, EXTEND_RIGHT i EXTEND_LEFT. Si el `mouseReleased` és fora del grid (`whichCol == -1`), l'autocorrect usa `lastColPressed` com a posició final.
