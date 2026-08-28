@@ -44,7 +44,7 @@ public class MyUserInterface extends JFrame {
      * window. Registers window state and closing listeners.
      */
     public MyUserInterface() {
-        super("DoDeReBu_App_v4.0");
+        super(AppConfig.getAppName());
         this.version = this.getTitle();
         this.controller = new MyController(this);
         this.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);

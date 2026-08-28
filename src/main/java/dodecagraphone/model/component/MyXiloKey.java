@@ -280,6 +280,11 @@ public class MyXiloKey extends MyComponent {
                 }
                 if (midiToPlay < 0) return;
                 SoundWithMidi.play(midiToPlay, channel, velocity);
+                // Cal recordar el pitch real tocat (pot diferir de this.midi per
+                // displayOffset o mode bateria) perquè stop() apagui la mateixa
+                // nota, si no el note-off se n'envia a this.midi i la nota real
+                // es queda sonant indefinidament.
+                this.channelRealMidi.put(channel, midiToPlay);
             } else {
                 /**
                  * Plays sound sample.

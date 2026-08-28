@@ -721,25 +721,22 @@ public class MyLyrics extends MyComponent {
 
             int numCols = score.getNumCols();
 
-            // Committed lyrics for the current display track.
-            // Quan el fit comprimeix la vista (getFitScaleX()<1), el text confirmat es
-            // dibuixa en screen-space a draw() per evitar text borrós per la compressió offscreen.
-            if (getFitScaleX() >= 1.0) {
-                List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
-                if (segs != null && !segs.isEmpty()) {
-                    offscreenGraphics.setColor(Color.BLACK);
-                    for (LyricSegment seg : segs) {
-                        drawSegment(seg, offscreenGraphics);
-                    }
+            // Committed lyrics for the current display track. Sempre es dibuixen
+            // al buffer offscreen (a escala 1:1, sense comprimir), perquè és
+            // l'única font que fan servir l'exportació SVG i el PDF (no criden
+            // draw()). Quan el fit comprimeix la vista en pantalla, draw() torna
+            // a dibuixar aquest mateix text en screen-space per evitar que es
+            // vegi borrós, i evita blitejar aquest buffer per no duplicar-lo.
+            List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
+            if (segs != null && !segs.isEmpty()) {
+                offscreenGraphics.setColor(Color.BLACK);
+                for (LyricSegment seg : segs) {
+                    drawSegment(seg, offscreenGraphics);
                 }
             }
 
             // Preview: text currently being typed (shown in dark-grey).
-            // Quan el fit comprimeix la vista (getFitScaleX()<1), el preview es dibuixa
-            // en screen-space a draw() per evitar text borrós per la compressió offscreen.
-            if (editMode && editBuffer.length() > 0
-                    && editTrack == displayTrackId
-                    && getFitScaleX() >= 1.0) {
+            if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {
                 offscreenGraphics.setColor(Color.DARK_GRAY);
                 LyricSegment preview = new LyricSegment(
                         editCursorCol, editTrack,
@@ -866,12 +863,18 @@ public class MyLyrics extends MyComponent {
                     "MyLyrics::draw(): left=" + left + ", ccol=" + ccol
                     + ", x1=" + x1 + ", y1=" + y1 + ", w=" + w
                     + ", h=" + h + ", x2=" + x2 + ", w2=" + w2);
-            drawImageClamped(g, offscreenImage,
-                    x1, y1, x1 + w, y1 + h,
-                    x2, 0, x2 + w2, h);
+            // Quan el fit comprimeix la vista, el buffer offscreen (sempre ple, a
+            // escala 1:1, per a l'exportació SVG/PDF) es veuria borrós si es
+            // blitegés comprimit; s'omet el blit i es dibuixa el text nítid en
+            // screen-space més avall, que ja cobreix tota la zona visible.
+            double fitScaleXScreen = getFitScaleX();
+            if (fitScaleXScreen >= 1.0) {
+                drawImageClamped(g, offscreenImage,
+                        x1, y1, x1 + w, y1 + h,
+                        x2, 0, x2 + w2, h);
+            }
 
             // Text en screen-space quan fit actiu: evita text borrós per la compressió offscreen.
-            double fitScaleXScreen = getFitScaleX();
             if (fitScaleXScreen < 1.0) {
                 Shape prevClip = g.getClip();
                 java.awt.Font prevFont = g.getFont();

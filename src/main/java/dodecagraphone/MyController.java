@@ -2306,6 +2306,7 @@ public class MyController {
 
     public void onMouseMoved(double posX, double posY) {
         if (clipboardTipVisible) return;
+        MyChordSymbolLine.MarkBox hoverMark = this.myChordSymbolLine.whichMark(posX, posY);
         int button = this.buttons.whichButton(posX, posY);
         if (button != -1) {
             if (button != lastTipButton) {
@@ -2322,6 +2323,17 @@ public class MyController {
                         (int)(posY + Settings.getRowHeight()));
                 lastTipButton = -2;
                 lastTipKeyRow = -1;
+            }
+        } else if (hoverMark != null) {
+            // Marca de canvi: mateixa prioritat que al clic (abans que l'acord).
+            MyChordSymbolLine.MarkBox mark = hoverMark;
+            if (lastTipButton != -8 || lastTipKeyRow != mark.col) {
+                this.buttons.hideTip();
+                this.buttons.showCustomTip(
+                        I18n.t(mark.col == 0 ? "scoreChange.mark.atStart.tip" : "scoreChange.mark.tip"),
+                        posX, posY);
+                lastTipButton = -8;
+                lastTipKeyRow = mark.col;
             }
         } else if (myChordSymbolLine.whichCol(posX, posY) != -1) {
             if (lastTipButton != -3) {

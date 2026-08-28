@@ -58,7 +58,7 @@ public class MyMain {
         SwingUtilities.invokeLater(() -> {
             MyUserInterface iu = new MyUserInterface();
             iu.setVisible(true);
-            System.out.println(I18n.f("main.welcome", iu.getTitle(), AppConfig.get().getConfigPathForDebug()));
+            System.out.println(I18n.f("main.welcome", iu.getVersion(), AppConfig.get().getConfigPathForDebug()));
             new javax.swing.Timer(Settings.REFRESH_PERIOD, e -> iu.update()).start();
         });
     }

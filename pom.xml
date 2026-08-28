@@ -2,8 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dodecaphenia</groupId>
-    <artifactId>DoDeReBu_v4.0</artifactId>
-    <version>2.0</version>
+    <artifactId>DoDeReBu_v4.1</artifactId>
+    <version>4.1</version>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
@@ -37,5 +37,24 @@
         <maven.compiler.source>16</maven.compiler.source>
         <maven.compiler.target>16</maven.compiler.target>
     </properties>
-    <name>DoDeReBu_v4.0</name>
+    <name>DoDeReBu_v4.1</name>
+    <build>
+        <resources>
+            <!-- Recursos normals, sense filtrar (missatges i18n amb %s i altres
+                 patrons que no s'han de tocar). -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+            <!-- app.properties amb project.name filtrat per Maven: vegeu
+                 AppConfig.getAppName(). Es genera tant en compilar des de
+                 NetBeans/IDE (target/classes) com en empaquetar el JAR, perquè
+                 el títol de la finestra i el missatge de consola no s'hagin de
+                 tocar a cada canvi de versió. -->
+            <resource>
+                <directory>src/main/resources-filtered</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
 </project>

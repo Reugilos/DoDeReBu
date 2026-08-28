@@ -142,6 +142,40 @@ public class MyGridScore extends MyComponent {
      */
     protected boolean fitAnacrusis;
     /**
+     * [CA] Factor d'escala horitzontal aplicat per {@code drawCurrentCam()} (mode
+     * impressió/exportació) quan fit-anacrusis comprimeix un compàs extra a la
+     * primera pàgina. {@code 1.0} quan no s'aplica compressió.
+     * <p>
+     * [EN] Horizontal scale factor applied by {@code drawCurrentCam()} (print/export
+     * mode) when fit-anacrusis compresses an extra measure into the first page.
+     * {@code 1.0} when no compression applies.
+     */
+    private double printFitScaleX = 1.0;
+    /**
+     * [CA] Cert si {@code drawCurrentCam()} està aplicant la compressió fit-anacrusis
+     * actual (usat per {@code drawSquare}/{@code drawBeatLine}/{@code drawMeasureLine}
+     * en mode impressió).
+     * <p>
+     * [EN] True while {@code drawCurrentCam()} is applying fit-anacrusis compression
+     * (used by {@code drawSquare}/{@code drawBeatLine}/{@code drawMeasureLine} in
+     * print mode).
+     */
+    private boolean printFitActive = false;
+    /**
+     * [CA] Origen (x1) i offset de columna font (x2) usats per {@link #getPrintScreenX(int)},
+     * en les mateixes unitats i amb el mateix floor/round que el bloc de línies de
+     * beat/compàs en screen-space de {@link #draw(java.awt.Graphics2D)} i de
+     * {@code MyChordSymbolLine}/{@code MyLyrics}, perquè les tres franges quedin
+     * alineades píxel a píxel.
+     * <p>
+     * [EN] Origin (x1) and source column offset (x2) used by {@link #getPrintScreenX(int)},
+     * in the same units and with the same floor/round as the screen-space beat/measure
+     * line block in {@link #draw(java.awt.Graphics2D)} and in
+     * {@code MyChordSymbolLine}/{@code MyLyrics}, so the three strips stay pixel-aligned.
+     */
+    private int printFitX1 = 0;
+    private int printFitX2 = 0;
+    /**
      * Whwen set, note names are written in Mobile Do
      */
     protected boolean useMobileDo;
@@ -618,6 +652,32 @@ public class MyGridScore extends MyComponent {
     @Override
     public double getScreenX(int scoreCol) {
         return cam.getScreenX(getCamCol(scoreCol));
+    }
+
+    /**
+     * [CA] Com {@link #getScreenX(int)}, però aplicant la compressió horitzontal
+     * fit-anacrusis quan {@code drawCurrentCam()} (mode impressió) l'ha activat
+     * per a la pàgina actual. Usat només pel camí d'impressió/exportació
+     * ({@code drawSquare}, {@code drawBeatLine}, {@code drawMeasureLine}).
+     * <p>
+     * [EN] Like {@link #getScreenX(int)}, but applying the fit-anacrusis
+     * horizontal compression when {@code drawCurrentCam()} (print mode) has
+     * activated it for the current page. Used only by the print/export path
+     * ({@code drawSquare}, {@code drawBeatLine}, {@code drawMeasureLine}).
+     *
+     * @param scoreCol
+     * @return
+     */
+    private double getPrintScreenX(int scoreCol) {
+        if (this.printFitActive) {
+            // Mateix floor abans d'escalar i round després que el bloc de línies en
+            // screen-space de draw() i de MyChordSymbolLine/MyLyrics (CLAUDE.md:
+            // compensació de compressió fit): cal el mateix ordre d'operacions
+            // perquè els píxels resultants coincideixin exactament entre franges.
+            int offX = (int) Math.floor(scoreCol * Settings.getColWidth());
+            return this.printFitX1 + Math.round((offX - this.printFitX2) * this.printFitScaleX);
+        }
+        return getScreenX(scoreCol);
     }
 
     public double getOffScreenScreenX(int scoreCol) {
@@ -1343,6 +1403,8 @@ public class MyGridScore extends MyComponent {
 
             //------------------------------------
             boolean left = !this.isUseScreenKeyboardRight();
+            this.printFitActive = false;
+            this.printFitScaleX = 1.0;
             int firstColToDraw;
             int x1, x2;
             int y1;//  = (int) Math.round(this.cam.getScreenY(Settings.getScoreFirstRow())); //Settings.getCamFirstRow();
@@ -1356,6 +1418,19 @@ public class MyGridScore extends MyComponent {
                 h = (int) Math.ceil(nKeys * Settings.getRowHeight() * Settings.getnRowsSquare());
                 firstColToDraw = firstDrawCol; // (int) Math.max(0,getCurrentCol()-Settings.getnColsCam());
                 int lastColToDraw = lastDrawCol; // getCurrentCol();
+                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
+                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+                    lastColToDraw = Math.min(lastColToDraw + extraCols, nCols);
+                    lastDrawCol = lastColToDraw;
+                    if (lastColToDraw - firstColToDraw > 0) {
+                        this.printFitActive = true;
+                        this.printFitScaleX = (double) ncolscam / (lastColToDraw - firstColToDraw);
+                        // Mateixos x1/x2 que el bloc de línies en screen-space de draw()
+                        // i de MyChordSymbolLine/MyLyrics, per quedar alineats.
+                        this.printFitX1 = (int) Math.round(this.cam.getScreenX(0));
+                        this.printFitX2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
+                    }
+                }
                 x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
                 w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
             } else {
@@ -1438,8 +1513,9 @@ public class MyGridScore extends MyComponent {
 //        }
         int screenX;
         int screenY;
+        double printScaleX = (this.controller.isPrinting() && this.printFitActive) ? this.printFitScaleX : 1.0;
         if (this.controller.isPrinting()){
-            screenX = (int) Math.round(this.getScreenX(col));
+            screenX = (int) Math.round(this.getPrintScreenX(col));
             screenY = (int) Math.round(this.getScreenY(row * Settings.getnRowsSquare()));
         } else {
             screenX = (int) Math.round(this.getOffScreenScreenX(col));
@@ -1447,7 +1523,7 @@ public class MyGridScore extends MyComponent {
         }
         // this.width = Settings.getColWidth() * nCols;
         //double h = this.height;
-        int wdth = (int) Math.ceil(Settings.getSquareWidth());
+        int wdth = (int) Math.ceil(Settings.getSquareWidth() * printScaleX);
         int hght = (int) Math.ceil(Settings.getSquareHeight());
         //System.out.println("MyGridSquare::Draw: hght = "+(int) hght);
 
@@ -1906,7 +1982,7 @@ public class MyGridScore extends MyComponent {
         int camX1;
         int camY1;
         if (this.controller.isPrinting()){
-            camX1 = (int) Math.floor(getScreenX(col));
+            camX1 = (int) Math.floor(getPrintScreenX(col));
             camY1 = (int) Math.round(getScreenY(0));
         } else {
             camX1 = (int) Math.floor(getOffScreenScreenX(col));
@@ -1933,7 +2009,7 @@ public class MyGridScore extends MyComponent {
         int camX1;
         int camY1;
         if (this.controller.isPrinting()){
-            camX1 = (int) Math.floor(getScreenX(col));
+            camX1 = (int) Math.floor(getPrintScreenX(col));
             camY1 = (int) Math.round(getScreenY(0));
         } else {
             camX1 = (int) Math.floor(getOffScreenScreenX(col));
