@@ -267,7 +267,17 @@ public class MyGridSquare extends MyComponent {
         
     public void addNote(int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
         SubSquare note = new SubSquare(channel, track, this, volume, is_visible, is_mutted, is_linked, is_dotted);
-//        if (!this.poliNotes.contains(note)) 
+        // La identitat d'un SubSquare és (canal, track, square): un track només
+        // pot tenir una nota en una cel·la. Afegir-ne una segona deixava la
+        // cel·la amb dues entrades del mateix track, i llavors linkNote
+        // (indexOf) només n'enllaçava una i removeNote (lastIndexOf) només
+        // n'esborrava una: la nota curta que hi havia a sota sobrevivia a la
+        // llarga que se li superposava, i la cel·la seguia dibuixant un cap.
+        // Si ja hi és, es conserva la que hi ha (amb el seu estat d'enllaç).
+        if (this.poliNotes.contains(note)) {
+            updateState();
+            return;
+        }
         this.poliNotes.add(note);
         updateState();
     }

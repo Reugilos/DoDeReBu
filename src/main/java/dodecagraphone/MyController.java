@@ -922,21 +922,51 @@ public class MyController {
 
     // ── MOVE helpers ────────────────────────────────────────────────────────────
 
+    /**
+     * [CA] Primera columna de la nota del track ACTUAL que passa per (row, col).
+     * Camina cap a l'esquerra mentre la cel·la sigui una continuació d'aquell
+     * track. Abans es feia amb {@code isSq_is_linked()}, que és un AND sobre
+     * totes les pistes visibles: amb notes d'altres pistes solapades a la
+     * mateixa altura, la cerca s'aturava massa aviat (s'agafava mitja nota) o
+     * seguia per columnes on el track actual no hi té res (s'agafava de més).
+     * <p>
+     * [EN] First column of the CURRENT track's note passing through (row, col).
+     * Walks left while the cell is a continuation of that track. It used to use
+     * {@code isSq_is_linked()}, an AND over all visible tracks: with other
+     * tracks' notes overlapping at the same pitch, the search stopped too early
+     * (half a note was grabbed) or ran on through columns where the current
+     * track has nothing (too much was grabbed).
+     *
+     * @param row [CA] fila / [EN] row
+     * @param col [CA] columna de partida / [EN] starting column
+     * @return [CA] columna del cap de la nota / [EN] column of the note head
+     */
     private int findNoteHeadCol(int row, int col) {
         int h = col;
-        while (h > 0) {
-            MyGridSquare sq = this.allPurposeScore.getGridSquare(row, h);
-            if (sq == null || !sq.isSqVisible() || !sq.isSq_is_linked()) break;
+        // isCurrentTrackNoteLinked ja és fals si el track no hi té nota, de
+        // manera que també cobreix la comprovació de visibilitat.
+        while (h > 0 && isCurrentTrackNoteLinked(this.allPurposeScore.getGridSquare(row, h))) {
             h--;
         }
         return h;
     }
 
+    /**
+     * [CA] Última columna de la nota del track ACTUAL que passa per (row, col).
+     * Mateix criteri per pista que {@link #findNoteHeadCol(int, int)}.
+     * <p>
+     * [EN] Last column of the CURRENT track's note passing through (row, col).
+     * Same per-track criterion as {@link #findNoteHeadCol(int, int)}.
+     *
+     * @param row [CA] fila / [EN] row
+     * @param col [CA] columna de partida / [EN] starting column
+     * @return [CA] columna de la cua de la nota / [EN] column of the note tail
+     */
     private int findNoteTailCol(int row, int col) {
         int t = col;
-        while (true) {
-            MyGridSquare next = this.allPurposeScore.getGridSquare(row, t + 1);
-            if (next == null || !next.isSqVisible() || !next.isSq_is_linked()) break;
+        int lastCol = this.allPurposeScore.getNumCols() - 1;
+        while (t < lastCol
+                && isCurrentTrackNoteLinked(this.allPurposeScore.getGridSquare(row, t + 1))) {
             t++;
         }
         return t;
@@ -1514,7 +1544,7 @@ public class MyController {
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
                 note.getVelocity(), note.isVisible(), !note.isAudible(), note.isLinked(),
                 this.mixer.getCurrentTrack().isDotted());
-        if (nextSq != null && nextSq.isSqVisible() && nextSq.isSq_is_linked()) {
+        if (nextSq != null && nextSq.isSqVisible() && isCurrentTrackNoteLinked(nextSq)) {
             nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
                     SoundWithMidi.getCurrentKeyboardVelocity(), false, false, false,
                     this.mixer.getCurrentTrack().isDotted());
@@ -1526,6 +1556,48 @@ public class MyController {
     }
 
     /** Linka la nota d'un square i registra el canvi al mouseSequence per undo. */
+    /**
+     * [CA] Cert si la nota del track ACTUAL en aquest square és una continuació.
+     * No es pot fer servir {@code sq.isSq_is_linked()}: aquell flag és un AND
+     * sobre tots els tracks visibles i, a més, és un valor calculat a
+     * {@code updateState()}, o sigui que durant un drag (que processa diverses
+     * cel·les sense repintar entremig) pot estar caducat.
+     * <p>
+     * [EN] True if the CURRENT track's note in this square is a continuation.
+     * {@code sq.isSq_is_linked()} cannot be used: that flag is an AND over all
+     * visible tracks and is cached in {@code updateState()}, so during a drag
+     * (which processes several cells with no repaint in between) it can be stale.
+     *
+     * @param sq [CA] cel·la a comprovar / [EN] cell to check
+     * @return [CA] cert si la nota del track actual està enllaçada / [EN] true if the current track's note is linked
+     */
+    /**
+     * [CA] Cert si el track actual ja té una nota visible a la cel·la indicada.
+     * <p>
+     * [EN] True if the current track already has a visible note in the given cell.
+     *
+     * @param row [CA] fila / [EN] row
+     * @param col [CA] columna / [EN] column
+     * @return [CA] cert si ja hi ha nota del track actual / [EN] true if the current track already has a note there
+     */
+    private boolean currentTrackHasNoteAt(int row, int col) {
+        MyGridSquare sq = this.allPurposeScore.getGridSquare(row, col);
+        if (sq == null) return false;
+        final int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        final int tr = this.mixer.getCurrentTrackId();
+        return sq.getPoliNotes().stream()
+                .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
+    }
+
+    private boolean isCurrentTrackNoteLinked(MyGridSquare sq) {
+        if (sq == null) return false;
+        final int ch = this.mixer.getCurrentChannelOfCurrentTrack();
+        final int tr = this.mixer.getCurrentTrackId();
+        return sq.getPoliNotes().stream()
+                .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr
+                        && n.isVisible() && n.isLinked());
+    }
+
     private void linkNoteAtCell(MyGridSquare sq) {
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
@@ -1553,7 +1625,7 @@ public class MyController {
         int vel = SoundWithMidi.getCurrentKeyboardVelocity();
         boolean wasMuted = !sq.isSqAudible();
         boolean wasDotted = this.mixer.getCurrentTrack().isDotted();
-        boolean wasLinked = sq.isSq_is_linked();
+        boolean wasLinked = isCurrentTrackNoteLinked(sq);
         sq.unlinkNote(ch, tr, vel, true, wasMuted, false, wasDotted);
         if (wasLinked) {
             mouseSequence.addLinkChange(sq, ch, tr, vel, true, wasMuted, wasDotted, true, false);
@@ -1570,7 +1642,7 @@ public class MyController {
                 boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
                     .anyMatch(n -> n.getChannel() == curCh && n.getTrack() == curTr && n.isVisible());
                 if (currentTrackHasNote) {
-                    if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                    if (!isCurrentTrackNoteLinked(sq)) linkNoteAtCell(sq);
                 } else {
                     addNoteAtCell(row, col);
                     MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
@@ -1591,7 +1663,7 @@ public class MyController {
                     if (extendStartCol > 0) {
                         MyGridSquare startSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol);
                         MyGridSquare leftSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol - 1);
-                        if (startSq != null && startSq.isSqVisible() && !startSq.isSq_is_linked()
+                        if (startSq != null && startSq.isSqVisible() && !isCurrentTrackNoteLinked(startSq)
                                 && leftSq != null && leftSq.isSqVisible()) {
                             linkNoteAtCell(startSq);
                         }
@@ -1600,7 +1672,7 @@ public class MyController {
                     boolean nextHasNote = nextSq != null && nextSq.getPoliNotes().stream()
                         .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                     if (nextHasNote) {
-                        if (!nextSq.isSq_is_linked()) linkNoteAtCell(nextSq);
+                        if (!isCurrentTrackNoteLinked(nextSq)) linkNoteAtCell(nextSq);
                         lastNote = nextSq;
                     } else {
                         addNoteAtCell(row, col);
@@ -1610,14 +1682,13 @@ public class MyController {
                 } else if (col < extendStartCol) {
                     dragMode = DragMode.EXTEND_LEFT;
                     MyGridSquare startSq = this.allPurposeScore.getGridSquare(extendStartRow, extendStartCol);
-                    if (startSq != null && startSq.isSqVisible() && !startSq.isSq_is_linked())
+                    if (startSq != null && startSq.isSqVisible() && !isCurrentTrackNoteLinked(startSq))
                         linkNoteAtCell(startSq);
                     MyGridSquare nextSq = this.allPurposeScore.getGridSquare(row, col);
                     boolean nextHasNote = nextSq != null && nextSq.getPoliNotes().stream()
                         .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                     if (nextHasNote) {
-                        boolean wasLinked = nextSq.getPoliNotes().stream()
-                            .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible() && n.isLinked());
+                        boolean wasLinked = isCurrentTrackNoteLinked(nextSq);
                         if (!wasLinked) linkNoteAtCell(nextSq);  // linka durant el drag; el cap es determina al release
                         firstNote = nextSq;
                         firstNoteWasLinkedBeforeDrag = wasLinked;
@@ -1636,7 +1707,7 @@ public class MyController {
                 boolean currentTrackHasNote = sq != null && sq.getPoliNotes().stream()
                     .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible());
                 if (currentTrackHasNote) {
-                    if (!sq.isSq_is_linked()) linkNoteAtCell(sq);
+                    if (!isCurrentTrackNoteLinked(sq)) linkNoteAtCell(sq);
                     lastNote = sq;
                 } else {
                     addNoteAtCell(row, col);
@@ -1654,10 +1725,9 @@ public class MyController {
                 boolean isNewLeftmost = (firstNote == null || col < firstNote.getScoreCol());
                 if (isNewLeftmost) {
                     // L'anterior firstNote passa a ser continuació (linked)
-                    if (firstNote != null && !firstNote.isSq_is_linked()) linkNoteAtCell(firstNote);
+                    if (firstNote != null && !isCurrentTrackNoteLinked(firstNote)) linkNoteAtCell(firstNote);
                     if (currentTrackHasNote) {
-                        boolean wasLinked = sq.getPoliNotes().stream()
-                            .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible() && n.isLinked());
+                        boolean wasLinked = isCurrentTrackNoteLinked(sq);
                         if (!wasLinked) linkNoteAtCell(sq);  // linka durant el drag; el cap es determina al release
                         firstNote = sq;
                         firstNoteWasLinkedBeforeDrag = wasLinked;
@@ -1669,9 +1739,7 @@ public class MyController {
                 } else {
                     // No és el nou leftmost → linked
                     if (currentTrackHasNote) {
-                        boolean isLinked = sq.getPoliNotes().stream()
-                            .anyMatch(n -> n.getChannel() == curCh2 && n.getTrack() == curTr2 && n.isVisible() && n.isLinked());
-                        if (!isLinked) linkNoteAtCell(sq);
+                        if (!isCurrentTrackNoteLinked(sq)) linkNoteAtCell(sq);
                     } else {
                         addNoteAtCell(row, col);
                         MyGridSquare added = this.allPurposeScore.getGridSquare(row, col);
@@ -2098,7 +2166,10 @@ public class MyController {
                     MyGridSquare acFirst = null;
                     MyGridSquare acLast = null;
                     for (int c = fcol; c != acCol + step; c += step) {
-                        addNoteAtCell(frow, c);
+                        // Només afegir on no hi hagi ja nota del track actual:
+                        // reescriure-hi a sobre duplicava el SubSquare i la nota
+                        // que hi havia abans quedava per sota de la nova.
+                        if (!currentTrackHasNoteAt(frow, c)) addNoteAtCell(frow, c);
                         acLast = this.allPurposeScore.getGridSquare(frow, c);
                         if (acFirst == null) {
                             acFirst = acLast;
