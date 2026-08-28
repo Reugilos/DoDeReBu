@@ -398,8 +398,12 @@ public class MyMidiScore extends MyExercise {
 
         // Variables per gestionar el processament de notes
         this.ticksPerQuarter = sequence.getResolution();
-        this.ticksPerQuarter = adjustResolution(this.ticksPerQuarter);
         Track[] tracks = sequence.getTracks();
+        // Compàs i tonalitat inicials ABANS de convertir cap nota: la conversió
+        // de ticks a columnes depèn de beatFigure, i adjustResolution de
+        // numBeatsMeasure. Vegeu applyInitialMetaFromSequence.
+        applyInitialMetaFromSequence(tracks);
+        this.ticksPerQuarter = adjustResolution(this.ticksPerQuarter);
 
         int first = 0;
         Track metatr = tracks[0];
@@ -560,6 +564,9 @@ public class MyMidiScore extends MyExercise {
                             break;
 
                         case 0x58:
+                            // Els valors inicials ja s'han aplicat a
+                            // applyInitialMetaFromSequence(); aquí només es
+                            // conserva el missatge per poder reexportar-lo.
                             byte[] timeSignatureData = metaMessage.getData();
                             int numerator = timeSignatureData[0];
                             int denominator = 1 << timeSignatureData[1];
@@ -1622,6 +1629,67 @@ public class MyMidiScore extends MyExercise {
     }
 
     // Mètode auxiliar per interpretar la Key Signature
+    /**
+     * [CA] Aplica el compàs (0x58) i la tonalitat (0x59) inicials del fitxer
+     * abans de processar cap nota, mirant TOTES les pistes.
+     * <p>
+     * Calia per dos motius. Primer, el bucle de càrrega es salta la pista 0
+     * quan és una pista de direcció, i és justament on MuseScore i la majoria
+     * de programes hi posen el compàs i la tonalitat: no s'arribaven a llegir
+     * mai. Segon, el {@code case 0x58} del bucle desxifrava el compàs però no
+     * l'aplicava enlloc, de manera que {@code beatFigure} conservava el valor
+     * de la partitura anterior. Com que {@code tickLengthToNCols()} converteix
+     * durades amb {@code nColsBeat * beatFigure / 4}, un beatFigure massa gran
+     * allargava totes les notes proporcionalment.
+     * <p>
+     * [EN] Applies the file's initial time signature (0x58) and key signature
+     * (0x59) before any note is processed, scanning ALL tracks.
+     * <p>
+     * Two reasons. First, the load loop skips track 0 when it is a conductor
+     * track, which is exactly where MuseScore and most programs put the time
+     * and key signatures: they were never read. Second, the loop's
+     * {@code case 0x58} decoded the time signature but applied it nowhere, so
+     * {@code beatFigure} kept the previous score's value. Since
+     * {@code tickLengthToNCols()} converts durations with
+     * {@code nColsBeat * beatFigure / 4}, a too-large beatFigure stretched
+     * every note proportionally.
+     *
+     * @param tracks [CA] pistes de la seqüència / [EN] tracks of the sequence
+     */
+    private void applyInitialMetaFromSequence(Track[] tracks) {
+        long bestTsTick = Long.MAX_VALUE;
+        long bestKsTick = Long.MAX_VALUE;
+        int tsNum = -1, tsDen = -1;
+        Integer ksKey = null, ksScale = null;
+        for (Track t : tracks) {
+            for (int j = 0; j < t.size(); j++) {
+                MidiEvent ev = t.get(j);
+                if (!(ev.getMessage() instanceof MetaMessage)) continue;
+                MetaMessage mm = (MetaMessage) ev.getMessage();
+                byte[] data = mm.getData();
+                if (data == null || data.length < 2) continue;
+                if (mm.getType() == 0x58 && ev.getTick() < bestTsTick) {
+                    bestTsTick = ev.getTick();
+                    tsNum = data[0];
+                    tsDen = 1 << data[1];
+                } else if (mm.getType() == 0x59 && ev.getTick() < bestKsTick) {
+                    bestKsTick = ev.getTick();
+                    ksKey   = (int) data[0];
+                    ksScale = (int) data[1];
+                }
+            }
+        }
+        if (tsNum > 0 && tsDen > 0) {
+            timeSignature2Params(tsNum + "/" + tsDen);
+        }
+        if (ksKey != null && ksKey >= -7 && ksKey <= 7) {
+            this.scaleMode = (ksScale == 0) ? 'M' : 'm';
+            String keySignature = interpretKeySignature(ksKey, this.scaleMode + "");
+            int mk = ToneRange.getMidiKey(keySignature);
+            if (mk >= 0) this.midiKey = mk;
+        }
+    }
+
     public static String interpretKeySignature(int key, String mode) {
         String[] majorKeys = {"Si", "Fo", "De", "Sa", "Ri", "Li", "Fa", "Do", "So", "Re", "La", "Mi", "Si", "Fo", "De"};
         String keyName = majorKeys[key + 7];
