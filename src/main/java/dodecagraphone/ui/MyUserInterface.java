@@ -89,6 +89,15 @@ public class MyUserInterface extends JFrame {
         // Correcció final amb les dimensions reals del panel (per si els insets
         // estimats diferien lleugerament de les dimensions definitives).
         SwingUtilities.invokeLater(() -> {
+            // setExtendedState(MAXIMIZED_BOTH) és asíncron: quan s'executa
+            // aquest invokeLater la finestra encara sol tenir la mida del
+            // pack(). Aplicar-hi la correcció substituïa la bona estimació
+            // (feta sobre el work area) per aquella mida petita, i tot es
+            // dibuixava petit fins que arribava l'esdeveniment real de
+            // maximització: el "blink" de l'arrencada. Si encara no està
+            // maximitzada no toquem res; ja se n'encarrega el componentResized
+            // del panell, que aplica la mida bona quan arriba de debò.
+            if ((getExtendedState() & Frame.MAXIMIZED_BOTH) == 0) return;
             int w = panel.getWidth();
             int h = panel.getHeight();
             if (w > 0 && h > 0 && (w != panelW || h != panelH)) {

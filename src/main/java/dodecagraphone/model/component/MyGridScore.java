@@ -1679,12 +1679,11 @@ public class MyGridScore extends MyComponent {
                         g.setColor(ColorSets.getGridSquareFontColor(midi));
                         g.drawString(name, (int) (2 + screenX + wdth / 3), (int) (screenY + hght * 0.8));
                     }
-                    // Vora esquerra: separa notes contigües. El color de font és
-                    // blanc per a 9 de les 12 notes i desapareixia sobre fons de
-                    // nota clars; ara es tria per contrast amb el fons real i
-                    // s'engruixeix a 2 px perquè sigui sempre visible.
+                    // Vora esquerra: separa notes contigües. Mateix color que el
+                    // nom de la nota, perquè la barra i el nom es llegeixin com
+                    // una sola marca. Gruix de 2 px perquè sigui prou visible.
                     Stroke sepStroke = g.getStroke();
-                    g.setColor(ColorSets.getSeparatorColor(sq.getColor()));
+                    g.setColor(ColorSets.getGridSquareFontColor(midi));
                     g.setStroke(new BasicStroke(2f));
                     g.drawLine(screenX + 1, screenY, screenX + 1, screenY + hght-1);
                     g.setStroke(sepStroke);

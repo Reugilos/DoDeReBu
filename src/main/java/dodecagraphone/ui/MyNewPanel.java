@@ -48,6 +48,26 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
     private JButton b, b2;
     private Graphics2D pantalla;
     private Timer resizeTimer;
+    /**
+     * [CA] Cert un cop s'ha aplicat la primera redimensió real del panell. Fins
+     * llavors no es dibuixa la partitura: en arrencar, la finestra es fa
+     * visible amb la mida estimada i tot seguit Windows la maximitza. Pintar
+     * durant aquest interval feia dos salts seguits — un de tota la finestra en
+     * arribar la mida bona, i un altre només de la graella 150 ms després, quan
+     * el temporitzador refeia el bitmap offscreen.
+     * <p>
+     * [EN] True once the first real panel resize has been applied. Until then
+     * the score is not drawn: at startup the window is shown at the estimated
+     * size and Windows maximises it right after. Painting during that interval
+     * produced two consecutive jumps — one of the whole window when the real
+     * size arrived, and another of the grid alone 150 ms later, when the timer
+     * rebuilt the offscreen bitmap.
+     */
+    private boolean firstResizeApplied = false;
+    /** Instant de creació, per no bloquejar el dibuix si mai no arriba cap redimensió. */
+    private final long createdAtMillis = System.currentTimeMillis();
+    /** Temps màxim d'espera abans de dibuixar igualment. */
+    private static final long FIRST_RESIZE_TIMEOUT_MS = 2000;
 //    private Image buffer; // Imatge en memòria
 //    private Graphics bufferGraphics; // Objecte Graphics per a la imatge en memòria
 
@@ -107,6 +127,15 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
                 int h = getHeight();
                 if (w > 0 && h > 0) {
                     Settings.setScreenPixelDimensions(w, h);
+                    if (!firstResizeApplied) {
+                        // La primera vegada fem el rebuild sencer de seguida:
+                        // amb el quick, la graella es quedaria 150 ms copiant un
+                        // bitmap fet a l'altra escala i es veuria el segon salt.
+                        // El retard només té sentit mentre s'arrossega la vora.
+                        firstResizeApplied = true;
+                        MyNewPanel.this.controller.onScreenResized();
+                        return;
+                    }
                     MyNewPanel.this.controller.onScreenResizedQuick();
                 }
                 resizeTimer.restart();
@@ -204,6 +233,12 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
+        // Res de partitura fins que la mida sigui la definitiva: val més un
+        // instant de fons buit que dos salts de mida seguits.
+        if (!firstResizeApplied
+                && System.currentTimeMillis() - createdAtMillis <= FIRST_RESIZE_TIMEOUT_MS) {
+            return;
+        }
         //this.pantalla = (Graphics2D) g;
 //        draw(bufferGraphics);
 //        if (count%2==1) {

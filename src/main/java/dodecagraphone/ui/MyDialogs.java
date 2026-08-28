@@ -38,6 +38,36 @@ public class MyDialogs {
      * @param titol    [CA] Títol de la finestra / [EN] Window title
      * @return [CA] JOptionPane.YES_OPTION o NO_OPTION / [EN] JOptionPane.YES_OPTION or NO_OPTION
      */
+    /**
+     * [CA] Pregunta si cal transportar la partitura, amb tres respostes: no,
+     * amunt o avall. Amunt i avall porten a la mateixa tonalitat i es
+     * diferencien només en el registre (una octava).
+     * <p>
+     * [EN] Asks whether the score should be transposed, with three answers: no,
+     * up or down. Up and down reach the same key and differ only in register
+     * (one octave).
+     *
+     * @param missatge [CA] pregunta / [EN] question
+     * @param titol    [CA] títol del diàleg / [EN] dialog title
+     * @return [CA] 0 = no, 1 = amunt, 2 = avall (0 també si es tanca el diàleg) /
+     *         [EN] 0 = no, 1 = up, 2 = down (0 also if the dialog is closed)
+     */
+    public static int demanaTransposicio(String missatge, String titol) {
+        Object[] opcions = {
+            I18n.t("keyButton.transpose.up"),
+            I18n.t("keyButton.transpose.down"),
+            I18n.t("keyButton.transpose.no")
+        };
+        int r = JOptionPane.showOptionDialog(
+                null, missatge, titol,
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null, opcions, opcions[0]);
+        if (r == 0) return 1;   // amunt
+        if (r == 1) return 2;   // avall
+        return 0;               // no, o diàleg tancat
+    }
+
     public static int demanaConfirmacio(String missatge, String titol) {
         return JOptionPane.showConfirmDialog(
                 null,

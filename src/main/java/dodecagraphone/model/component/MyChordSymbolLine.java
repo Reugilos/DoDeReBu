@@ -9,6 +9,7 @@ import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.chord.ChordSymbols;
+import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
@@ -74,6 +75,8 @@ public class MyChordSymbolLine extends MyComponent {
     private static final Color COLOR_KEY_BG    = new Color(140, 0, 30);
     /** Background colour for volume change markers (white text on green). */
     private static final Color COLOR_VOLUME_BG = new Color(0, 130, 55);
+    /** Fons de la marca de transposició (displayOffset). Groc: el text hi va en negre. */
+    private static final Color COLOR_TRANSPOSE_BG = new Color(235, 200, 0);
     /** Cached chord font and the row height it was computed for. */
     private Font   cachedChordFont   = null;
     private double cachedChordRowH   = 0;
@@ -88,7 +91,7 @@ public class MyChordSymbolLine extends MyComponent {
      * [EN] Kind of change mark drawn in the strip. Time signature is absent: it
      * has no box of its own and hence is not selectable.
      */
-    public enum MarkKind { TEMPO, KEY, VOLUME }
+    public enum MarkKind { TEMPO, KEY, VOLUME, TRANSPOSE }
 
     /**
      * [CA] Marca dibuixada, descrita en termes independents de la
@@ -154,13 +157,73 @@ public class MyChordSymbolLine extends MyComponent {
         return f;
     }
 
+    /**
+     * [CA] Font forçada per a la pila de marques quan la mida normal no hi
+     * cabria. Null = mida normal.
+     * <p>
+     * [EN] Font forced on the mark stack when the normal size would not fit.
+     * Null = normal size.
+     */
+    private Font markFontOverride = null;
+
     private Font getMarkFont() {
+        if (markFontOverride != null) return markFontOverride;
         double rowH = Settings.getRowHeight();
         if (cachedMarkFont != null && rowH == cachedMarkRowH) return cachedMarkFont;
         cachedMarkRowH = rowH;
         int size = Math.max(6, (int)(rowH * 0.85));
         cachedMarkFont = new Font("SansSerif", Font.BOLD, size);
         return cachedMarkFont;
+    }
+
+    /**
+     * [CA] Prepara la franja perquè {@code nMarks} marques apilades hi càpiguen.
+     * Les marques s'apilen cap amunt des de la base, o sigui que quan la pila és
+     * massa alta la que es perd és la de dalt de tot; amb quatre marques
+     * (transposició, tempo, tonalitat i volum) la de volum quedava dibuixada per
+     * sobre de la vora i es retallava.
+     * <p>
+     * El marge del triangle d'atac es respecta sempre: l'alçada de la franja
+     * (Settings.DEFAULT_NROWS_CHORD) està calculada perquè hi càpiguen les
+     * quatre marques i el triangle a partir de 720 px de pantalla, de manera
+     * que encongir la lletra només hauria de passar en casos extrems.
+     * <p>
+     * [EN] Prepares the strip so that {@code nMarks} stacked marks fit. Marks
+     * stack upward from the base, so an over-tall stack loses the topmost one;
+     * with four marks (transposition, tempo, key and volume) the volume one was
+     * drawn past the edge and clipped.
+     * <p>
+     * The attack-triangle margin is always preserved: the strip height
+     * (Settings.DEFAULT_NROWS_CHORD) is sized so that the four marks and the
+     * triangle fit from 720 px screen height upwards, so shrinking the font
+     * should only happen in extreme cases.
+     *
+     * @param g      [CA] context on es mesurarà / [EN] context used for measuring
+     * @param nMarks [CA] marques que s'apilaran / [EN] marks about to be stacked
+     */
+    private void fitMarkStack(Graphics2D g, int nMarks) {
+        markFontOverride = null;
+        if (nMarks <= 0) return;
+        int available = (int) Math.round(nRows * Settings.getRowHeight()) - TRIANGLE_SPACE;
+        int pad = 2;
+        int normalSize = getMarkFont().getSize();
+        int size = normalSize;
+        while (size > 6) {
+            Font f = new Font("SansSerif", Font.BOLD, size);
+            FontMetrics fm = g.getFontMetrics(f);
+            int stackH = nMarks * (fm.getAscent() + fm.getDescent() + 2 * pad);
+            if (stackH <= available) {
+                if (size != normalSize) markFontOverride = f;
+                return;
+            }
+            size--;
+        }
+        markFontOverride = new Font("SansSerif", Font.BOLD, 6);
+    }
+
+    /** Torna la pila de marques a la mida normal. */
+    private void clearMarkStackFit() {
+        markFontOverride = null;
     }
 
     private static int lineStep(FontMetrics fm) {
@@ -560,6 +623,26 @@ public class MyChordSymbolLine extends MyComponent {
         return drawChangeMark(col, text, COLOR_KEY_BG, MarkKind.KEY, g, offscreen, existingYOff);
     }
 
+    /**
+     * [CA] Marca de transposició: el {@code displayOffset} de la pista actual en
+     * semitons. Ve de l'instrument (no del changeMap), o sigui que és
+     * informativa: no es pot editar ni esborrar.
+     * <p>
+     * [EN] Transposition mark: the current track's {@code displayOffset} in
+     * semitones. It comes from the instrument (not from the changeMap), so it
+     * is informational: it cannot be edited or deleted.
+     */
+    private int drawTransposeMark(int col, int semitones, Graphics2D g, boolean offscreen, int existingYOff) {
+        String txt = "t" + (semitones > 0 ? "+" : "") + semitones;
+        return drawChangeMark(col, txt, COLOR_TRANSPOSE_BG, MarkKind.TRANSPOSE, g, offscreen, existingYOff);
+    }
+
+    /** Transposició vigent de la pista actual, en semitons. */
+    private int currentTrackTranspose() {
+        dodecagraphone.model.mixer.MyTrack t = contr.getMixer().getCurrentTrack();
+        return (t != null) ? t.getDisplayOffset() : 0;
+    }
+
     private int drawVolumeMark(int col, int velocity, Graphics2D g, boolean offscreen, int existingYOff) {
         return drawChangeMark(col, "v" + velocity, COLOR_VOLUME_BG, MarkKind.VOLUME, g, offscreen, existingYOff);
     }
@@ -589,7 +672,9 @@ public class MyChordSymbolLine extends MyComponent {
 
         g.setColor(bgColor);
         g.fillRect(boxX, boxY, boxW, boxH);
-        g.setColor(Color.WHITE);
+        // Color per contrast amb el fons: els fons foscos segueixen amb text
+        // blanc, i el groc de la transposició el necessita negre.
+        g.setColor(ColorSets.getSeparatorColor(bgColor));
         g.drawString(text, boxX + pad, boxY + pad + fm.getAscent());
 
         // Només el buffer de pantalla registra rectangles i pinta la selecció:
@@ -724,7 +809,12 @@ public class MyChordSymbolLine extends MyComponent {
                 int tempo0   = (sc0 != null && sc0.tempo    != null) ? sc0.tempo    : Settings.DEFAULT_TEMPO;
                 int midiKey0 = (sc0 != null && sc0.midiKey  != null) ? sc0.midiKey  : ToneRange.getDefaultKey();
                 char mode0   = (sc0 != null && sc0.scaleMode != null) ? sc0.scaleMode : ToneRange.getDefaultMode();
+                // Quatre marques a la columna 0: transposició, tempo, tonalitat i
+                // volum. Cal encongir la font si no hi caben totes.
+                fitMarkStack(offscreenGraphics, 4);
                 int yOff = 0;
+                // Primera de la pila = fila inferior (les marques s'apilen cap amunt).
+                yOff += drawTransposeMark(0, currentTrackTranspose(), offscreenGraphics, true, yOff);
                 yOff += drawTempoMark(0, tempo0, offscreenGraphics, true, yOff);
                 yOff += drawKeyMark(0, midiKey0, mode0, offscreenGraphics, true, yOff);
                 // Volum: es mostra sempre, com el tempo i la tonalitat. Sense marca
@@ -741,8 +831,11 @@ public class MyChordSymbolLine extends MyComponent {
                     try { maxW = Math.max(maxW, fm.stringWidth(ToneRange.getKeyName(midiKey0, mode0)) + 2 * pad); }
                     catch (Exception ignored) {}
                     maxW = Math.max(maxW, fm.stringWidth("v" + vel0Shown) + 2 * pad);
+                    int tr0 = currentTrackTranspose();
+                    maxW = Math.max(maxW, fm.stringWidth("t" + (tr0 > 0 ? "+" : "") + tr0) + 2 * pad);
                     markerMaxWidths.put(0, maxW);
                 }
+                clearMarkStackFit();
             }
 
             // Col > 0: marques del changeMap.

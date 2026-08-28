@@ -70,7 +70,18 @@ public class Settings {
     private static final double DEFAULT_KEYBOARD_RATIO      = 2.4 / 16;
     private static final double DEFAULT_CONTROL_RATIO       = 4.6 / 16;
     private static final double DEFAULT_STATUS_RATIO        = 4.5 / 59;
-    private static final int    DEFAULT_NROWS_CHORD         = 5;
+    /**
+     * [CA] Files de la franja d'acords. Ha de donar per a la pila de quatre
+     * marques inicials (transposició, tempo, tonalitat i volum) MÉS els píxels
+     * reservats a baix per al triangle d'atac. Amb 5 files només hi cabien a
+     * partir de pantalles de 1200 px d'alçada; amb 6 hi caben des de 720.
+     * <p>
+     * [EN] Rows of the chord strip. It must hold the stack of four initial
+     * marks (transposition, tempo, key and volume) PLUS the pixels reserved at
+     * the bottom for the attack triangle. With 5 rows they only fitted from
+     * 1200 px screen height upwards; with 6 they fit from 720 px.
+     */
+    private static final int    DEFAULT_NROWS_CHORD         = 6;
     private static final int    DEFAULT_NROWS_LYRICS        = 3;
     private static final int    DEFAULT_NCOLS_SQUARE        = 1;
     private static final int    DEFAULT_NROWS_BUTTON        = 2;

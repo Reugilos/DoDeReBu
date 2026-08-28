@@ -1823,6 +1823,7 @@ public class MyController {
         this.buttons.hideTip();
         lastTipButton = -1;
         lastTipKeyRow = -1;
+        lastTipMarkKind = null;
         /* Exit lyrics edit mode on any click (commits pending text) */
         if (this.myLyrics.isEditMode()) {
             this.myLyrics.exitEditMode();
@@ -2456,6 +2457,16 @@ public class MyController {
     private int lastTipButton = -1;
     private int lastTipKeyRow = -1;
     private int lastTipGridBeatCol = -1;
+    /**
+     * [CA] Tipus de la marca que va generar el tip visible. Cal recordar-lo
+     * perquè les quatre marques inicials són totes a la columna 0: mirant només
+     * la columna, passar d'una a l'altra no refrescava el tip.
+     * <p>
+     * [EN] Kind of the mark that produced the visible tooltip. Needed because
+     * the four initial marks all sit at column 0: looking only at the column,
+     * moving from one to another did not refresh the tooltip.
+     */
+    private MyChordSymbolLine.MarkKind lastTipMarkKind = null;
 
     public void onMouseMoved(double posX, double posY) {
         if (clipboardTipVisible) return;
@@ -2467,6 +2478,7 @@ public class MyController {
                 this.buttons.showTip(button, posX, posY);
                 lastTipButton = button;
                 lastTipKeyRow = -1;
+                lastTipMarkKind = null;
             }
         } else if (isChordFormatButtonClick(posX, posY)) {
             if (lastTipButton != -2) {
@@ -2476,21 +2488,24 @@ public class MyController {
                         (int)(posY + Settings.getRowHeight()));
                 lastTipButton = -2;
                 lastTipKeyRow = -1;
+                lastTipMarkKind = null;
             }
         } else if (hoverMark != null) {
             // Marca de canvi: mateixa prioritat que al clic (abans que l'acord).
             MyChordSymbolLine.MarkBox mark = hoverMark;
-            if (lastTipButton != -8 || lastTipKeyRow != mark.col) {
+            if (lastTipButton != -8 || lastTipKeyRow != mark.col
+                    || lastTipMarkKind != mark.kind) {
                 this.buttons.hideTip();
                 // Sota el cursor, com el tip de la graella: la variant de dos
                 // arguments el col·loca a (posX-10, posY-10), és a dir damunt de
                 // la marca, i el popup es menjava el clic.
                 this.buttons.showCustomTip(
-                        I18n.t(mark.col == 0 ? "scoreChange.mark.atStart.tip" : "scoreChange.mark.tip"),
+                        markTipText(mark),
                         (int) posX + 12,
                         (int) (posY + Settings.getRowHeight()));
                 lastTipButton = -8;
                 lastTipKeyRow = mark.col;
+                lastTipMarkKind = mark.kind;
             }
         } else if (myChordSymbolLine.whichCol(posX, posY) != -1) {
             if (lastTipButton != -3) {
@@ -2498,6 +2513,7 @@ public class MyController {
                 this.buttons.showCustomTip(I18n.t("myChordSymbolLine.chord.tip"), posX, posY);
                 lastTipButton = -3;
                 lastTipKeyRow = -1;
+                lastTipMarkKind = null;
             }
         } else {
             int keyRow = this.keyboard.whichKey(posX, posY);
@@ -2531,6 +2547,7 @@ public class MyController {
                             (int)(posX + 2 * Settings.getColWidth()), (int) posY);
                     lastTipButton = -5;
                     lastTipKeyRow = -1;
+                    lastTipMarkKind = null;
                 }
             } else if (this.myLyrics != null && this.myLyrics.contains(posX, posY)) {
                 if (lastTipButton != -6) {
@@ -2539,14 +2556,18 @@ public class MyController {
                     this.buttons.showCustomTip(I18n.t("myLyrics.tip"), (int) posX, lyricsBottom);
                     lastTipButton = -6;
                     lastTipKeyRow = -1;
+                    lastTipMarkKind = null;
                 }
             } else if (this.allPurposeScore.whichRow(posX, posY) != -1) {
                 if (lastTipButton != -7) {
                     this.buttons.hideTip();
-                    int gridBottom = (int)(this.allPurposeScore.getScreenPosY() + this.allPurposeScore.getHeight()) + 3;
+                    // +6 i no +3: deixa marge perquè el tip desaparegui abans que
+                    // el cursor arribi a la barra d'eines del sistema.
+                    int gridBottom = (int)(this.allPurposeScore.getScreenPosY() + this.allPurposeScore.getHeight()) + 6;
                     this.buttons.showCustomTip(I18n.t("myGridScore.tip"), (int) posX, gridBottom);
                     lastTipButton = -7;
                     lastTipKeyRow = -1;
+                    lastTipMarkKind = null;
                     lastTipGridBeatCol = -1;
                 }
             } else {
@@ -2554,6 +2575,7 @@ public class MyController {
                     this.buttons.hideTip();
                     lastTipButton = -1;
                     lastTipKeyRow = -1;
+                    lastTipMarkKind = null;
                     lastTipGridBeatCol = -1;
                 }
             }
@@ -4143,6 +4165,64 @@ public class MyController {
         this.drawFull(true);
     }
 
+    /**
+     * [CA] Text del tip d'una marca: primera línia amb què és i quant val
+     * (tempo, tonalitat, volum o transposició), i a sota les accions
+     * disponibles. Es compon a partir de les claus existents perquè el text
+     * d'accions no s'hagi de duplicar a cada idioma.
+     * <p>
+     * [EN] Tooltip text for a mark: a first line with what it is and its value
+     * (tempo, key, volume or transposition), and the available actions below.
+     * Composed from the existing keys so the actions text is not duplicated in
+     * every language.
+     *
+     * @param mark [CA] marca sota el cursor / [EN] mark under the cursor
+     * @return [CA] text HTML del tip / [EN] HTML tooltip text
+     */
+    private String markTipText(MyChordSymbolLine.MarkBox mark) {
+        MyGridScore.ScoreChange eff = allPurposeScore.getEffectiveChange(mark.col);
+        int trackId = getMixer().getCurrentTrackId();
+        MyTrack track = getMixer().getCurrentTrack();
+        String info;
+        String actionsKey;
+        switch (mark.kind) {
+            case TEMPO:
+                info = I18n.f("scoreChange.mark.info.tempo",
+                        "" + (eff.tempo != null ? eff.tempo : Settings.DEFAULT_TEMPO));
+                actionsKey = null;
+                break;
+            case KEY: {
+                int mk    = (eff.midiKey   != null) ? eff.midiKey   : ToneRange.getDefaultKey();
+                char mode = (eff.scaleMode != null) ? eff.scaleMode : ToneRange.getDefaultMode();
+                info = I18n.f("scoreChange.mark.info.key", ToneRange.getKeyName(mk, mode));
+                actionsKey = null;
+                break;
+            }
+            case VOLUME: {
+                Integer vel = eff.trackVelocities.get(trackId);
+                int shown = (vel != null) ? vel
+                        : (track != null ? track.getVelocity() : Settings.getDefaultVelocity());
+                info = I18n.f("scoreChange.mark.info.volume", "" + shown);
+                actionsKey = null;
+                break;
+            }
+            case TRANSPOSE: {
+                int semis = (track != null) ? track.getDisplayOffset() : 0;
+                info = I18n.f("scoreChange.mark.info.transpose", "" + semis);
+                actionsKey = "scoreChange.mark.transpose.tip";
+                break;
+            }
+            default:
+                return I18n.t(mark.col == 0 ? "scoreChange.mark.atStart.tip" : "scoreChange.mark.tip");
+        }
+        if (actionsKey == null) {
+            actionsKey = (mark.col == 0) ? "scoreChange.mark.atStart.tip" : "scoreChange.mark.tip";
+        }
+        String actions = I18n.t(actionsKey)
+                .replace("<html>", "").replace("</html>", "");
+        return "<html><b>" + info + "</b><br>" + actions + "</html>";
+    }
+
     /** Oblida el volum previ desat per a un canvi pendent de volum. */
     private void clearPendingVolumeUndo() {
         pendingVolumeTrackId = -1;
@@ -4239,16 +4319,29 @@ public class MyController {
         if (pendingTransposeStep != 0) {
             int step = pendingTransposeStep;
             pendingTransposeStep = 0;
-            int res = MyDialogs.demanaConfirmacio(
+            // Amunt i avall porten a la MATEIXA tonalitat: es diferencien només
+            // en el registre, una octava. Normalitzem el pas a 0..11 (amunt) i
+            // al seu equivalent negatiu (avall).
+            int up   = ((step % 12) + 12) % 12;
+            int down = up - 12;
+            int res = MyDialogs.demanaTransposicio(
                     I18n.t("keyButton.transposeConfirm"),
                     I18n.t("keyButton.transposeConfirm.title"));
-            appliedTransposeStep  = step;
-            appliedTransposeNotes = (res == javax.swing.JOptionPane.YES_OPTION);
+            if (res == 1) {
+                appliedTransposeStep  = up;
+                appliedTransposeNotes = true;
+            } else if (res == 2) {
+                appliedTransposeStep  = down;
+                appliedTransposeNotes = true;
+            } else {
+                appliedTransposeStep  = step;
+                appliedTransposeNotes = false;
+            }
             if (appliedTransposeNotes) {
-                allPurposeScore.transpose(step);
+                allPurposeScore.transpose(appliedTransposeStep);
             } else {
                 // Les notes no es transposen, però el choice sí segueix la nova tonalitat
-                allPurposeScore.getChoice().transposeChoice(step);
+                allPurposeScore.getChoice().transposeChoice(appliedTransposeStep);
                 allPurposeScore.updateStripsNKeyboard();
             }
         }
@@ -4419,6 +4512,12 @@ public class MyController {
      */
     public void editSelectedMark() {
         if (selectedMarkKind == null) return;
+        // La transposició ve de l'instrument de la pista, no del changeMap:
+        // és informativa i no s'edita des de la marca.
+        if (selectedMarkKind == MyChordSymbolLine.MarkKind.TRANSPOSE) {
+            clearMarkSelection();
+            return;
+        }
         int col = selectedMarkCol;
         MyGridScore.ScoreChange oldEntry = allPurposeScore.getChangeMap().get(col);
         oldEntry = (oldEntry == null) ? null : oldEntry.copy();
@@ -4506,6 +4605,7 @@ public class MyController {
      */
     public boolean deleteSelectedMark() {
         if (selectedMarkKind == null) return false;
+        if (selectedMarkKind == MyChordSymbolLine.MarkKind.TRANSPOSE) return true;
         int col = selectedMarkCol;
         if (col == 0) {
             double tipX = Settings.getScreenWidth() / 2.0;
