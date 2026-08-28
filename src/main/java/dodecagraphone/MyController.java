@@ -213,6 +213,21 @@ public class MyController {
      */
     private MyGridScore.ScoreChange pendingChange = null;
     private int pendingTransposeStep = 0;
+    /**
+     * [CA] Track i velocitat anteriors quan el canvi pendent és de volum. El
+     * volum s'aplica al mixer abans de col·locar la marca (perquè l'usuari el
+     * senti), de manera que cancel·lar ha de poder-lo desfer. -1 = cap.
+     * <p>
+     * [EN] Previous track and velocity when the pending change is a volume one.
+     * The volume is applied to the mixer before the mark is placed (so the user
+     * can hear it), so cancelling must be able to undo it. -1 = none.
+     */
+    private int pendingVolumeTrackId = -1;
+    private int pendingVolumePrevVelocity = -1;
+    /** Columna de la marca que s'està editant amb Spd+/-/Vol+/-; -1 = cap gest obert. */
+    private int gestureMarkCol = -1;
+    /** Entrada del changeMap abans d'obrir el gest (null = no n'hi havia). */
+    private MyGridScore.ScoreChange gestureOldEntry = null;
 
     private String pendingColumnOp = null;
     private int pendingColumnN = 1;
@@ -479,6 +494,8 @@ public class MyController {
      * @param track [CA] pista a configurar / [EN] track to configure
      */
     public void addDrumsTrackAndInstrumentToMixer(MyTrack track) {
+        // La percussió es queda a 63: a volum ple tapa la melodia. Si es vol
+        // igualar a la resta, canviar per Settings.getDefaultVelocity().
         track.setVelocity(63);
         int canal = 9;
         track.afegirCanal(canal);
@@ -489,7 +506,7 @@ public class MyController {
     }
 
     public void addTrackAndInstrumentToMixer(MyTrack track, int instr) {
-        track.setVelocity(63);
+        track.setVelocity(Settings.getDefaultVelocity());
         int canal = SoundWithMidi.getNextAvailableChannel();
         track.afegirCanal(canal);
         track.setCurrentChannel(canal);
@@ -2115,6 +2132,8 @@ public class MyController {
             this.buttons.onButtonRelesased(this.lastButtonPressed);
             this.lastButtonPressed = -1;
             this.buttons.setModified(true);
+            // Un sol pas d'undo per gest de Spd+/-/Vol+/-, no un per increment.
+            commitMarkGesture();
         }
         this.drawFull(true);
     }
@@ -2329,9 +2348,13 @@ public class MyController {
             MyChordSymbolLine.MarkBox mark = hoverMark;
             if (lastTipButton != -8 || lastTipKeyRow != mark.col) {
                 this.buttons.hideTip();
+                // Sota el cursor, com el tip de la graella: la variant de dos
+                // arguments el col·loca a (posX-10, posY-10), és a dir damunt de
+                // la marca, i el popup es menjava el clic.
                 this.buttons.showCustomTip(
                         I18n.t(mark.col == 0 ? "scoreChange.mark.atStart.tip" : "scoreChange.mark.tip"),
-                        posX, posY);
+                        (int) posX + 12,
+                        (int) (posY + Settings.getRowHeight()));
                 lastTipButton = -8;
                 lastTipKeyRow = mark.col;
             }
@@ -2925,11 +2948,15 @@ public class MyController {
             int requested = Integer.parseInt(input.trim());
             int clamped = Math.max(0, Math.min(127, requested));
             int trackId = this.getMixer().getCurrentTrackId();
-            this.getMixer().getCurrentTrack().setVelocity(clamped);
-            this.buttons.updateVolumeButton("" + clamped);
             MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
             sc.trackVelocities.put(trackId, clamped);
             setPendingChange(sc, I18n.t("scoreChange.volume"));
+            // Després de setPendingChange: aquest neteja l'estat pendent anterior
+            // i restauraria el volum que estem a punt de desar.
+            this.pendingVolumeTrackId = trackId;
+            this.pendingVolumePrevVelocity = currentVol;
+            this.getMixer().getCurrentTrack().setVelocity(clamped);
+            this.buttons.updateVolumeButton("" + clamped);
         } catch (NumberFormatException e) {
             MyDialogs.mostraError(
                     I18n.f("MyController.onVolumeButtonPressed.invalidInput", input),
@@ -3115,11 +3142,130 @@ public class MyController {
         }
     }
     
+    /** Pas dels botons Spd+/Spd- sobre la marca de tempo vigent, en BPM. */
+    private static final int TEMPO_MARK_STEP = 5;
+    /** Pas dels botons Vol+/Vol- sobre la marca de volum vigent. */
+    private static final int VOLUME_MARK_STEP = 10;
+
+    /** Columna de la marca de tempo vigent a {@code col}; 0 si no n'hi ha cap. */
+    private int tempoMarkColAt(int col) {
+        for (java.util.Map.Entry<Integer, MyGridScore.ScoreChange> en
+                : allPurposeScore.getChangeMap().headMap(Math.max(0, col), true).descendingMap().entrySet()) {
+            if (en.getValue().tempo != null) return en.getKey();
+        }
+        return 0;
+    }
+
+    /** Columna de la marca de volum vigent per a {@code trackId}; 0 si no n'hi ha cap. */
+    private int volumeMarkColAt(int col, int trackId) {
+        for (java.util.Map.Entry<Integer, MyGridScore.ScoreChange> en
+                : allPurposeScore.getChangeMap().headMap(Math.max(0, col), true).descendingMap().entrySet()) {
+            if (en.getValue().trackVelocities.containsKey(trackId)) return en.getKey();
+        }
+        return 0;
+    }
+
+    /**
+     * [CA] Modifica la marca de tempo vigent a la posició d'edició (o la de la
+     * columna 0 si no n'hi ha cap) sumant-hi {@code delta} BPM. Spd+/Spd- editen
+     * la partitura: el valor queda desat i el botó mostra sempre el de la marca.
+     * <p>
+     * [EN] Changes the tempo mark in force at the editing position (or the one at
+     * column 0 if there is none) by {@code delta} BPM. Spd+/Spd- edit the score:
+     * the value is persisted and the button always shows the mark's value.
+     *
+     * @param delta [CA] BPM a sumar (pot ser negatiu) / [EN] BPM to add (may be negative)
+     */
+    private void adjustTempoMark(int delta) {
+        int editCol = getEditingCol();
+        int markCol = tempoMarkColAt(editCol);
+        MyGridScore.ScoreChange eff = allPurposeScore.getEffectiveChange(editCol);
+        int cur  = (eff.tempo != null) ? eff.tempo : Settings.DEFAULT_TEMPO;
+        int next = Math.max(0, Math.min(Settings.MAX_BPM, cur + delta));
+        if (next == cur) return;
+        beginMarkGesture(markCol);
+        MyGridScore.ScoreChange entry = markEntryAt(markCol);
+        entry.tempo = next;
+        allPurposeScore.putScoreChange(markCol, entry);
+        MyTempo.setTempo(next);
+        needsSaving = true;
+        redrawChordLine();
+        updateTextOfButtons();
+    }
+
+    /**
+     * [CA] Com {@link #adjustTempoMark(int)} però per al volum del track actual.
+     * <p>
+     * [EN] Like {@link #adjustTempoMark(int)} but for the current track volume.
+     *
+     * @param delta [CA] unitats de velocity a sumar / [EN] velocity units to add
+     */
+    private void adjustVolumeMark(int delta) {
+        MyTrack track = this.getMixer().getCurrentTrack();
+        if (track == null) return;
+        int trackId = this.getMixer().getCurrentTrackId();
+        int editCol = getEditingCol();
+        int markCol = volumeMarkColAt(editCol, trackId);
+        MyGridScore.ScoreChange eff = allPurposeScore.getEffectiveChange(editCol);
+        Integer effVel = eff.trackVelocities.get(trackId);
+        int cur  = (effVel != null) ? effVel : track.getVelocity();
+        int next = Math.max(0, Math.min(127, cur + delta));
+        if (next == cur) return;
+        beginMarkGesture(markCol);
+        MyGridScore.ScoreChange entry = markEntryAt(markCol);
+        entry.trackVelocities.put(trackId, next);
+        allPurposeScore.putScoreChange(markCol, entry);
+        track.setVelocity(next);
+        this.mixer.refreshMixer();
+        needsSaving = true;
+        redrawChordLine();
+        updateTextOfButtons();
+    }
+
+    /**
+     * [CA] Obre un gest d'edició de marca amb Spd+/-/Vol+/-: desa l'entrada
+     * anterior perquè mantenir el botó premut generi un sol pas d'undo, no un
+     * per cada increment. Es tanca a {@link #commitMarkGesture()}.
+     * <p>
+     * [EN] Opens a mark-editing gesture with Spd+/-/Vol+/-: stores the previous
+     * entry so that holding the button down produces a single undo step instead
+     * of one per increment. Closed by {@link #commitMarkGesture()}.
+     *
+     * @param col [CA] columna de la marca editada / [EN] column of the edited mark
+     */
+    private void beginMarkGesture(int col) {
+        if (gestureMarkCol != -1) return;
+        gestureMarkCol = col;
+        MyGridScore.ScoreChange old = allPurposeScore.getChangeMap().get(col);
+        gestureOldEntry = (old == null) ? null : old.copy();
+    }
+
+    /**
+     * [CA] Tanca el gest obert per {@link #beginMarkGesture(int)} i registra un
+     * únic event d'undo si l'entrada ha canviat. Cridat en deixar anar el botó.
+     * <p>
+     * [EN] Closes the gesture opened by {@link #beginMarkGesture(int)} and
+     * records a single undo event if the entry changed. Called on button release.
+     */
+    private void commitMarkGesture() {
+        if (gestureMarkCol == -1) return;
+        int col = gestureMarkCol;
+        MyGridScore.ScoreChange old = gestureOldEntry;
+        gestureMarkCol  = -1;
+        gestureOldEntry = null;
+        MyGridScore.ScoreChange now = allPurposeScore.getChangeMap().get(col);
+        now = (now == null) ? null : now.copy();
+        boolean changed = (old == null) ? (now != null) : !old.sameAs(now);
+        if (changed) {
+            afegirEvent(new ScoreChangeEvent(this, col, old, now));
+        }
+    }
+
     public void onFasterButtonPressed(MyButton togg) {
-        // Vel+: modifica el playbackTempo (velocitat de reproducció en viu).
-        // El botó mostra el playbackTempo en tot moment.
-        MyTempo.faster();
-        this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
+        // Spd+: edita la marca de tempo vigent (queda desada a la partitura).
+        // El botó mostra sempre el valor de la marca.
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
+        adjustTempoMark(TEMPO_MARK_STEP);
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -3133,11 +3279,17 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    MyTempo.faster();
-                    this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
+                    // Redibuix a l'EDT: fer-ho des d'aquest fil reescrivia
+                    // l'offscreen mentre l'EDT el copiava a pantalla.
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        if (!togg.isPressed()) return;
+                        adjustTempoMark(TEMPO_MARK_STEP);
+                    });
                     Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -3145,9 +3297,9 @@ public class MyController {
     }
 
     public void onLouderButtonPressed(MyButton togg) {
-        int vol = this.getMixer().louder();
-        this.buttons.updateVolumeButton("" + vol);
-        this.mixer.refreshMixer();
+        // Vol+: edita la marca de volum vigent del track actual.
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
+        adjustVolumeMark(VOLUME_MARK_STEP);
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -3161,12 +3313,17 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    int v = this.getMixer().louder();
-                    this.buttons.updateVolumeButton("" + v);
-                    this.mixer.refreshMixer();
+                    // Redibuix a l'EDT: fer-ho des d'aquest fil reescrivia
+                    // l'offscreen mentre l'EDT el copiava a pantalla.
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        if (!togg.isPressed()) return;
+                        adjustVolumeMark(VOLUME_MARK_STEP);
+                    });
                     Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -3174,9 +3331,9 @@ public class MyController {
     }
 
     public void onQuieterButtonPressed(MyButton togg) {
-        int vol = this.getMixer().quieter();
-        this.buttons.updateVolumeButton("" + vol);
-        this.mixer.refreshMixer();
+        // Vol-: edita la marca de volum vigent del track actual.
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
+        adjustVolumeMark(-VOLUME_MARK_STEP);
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -3190,12 +3347,17 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    int v = this.getMixer().quieter();
-                    this.buttons.updateVolumeButton("" + v);
-                    this.mixer.refreshMixer();
+                    // Redibuix a l'EDT: fer-ho des d'aquest fil reescrivia
+                    // l'offscreen mentre l'EDT el copiava a pantalla.
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        if (!togg.isPressed()) return;
+                        adjustVolumeMark(-VOLUME_MARK_STEP);
+                    });
                     Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -3203,10 +3365,10 @@ public class MyController {
     }
 
     public void onSlowerButtonPressed(MyButton togg) {
-        // Vel-: modifica el playbackTempo (velocitat de reproducció en viu).
-        // El botó mostra el playbackTempo en tot moment.
-        MyTempo.slower();
-        this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
+        // Spd-: edita la marca de tempo vigent (queda desada a la partitura).
+        // El botó mostra sempre el valor de la marca.
+        if (cam.isPlaying()) { togg.setPressed(false); return; }
+        adjustTempoMark(-TEMPO_MARK_STEP);
         if (replicador != null && replicador.isAlive()) {
             return;
         }
@@ -3220,11 +3382,17 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    MyTempo.slower();
-                    this.buttons.updateTempoButton("" + MyTempo.getPlaybackTempo());
+                    // Redibuix a l'EDT: fer-ho des d'aquest fil reescrivia
+                    // l'offscreen mentre l'EDT el copiava a pantalla.
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        if (!togg.isPressed()) return;
+                        adjustTempoMark(-TEMPO_MARK_STEP);
+                    });
                     Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -3696,7 +3864,7 @@ public class MyController {
         String tempo = "" + MyTempo.getPlaybackTempo();
         this.buttons.updateTempoButton(tempo);
         MyTrack track = this.getMixer().getCurrentTrack();
-        int volume = 63;
+        int volume = Settings.getDefaultVelocity();
         if (track != null) {
             volume = track.getVelocity();
         }
@@ -3772,20 +3940,132 @@ public class MyController {
             if (onPlaceAtStart != null) {
                 onPlaceAtStart.run();
             } else {
+                // Col·loca a la columna 0 de la PARTITURA sense moure la vista:
+                // l'usuari es queda a la pàgina on estava treballant.
                 placePendingChangeAt(0);
             }
         });
+        // Cancel·la: descarta el canvi pendent i restaura el que ja s'hagués
+        // aplicat abans de col·locar la marca (el volum del track).
+        javax.swing.JButton btnCancel = new javax.swing.JButton(I18n.t("btn.cancel"));
+        btnCancel.addActionListener(ev -> cancelPendingChange());
+        javax.swing.JPanel buttonRow = new javax.swing.JPanel(
+                new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 8, 0));
+        buttonRow.add(btnInici);
+        buttonRow.add(btnCancel);
         javax.swing.JPanel contentPanel = new javax.swing.JPanel(new java.awt.BorderLayout(0, 8));
         contentPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 24, 16, 24));
         contentPanel.add(label, java.awt.BorderLayout.CENTER);
-        contentPanel.add(btnInici, java.awt.BorderLayout.SOUTH);
+        contentPanel.add(buttonRow, java.awt.BorderLayout.SOUTH);
         dlg.add(contentPanel);
         dlg.getRootPane().setDefaultButton(btnInici);
+        // Tancar la finestra equival a cancel·lar: abans el canvi pendent quedava
+        // armat i el següent clic a la graella el col·locava sense avisar.
+        dlg.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent ev) {
+                cancelPendingChange();
+            }
+        });
         dlg.pack();
         dlg.setLocationRelativeTo(this.getUi());
         dlg.setVisible(true);
         pendingChangeDialog = dlg;
         this.drawFull(true);
+    }
+
+    /**
+     * [CA] Descarta el canvi pendent sense col·locar cap marca i deixa l'estat
+     * tal com era abans d'obrir el diàleg: restaura el volum del track si ja
+     * s'havia aplicat, tanca la finestra i refresca els botons.
+     * <p>
+     * [EN] Discards the pending change without placing any mark and leaves the
+     * state as it was before the dialog opened: restores the track velocity if
+     * it had already been applied, closes the window and refreshes the buttons.
+     */
+    private void cancelPendingChange() {
+        if (pendingChange == null && pendingChangeDialog == null) return;
+        pendingChange = null;
+        pendingTransposeStep = 0;
+        if (pendingVolumeTrackId >= 0 && pendingVolumePrevVelocity >= 0) {
+            MyTrack t = this.getMixer().getTrackFromId(pendingVolumeTrackId);
+            if (t != null) t.setVelocity(pendingVolumePrevVelocity);
+        }
+        clearPendingVolumeUndo();
+        if (pendingChangeDialog != null) {
+            pendingChangeDialog.dispose();
+            pendingChangeDialog = null;
+        }
+        this.statusLine.setText(scoreStatusText());
+        this.updateTextOfButtons();
+        this.drawFull(true);
+    }
+
+    /** Oblida el volum previ desat per a un canvi pendent de volum. */
+    private void clearPendingVolumeUndo() {
+        pendingVolumeTrackId = -1;
+        pendingVolumePrevVelocity = -1;
+    }
+
+    /**
+     * [CA] Retorna els valors vigents immediatament abans de {@code col}, amb
+     * els camps no fixats resolts al valor per defecte que faria servir
+     * {@code applyChangesAt}. Serveix per decidir si una marca nova aportaria
+     * res: si tots els seus camps coincideixen amb aquests, és redundant.
+     * <p>
+     * [EN] Returns the values in force immediately before {@code col}, with
+     * unset fields resolved to the default {@code applyChangesAt} would use.
+     * Used to decide whether a new mark adds anything: if all its fields match
+     * these, it is redundant.
+     *
+     * @param col [CA] columna de la marca / [EN] column of the mark
+     * @return [CA] valors vigents just abans de col / [EN] values in force just before col
+     */
+    private MyGridScore.ScoreChange effectiveBeforeCol(int col) {
+        MyGridScore.ScoreChange r = (col <= 0)
+                ? new MyGridScore.ScoreChange()
+                : allPurposeScore.getEffectiveChange(col - 1).copy();
+        if (r.tempo == null)         r.tempo         = Settings.DEFAULT_TEMPO;
+        if (r.midiKey == null)       r.midiKey       = ToneRange.getDefaultKey();
+        if (r.scaleMode == null)     r.scaleMode     = ToneRange.getDefaultMode();
+        if (r.nBeatsMeasure == null) r.nBeatsMeasure = allPurposeScore.getBaseNBeatsMeasure();
+        if (r.beatFigure == null)    r.beatFigure    = allPurposeScore.getBaseBeatFigure();
+        return r;
+    }
+
+    /**
+     * [CA] Buida de {@code sc} els camps que repeteixen el valor ja vigent a
+     * {@code before}. Tonalitat i compàs es tracten en bloc: només es descarten
+     * si coincideixen tots els camps del grup, perquè una marca a mitges
+     * deixaria la partitura en un estat incoherent.
+     * <p>
+     * [EN] Clears from {@code sc} the fields that repeat the value already in
+     * force in {@code before}. Key and time signature are handled as a block:
+     * they are only dropped when every field of the group matches, since a
+     * half-written mark would leave the score inconsistent.
+     *
+     * @param sc     [CA] entrada a netejar / [EN] entry to clean up
+     * @param before [CA] valors vigents just abans / [EN] values in force just before
+     */
+    private void dropRedundantFields(MyGridScore.ScoreChange sc, MyGridScore.ScoreChange before) {
+        if (java.util.Objects.equals(sc.tempo, before.tempo)) {
+            sc.tempo = null;
+        }
+        if (java.util.Objects.equals(sc.midiKey, before.midiKey)
+                && java.util.Objects.equals(sc.scaleMode, before.scaleMode)) {
+            sc.midiKey   = null;
+            sc.scaleMode = null;
+        }
+        if (java.util.Objects.equals(sc.nBeatsMeasure, before.nBeatsMeasure)
+                && java.util.Objects.equals(sc.beatFigure, before.beatFigure)
+                && java.util.Objects.equals(sc.nColsQuarter, before.nColsQuarter)) {
+            sc.nBeatsMeasure = null;
+            sc.beatFigure    = null;
+            sc.nColsQuarter  = null;
+            sc.nColsBeat     = null;
+        }
+        sc.trackVelocities.entrySet().removeIf(en ->
+                java.util.Objects.equals(en.getValue(), before.trackVelocities.get(en.getKey())));
     }
 
     /**
@@ -3807,6 +4087,10 @@ public class MyController {
         if (!isVolumeOnly) {
             col = allPurposeScore.getFirstColOfCurrentMeasure(col);
         }
+        // Valors vigents immediatament abans d'aquesta columna. Es calcula ABANS
+        // de transposar: transpose() desplaça els midiKey de tot el changeMap i
+        // la referència ja no seria comparable amb el valor que l'usuari ha entrat.
+        MyGridScore.ScoreChange beforeCol = effectiveBeforeCol(col);
         // Si hi ha un canvi de to pendent, preguntar si cal transposar les notes.
         int appliedTransposeStep = 0;
         boolean appliedTransposeNotes = false;
@@ -3830,17 +4114,29 @@ public class MyController {
         // perquè el redo no perdi els camps que ja hi havia en aquella columna.
         MyGridScore.ScoreChange oldEntry = allPurposeScore.getChangeMap().get(col);
         oldEntry = (oldEntry == null) ? null : oldEntry.copy();
-        allPurposeScore.setScoreChange(col, pendingChange);
+        // Merge sobre una còpia i després descarta els camps que repeteixen el
+        // valor ja vigent: una marca que no canvia res no s'ha de col·locar, i
+        // si a la columna n'hi havia una d'igual, ha de desaparèixer.
+        MyGridScore.ScoreChange merged = (oldEntry == null)
+                ? new MyGridScore.ScoreChange()
+                : oldEntry.copy();
+        merged.mergeFrom(pendingChange);
+        dropRedundantFields(merged, beforeCol);
+        allPurposeScore.putScoreChange(col, merged);
         MyGridScore.ScoreChange newEntry = allPurposeScore.getChangeMap().get(col);
-        afegirEvent(new ScoreChangeEvent(this, col, oldEntry,
-                (newEntry == null) ? null : newEntry.copy(),
-                appliedTransposeStep, appliedTransposeNotes));
+        newEntry = (newEntry == null) ? null : newEntry.copy();
+        boolean entryChanged = (oldEntry == null) ? (newEntry != null) : !oldEntry.sameAs(newEntry);
+        if (entryChanged || appliedTransposeStep != 0) {
+            afegirEvent(new ScoreChangeEvent(this, col, oldEntry, newEntry,
+                    appliedTransposeStep, appliedTransposeNotes));
+        }
         // Reseteja playbackTempo només si la marca és a la posició actual o abans;
         // si és posterior al playbar el tempo en viu no canvia fins que s'hi arriba.
         if (pendingChange.tempo != null && col <= getEditingCol()) {
             MyTempo.setTempo(pendingChange.tempo);
         }
         pendingChange = null;
+        clearPendingVolumeUndo();
         // Tanca el diàleg informatiu
         if (pendingChangeDialog != null) {
             pendingChangeDialog.dispose();
@@ -4049,6 +4345,9 @@ public class MyController {
         }
         afegirEvent(new ScoreChangeEvent(this, col, oldEntry, newEntry));
         applyScoreChangeAt(col, newEntry);
+        // L'edició acaba el treball sobre la marca: deixar-la ressaltada feia
+        // pensar que encara hi havia una acció pendent.
+        clearMarkSelection();
     }
 
     /**
@@ -4103,6 +4402,30 @@ public class MyController {
      *
      * @return true si hi havia un canvi pendent i s'ha col·locat
      */
+    /**
+     * [CA] Col·loca el canvi pendent a la columna 0 de la partitura, que és
+     * l'acció del botó "A l'inici" del diàleg.
+     * <p>
+     * [EN] Places the pending change at score column 0, the action of the
+     * dialog's "At the beginning" button.
+     *
+     * @return [CA] cert si hi havia un canvi pendent / [EN] true if there was a pending change
+     */
+    public boolean placePendingChangeAtStart() {
+        return placePendingChangeAt(0);
+    }
+
+    /**
+     * [CA] Indica si hi ha un canvi pendent de col·locar.
+     * <p>
+     * [EN] Returns whether there is a change waiting to be placed.
+     *
+     * @return [CA] cert si hi ha canvi pendent / [EN] true if a change is pending
+     */
+    public boolean isPendingChangeActive() {
+        return pendingChange != null;
+    }
+
     public boolean placePendingChangeAtPlayBar() {
         if (pendingChange == null) return false;
         return placePendingChangeAt(getEditingCol());
@@ -4163,17 +4486,15 @@ public class MyController {
         if (sc.nMeasuresCam != null) {
             Settings.setnMeasuresCam(sc.nMeasuresCam);
         }
-        // Les velocitats del changeMap s'apliquen al track i al botó només durant la
-        // reproducció (quan el playbar passa per una marca de volum). En mode d'edició,
-        // la velocitat del track reflecteix l'ajust manual de l'usuari (Louder/Quieter/Volum).
-        if (cam.isPlaying()) {
-            for (java.util.Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
-                MyTrack t = getMixer().getTrackFromId(e.getKey());
-                if (t != null) {
-                    t.setVelocity(e.getValue());
-                    if (e.getKey() == getMixer().getCurrentTrackId()) {
-                        this.buttons.updateVolumeButton("" + e.getValue());
-                    }
+        // Les velocitats del changeMap s'apliquen sempre, també en edició: amb
+        // Vol+/Vol- editant la marca vigent, la marca ÉS el volum de la partitura
+        // i el botó ha de mostrar el mateix tant navegant com reproduint.
+        for (java.util.Map.Entry<Integer, Integer> e : sc.trackVelocities.entrySet()) {
+            MyTrack t = getMixer().getTrackFromId(e.getKey());
+            if (t != null) {
+                t.setVelocity(e.getValue());
+                if (e.getKey() == getMixer().getCurrentTrackId()) {
+                    this.buttons.updateVolumeButton("" + e.getValue());
                 }
             }
         }

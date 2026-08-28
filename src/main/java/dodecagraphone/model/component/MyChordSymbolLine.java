@@ -599,12 +599,17 @@ public class MyChordSymbolLine extends MyComponent {
             int spanCols = Math.max(1, (int) Math.ceil(boxW / Settings.getColWidth()));
             markBoxes.add(new MarkBox(col, kind, spanCols, existingYOff, boxH));
         }
-        // Marca seleccionada: contorn de contrast (groc sobre fons fosc).
+        // Marca seleccionada: marc groc gruixut PER FORA de la caixa, amb un
+        // filet negre exterior. Dibuixat a dins i de 2 px amb prou feines es
+        // distingia del fons de la marca.
         if (toOwnBuffer && col == contr.getSelectedMarkCol() && kind == contr.getSelectedMarkKind()) {
             Stroke savedStroke = g.getStroke();
-            g.setStroke(new BasicStroke(2f));
+            g.setStroke(new BasicStroke(1f));
+            g.setColor(Color.BLACK);
+            g.drawRect(boxX - 4, boxY - 4, boxW + 7, boxH + 7);
+            g.setStroke(new BasicStroke(3f));
             g.setColor(Color.YELLOW);
-            g.drawRect(boxX, boxY, boxW - 1, boxH - 1);
+            g.drawRect(boxX - 2, boxY - 2, boxW + 3, boxH + 3);
             g.setStroke(savedStroke);
         }
 
@@ -626,6 +631,18 @@ public class MyChordSymbolLine extends MyComponent {
         if (tempo > 0) yOff += drawTempoMark(0, tempo, g, true, yOff);
         if (midiKey >= 0) yOff += drawKeyMark(0, midiKey, scaleMode, g, true, yOff);
         return yOff;
+    }
+
+    /**
+     * [CA] Volum vigent del track actual quan no hi ha marca explícita.
+     * <p>
+     * [EN] Current track volume when there is no explicit mark.
+     *
+     * @return [CA] velocity del track actual / [EN] current track velocity
+     */
+    private int currentTrackVelocity() {
+        dodecagraphone.model.mixer.MyTrack t = contr.getMixer().getCurrentTrack();
+        return (t != null) ? t.getVelocity() : Settings.getDefaultVelocity();
     }
 
     /** Draws the col-0 marks (tempo/key/volume) from the changeMap, with fallback defaults. */
@@ -710,13 +727,12 @@ public class MyChordSymbolLine extends MyComponent {
                 int yOff = 0;
                 yOff += drawTempoMark(0, tempo0, offscreenGraphics, true, yOff);
                 yOff += drawKeyMark(0, midiKey0, mode0, offscreenGraphics, true, yOff);
-                // Volum: només el del track actual, i només si hi ha marca explícita.
-                if (sc0 != null) {
-                    Integer vel0 = sc0.trackVelocities.get(currentTrackId);
-                    if (vel0 != null) {
-                        yOff += drawVolumeMark(0, vel0, offscreenGraphics, true, yOff);
-                    }
-                }
+                // Volum: es mostra sempre, com el tempo i la tonalitat. Sense marca
+                // explícita el valor és el del track actual, que arrenca a
+                // Settings.getDefaultVelocity(); així la marca no menteix mai.
+                Integer vel0 = (sc0 != null) ? sc0.trackVelocities.get(currentTrackId) : null;
+                int vel0Shown = (vel0 != null) ? vel0 : currentTrackVelocity();
+                yOff += drawVolumeMark(0, vel0Shown, offscreenGraphics, true, yOff);
                 if (yOff > 0) {
                     offscreenGraphics.setFont(getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
@@ -724,12 +740,7 @@ public class MyChordSymbolLine extends MyComponent {
                     int maxW = fm.stringWidth("" + tempo0) + 2 * pad;
                     try { maxW = Math.max(maxW, fm.stringWidth(ToneRange.getKeyName(midiKey0, mode0)) + 2 * pad); }
                     catch (Exception ignored) {}
-                    if (sc0 != null) {
-                        Integer vel0 = sc0.trackVelocities.get(currentTrackId);
-                        if (vel0 != null) {
-                            maxW = Math.max(maxW, fm.stringWidth("v" + vel0) + 2 * pad);
-                        }
-                    }
+                    maxW = Math.max(maxW, fm.stringWidth("v" + vel0Shown) + 2 * pad);
                     markerMaxWidths.put(0, maxW);
                 }
             }

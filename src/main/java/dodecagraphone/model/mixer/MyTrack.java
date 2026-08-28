@@ -64,7 +64,7 @@ public class MyTrack {
         this.currentChannel = -1;
         this.dotted = false;
         this.nNotes = 0;
-        this.velocity = 127;
+        this.velocity = dodecagraphone.ui.Settings.getDefaultVelocity();
         this.keepNoteVelocity = false;
         this.selected = false;
         this.deleted = false;

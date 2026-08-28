@@ -267,6 +267,31 @@ public class MyGridScore extends MyComponent {
         }
 
         /**
+         * [CA] Compara aquesta entrada amb una altra camp a camp. Un
+         * {@code other} null equival a una entrada buida.
+         * <p>
+         * [EN] Compares this entry with another field by field. A null
+         * {@code other} is equivalent to an empty entry.
+         *
+         * @param other [CA] entrada a comparar / [EN] entry to compare with
+         * @return [CA] cert si totes dues tenen els mateixos valors / [EN] true if both hold the same values
+         */
+        public boolean sameAs(ScoreChange other) {
+            if (other == null) return isEmpty();
+            return java.util.Objects.equals(tempo, other.tempo)
+                    && java.util.Objects.equals(midiKey, other.midiKey)
+                    && java.util.Objects.equals(scaleMode, other.scaleMode)
+                    && java.util.Objects.equals(nBeatsMeasure, other.nBeatsMeasure)
+                    && java.util.Objects.equals(beatFigure, other.beatFigure)
+                    && java.util.Objects.equals(nColsQuarter, other.nColsQuarter)
+                    && java.util.Objects.equals(nColsBeat, other.nColsBeat)
+                    && java.util.Objects.equals(nMeasuresCam, other.nMeasuresCam)
+                    && java.util.Objects.equals(measurePhase, other.measurePhase)
+                    && java.util.Objects.equals(colInBeatPhase, other.colInBeatPhase)
+                    && trackVelocities.equals(other.trackVelocities);
+        }
+
+        /**
          * @return cert si no hi ha cap camp establert (tots null i sense velocitats)
          */
         public boolean isEmpty() {

@@ -368,14 +368,23 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             this.repinta(true);
             return;
         }
-        // Enter: col·loca el canvi pendent (scoreChange o column op) al playBar
+        // Enter amb un canvi pendent: fa el mateix que el botó per defecte del
+        // diàleg, "A l'inici" (columna 0 de la partitura). Abans col·locava al
+        // playbar, i com que el diàleg no és modal el resultat depenia de quina
+        // finestra tingués el focus: la mateixa tecla feia dues coses oposades.
+        // Ctrl+Enter conserva la col·locació al playbar.
         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
             controller.clearSelection();
             if (controller.isPendingColumnOp()) {
                 controller.executePendingColumnOpAt(controller.getEditingColPublic());
-            } else if (controller.placePendingChangeAtPlayBar()) {
-                controller.getAllPurposeScore().drawCurrentCamInOffscreen();
-                this.repinta(true);
+            } else if (controller.isPendingChangeActive()) {
+                boolean placed = e.isControlDown()
+                        ? controller.placePendingChangeAtPlayBar()
+                        : controller.placePendingChangeAtStart();
+                if (placed) {
+                    controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+                    this.repinta(true);
+                }
             }
             return;
         }

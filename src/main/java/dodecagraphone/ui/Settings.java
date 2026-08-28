@@ -59,6 +59,8 @@ public class Settings {
     // ── Constants de partitura i reproducció ─────────────────────────────
     public static final boolean PLAY_AT_BEAT  = false;
     public static final int     DEFAULT_TEMPO = 60;
+    /** [CA] Volum (velocity MIDI) inicial d'una pista. / [EN] Initial track volume (MIDI velocity). */
+    public static final int     DEFAULT_VELOCITY = 127;
     public static final int     MAX_BPM       = 300;
     public static final int     END_COL_MARGIN = 250;
 
@@ -286,6 +288,15 @@ public class Settings {
      * @return [CA] tempo per defecte / [EN] default tempo
      */
     public static int getDefaultTempo()  { return DEFAULT_TEMPO; }
+
+    /**
+     * [CA] Retorna el volum inicial d'una pista (velocity MIDI).
+     * <p>
+     * [EN] Returns the initial track volume (MIDI velocity).
+     *
+     * @return [CA] velocity per defecte / [EN] default velocity
+     */
+    public static int getDefaultVelocity() { return DEFAULT_VELOCITY; }
 
     // ── UI: preferències de l'usuari ──────────────────────────────────────
 

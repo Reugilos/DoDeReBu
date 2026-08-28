@@ -732,6 +732,10 @@ public class MyMixer {
         selectButton.addActionListener(e -> {
             setCurrentTrack(index);
             refreshMixer();
+            // Les marques de volum són per track: cal redibuixar la franja
+            // d'acords I refrescar el botó de volum perquè tots dos passin a
+            // mostrar els valors de la pista que acaba de seleccionar-se.
+            contr.updateTextOfButtons();
             contr.redrawChordLine();
         });
         rightPanel.add(selectButton);
