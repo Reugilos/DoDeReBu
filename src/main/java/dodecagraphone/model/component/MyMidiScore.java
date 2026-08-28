@@ -344,20 +344,31 @@ public class MyMidiScore extends MyExercise {
 //    }
 
     /**
-     * [CA] Llegeix un fitxer MIDI i emplena la graella de la partitura.
-     * Analitza les pistes MIDI, detecta la capçalera (tempo, compàs,
-     * tonalitat), processa les notes (NOTE_ON/OFF), els acords, la lletra i
-     * el changeMap, i actualitza el mixer.
+     * [CA] Nombre de notes de l'última càrrega que queien fora del rang de la
+     * graella. Es posa a zero al començar cada {@link #readMidiScore(String)}.
      * <p>
-     * [EN] Reads a MIDI file and populates the score grid. Analyses MIDI
-     * tracks, detects the header (tempo, time signature, key), processes
-     * notes (NOTE_ON/OFF), chords, lyrics and the changeMap, and updates the
-     * mixer.
+     * [EN] Number of notes in the last load that fell outside the grid range.
+     * Reset to zero at the start of each {@link #readMidiScore(String)}.
      *
-     * @param fitxer [CA] ruta al fitxer MIDI / [EN] path to the MIDI file
+     * @return [CA] notes fora de rang / [EN] out-of-range notes
      */
     public int getOutOfRangeCount() { return outOfRangeCount; }
 
+    /**
+     * [CA] Llegeix un fitxer MIDI i emplena la graella de la partitura.
+     * Analitza les pistes MIDI, aplica el compàs i la tonalitat inicials
+     * ({@code applyInitialMetaFromSequence}, abans de convertir cap nota),
+     * processa les notes (NOTE_ON/OFF), els acords, la lletra i el changeMap,
+     * i actualitza el mixer.
+     * <p>
+     * [EN] Reads a MIDI file and populates the score grid. Analyses MIDI
+     * tracks, applies the initial time and key signatures
+     * ({@code applyInitialMetaFromSequence}, before converting any note),
+     * processes notes (NOTE_ON/OFF), chords, lyrics and the changeMap, and
+     * updates the mixer.
+     *
+     * @param fitxer [CA] ruta al fitxer MIDI / [EN] path to the MIDI file
+     */
     public void readMidiScore(String fitxer) {
         outOfRangeCount = 0;
         // defaults;
@@ -1222,6 +1233,24 @@ public class MyMidiScore extends MyExercise {
      * [EN] Analyses the MIDI sequence header and directly applies tempo,
      * time signature, key and metadata values to the score, without
      * generating events in the grid.
+     * <p>
+     * <b>Del compàs només n'aplica el numerador</b> ({@code setNumBeatsMeasure},
+     * dividit per 3 en compassos de corxeres): <b>no toca {@code beatFigure}</b>.
+     * Com que {@code tickLengthToNCols()} converteix durades amb
+     * {@code nColsBeat * beatFigure / 4}, deixar-lo sense actualitzar feia que
+     * les notes dels MIDI externs sortissin escalades. Qui fixa el
+     * {@code beatFigure} és {@code applyInitialMetaFromSequence}, que s'executa
+     * abans; aquest mètode s'executa després i el seu numerador preval, que és
+     * el que interessa per als compassos compostos.
+     * <p>
+     * <b>Only the numerator of the time signature is applied</b>
+     * ({@code setNumBeatsMeasure}, divided by 3 for eighth-note meters):
+     * <b>{@code beatFigure} is left untouched</b>. Since
+     * {@code tickLengthToNCols()} converts durations with
+     * {@code nColsBeat * beatFigure / 4}, leaving it stale made notes from
+     * external MIDI files come out scaled. {@code beatFigure} is set by
+     * {@code applyInitialMetaFromSequence}, which runs first; this method runs
+     * afterwards and its numerator wins, which is what compound meters need.
      *
      * @param sequence [CA] seqüència MIDI a analitzar / [EN] MIDI sequence to analyse
      * @return [CA] true si l'anàlisi ha tingut èxit / [EN] true if analysis succeeded

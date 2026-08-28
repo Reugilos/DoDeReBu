@@ -30,15 +30,19 @@ import java.util.TreeMap;
 /**
  * [CA] Franja horitzontal de símbols d'acord que fa scroll juntament amb la
  * partitura. Mostra els símbols d'acord del {@code chordSymbolLine} del
- * {@link MyGridScore}, les marques de canvi de tempo, tonalitat i volum
- * (colorejades), i les línies de compàs i temps. Utilitza un buffer offscreen
+ * {@link MyGridScore}, les marques de canvi (tempo en blau, tonalitat en
+ * granate, volum en verd i transposició en groc), i les línies de compàs i
+ * temps. Les de volum i transposició són del track actual; les altres dues,
+ * globals. Utilitza un buffer offscreen
  * ({@link BufferedImage}) per minimitzar el redibuix; el mètode
  * {@code drawFullChordLineInOffscreen()} regenera tot el buffer i
  * {@code draw(Graphics2D)} n'extreu la porció visible.
  * <p>
  * [EN] Horizontal chord symbol strip that scrolls with the score. Displays
- * chord symbols from the {@link MyGridScore} {@code chordSymbolLine}, tempo,
- * key and volume change markers (coloured), and bar/beat lines. Uses an
+ * chord symbols from the {@link MyGridScore} {@code chordSymbolLine}, change
+ * markers (tempo in blue, key in maroon, volume in green and transposition in
+ * yellow), and bar/beat lines. The volume and transposition ones belong to the
+ * current track; the other two are global. Uses an
  * offscreen buffer ({@link BufferedImage}) to minimise redraws;
  * {@code drawFullChordLineInOffscreen()} regenerates the whole buffer and
  * {@code draw(Graphics2D)} extracts the visible slice.
@@ -270,7 +274,7 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * [CA] Retorna la marca de canvi (tempo, to o volum) dibuixada sota la
+     * [CA] Retorna la marca de canvi (tempo, to, volum o transposició) dibuixada sota la
      * posició de pantalla indicada, o null si no n'hi ha cap. La columna es
      * resol amb el mateix {@code getCol()} que fa servir {@code whichCol()} per
      * als acords, i la banda vertical es reconstrueix des de la base de la pila
@@ -435,7 +439,7 @@ public class MyChordSymbolLine extends MyComponent {
     /**
      * setter.
      *
-     * @param score
+     * @param score [CA] partitura associada / [EN] associated score
      */
     public void setScore(MyGridScore score) {
         this.score = score;
@@ -445,8 +449,9 @@ public class MyChordSymbolLine extends MyComponent {
      * Draws a measure line. To place the line, it uses score rows (negative)
      * and columns.
      *
-     * @param col
-     * @param g
+     * @param col [CA] columna de partitura / [EN] score column
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
+     * @param offscreen [CA] cert per dibuixar al buffer offscreen; fals, a pantalla / [EN] true to draw into the offscreen buffer; false, on screen
      */
     private void drawMeasureLine(int col, Graphics2D g, boolean offscreen) {
         //if (Settings.IS_BU) return;
@@ -467,8 +472,9 @@ public class MyChordSymbolLine extends MyComponent {
      * Draws a beat line. To place the line, it uses score rows (negative) and
      * columns.
      *
-     * @param col
-     * @param g
+     * @param col [CA] columna de partitura / [EN] score column
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
+     * @param offscreen [CA] cert per dibuixar al buffer offscreen; fals, a pantalla / [EN] true to draw into the offscreen buffer; false, on screen
      */
     private void drawBeatLine(int col, Graphics2D g, boolean offscreen) {
         //if (Settings.IS_BU) return;
@@ -492,9 +498,9 @@ public class MyChordSymbolLine extends MyComponent {
      * chordSymbolVertical is set, it draws the chord notes in vertical,
      * otherwise it draws a basic chord symbol (chord.basicString()).
      *
-     * @param chord
-     * @param col
-     * @param g
+     * @param chord [CA] acord a dibuixar / [EN] chord to draw
+     * @param col [CA] columna de partitura / [EN] score column
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     public void drawChordSymbol(Chord chord, int col, Graphics2D g) {
         drawChordSymbol(chord, col, g, false, 0);
@@ -648,7 +654,8 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * Draws a small filled rectangle with white text at the bottom-left of the
+     * Draws a small filled rectangle with contrast-coloured text (white on the
+     * dark backgrounds, black on the yellow one) at the bottom-left of the
      * chord strip cell at {@code col}, stacked {@code existingYOff} pixels above
      * the bottom edge (markers stack upward).
      * Returns the height of the box so the caller can stack further markers.
@@ -730,7 +737,19 @@ public class MyChordSymbolLine extends MyComponent {
         return (t != null) ? t.getVelocity() : Settings.getDefaultVelocity();
     }
 
-    /** Draws the col-0 marks (tempo/key/volume) from the changeMap, with fallback defaults. */
+    /**
+     * [CA] Marques de la columna 0 (tempo, tonalitat i volum) amb fallback als
+     * valors per defecte. És el camí d'<b>impressió/PDF</b>: la pantalla les
+     * dibuixa a {@code drawFullChordLineInOffscreen()}, que hi afegeix la de
+     * transposició i només mostra el volum del track actual.
+     * <p>
+     * [EN] Column-0 marks (tempo, key and volume) with a fallback to the
+     * defaults. This is the <b>print/PDF</b> path: on screen they are drawn by
+     * {@code drawFullChordLineInOffscreen()}, which also adds the transposition
+     * one and shows only the current track's volume.
+     *
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
+     */
     public void drawInitialMarkersAt(Graphics2D g) {
         MyGridScore.ScoreChange sc0 = score.getChangeMap().get(0);
         int tempo      = (sc0 != null && sc0.tempo     != null) ? sc0.tempo     : Settings.DEFAULT_TEMPO;
@@ -934,7 +953,7 @@ public class MyChordSymbolLine extends MyComponent {
      * extracts the visible portion from the buffer instead of redrawing from
      * scratch (mirrors MyGridScore.draw()).
      *
-     * @param g
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     @Override
     public void draw(Graphics2D g) {

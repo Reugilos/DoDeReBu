@@ -139,6 +139,9 @@ public class PdfDrawKit {
 
     /**
      * Descripció de la partitura (pàgina 1), amb wrapping automàtic.
+     * @param x        coordenada X en punts PDF
+     * @param y        coordenada Y en punts PDF
+     * @param text     text de la descripció
      * @param maxWidth amplada màxima disponible en punts PDF
      * @return alçada total usada (nombre de línies × alçada de línia)
      */
@@ -182,6 +185,8 @@ public class PdfDrawKit {
     /**
      * Capçalera de pàgina alineada a la dreta.
      * @param rightX coordenada X del marge dret
+     * @param y      coordenada Y en punts PDF
+     * @param text   text de la capçalera
      */
     public void drawPageHeader(float rightX, float y, String text) throws IOException {
         if (text == null || text.isEmpty()) return;

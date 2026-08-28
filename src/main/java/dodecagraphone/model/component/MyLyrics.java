@@ -421,7 +421,12 @@ public class MyLyrics extends MyComponent {
     }
 
     /**
-     * Handles key-pressed events (special keys) while in edit mode.
+     * Handles key-pressed events (special keys) while in edit mode: Enter and
+     * Escape commit and leave, the arrows move the cursor, Backspace deletes
+     * (and goes back to the previous segment when the buffer is empty), Space
+     * advances to the next note and Shift+Space goes back to the previous one.
+     * Any cursor move turns the page automatically when the target note falls
+     * outside the visible page ({@link #ensureEditCursorVisible()}).
      *
      * @return true if the event was consumed (edit mode was active)
      */
@@ -550,7 +555,19 @@ public class MyLyrics extends MyComponent {
 
     // ---- private helpers for edit mode ----
 
-    /** Commits the current edit buffer as a real segment (if non-empty). */
+    /**
+     * [CA] Confirma el buffer d'edició com a segment real (si no és buit) i
+     * marca la partitura com a modificada. També la marca quan el buffer queda
+     * buit però s'havia carregat un segment existent: esborrar text del tot
+     * també és un canvi que s'ha de desar. La marca es fa aquí i no a
+     * {@code setLyric}, que també l'usen la càrrega MIDI, l'undo i l'enganxa.
+     * <p>
+     * [EN] Commits the edit buffer as a real segment (if non-empty) and marks
+     * the score as modified. It also marks it when the buffer ends up empty but
+     * an existing segment had been loaded: deleting text entirely is a change
+     * that must be saved too. The flag is set here and not in {@code setLyric},
+     * which is also used by MIDI loading, undo and paste.
+     */
     private void commitCurrentWord() {
         String text = editBuffer.toString().trim();
         if (!text.isEmpty()) {
@@ -658,11 +675,16 @@ public class MyLyrics extends MyComponent {
     }
 
     /**
-     * Converts a score column index to a screen X coordinate, taking the
-     * current camera scroll position into account.
+     * [CA] Factor d'escala horitzontal de la franja quan la compressió
+     * fit-anacrusi és activa a la primera pàgina: la vista hi mostra un compàs
+     * de més, i les columnes es dibuixen més estretes en la mateixa amplada.
+     * Retorna 1.0 quan no s'aplica.
+     * <p>
+     * [EN] Horizontal scale factor of the strip when fit-anacrusis compression
+     * is active on the first page: the view shows one extra measure there, so
+     * columns are drawn narrower within the same width. Returns 1.0 otherwise.
      *
-     * @param col  score column
-     * @return screen X in panel coordinates
+     * @return [CA] factor d'escala (1.0 = sense compressió) / [EN] scale factor (1.0 = no compression)
      */
     private double getFitScaleX() {
         if (!score.isUseScreenKeyboardRight()
@@ -679,6 +701,13 @@ public class MyLyrics extends MyComponent {
         return 1.0;
     }
 
+    /**
+     * Converts a score column index to a screen X coordinate, taking the
+     * current camera scroll position into account.
+     *
+     * @param col  score column
+     * @return screen X in panel coordinates
+     */
     private int colToScreenX(int col) {
         boolean left = !score.isUseScreenKeyboardRight();
         int ccol = score.getCurrentCol();
@@ -857,7 +886,7 @@ public class MyLyrics extends MyComponent {
      * Extracts the visible slice from the offscreen buffer and blits it to
      * the screen (mirrors MyChordSymbolLine.draw()).
      *
-     * @param g
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     @Override
     public void draw(Graphics2D g) {

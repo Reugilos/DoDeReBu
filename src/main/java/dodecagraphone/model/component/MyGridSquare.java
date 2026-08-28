@@ -144,6 +144,21 @@ public class MyGridSquare extends MyComponent {
     private boolean sq_is_visible;
     private boolean sq_is_dotted;
     private boolean sq_is_audible;
+    /**
+     * [CA] Cert si TOTS els tracks visibles d'aquesta cel·la tenen la nota
+     * enllaçada. És un AND, no l'estat del track actual, i és un valor calculat
+     * a {@link #updateState()}, o sigui que pot estar caducat entre repintats.
+     * <b>No</b> el facis servir per decidir si cal enllaçar una nota: usa
+     * {@code MyController.isCurrentTrackNoteLinked(sq)}, que mira {@code poliNotes}
+     * del track actual sense cau.
+     * <p>
+     * [EN] True if ALL visible tracks in this cell have their note linked. It is
+     * an AND, not the current track's state, and it is computed in
+     * {@link #updateState()}, so it can be stale between repaints. Do <b>not</b>
+     * use it to decide whether to link a note: use
+     * {@code MyController.isCurrentTrackNoteLinked(sq)}, which reads the current
+     * track's {@code poliNotes} with no caching.
+     */
     private boolean sq_is_linked;
     private boolean sq_is_empty;
     private int are_playing;
@@ -265,6 +280,27 @@ public class MyGridSquare extends MyComponent {
         return this.sq_is_empty;
     }
         
+    /**
+     * [CA] Afegeix una nota a la cel·la. La identitat d'un {@code SubSquare} és
+     * {@code (canal, track, square)}: si el track ja hi té nota, <b>es conserva
+     * la que hi ha</b> (amb el seu estat d'enllaç) i no se n'afegeix cap altra.
+     * Permetre duplicats trencava {@code linkNote} ({@code indexOf}, n'enllaçava
+     * només una) i {@code removeNote} ({@code lastIndexOf}, n'esborrava només una).
+     * <p>
+     * [EN] Adds a note to the cell. A {@code SubSquare}'s identity is
+     * {@code (channel, track, square)}: if the track already has a note here,
+     * <b>the existing one is kept</b> (with its link state) and no second one is
+     * added. Allowing duplicates broke {@code linkNote} ({@code indexOf}, linking
+     * only one) and {@code removeNote} ({@code lastIndexOf}, deleting only one).
+     *
+     * @param channel    [CA] canal MIDI / [EN] MIDI channel
+     * @param track      [CA] id del track / [EN] track id
+     * @param volume     [CA] velocity / [EN] velocity
+     * @param is_visible [CA] visible / [EN] visible
+     * @param is_mutted  [CA] silenciada / [EN] muted
+     * @param is_linked  [CA] continuació de la nota anterior / [EN] continuation of the previous note
+     * @param is_dotted  [CA] puntejada / [EN] dotted
+     */
     public void addNote(int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
         SubSquare note = new SubSquare(channel, track, this, volume, is_visible, is_mutted, is_linked, is_dotted);
         // La identitat d'un SubSquare és (canal, track, square): un track només
@@ -519,6 +555,8 @@ public class MyGridSquare extends MyComponent {
      * @param channel The MIDI channel of the note.
      * @param track The track associated with the note.
      * @param volume The velocity of the note.
+     * @param is_visible [CA] visible / [EN] visible
+     * @param is_dotted [CA] puntejada / [EN] dotted
      * @param is_mutted Whether the note is muted.
      * @param is_linked Whether the note is linked.
      */
@@ -537,6 +575,8 @@ public class MyGridSquare extends MyComponent {
      * @param channel The MIDI channel of the note.
      * @param track The track associated with the note.
      * @param volume The velocity of the note.
+     * @param is_visible [CA] visible / [EN] visible
+     * @param is_dotted [CA] puntejada / [EN] dotted
      * @param is_mutted Whether the note is muted.
      * @param is_linked Whether the note is linked.
      */
@@ -553,7 +593,7 @@ public class MyGridSquare extends MyComponent {
         return this.controller.getAllPurposeScore().getGridSquare(this.getScoreRow(),this.getScoreCol()+1);
     }
     
-    /** Deprecated */
+    ///** Deprecated */
 //    public boolean toggle() {        
 //        boolean added;
 //        if (this.isSqVisible()) {

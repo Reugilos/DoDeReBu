@@ -225,6 +225,10 @@ public class MyMixer {
      * [CA] Incrementa la velocitat de la pista seleccionada en 10 unitats
      * (màxim 127) i retorna el nou valor.
      * <p>
+     * <b>Actualment no la crida ningú.</b> Els botons Vol+/Vol- editen la marca
+     * de volum vigent ({@code MyController.adjustVolumeMark}) perquè el valor
+     * quedi desat a la partitura; això només canviava la pista en viu.
+     * <p>
      * [EN] Increases the velocity of the selected track by 10 units
      * (maximum 127) and returns the new value.
      *
@@ -239,8 +243,10 @@ public class MyMixer {
     }
 
     /**
-     * [CA] Decreixenta la velocitat de la pista seleccionada en 10 unitats
+     * [CA] Decrementa la velocitat de la pista seleccionada en 10 unitats
      * (mínim 0) i retorna el nou valor.
+     * <p>
+     * <b>Actualment no la crida ningú</b>, pel mateix motiu que {@link #louder()}.
      * <p>
      * [EN] Decreases the velocity of the selected track by 10 units
      * (minimum 0) and returns the new value.

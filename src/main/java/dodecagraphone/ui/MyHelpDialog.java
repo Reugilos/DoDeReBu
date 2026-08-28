@@ -262,6 +262,7 @@ public class MyHelpDialog {
             { I18n.t("help.grid.move.key"),   I18n.t("help.grid.move.desc") },
             { I18n.t("help.grid.undo.key"),   I18n.t("help.grid.undo.desc") },
             { I18n.t("help.grid.redo.key"),   I18n.t("help.grid.redo.desc") },
+            { I18n.t("help.grid.doublebar.key"), I18n.t("help.grid.doublebar.desc") },
         };
     }
 
@@ -293,6 +294,7 @@ public class MyHelpDialog {
             { I18n.t("help.lyrics.edit.key"),    I18n.t("help.lyrics.edit.desc") },
             { I18n.t("help.lyrics.type.key"),    I18n.t("help.lyrics.type.desc") },
             { I18n.t("help.lyrics.advance.key"), I18n.t("help.lyrics.advance.desc") },
+            { I18n.t("help.lyrics.back.key"),    I18n.t("help.lyrics.back.desc") },
             { I18n.t("help.lyrics.exit.key"),    I18n.t("help.lyrics.exit.desc") },
         };
     }
@@ -304,7 +306,9 @@ public class MyHelpDialog {
             { I18n.t("help.markers.key.key"),     I18n.t("help.markers.key.desc") },
             { I18n.t("help.markers.tempo.key"),   I18n.t("help.markers.tempo.desc") },
             { I18n.t("help.markers.volume.key"),  I18n.t("help.markers.volume.desc") },
+            { I18n.t("help.markers.transpose.key"), I18n.t("help.markers.transpose.desc") },
             { I18n.t("help.markers.place.key"),   I18n.t("help.markers.place.desc") },
+            { I18n.t("help.markers.select.key"),  I18n.t("help.markers.select.desc") },
         };
     }
 

@@ -351,7 +351,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * Checks whether the button panel has been modified.
      *
-     * @return
+     * @return [CA] cert si el panell s'ha modificat des de l'últim reset / [EN] true if the panel changed since the last reset
      */
     public boolean isModified() {
         return modified;
@@ -360,7 +360,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * Setter.
      *
-     * @param modified
+     * @param modified [CA] nou valor del flag de modificació / [EN] new value of the modified flag
      */
     public void setModified(boolean modified) {
         this.modified = modified;
@@ -508,7 +508,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * Resets the button whose identifier is id.
      *
-     * @param id
+     * @param id [CA] identificador del botó / [EN] button id
      */
     public void onButtonRelesased(int id) {
         this.buttons.get(id).reset();
@@ -522,9 +522,9 @@ public class MyButtonPanel extends MyComponent {
      * Returns the id of the button that contains the coordinates
      * (screenX,screenY). -1 otherwise.
      *
-     * @param screenX
-     * @param screenY
-     * @return
+     * @param screenX [CA] coordenada X en píxels / [EN] X coordinate in pixels
+     * @param screenY [CA] coordenada Y en píxels / [EN] Y coordinate in pixels
+     * @return [CA] id del botó que conté el punt, o -1 / [EN] id of the button containing the point, or -1
      */
     public int whichButton(double screenX, double screenY) {
         if (this.contains(screenX, screenY)) {
@@ -538,8 +538,11 @@ public class MyButtonPanel extends MyComponent {
     }
 
     /**
+     * [CA] Dibuixa tots els botons del panell i, si escau, el tip flotant.
+     * <p>
+     * [EN] Draws every button of the panel and, if applicable, the floating tip.
      *
-     * @param g
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     @Override
     public void draw(Graphics2D g) {
@@ -615,7 +618,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * A specif update method for the page num button.
      *
-     * @param text
+     * @param text [CA] text a mostrar / [EN] text to display
      */
     public void updatePageNumButton(String text) {
         this.setModified(true);
@@ -625,7 +628,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * A specific update method for the tempo button.
      *
-     * @param text
+     * @param text [CA] text a mostrar / [EN] text to display
      */
     public void updateTempoButton(String text) {
         this.setModified(true);
@@ -727,7 +730,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * A specific update method for the current exercise button.
      *
-     * @param text
+     * @param text [CA] text a mostrar / [EN] text to display
      */
     public void updateCurrentExerciseButton(String text) {
         this.setModified(true);
@@ -744,7 +747,7 @@ public class MyButtonPanel extends MyComponent {
     /**
      * A specific update method for the current key button.
      *
-     * @param text
+     * @param text [CA] text a mostrar / [EN] text to display
      */
     public void updateCurrentKeyButton(String text) {
         this.setModified(true);

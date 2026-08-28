@@ -30,15 +30,6 @@ import javax.swing.*;
 public class MyDialogs {
 
     /**
-     * [CA] Mostra un diàleg de confirmació amb opcions Sí i No.
-     * <p>
-     * [EN] Shows a confirmation dialog with Yes and No options.
-     *
-     * @param missatge [CA] Missatge a mostrar / [EN] Message to display
-     * @param titol    [CA] Títol de la finestra / [EN] Window title
-     * @return [CA] JOptionPane.YES_OPTION o NO_OPTION / [EN] JOptionPane.YES_OPTION or NO_OPTION
-     */
-    /**
      * [CA] Pregunta si cal transportar la partitura, amb tres respostes: no,
      * amunt o avall. Amunt i avall porten a la mateixa tonalitat i es
      * diferencien només en el registre (una octava).
@@ -68,6 +59,15 @@ public class MyDialogs {
         return 0;               // no, o diàleg tancat
     }
 
+    /**
+     * [CA] Mostra un diàleg de confirmació amb opcions Sí i No.
+     * <p>
+     * [EN] Shows a confirmation dialog with Yes and No options.
+     *
+     * @param missatge [CA] Missatge a mostrar / [EN] Message to display
+     * @param titol    [CA] Títol de la finestra / [EN] Window title
+     * @return [CA] JOptionPane.YES_OPTION o NO_OPTION / [EN] JOptionPane.YES_OPTION or NO_OPTION
+     */
     public static int demanaConfirmacio(String missatge, String titol) {
         return JOptionPane.showConfirmDialog(
                 null,

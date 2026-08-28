@@ -222,6 +222,11 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
      * explícitament. Delega el dibuix al controlador via
      * {@link MyController#redraw(Graphics2D)}.
      * <p>
+     * No dibuixa res fins que s'ha aplicat la primera redimensió real del
+     * panell (o fins que passen {@code FIRST_RESIZE_TIMEOUT_MS}): en arrencar,
+     * la finestra es fa visible amb una mida estimada i Windows la maximitza
+     * tot seguit, i pintar mentrestant feia dos salts de mida seguits.
+     * <p>
      * [EN] Main paint method. Invoked automatically at each window change and
      * when {@link #repaint()} is called. Should not be called explicitly.
      * Delegates drawing to the controller via
@@ -373,7 +378,9 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
 
     /**
      * [CA] Gestiona les tecles premudes. Processa dreceres de teclat globals:
-     * Enter (col·loca canvi pendent), Ctrl+Z/Shift+Z (undo/redo),
+     * Enter (col·loca el canvi pendent a la columna 0 de la partitura),
+     * Ctrl+Enter (el col·loca al playbar), Supr (esborra la marca
+     * seleccionada), Escape (neteja la selecció), Ctrl+Z/Shift+Z (undo/redo),
      * Ctrl+C/X/V/R (còpia, retalla, enganxa, replica), Ctrl+I/D
      * (insereix/elimina columna). En mode edició de lletra, envia els events
      * a {@link dodecagraphone.model.component.MyLyrics}.

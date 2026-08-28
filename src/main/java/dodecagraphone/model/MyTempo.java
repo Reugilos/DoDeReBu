@@ -15,9 +15,14 @@ import dodecagraphone.ui.Settings;
  *       {@link #setTempo(int)} (reinicia ambdós) o {@link #setScoreTempo(int)}
  *       (només scoreTempo, conserva playbackTempo).</li>
  *   <li>{@code playbackTempo}: la velocitat de reproducció en viu. Comença igual
- *       que scoreTempo però es pot ajustar amb {@link #faster()}/{@link #slower()}
- *       sense col·locar cap marca. Només es reinicia a scoreTempo amb
- *       {@link #setTempo(int)} (cridat en carregar/crear una partitura).</li>
+ *       que scoreTempo i es reinicia amb {@link #setTempo(int)}.</li>
+ * </ul>
+ * <p>
+ * <b>Atenció</b>: els botons Spd+/Spd- de la interfície <b>ja no passen per
+ * aquí</b>. Editen la marca de tempo vigent ({@code MyController.adjustTempoMark}),
+ * de manera que el valor queda desat a la partitura i els dos tempos es mantenen
+ * iguals en l'ús normal. {@link #faster()}/{@link #slower()} només mouen
+ * {@code playbackTempo} i avui els fa servir únicament {@code EarTraining}.
  * </ul>
  * <p>
  * [EN] Manages two tempo values statically:
@@ -26,11 +31,15 @@ import dodecagraphone.ui.Settings;
  *       This is what the tempo button displays and what gets saved. Changed via
  *       {@link #setTempo(int)} (resets both) or {@link #setScoreTempo(int)}
  *       (only scoreTempo, keeps playbackTempo).</li>
- *   <li>{@code playbackTempo}: the live playback speed. Starts equal to scoreTempo
- *       but can be adjusted with {@link #faster()}/{@link #slower()} without placing
- *       a mark. Only reset to scoreTempo by {@link #setTempo(int)} (called when
- *       loading/creating a score).</li>
+ *   <li>{@code playbackTempo}: the live playback speed. Starts equal to
+ *       scoreTempo and is reset by {@link #setTempo(int)}.</li>
  * </ul>
+ * <p>
+ * <b>Note</b>: the UI's Spd+/Spd- buttons <b>no longer go through here</b>. They
+ * edit the tempo mark in force ({@code MyController.adjustTempoMark}), so the
+ * value is saved with the score and both tempos stay equal in normal use.
+ * {@link #faster()}/{@link #slower()} only move {@code playbackTempo} and today
+ * they are used solely by {@code EarTraining}.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -39,7 +48,7 @@ import dodecagraphone.ui.Settings;
 public class MyTempo {
     /** The score tempo — from changeMap marks, shown on the button. */
     private static int scoreTempo = Settings.DEFAULT_TEMPO;
-    /** The live playback tempo — adjusted by Vel+/Vel-, not shown on button. */
+    /** The live playback tempo. Equal to scoreTempo in normal use; only EarTraining moves it apart. */
     private static int playbackTempo = Settings.DEFAULT_TEMPO;
 
     private static final double increment = 5;
@@ -68,12 +77,15 @@ public class MyTempo {
 
     /**
      * [CA] Actualitza només {@code scoreTempo} (el valor mostrat al botó i usat per desar).
-     * No modifica {@code playbackTempo}. Cridat des de {@code applyChangesAt} per
-     * preservar els ajustos Spd+/Spd- durant la navegació.
+     * No modifica {@code playbackTempo}. El cridava {@code applyChangesAt} per
+     * preservar els ajustos Spd+/Spd- durant la navegació; ara que Spd+/Spd-
+     * editen la marca, aquesta distinció ja no és necessària per als botons.
      * <p>
-     * [EN] Updates only {@code scoreTempo} (the value shown on the button and used for
-     * saving). Does NOT touch {@code playbackTempo}. Called from {@code applyChangesAt} so
-     * that Spd+/Spd- adjustments survive navigation.
+     * [EN] Updates only {@code scoreTempo} (the value shown on the button and used
+     * for saving). Does NOT touch {@code playbackTempo}. It was called by
+     * {@code applyChangesAt} so that Spd+/Spd- adjustments survived navigation;
+     * now that Spd+/Spd- edit the mark, that distinction is no longer needed for
+     * the buttons.
      *
      * @param tpo [CA] nou valor del tempo de la partitura en BPM / [EN] new score tempo value in BPM
      * @return [CA] el valor de scoreTempo efectivament assignat / [EN] the effectively assigned scoreTempo value

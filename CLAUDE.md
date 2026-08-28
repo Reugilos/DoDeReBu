@@ -39,7 +39,13 @@ El codi font és a `src/main/java/dodecagraphone/`.
 - `placePendingChangeAt(col)` (a MyController) — col·loca un canvi pendent; crida `drawFullGridinOffscreen` + `drawFullChordLineInOffscreen` + `drawFull`.
 
 ### Pending change
-Quan l'usuari vol afegir una marca (tempo, to, compàs), `setPendingChange(sc, label, onAtStart)` activa un JDialog no-modal i espera un clic. `onMousePressed` detecta el clic i crida `placePendingChangeAt(col)`. La tecla **Enter** col·loca el canvi al playbar.
+Quan l'usuari vol afegir una marca (tempo, to, compàs), `setPendingChange(sc, label, onAtStart)` activa un JDialog no-modal i espera un clic. `onMousePressed` detecta el clic i crida `placePendingChangeAt(col)`.
+
+El diàleg té dos botons: **A l'inici** (`placePendingChangeAtStart()` → columna 0 de la partitura, sense moure la vista) i **Cancel·la** (`cancelPendingChange()`). Tancar la finestra equival a cancel·lar; abans deixava el canvi armat i el següent clic el col·locava sense avisar.
+
+**Enter** fa el mateix que el botó per defecte, o sigui col·loca a la columna 0; **Ctrl+Enter** col·loca al playbar. Abans Enter anava sempre al playbar i, com que el diàleg no és modal, el resultat depenia de quina finestra tingués el focus: la mateixa tecla feia dues coses oposades.
+
+`placePendingChangeAt` descarta els camps que repeteixen el valor ja vigent just abans d'aquella columna (`effectiveBeforeCol` + `dropRedundantFields`): una marca que no canvia res no es col·loca, i si a la columna n'hi havia una d'igual, s'elimina. Tonalitat i compàs es descarten **en bloc**, mai camp a camp.
 
 ### Offscreen rendering
 Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `draw(g)` només copia la porció visible de l'offscreen a pantalla.
@@ -56,10 +62,17 @@ int col = allPurposeScore.getScoreCol(camPBar)
 return Math.max(0, col);
 ```
 
-### MyTempo
-Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (ajustat per Spd+/Spd-). `DEFAULT_TEMPO = 60`.
-- `setTempo()` — reseteja ambdós; cridar en `newScore`, `loadScore`, quan es col·loca una marca de tempo, i des d'`applyChangesAt` quan NO s'està reproduint o hi ha una marca explícita.
-- `setScoreTempo()` — només actualitza `scoreTempo` (no toca `playbackTempo`); cridat des d'`applyChangesAt` únicament durant la reproducció sense marca explícita (per preservar l'ajust Spd+/Spd-).
+### MyTempo i els botons Spd± / Vol±
+Estàtica. `scoreTempo` vs `playbackTempo`. `DEFAULT_TEMPO = 60`.
+- `setTempo()` — reseteja ambdós; cridar en `newScore`, `loadScore`, quan es col·loca una marca de tempo, i des d'`applyChangesAt`.
+- `setScoreTempo()` — només actualitza `scoreTempo`.
+
+**Spd± i Vol± editen la marca vigent** (`adjustTempoMark` / `adjustVolumeMark`), no un valor global de reproducció: busquen la marca en vigor a la posició d'edició (la de la columna 0 si no n'hi ha cap de posterior), li sumen el pas i la reescriuen. El valor queda desat a la partitura i el botó mostra sempre el de la marca.
+
+Conseqüències:
+- Mantenir el botó premut genera **un sol pas d'undo** per gest: `beginMarkGesture` a la primera premuda, `commitMarkGesture` en deixar-lo anar (des d'`onMouseReleased`).
+- `applyChangesAt` aplica les velocitats del `changeMap` **sempre**, no només reproduint: la marca és el volum de la partitura.
+- Abans, `applyChangesAt` reaplicava la marca després de cada premuda i esborrava l'ajust; per això els botons de tempo semblaven no respondre.
 
 ## Convencions de codi
 - `I18n.t("clau")` per a textos UI; `I18n.f("clau", arg)` per a textos amb paràmetres.
@@ -75,7 +88,11 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 - `stopCol` = final del compàs que conté `endOfScore` — fins on avança la reproducció en silenci
 - L'últim acord s'estén fins a `endOfScore`, **no** fins a `stopCol`
 
-**Important**: `updateStopMarker` s'ha de cridar tant quan s'afegeix una nota com quan s'esborra. A `MyController`, quan s'afegeix una nota (clic o arrossegament), cal actualitzar `lastColWritten` primer i després cridar `updateStopMarker()`. **No** usar `expandStopIfNeeded` en rutes d'afegir notes si hi ha acords a la partitura, perquè `expandStopIfNeeded` actualitza `stopCol` però no la durada de l'acord.
+**Important**: `updateStopMarker` es crida **només en reproduir i en desar** (`play()` i `saveScore()`), més la inicialització (constructor, `newScore`, `loadScore`), el canvi de compàs base (`refreshAfterChangeMapEdit` a col 0) i `replicateSelection`, que llegeix `stopCol` i el necessita fresc. **No** s'ha de cridar des de rutes d'edició: la doble barra ha de quedar quieta mentre s'edita.
+
+`stopMarkerValid` (a `MyGridScore`) diu si `stopCol` correspon al contingut actual. Es valida a `updateStopMarker`/`setStopCol` i es **caduca a qualsevol mutació de contingut**; la invalidació viu dins del model (`addNoteToSquare`, `removeNoteFromSquare`, `insertColumn`, `deleteColumn`) perquè cap ruta d'edició se n'escapi. Els tres llocs que dibuixen la doble barra (graella, acords, lletra) comproven el flag: si no és vigent, no la dibuixen.
+
+El buffer no depèn de `stopCol`: `expandBufferIfNeeded` es dimensiona amb `lastColWritten`, i **passar pàgina l'amplia** (`onNextPageButtonPressed`), altrament `nextPage()` es negava a avançar més enllà del contingut escrit.
 
 ## Selecció, porta-retalls i undo/redo
 
@@ -89,17 +106,34 @@ Estàtica. `scoreTempo` (de les marques, mostrat al botó) vs `playbackTempo` (a
 - `MouseSequence` — seqüència d'accions de ratolí (notes).
 - `ChordEvent` (`teclesControl/ChordEvent.java`) — col·locar/esborrar un acord; crida `placeChordSymbol`/`removeChordSymbol` + `redrawChordLine()`.
 - `PasteEvent` — enganxar notes; `desfer()` té null guard si la nota ja no existeix.
-- `ScoreChangeEvent` — marques de canvi (tempo/to/volum/compàs). Desa l'entrada **sencera** del `changeMap` abans i després (no el delta), perquè el redo no perdi els camps que ja hi havia a la columna. Si la marca de to va transposar, l'event també desfà la transposició, en ordre invers a la col·locació (primer restaura l'entrada, després destransposa).
+- `ScoreChangeEvent` — marques de canvi (tempo/to/volum/compàs). Desa l'entrada **sencera** del `changeMap` abans i després (no el delta), perquè el redo no perdi els camps que ja hi havia a la columna. Si la marca de to va transposar, l'event també desfà la transposició, en ordre invers a la col·locació (primer restaura l'entrada, després destransposa). Només es registra si l'entrada realment canvia.
+- El diàleg de transposició en canviar de to té **tres opcions** (`MyDialogs.demanaTransposicio`): amunt, avall o no transportar. Amunt i avall porten a la mateixa tonalitat i es diferencien en el registre — el pas es normalitza a `0..11` (amunt) i al mateix menys 12 (avall). L'event desa el pas realment aplicat.
 
 ### Marques de canvi: selecció, edició i esborrat
 - `MyChordSymbolLine` registra el rectangle real de cada marca dibuixada (`markBoxes`, buidada a cada `drawFullChordLineInOffscreen`) i desa la transformació offscreen→pantalla de l'últim `draw()`; `whichMark(x, y)` la inverteix (compensa l'escala de fit-anacrusis).
 - `MyController.onMousePressed` consulta `whichMark` **abans** de `myChordSymbolLine.whichCol`, altrament el clic obriria el diàleg d'acords. Un clic selecciona, doble clic edita (`editSelectedMark`), Supr esborra (`deleteSelectedMark`, a `MyNewPanel.keyPressed`).
 - Les marques de la columna 0 són editables però **no** esborrables (són la base de la partitura).
 - El compàs no té caixeta dibuixada: guanya undo, però no és seleccionable.
-- `MyGridScore.putScoreChange` **substitueix** l'entrada sencera (i l'elimina si queda buida), a diferència de `setScoreChange`, que fa merge i el segueixen usant la càrrega MIDI, el paste i el workflow de pending change.
+- `MyGridScore.putScoreChange` **substitueix** l'entrada sencera (i l'elimina si queda buida), a diferència de `setScoreChange`, que fa merge i el segueixen usant la càrrega MIDI i el paste. La col·locació de marques també usa `putScoreChange`.
+- Editar una marca la **deselecciona** en acabar (`clearMarkSelection()` al final d'`editSelectedMark`).
+- Hi ha **quatre** tipus de marca (`MarkKind`): TEMPO (blau), KEY (granate), VOLUME (verd) i TRANSPOSE (groc). La de volum i la de transposició són **per track**; les altres dues, globals.
+- **TRANSPOSE** mostra el `displayOffset` de la pista en semitons. Ve de l'instrument, no del `changeMap`: és informativa i `editSelectedMark`/`deleteSelectedMark` la ignoren.
+- A la columna 0 es dibuixen sempre les quatre, amb fallback als valors per defecte quan no hi ha entrada explícita. `fitMarkStack()` encongeix la font si la pila no hi cabés; amb `DEFAULT_NROWS_CHORD = 6` no hauria de caldre (amb 5 files no hi cabien per sota de 1200 px d'alçada de pantalla).
+- El text de la caixeta es tria per contrast amb el fons (`ColorSets.getSeparatorColor`): blanc sobre els fons foscos, negre sobre el groc.
+- El tip d'una marca (`MyController.markTipText`) mostra què és i quant val. La condició de refresc compara **columna i tipus** (`lastTipMarkKind`): com que les quatre marques inicials són a la columna 0, mirant només la columna no es refrescava en passar d'una a l'altra.
 
 ### Autocorrect en drag ADD i EXTEND
 `processDragCell` i `onMousePressed` comproven si el track **actual** té una nota a la cel·la (stream sobre `sq.getPoliNotes()`), **no** `isSqVisible()` (global). Afecta els modes ADD, EXTEND_PENDING, EXTEND_RIGHT i EXTEND_LEFT. Si el `mouseReleased` és fora del grid (`whichCol == -1`), l'autocorrect usa `lastColPressed` com a posició final.
+
+L'autocorrect **no reescriu** on ja hi ha nota del track actual (`currentTrackHasNoteAt`): abans hi passava per sobre amb `addNoteAtCell` i duplicava el `SubSquare`.
+
+### Enllaç de notes: sempre per pista
+**Mai** usar `sq.isSq_is_linked()` per decidir si cal enllaçar: és un AND sobre **tots els tracks visibles** i, a més, és un valor calculat a `updateState()`, o sigui que durant un drag (que processa diverses cel·les sense repintar entremig) pot estar caducat. Usar `MyController.isCurrentTrackNoteLinked(sq)`, que mira `poliNotes` del track actual sense cau.
+
+S'aplica a ADD, EXTEND_PENDING (els dos sentits), EXTEND_RIGHT, EXTEND_LEFT, `removeNoteAtCell`, `unlinkNoteForUndo` i als helpers de MOVE (`findNoteHeadCol` / `findNoteTailCol`).
+
+### Un SubSquare per track i cel·la
+La identitat d'un `SubSquare` és `(canal, track, square)`. `MyGridSquare.addNote` **conserva** la nota existent en lloc d'afegir-ne una segona: amb duplicats, `linkNote` (`indexOf`) només n'enllaçava una i `removeNote` (`lastIndexOf`) només n'esborrava una — superposar una nota llarga sobre una de curta deixava un cap de nota, i esborrar amb shift-drag deixava la curta a sota.
 
 ### Tip del porta-retalls
 `MyController.showClipboardTip()` mostra el tip via `buttons.showCustomTip(I18n.t("clipboard.full.tip"), ...)`. Respecta `Settings.isTipsVisible()` automàticament.
@@ -134,7 +168,18 @@ en lloc del càlcul estàndard `relX / colWidth`.
 ### Paginació fit (`MyCamera`)
 `nextPage`/`prevPage` usen `getBaseColsPerMeasure()` per calcular la mida de la primera pàgina ampliada quan `fitAnacrusis && hasAnacrusis`.
 
+## Punts de retorn (tags)
+- `punt-de-partida` — abans de la sèrie de correccions de l'agost del 2026.
+- `divendres-28-8-26` — amb les sis tandes de correccions fetes.
+
 ## Historial de canvis recents (commits rellevants)
+- **e31d005** Marca de transposició (groga, per track), tips de marca amb valors, franja d'acords a 6 files, transposició amb tres opcions, fixes del blink d'arrencada.
+- **c72c1ee** MIDI extern: compàs i tonalitat es llegeixen de totes les pistes abans de convertir notes (`applyInitialMetaFromSequence`). El `case 0x58` desxifrava el compàs i no l'aplicava, i la pista de direcció no es llegia mai.
+- **da5c6c1** Lletra: salt de pàgina automàtic (`ensureScoreColVisible`); editar la lletra marca la partitura com a modificada.
+- **ad4a6d4** Enllaç de notes per pista; `addNote` no duplica `SubSquare`; MOVE delimita la nota del track actual.
+- **bb4df19** Doble barra només en play/desar (`stopMarkerValid`); navegació lliure endavant; paste que abasta una pàgina nova.
+- **22b8de7** Marques de canvi: valor redundant, Cancel·la, Enter a l'inici, tip que no tapa, Spd±/Vol± editen la marca.
+- **95a7611** Nom de fitxer amb tonalitat; `MyButton.isPressed` volatile; separació de notes contigües.
 - **bf25337** fitAnacrusis sempre false a l'inici; getCol compensa compressió fit.
 - **0067383** Autocorrect quan mouseReleased és fora del grid.
 - **8d07e52** Fix desajust drag: refreshAnacrusis diferit a onMouseReleased.

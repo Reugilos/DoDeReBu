@@ -19,6 +19,23 @@ import java.nio.charset.StandardCharsets;
  * Read from {@code defaults/GeneralMidiInstruments.csv} (fields 3 and 4: lowestMidi and highestMidi).
  * Used to calculate the {@code displayOffset} of each track based on the instrument.
  *
+     * <p>
+     * <b>Compte</b>: el rang surt de {@code defaults/GeneralMidiInstruments.csv}
+     * i no sempre correspon a l'instrument que modela l'app. El glockenspiel hi
+     * consta com a 67–96 (so4–do7), una octava per sota del metal·lòfon que
+     * representa la graella (79–103, so5–so7), i per això li surt un offset de
+     * +12 que fa sonar i exportar una octava per sota del que es veu. Corregir-ho
+     * vol dir ajustar el CSV i fer que la càrrega respecti el {@code displayOffset}
+     * desat als fitxers antics, per no desafinar-los.
+     * <p>
+     * <b>Note</b>: the range comes from {@code defaults/GeneralMidiInstruments.csv}
+     * and does not always match the instrument the app models. The glockenspiel
+     * is listed as 67–96 (G4–C7), one octave below the metallophone the grid
+     * represents (79–103, G5–G7), which is why it gets a +12 offset that makes it
+     * sound and export one octave below what is shown. Fixing it means adjusting
+     * the CSV and making loading honour the {@code displayOffset} stored in older
+     * files, so they are not detuned.
+     *
  * @author Pau Bofill
  * @author Claude IA
  * @version 4.0

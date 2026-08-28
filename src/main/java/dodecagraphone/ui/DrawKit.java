@@ -482,6 +482,14 @@ public class DrawKit {
      * <p>
      * [EN] Draws a score mark (tempo, key, time signature) with a coloured background.
      * The background is painted at (bgX, bgY, bgW, bgH); the text at (x, y).
+     * <p>
+     * <b>Actualment no la crida ningú</b>: les marques de la franja d'acords les
+     * dibuixa {@code MyChordSymbolLine.drawChangeMark}, que a més registra la
+     * caixeta per poder-la seleccionar i tria el color del text per contrast.
+     * <p>
+     * <b>Currently unused</b>: the chord-strip marks are drawn by
+     * {@code MyChordSymbolLine.drawChangeMark}, which also records the box so it
+     * can be selected and picks the text colour by contrast.
      *
      * @param text      [CA] Text de la marca / [EN] Mark text
      * @param x         [CA] X del text / [EN] Text X

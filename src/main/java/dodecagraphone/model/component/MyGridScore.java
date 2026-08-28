@@ -383,30 +383,6 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
-     * [CA] Afegeix una nota (SubSquare) a la cel·la indicada. Si la cel·la
-     * no existeix, la crea. Retorna la cel·la modificada.
-     * <p>
-     * [EN] Adds a note (SubSquare) to the specified cell. Creates the cell
-     * if it does not exist. Returns the modified cell.
-     *
-     * @param firstRow   [CA] fila de partitura / [EN] score row
-     * @param firstCol   [CA] columna de partitura / [EN] score column
-     * @param nCols      [CA] amplada de la nota / [EN] note width
-     * @param nRows      [CA] alçada de la nota / [EN] note height
-     * @param parent     [CA] component pare / [EN] parent component
-     * @param contr      [CA] controlador / [EN] controller
-     * @param score      [CA] graella / [EN] grid
-     * @param cam        [CA] càmera / [EN] camera
-     * @param channel    [CA] canal MIDI / [EN] MIDI channel
-     * @param track      [CA] id del track / [EN] track id
-     * @param volume     [CA] velocitat / [EN] velocity
-     * @param is_visible [CA] visible a la partitura / [EN] visible in score
-     * @param is_mutted  [CA] silenciada / [EN] muted
-     * @param is_linked  [CA] lligada a la nota anterior / [EN] tied to previous note
-     * @param is_dotted  [CA] puntejada / [EN] dotted
-     * @return [CA] la cel·la modificada / [EN] the modified cell
-     */
-    /**
      * [CA] Cert quan {@code stopCol} correspon al contingut actual. Es
      * recalcula només en reproduir i en desar; qualsevol edició posterior el
      * torna invàlid i la doble barra deixa de dibuixar-se fins al pròxim play
@@ -431,6 +407,33 @@ public class MyGridScore extends MyComponent {
         stopMarkerValid = false;
     }
 
+    /**
+     * [CA] Afegeix una nota (SubSquare) a la cel·la indicada. Si la cel·la
+     * no existeix, la crea. Retorna la cel·la modificada.
+     * <p>
+     * [EN] Adds a note (SubSquare) to the specified cell. Creates the cell
+     * if it does not exist. Returns the modified cell.
+     *
+     *
+     * Caduca la doble barra ({@code invalidateStopMarker}); un track no pot
+     * tenir dues notes a la mateixa cel·la (vegeu {@code MyGridSquare.addNote}).
+     * @param firstRow   [CA] fila de partitura / [EN] score row
+     * @param firstCol   [CA] columna de partitura / [EN] score column
+     * @param nCols      [CA] amplada de la nota / [EN] note width
+     * @param nRows      [CA] alçada de la nota / [EN] note height
+     * @param parent     [CA] component pare / [EN] parent component
+     * @param contr      [CA] controlador / [EN] controller
+     * @param score      [CA] graella / [EN] grid
+     * @param cam        [CA] càmera / [EN] camera
+     * @param channel    [CA] canal MIDI / [EN] MIDI channel
+     * @param track      [CA] id del track / [EN] track id
+     * @param volume     [CA] velocitat / [EN] velocity
+     * @param is_visible [CA] visible a la partitura / [EN] visible in score
+     * @param is_mutted  [CA] silenciada / [EN] muted
+     * @param is_linked  [CA] lligada a la nota anterior / [EN] tied to previous note
+     * @param is_dotted  [CA] puntejada / [EN] dotted
+     * @return [CA] la cel·la modificada / [EN] the modified cell
+     */
     public MyGridSquare addNoteToSquare(
             int firstRow, int firstCol, int nCols, int nRows, MyComponent parent, MyController contr, MyGridScore score, MyCamera cam,
             int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
@@ -453,6 +456,8 @@ public class MyGridScore extends MyComponent {
      * becomes empty, removes it from the grid. Returns the removed SubSquare,
      * or null if it did not exist.
      *
+     *
+     * Caduca la doble barra ({@code invalidateStopMarker}).
      * @param row     [CA] fila de partitura / [EN] score row
      * @param col     [CA] columna de partitura / [EN] score column
      * @param channel [CA] canal MIDI / [EN] MIDI channel
@@ -476,12 +481,12 @@ public class MyGridScore extends MyComponent {
 //    public void addNote(int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
 //    public SubSquare removeNote(int channel, int track) {
 //
-    /**
-     * Copies the current grid and adds new columns to it, up to newnCols.
-     * (Currently, not used.)
-     *
-     * @param newnCols
-     */
+//    /**
+//     * Copies the current grid and adds new columns to it, up to newnCols.
+//     * (Currently, not used.)
+//     *
+//     * @param newnCols
+//     */
 //    public void addCols(int newnCols) {
 //        this.subComponents.clear();
 //        MyGridSquare[][] oldGrid = this.grid;
@@ -501,6 +506,13 @@ public class MyGridScore extends MyComponent {
 //        this.nCols = newnCols;
 //    }
 //
+    /**
+     * [CA] Retorna la selecció de notes actives (plantilla) de la partitura.
+     * <p>
+     * [EN] Returns the score's active-note selection (template).
+     *
+     * @return [CA] el choice de la partitura / [EN] the score's choice
+     */
     public MyChoice getChoice() {
         return choice;
     }
@@ -510,11 +522,16 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
-     * Updates the color of the strips depending on the flag pentagram.
+     * [CA] Actualitza el color de les bandes i del teclat. Amb {@code pentagram}
+     * cert, les línies del pentagrama es pinten de gris; amb fals, s'il·luminen
+     * les notes de la plantilla ({@code choice}).
+     * <p>
+     * [EN] Updates the colour of the strips and the keyboard. When
+     * {@code pentagram} is true the staff lines are painted grey; when false,
+     * the notes of the template ({@code choice}) are highlighted.
      *
-     * @param pentagram. If pentagram is true, the pentagram lines are painted
-     * grey. If pentagram is false, the notes chosen in "choice" are
-     * highlighted.
+     * @param pentagram [CA] cert per a la vista Pentagrama, fals per a Plantilla /
+     *                  [EN] true for the Staff view, false for the Template view
      */
     public void updateStripsNKeyboard(boolean pentagram) {
         this.usePentagramaStrips = pentagram;
@@ -538,7 +555,7 @@ public class MyGridScore extends MyComponent {
      * Computes the number of columns that make up a page, based on the num
      * squares per beat, and the num beats per measure.
      *
-     * @return
+     * @return [CA] columnes que ocupa una pàgina / [EN] columns making up a page
      */
     public int getNumColsPage() {
         if (cam == null) {
@@ -605,7 +622,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] la matriu de cel·les (inclou les files de BUFFER) / [EN] the cell matrix (BUFFER rows included)
      */
     public MyGridSquare[][] getGrid() {
         return grid;
@@ -622,7 +639,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] columna dreta de la vista actual / [EN] rightmost column of the current view
      */
     public synchronized int getCurrentCol() {
         return currentCol;
@@ -631,7 +648,7 @@ public class MyGridScore extends MyComponent {
     /**
      * setter.
      *
-     * @param currentCol
+     * @param currentCol [CA] nova columna dreta de la vista / [EN] new rightmost column of the view
      */
     public synchronized void setCurrentCol(int currentCol) {
         this.currentCol = currentCol;
@@ -649,8 +666,8 @@ public class MyGridScore extends MyComponent {
      * Given the position of a column in the score, it returns its position in
      * the camera.
      *
-     * @param scoreCol
-     * @return
+     * @param scoreCol [CA] columna de partitura / [EN] score column
+     * @return [CA] columna equivalent dins la càmera / [EN] equivalent column inside the camera
      */
     public int getCamCol(int scoreCol) {
         int camCol = scoreCol + cam.getnCols() - getCurrentCol() + getFirstParentCol();
@@ -661,8 +678,8 @@ public class MyGridScore extends MyComponent {
      * Given the position of a columns in the camera, it returns its position in
      * the score.
      *
-     * @param camCol
-     * @return
+     * @param camCol [CA] columna de càmera / [EN] camera column
+     * @return [CA] columna equivalent dins la partitura / [EN] equivalent column inside the score
      */
     public int getScoreCol(int camCol) {
         int scoreCol = camCol - getFirstParentCol() - cam.getnCols() + getCurrentCol();
@@ -674,8 +691,8 @@ public class MyGridScore extends MyComponent {
      * Given the position of a row in the score, it returns its position in the
      * camera.
      *
-     * @param scoreRow
-     * @return
+     * @param scoreRow [CA] fila de partitura / [EN] score row
+     * @return [CA] fila equivalent dins la càmera / [EN] equivalent row inside the camera
      */
     public int getCamRow(int scoreRow) {
         int camRow = scoreRow + getParentFirstRow();
@@ -686,8 +703,8 @@ public class MyGridScore extends MyComponent {
      * Given the position of a row in the camera, it returns its position in the
      * score.
      *
-     * @param camRow
-     * @return
+     * @param camRow [CA] fila de càmera / [EN] camera row
+     * @return [CA] fila equivalent dins la partitura / [EN] equivalent row inside the score
      */
     public int getScoreRow(int camRow) {
         int scoreRow = -getParentFirstRow() + camRow;
@@ -698,8 +715,8 @@ public class MyGridScore extends MyComponent {
      * Given a column in the score, it returns its absolute X position in the
      * screen (in pixels).
      *
-     * @param scoreCol
-     * @return
+     * @param scoreCol [CA] columna de partitura / [EN] score column
+     * @return [CA] posició X absoluta en píxels / [EN] absolute X position in pixels
      */
     @Override
     public double getScreenX(int scoreCol) {
@@ -717,8 +734,8 @@ public class MyGridScore extends MyComponent {
      * activated it for the current page. Used only by the print/export path
      * ({@code drawSquare}, {@code drawBeatLine}, {@code drawMeasureLine}).
      *
-     * @param scoreCol
-     * @return
+     * @param scoreCol [CA] columna de partitura / [EN] score column
+     * @return [CA] posició X en píxels, amb la compressió fit aplicada / [EN] X position in pixels, with fit compression applied
      */
     private double getPrintScreenX(int scoreCol) {
         if (this.printFitActive) {
@@ -748,8 +765,8 @@ public class MyGridScore extends MyComponent {
      * Given a row in the score, it returns its absolute Y position in the
      * screen (in pixels).
      *
-     * @param scoreRow
-     * @return
+     * @param scoreRow [CA] fila de partitura / [EN] score row
+     * @return [CA] posició Y absoluta en píxels / [EN] absolute Y position in pixels
      */
     @Override
     public double getScreenY(int scoreRow) {
@@ -761,7 +778,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] tònica en MIDI, normalitzada dins el rang del teclat / [EN] tonic as MIDI, normalised into the keyboard range
      */
     public int getMidiKey() {
         while (midiKey > ToneRange.getHighestMidi()) {
@@ -776,7 +793,7 @@ public class MyGridScore extends MyComponent {
     /**
      * setter.
      *
-     * @param midiKey
+     * @param midiKey [CA] nota MIDI de la tònica / [EN] MIDI note of the tonic
      */
     public void setMidiKey(int midiKey) {
         this.midiKey = midiKey;
@@ -793,7 +810,7 @@ public class MyGridScore extends MyComponent {
     /**
      * setter.
      *
-     * @param choice
+     * @param choice [CA] la nova selecció de notes actives / [EN] the new active-note selection
      */
     public void setChoice(MyChoice choice) {
         this.choice = choice;
@@ -810,7 +827,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] manera de rotular les notes (NOTE_DISPLAY_*) / [EN] note labelling mode (NOTE_DISPLAY_*)
      */
     public int getNoteDisplayMode() {
         return noteDisplayMode;
@@ -832,7 +849,7 @@ public class MyGridScore extends MyComponent {
      * [EN] Compatibility: {@code true} if any note information is shown
      * (name, interval, degree or Anglo-Saxon name), {@code false} if hidden.
      *
-     * @return
+     * @return [CA] cert si es mostra informació de nota / [EN] true if note information is shown
      */
     public boolean isShowNoteNames() {
         return noteDisplayMode != NOTE_DISPLAY_HIDE;
@@ -843,7 +860,7 @@ public class MyGridScore extends MyComponent {
      * <p>
      * [EN] Compatibility: {@code true} sets the mode to NAMES, {@code false} sets it to HIDE.
      *
-     * @param showNoteNames
+     * @param showNoteNames [CA] cert per mostrar els noms, fals per amagar-los / [EN] true to show names, false to hide them
      */
     public void setShowNoteNames(boolean showNoteNames) {
         this.noteDisplayMode = showNoteNames ? NOTE_DISPLAY_NAMES : NOTE_DISPLAY_HIDE;
@@ -885,7 +902,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] cert si es mostren les bandes de pentagrama / [EN] true if the staff strips are shown
      */
     public boolean isShowPentagramaStrips() {
         return usePentagramaStrips;
@@ -894,7 +911,7 @@ public class MyGridScore extends MyComponent {
     /**
      * setter.
      *
-     * @param showPentagramaStrips
+     * @param showPentagramaStrips [CA] cert per mostrar les bandes de pentagrama / [EN] true to show the staff strips
      */
     public void setUsePentagramaStrips(boolean showPentagramaStrips) {
         this.usePentagramaStrips = showPentagramaStrips;
@@ -903,7 +920,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] files de la graella / [EN] rows of the grid
      */
     public int getNumRows() {
         return nRows;
@@ -912,7 +929,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] columnes de la graella / [EN] columns of the grid
      */
     public int getNumCols() {
         return nCols;
@@ -921,7 +938,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] acords de fons per columna / [EN] background chords by column
      */
     public Map<Integer, Chord> getChordLine() {
         return backgroundChordLine;
@@ -930,7 +947,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] símbols d'acord per columna / [EN] chord symbols by column
      */
     public Map<Integer, Chord> getChordSimbolLine() {
         return chordSymbolLine;
@@ -939,7 +956,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] missatges de text per columna / [EN] text messages by column
      */
     public Map<Integer, String> getMessages() {
         return messages;
@@ -948,7 +965,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] missatges MIDI per columna / [EN] MIDI messages by column
      */
     public Map<Integer, ArrayList<MidiMessage>> getMidiMessages() {
         return midiMessages;
@@ -1009,7 +1026,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] figura del beat (4 = negra, 8 = corxera...) / [EN] beat figure (4 = quarter, 8 = eighth...)
      */
     public int getBeatFigure() {
         return beatFigure;
@@ -1018,7 +1035,7 @@ public class MyGridScore extends MyComponent {
     /**
      * setter.
      *
-     * @param beatFigure
+     * @param beatFigure [CA] figura del beat (4 = negra, 8 = corxera...) / [EN] beat figure (4 = quarter, 8 = eighth...)
      */
     public final void setBeatFigure(int beatFigure) {
         this.beatFigure = beatFigure;
@@ -1335,10 +1352,15 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
-     * Draws the score: each visible grid square, the beat lines and the measure
-     * lines.
-     *
-     * @param g
+     * [CA] Redibuixa TOTA la graella al buffer offscreen: esborra el buffer amb
+     * blanc i torna a pintar cada cel·la. És l'operació més cara del dibuix;
+     * per a la vista actual n'hi ha prou amb {@link #drawCurrentCamInOffscreen()},
+     * i per a un interval concret amb {@link #drawColRangeInOffscreen(int, int)}.
+     * <p>
+     * [EN] Redraws the WHOLE grid into the offscreen buffer: clears it to white
+     * and repaints every cell. It is the most expensive drawing operation; for
+     * the current view {@link #drawCurrentCamInOffscreen()} is enough, and for a
+     * given range {@link #drawColRangeInOffscreen(int, int)}.
      */
     public void drawFullGridinOffscreen() {
         java.awt.Component panel = (controller != null && controller.getUi() != null)
@@ -1898,8 +1920,8 @@ public class MyGridScore extends MyComponent {
      * Given an absolute Y position in the screen, it returns its corresponding
      * row in the score.
      *
-     * @param screenY
-     * @return
+     * @param screenY [CA] coordenada Y en píxels / [EN] Y coordinate in pixels
+     * @return [CA] fila de partitura corresponent / [EN] matching score row
      */
     public int getRow(double screenY) {
         double cspy = cam.getScreenPosY();
@@ -1913,8 +1935,8 @@ public class MyGridScore extends MyComponent {
      * Given an absolute X position in the screen, it return its corresponding
      * column in the score.
      *
-     * @param screenX
-     * @return
+     * @param screenX [CA] coordenada X en píxels / [EN] X coordinate in pixels
+     * @return [CA] columna de partitura corresponent / [EN] matching score column
      */
     @Override
     public int getCol(double screenX) {
@@ -1941,9 +1963,9 @@ public class MyGridScore extends MyComponent {
      * hit, and returns the row (else -1). This method should be invoked before
      * whichCol().
      *
-     * @param screenX
-     * @param screenY
-     * @return
+     * @param screenX [CA] coordenada X en píxels / [EN] X coordinate in pixels
+     * @param screenY [CA] coordenada Y en píxels / [EN] Y coordinate in pixels
+     * @return [CA] fila sota el punt, o -1 si és fora de la càmera / [EN] row under the point, or -1 if outside the camera
      */
     public int whichRow(double screenX, double screenY) {
         if (cam.contains(screenX, screenY)) {
@@ -1968,7 +1990,7 @@ public class MyGridScore extends MyComponent {
      * Returns the column selected in the previous call to whichRow() (-1,
      * none).
      *
-     * @return
+     * @return [CA] columna calculada per l'últim whichRow, o -1 / [EN] column computed by the last whichRow, or -1
      */
     public int whichCol() {
         if (this.whichRow != -1) {
@@ -1994,9 +2016,9 @@ public class MyGridScore extends MyComponent {
     /**
      * Check wether the corresponding square is on.
      *
-     * @param row
-     * @param col
-     * @return
+     * @param row [CA] fila de partitura / [EN] score row
+     * @param col [CA] columna de partitura / [EN] score column
+     * @return [CA] cert si la cel·la existeix i és visible / [EN] true if the cell exists and is visible
      */
     public boolean isNotNullAndVisible(int row, int col) {
         if (this.grid[row + BUFFER][col] == null) {
@@ -2014,21 +2036,25 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
-     * It returns the corresponding grid square.
+     * [CA] Retorna la cel·la de la graella a la fila i la columna indicades.
+     * La fila és un índex de tecla: internament s'hi suma {@code BUFFER}.
+     * <p>
+     * [EN] Returns the grid cell at the given row and column. The row is a key
+     * index: {@code BUFFER} is added internally.
      *
-     * @param row
-     * @param col
-     * @return
+     * @param key [CA] índex de tecla (fila) / [EN] key index (row)
+     * @param col [CA] columna de partitura / [EN] score column
+     * @return [CA] la cel·la, o null si és buida / [EN] the cell, or null if empty
      */
     public MyGridSquare getGridSquare(int key, int col) {
         return this.grid[key + BUFFER][col];
     }
 
-    /**
-     * getter.
-     *
-     * @return
-     */
+    ///**
+     //* getter.
+     //*
+     //* @return
+     //*/
 //    public MyXiloKeyboard getKeyboard() {
 //        return keyboard;
 //    }
@@ -2045,8 +2071,8 @@ public class MyGridScore extends MyComponent {
     /**
      * It "stops" the correspondig grid square (see MyGridSquare).
      *
-     * @param row
-     * @param col
+     * @param row [CA] fila de partitura / [EN] score row
+     * @param col [CA] columna de partitura / [EN] score column
      */
     public void stop(int row, int col) {
         this.grid[row + BUFFER][col].stop();
@@ -2068,8 +2094,8 @@ public class MyGridScore extends MyComponent {
     /**
      * Draws a measure line at the indicated column.
      *
-     * @param col
-     * @param g
+     * @param col [CA] columna de partitura / [EN] score column
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     private void drawMeasureLine(int col, Graphics2D g) {
         Stroke stroke = g.getStroke();
@@ -2093,8 +2119,8 @@ public class MyGridScore extends MyComponent {
     /**
      * Draws a beat line at the indicated column.
      *
-     * @param col
-     * @param g
+     * @param col [CA] columna de partitura / [EN] score column
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     private void drawBeatLine(int col, Graphics2D g) {
         Stroke stroke = g.getStroke();
@@ -2118,9 +2144,21 @@ public class MyGridScore extends MyComponent {
     }
 
     /**
-     * Transposes the score by step halftones.
+     * [CA] Transposa la partitura {@code step} semitons. A més de moure les
+     * notes, <b>desplaça també la tonalitat</b> ({@code midiKey}, normalitzada
+     * dins el rang), <b>totes les marques de to del changeMap</b>, la línia
+     * d'acords, els acords de fons i el {@code choice}; i garanteix que hi hagi
+     * entrada a la columna 0 amb el {@code scaleMode} actual. Si s'estava
+     * reproduint, atura i reprèn la reproducció.
+     * <p>
+     * [EN] Transposes the score by {@code step} semitones. Besides moving the
+     * notes it <b>also shifts the key</b> ({@code midiKey}, normalised into
+     * range), <b>every key mark in the changeMap</b>, the chord line, the
+     * background chords and the {@code choice}; and it makes sure column 0 has
+     * an entry with the current {@code scaleMode}. If playback was running, it
+     * stops and resumes it.
      *
-     * @param step
+     * @param step [CA] semitons (positiu = amunt) / [EN] semitones (positive = up)
      */
     public void transpose(int step) {
         boolean playing = this.cam.isPlaying();
@@ -2189,7 +2227,7 @@ public class MyGridScore extends MyComponent {
     /**
      * Transpose the chord symbol line by step.
      *
-     * @param step
+     * @param step [CA] semitons (positiu = amunt) / [EN] semitones (positive = up)
      */
     public void transposeChordSymbolLine(int step) {
         for (int i : chordSymbolLine.keySet()) {
@@ -2202,7 +2240,7 @@ public class MyGridScore extends MyComponent {
     /**
      * Transpose the background chord line by step.
      *
-     * @param step
+     * @param step [CA] semitons (positiu = amunt) / [EN] semitones (positive = up)
      */
     public void transposeBackgroundChordLine(int step) {
         for (int i : backgroundChordLine.keySet()) {
@@ -2215,7 +2253,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] el reproductor d'acords de fons / [EN] the background chord player
      */
     public BackgroundChordPlayer getBackgroundChordPlayer() {
         return background;
@@ -2224,7 +2262,7 @@ public class MyGridScore extends MyComponent {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] beats per compàs / [EN] beats per measure
      */
     public int getNumBeatsMeasure() {
         return numBeatsMeasure;
@@ -2254,7 +2292,7 @@ public class MyGridScore extends MyComponent {
     /**
      * setter.
      *
-     * @param numBM
+     * @param numBM [CA] beats per compàs / [EN] beats per measure
      */
     public final void setNumBeatsMeasure(int numBM) {
         numBeatsMeasure = numBM;
@@ -2433,10 +2471,15 @@ public class MyGridScore extends MyComponent {
 //    
     //private static boolean once = true;
     /**
-     * Plays the score at the given column.
+     * [CA] Toca les notes de la columna indicada. No fa res més enllà de
+     * {@code stopCol}: és el que fa que la reproducció s'aturi al final de la
+     * partitura.
+     * <p>
+     * [EN] Plays the notes at the given column. It does nothing beyond
+     * {@code stopCol}: that is what makes playback stop at the end of the score.
      *
-     * @param col
-     * @return
+     * @param col [CA] columna de partitura / [EN] score column
+     * @return [CA] cert si s'ha tocat alguna cosa a la columna / [EN] true if anything was played at the column
      */
     public boolean playScoreCol(int col) {
         Utilities.printOutWithPriority(false,"MyGridScore::playScoreCol(): col = "+col+" playBar = "+this.cam.getPlayBar());
@@ -2474,7 +2517,7 @@ public class MyGridScore extends MyComponent {
     /**
      * Checks if there is a midi message at the current col, and runs it.
      *
-     * @param col
+     * @param col [CA] columna de partitura / [EN] score column
      */
     public void checkNRunMidiMessage(int col) {
         if (SampleOrMidi.isMidi()) {
@@ -2492,7 +2535,7 @@ public class MyGridScore extends MyComponent {
      * Checks if there is a message at the given column, and it shows it on the
      * status line.
      *
-     * @param col
+     * @param col [CA] columna de partitura / [EN] score column
      */
     public void checkNShowMessage(int col) {
         MyStatusLine statusLine = this.controller.getStatusLine();
@@ -2507,7 +2550,7 @@ public class MyGridScore extends MyComponent {
      * Checks if there is a background chord in the given column, and it plays
      * it (or it stops the current background chord if the chord root is -2).
      *
-     * @param col
+     * @param col [CA] columna de partitura / [EN] score column
      */
     public void checkNPlayBackgroundChord(int col) {
         Chord chord = backgroundChordLine.get(col);
@@ -2545,9 +2588,9 @@ public class MyGridScore extends MyComponent {
         return result;
     }
 
-    /**
-     * Elimina totes les notes de la pista especificada del gridScore.
-     */
+    ///**
+     //* Elimina totes les notes de la pista especificada del gridScore.
+     //*/
 //    public void removeAllNotesOfTrack(int trackId) {
 //        removeNotesOfList(getNotesOfTrack(trackId));
 ////        for (int row = 0; row < this.nKeys; row++) {
@@ -2658,8 +2701,9 @@ public class MyGridScore extends MyComponent {
      * A diferència de {@link #setScoreChange}, no fusiona: el que hi hagi es
      * descarta. Si {@code change} és null o buit, l'entrada s'elimina.
      * <p>
-     * L'usen l'edició i l'esborrat de marques i els events d'undo/redo, que
-     * necessiten deixar la columna exactament en un estat conegut.
+     * L'usen la col·locació, l'edició i l'esborrat de marques i els events
+     * d'undo/redo, que necessiten deixar la columna exactament en un estat
+     * conegut.
      *
      * @param col    columna de partitura
      * @param change entrada nova (null o buida = esborrar l'entrada)

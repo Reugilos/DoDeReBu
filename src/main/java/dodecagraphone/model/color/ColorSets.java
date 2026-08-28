@@ -179,7 +179,7 @@ public class ColorSets {
      * @param selected [CA] llista de notes seleccionades / [EN] list of selected notes
      * @return [CA] color de selecció per a la nota / [EN] selection color for the note
      */
-    public static Color getChoiceColor(int midi, List<Integer>selected) {
+    public static Color getChoiceColor(int midi, List<Integer> selected) {
         int max = Utilities.max(selected);
         int min = Utilities.min(selected);
 //        int relative = midi-key;
@@ -229,15 +229,25 @@ public class ColorSets {
     }
 
     /**
-     * [CA] Retorna el color de la vora que separa notes contigües, triat per
-     * contrast amb el color de fons de la nota (negre sobre fons clar, blanc
-     * sobre fons fosc).
+     * [CA] Retorna negre o blanc, el que contrasti amb el fons donat. L'usa el
+     * text de les caixetes de marca de la franja d'acords, que ha de ser
+     * llegible tant sobre els fons foscos (tempo, tonalitat, volum) com sobre
+     * el groc de la transposició.
      * <p>
-     * [EN] Returns the colour of the border that separates contiguous notes,
-     * chosen for contrast against the note background colour (black on light
-     * backgrounds, white on dark ones).
+     * No l'usa la barra vertical d'inici de nota: aquella fa servir
+     * {@link #getGridSquareFontColor(int)}, el mateix color que el nom de la
+     * nota, perquè barra i nom es llegeixin com una sola marca.
+     * <p>
+     * [EN] Returns black or white, whichever contrasts with the given
+     * background. Used by the text of the chord-strip mark boxes, which must be
+     * readable both on the dark backgrounds (tempo, key, volume) and on the
+     * yellow transposition one.
+     * <p>
+     * It is not used by the note-start vertical bar: that one uses
+     * {@link #getGridSquareFontColor(int)}, the same colour as the note name, so
+     * that bar and name read as a single mark.
      *
-     * @param background [CA] color de fons de la nota / [EN] note background colour
+     * @param background [CA] color de fons / [EN] background colour
      * @return [CA] negre o blanc, el que contrasti / [EN] black or white, whichever contrasts
      */
     public static Color getSeparatorColor(Color background){

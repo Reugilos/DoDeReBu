@@ -26,14 +26,18 @@ import javax.sound.midi.MidiMessage;
  * ció i endevinament. Les notes es col·loquen a {@code currentWriteCol}, que
  * s'actualitza automàticament. El mètode {@code updateStopMarker()} recalcula
  * la durada de l'últim acord del {@code chordSymbolLine} fins a {@code endOfScore}
- * (= final de l'última nota, no del compàs).
+ * (= final de l'última nota, no del compàs) i valida {@code stopMarkerValid}.
+ * Es crida <b>només en reproduir i en desar</b>, més la inicialització: durant
+ * l'edició la doble barra ha de quedar quieta.
  * <p>
  * [EN] Subclass of {@link MyGridScore} specialised in placing musical
  * elements (notes, chords, patterns) for playing and guessing exercises.
  * Notes are placed at {@code currentWriteCol}, which is updated automatically.
  * The method {@code updateStopMarker()} recomputes the duration of the last
- * chord in {@code chordSymbolLine} up to {@code endOfScore} (= end of the
- * last note, not of the measure).
+ * chord in {@code chordSymbolLine} up to {@code endOfScore} (= end of the last
+ * note, not of the measure) and validates {@code stopMarkerValid}. It is called
+ * <b>only on playback and on save</b>, plus initialisation: while editing, the
+ * double bar must stay put.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -78,7 +82,7 @@ public class MyPatternScore extends MyGridScore {
     /**
      * Constructor.
      *
-     * @param contr
+     * @param contr [CA] controlador principal / [EN] main controller
      */
     public MyPatternScore(MyController contr) {
         super(Settings.getScoreFirstCol(), Settings.getScoreFirstRow(), Settings.getnColsScore(), Settings.getnRowsScore(), contr.getCam(), contr, contr.getCam(), Settings.getnKeysKeyboard());
@@ -141,7 +145,7 @@ public class MyPatternScore extends MyGridScore {
     /**
      * getter.
      *
-     * @return
+     * @return [CA] columna on s'escriurà el pròxim element / [EN] column where the next element will be written
      */
     public int getCurrentWriteCol() {
         return currentWriteCol;
@@ -196,14 +200,24 @@ public class MyPatternScore extends MyGridScore {
 
     /**
      * [CA] Estén {@code stopCol} per cobrir el compàs que conté
-     * {@code noteCol}. Operació O(1) que només creix mai retrocedeix. No
-     * usar en rutes d'afegir notes si hi ha acords; usar
-     * {@link #updateStopMarker()} en aquell cas.
+     * {@code noteCol}. Operació O(1) que només creix, mai retrocedeix.
+     * <p>
+     * <b>Actualment no la crida ningú.</b> Servia per anar movent la doble barra
+     * a mesura que s'escrivien notes; ara {@code stopCol} es recalcula només en
+     * reproduir i en desar (vegeu {@link #updateStopMarker()}), i durant l'edició
+     * la barra ha de quedar quieta. Es manté per si es vol recuperar aquell
+     * comportament; si es fa servir, cal saber que actualitza {@code stopCol}
+     * però no la durada de l'últim acord ni {@code stopMarkerValid}.
      * <p>
      * [EN] Extends {@code stopCol} to cover the measure containing
-     * {@code noteCol}. O(1) operation that only grows, never shrinks. Do not
-     * use in note-add paths if there are chords; use
-     * {@link #updateStopMarker()} in that case.
+     * {@code noteCol}. O(1) operation that only grows, never shrinks.
+     * <p>
+     * <b>Currently unused.</b> It used to move the double bar along as notes
+     * were written; {@code stopCol} is now recomputed only on playback and on
+     * save (see {@link #updateStopMarker()}), and while editing the bar must
+     * stay put. Kept in case that behaviour is wanted back; if used, note that
+     * it updates {@code stopCol} but neither the last chord's duration nor
+     * {@code stopMarkerValid}.
      *
      * @param noteCol [CA] columna de la nota afegida / [EN] column of the added note
      */
@@ -283,9 +297,9 @@ public class MyPatternScore extends MyGridScore {
      * Places an ascending scale, starting on midiKey (each note is nCols in
      * length). The currentWriteCol is updated.
      *
-     * @param midiKey
-     * @param ncols
-     * @param mutted
+     * @param midiKey [CA] nota MIDI de la tònica / [EN] MIDI note of the tonic
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
      */
     public void placeScaleUp(int midiKey, int ncols, boolean mutted) {
         int[] relativeScale = new int[]{0, 2, 4, 5, 7, 9, 11, 12};
@@ -298,9 +312,9 @@ public class MyPatternScore extends MyGridScore {
      * Places a descending scale, starting at midiKey (nCols is the note
      * duration). The currentWriteCol is updated.
      *
-     * @param midiKey
-     * @param ncols
-     * @param mutted
+     * @param midiKey [CA] nota MIDI de la tònica / [EN] MIDI note of the tonic
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
      */
     public void placeScaleDown(int midiKey, int ncols, boolean mutted) {
         int[] relativeScale = new int[]{12, 11, 9, 7, 5, 4, 2, 0};
@@ -313,8 +327,8 @@ public class MyPatternScore extends MyGridScore {
      * Places a sustained note from the beginning to the end of the grid,
      * without touching the currentWriteCol.
      *
-     * @param midi
-     * @param mutted
+     * @param midi [CA] nota MIDI absoluta / [EN] absolute MIDI note
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
      */
     public void placeSustained(int midi, boolean mutted) {
         int row = ToneRange.midiToKeyId(midi);
@@ -332,7 +346,7 @@ public class MyPatternScore extends MyGridScore {
      * Checks whether the grid is over (to prevent further placements). A
      * security margin is defined in Settings.END_COL_MARGIN.
      *
-     * @return
+     * @return [CA] cert si s'ha arribat prop del final del buffer / [EN] true if the end of the buffer is near
      */
     public boolean isOver() {
         int margin = Settings.END_COL_MARGIN;
@@ -345,8 +359,8 @@ public class MyPatternScore extends MyGridScore {
      * Appends a new message to the current message at the currentWriteCol+delay
      * of the score::messages Map, without updating the currentWriteCol.
      *
-     * @param message
-     * @param delay
+     * @param message [CA] text del missatge / [EN] message text
+     * @param delay [CA] columnes de retard abans de mostrar-lo / [EN] delay in columns before showing it
      */
     public void placeAppendMessage(String message, int delay) {
         String mess = this.messages.get(currentWriteCol + delay);
@@ -364,7 +378,7 @@ public class MyPatternScore extends MyGridScore {
      * Appends a new midi message to the current message at the currentWriteCol
      * of the score::midiMessages Map, without updating the currentWriteCol.
      *
-     * @param message
+     * @param message [CA] missatge MIDI a encuar / [EN] MIDI message to queue
      */
     public void placeAppendMidiMessage(MidiMessage message) {
         ArrayList<MidiMessage> mess = this.midiMessages.get(currentWriteCol);
@@ -380,9 +394,9 @@ public class MyPatternScore extends MyGridScore {
      * Places the notes of a chord (each note ncols wide). The currentWriteCol
      * is updated.
      *
-     * @param chord
-     * @param ncols
-     * @param mutted
+     * @param chord [CA] acord a dibuixar / [EN] chord to draw
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
      */
     public void placeChord(Chord chord, int ncols, boolean mutted) {
         int[] midiChord = chord.getMidiNotes();
@@ -399,7 +413,7 @@ public class MyPatternScore extends MyGridScore {
      * Places a chord at the currentWriteCol in the background chord Map,
      * without updating the currentWriteCol.
      *
-     * @param chord
+     * @param chord [CA] acord a dibuixar / [EN] chord to draw
      */
     public void placeBackgroundChord(Chord chord) {
         this.backgroundChordLine.put(currentWriteCol, chord);
@@ -527,7 +541,7 @@ public class MyPatternScore extends MyGridScore {
      * is created with midiRoot set to -1 and the symbol text copied on the info
      * field of the chord.
      *
-     * @param simbol
+     * @param simbol [CA] símbol d'acord a col·locar / [EN] chord symbol to place
      */
     public void placeSimbolInChordLine(String simbol) {
         Chord ch = new Chord(Settings.USE_INFO_AS_SIMBOL, null, -1, simbol); // if root = -13, use info as simbol
@@ -560,11 +574,11 @@ public class MyPatternScore extends MyGridScore {
      * currentWriteCol (each note is ncols wide). The currentWriteCol is
      * updated.
      *
-     * @param chord
+     * @param chord [CA] acord a dibuixar / [EN] chord to draw
      * @param arpeggiatura, an array of chord positions, stating the order in
      * which each chord note must be placed (first chord note = 1)
-     * @param ncols
-     * @param mutted
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
      */
     public void placeArpeggio(Chord chord, int[] arpeggiatura, int ncols, boolean mutted) {
         int[] midiChord = chord.getMidiNotes();
@@ -610,9 +624,9 @@ public class MyPatternScore extends MyGridScore {
      * Places a chord progression (each note is ncols wide). The currentWriteCol
      * is updated.
      *
-     * @param progression
-     * @param ncols
-     * @param mutted
+     * @param progression [CA] progressió d'acords a col·locar / [EN] chord progression to place
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
      */
     public void placeProgression(ChordProgression progression, int ncols, boolean mutted) {
         progression.setIterator();
@@ -640,9 +654,10 @@ public class MyPatternScore extends MyGridScore {
      * currentWriteCol.For drawing purposess if the argument "mutted" is true
      * the corresponding grid square is mutted.
      *
-     * @param midi
-     * @param ncols
-     * @param mutted
+     * @param midi [CA] nota MIDI absoluta / [EN] absolute MIDI note
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
+     * @param linked [CA] cert si continua la nota anterior / [EN] true if it continues the previous note
      */
     public void placeNote(int midi, int ncols, boolean mutted, boolean linked) {
         int channel = this.controller.getMixer().getCurrentChannelOfCurrentTrack();
@@ -659,10 +674,10 @@ public class MyPatternScore extends MyGridScore {
     /**
      * Places a note and sets its square's midi channel.
      *
-     * @param midi
-     * @param ncols
-     * @param mutted
-     * @param channel
+     * @param midi [CA] nota MIDI absoluta / [EN] absolute MIDI note
+     * @param ncols [CA] durada en columnes / [EN] duration in columns
+     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
+     * @param channel [CA] canal MIDI / [EN] MIDI channel
      */
     /** Col·loca una nota a una fila específica del grid (no usa midiToKeyId). Per drums. */
     public void placeNoteAtRow(int row, int ncols, boolean linked, int channel, int trackId, int velocity) {
@@ -768,6 +783,15 @@ public class MyPatternScore extends MyGridScore {
         return new int[]{lo, hi};
     }
 
+    /**
+     * [CA] Com {@link #placeTonalContext(int, int, int)}, però amb el rang
+     * visual de l'instrument principal.
+     * <p>
+     * [EN] Like {@link #placeTonalContext(int, int, int)}, but using the lead
+     * instrument's visual range.
+     *
+     * @param key [CA] nota MIDI de la tònica / [EN] MIDI note of the tonic
+     */
     public void placeTonalContext(int key) {
         int[] r = getLeadInstrumentVisualRange();
         placeTonalContext(key, r[0], r[1]);
@@ -832,7 +856,9 @@ public class MyPatternScore extends MyGridScore {
      * Places the required elements to set up a tonal context, updating the
      * currentWriteCol.
      *
-     * @param midiKey
+     * @param midiKey [CA] nota MIDI de la tònica / [EN] MIDI note of the tonic
+     * @param lowest  [CA] nota MIDI més greu admesa / [EN] lowest MIDI note allowed
+     * @param highest [CA] nota MIDI més aguda admesa / [EN] highest MIDI note allowed
      */
     public void placeTonalContext(int midiKey,int lowest,int highest) {
         Integer[] rootProgression = new Integer[]{0, 5, 7, 0};

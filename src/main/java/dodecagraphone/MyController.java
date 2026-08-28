@@ -363,10 +363,16 @@ public class MyController {
 
     /**
      * [CA] Desfà l'últim event registrat a la pila undo. Usa
-     * {@code drawCurrentCamInOffscreen()} (ràpid) per actualitzar la vista.
+     * Refresca l'anacrusi i marca la vista per redibuixar. El redibuix ràpid
+     * ({@code drawCurrentCamInOffscreen()}) el fa qui la crida:
+     * {@code MyNewPanel.keyPressed} en rebre Ctrl+Z. <b>No</b> s'hi ha d'usar
+     * {@code drawFullGridinOffscreen()}: és molt lent en partitures grans.
      * <p>
      * [EN] Undoes the last event recorded in the undo stack. Uses
-     * {@code drawCurrentCamInOffscreen()} (fast) to update the view.
+     * Refreshes the anacrusis and flags the view for redrawing. The fast redraw
+     * ({@code drawCurrentCamInOffscreen()}) is done by the caller:
+     * {@code MyNewPanel.keyPressed} on Ctrl+Z. {@code drawFullGridinOffscreen()}
+     * must <b>not</b> be used there: it is very slow on large scores.
      */
     public void undo() {
         pilaEvents.undo();
@@ -376,7 +382,8 @@ public class MyController {
     }
 
     /**
-     * [CA] Refà l'últim event desfet. Actualitza l'anacrusis i redibuixa la vista.
+     * [CA] Refà l'últim event desfet. Refresca l'anacrusi i marca la vista per
+     * redibuixar; el redibuix el fa qui la crida, igual que a {@link #undo()}.
      * <p>
      * [EN] Redoes the last undone event. Updates anacrusis detection and redraws the view.
      */
@@ -582,10 +589,13 @@ public class MyController {
     }
 
     /**
-     * During playing, checks which SquareGrid's collide with the playBar and
+     * [CA] Durant la reproducció, mira quines cel·les coincideixen amb el
+     * playbar i les toca.
+     * <p>
+     * [EN] During playback, checks which grid cells collide with the playbar and
      * plays them.
      *
-     * @return
+     * @return [CA] cert si s'ha tocat alguna nota / [EN] true if any note was played
      */
     public boolean playScoreColAtPlayBar() {
 //        System.out.println("MyController::entering PlayScoreColAtPlayBar");
@@ -622,11 +632,11 @@ public class MyController {
         return modified; // Si modified, repinta
     }
     
-        /**
-         * Updates position of everything that moves (the camera).
-         *
-         * @return true if there have been changes.
-         */
+        ///**
+         //* Updates position of everything that moves (the camera).
+         //*
+         //* @return true if there have been changes.
+         //*/
         //    public boolean old_update() {
         //        boolean modified = false;
         //        modified = this.mixer.isModified();
@@ -661,12 +671,12 @@ public class MyController {
 //        return modified;
 //    }
 //
-    /**
-     * During playing, checks which SquareGrid's collide with the playBar and
-     * plays them.
-     *
-     * @return
-     */
+///**
+//* During playing, checks which SquareGrid's collide with the playBar and
+//* plays them.
+//*
+//* @return
+//*/
 //    public boolean playScoreColAtPlayBar() {
 ////        System.out.println("MyController::entering PlayScoreColAtPlayBar");
 //        int camPBar = cam.getPlayBar();
@@ -681,7 +691,7 @@ public class MyController {
     /**
      * Draws the current image at each ui repaint.
      *
-     * @param g
+     * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     /**
      * Fills the keyboard-column areas of the chord and lyrics strips with
@@ -1612,22 +1622,6 @@ public class MyController {
         }
     }
 
-    /** Linka la nota d'un square i registra el canvi al mouseSequence per undo. */
-    /**
-     * [CA] Cert si la nota del track ACTUAL en aquest square és una continuació.
-     * No es pot fer servir {@code sq.isSq_is_linked()}: aquell flag és un AND
-     * sobre tots els tracks visibles i, a més, és un valor calculat a
-     * {@code updateState()}, o sigui que durant un drag (que processa diverses
-     * cel·les sense repintar entremig) pot estar caducat.
-     * <p>
-     * [EN] True if the CURRENT track's note in this square is a continuation.
-     * {@code sq.isSq_is_linked()} cannot be used: that flag is an AND over all
-     * visible tracks and is cached in {@code updateState()}, so during a drag
-     * (which processes several cells with no repaint in between) it can be stale.
-     *
-     * @param sq [CA] cel·la a comprovar / [EN] cell to check
-     * @return [CA] cert si la nota del track actual està enllaçada / [EN] true if the current track's note is linked
-     */
     /**
      * [CA] Cert si el track actual ja té una nota visible a la cel·la indicada.
      * <p>
@@ -1646,6 +1640,21 @@ public class MyController {
                 .anyMatch(n -> n.getChannel() == ch && n.getTrack() == tr && n.isVisible());
     }
 
+    /**
+     * [CA] Cert si la nota del track ACTUAL en aquest square és una continuació.
+     * No es pot fer servir {@code sq.isSq_is_linked()}: aquell flag és un AND
+     * sobre tots els tracks visibles i, a més, és un valor calculat a
+     * {@code updateState()}, o sigui que durant un drag (que processa diverses
+     * cel·les sense repintar entremig) pot estar caducat.
+     * <p>
+     * [EN] True if the CURRENT track's note in this square is a continuation.
+     * {@code sq.isSq_is_linked()} cannot be used: that flag is an AND over all
+     * visible tracks and is cached in {@code updateState()}, so during a drag
+     * (which processes several cells with no repaint in between) it can be stale.
+     *
+     * @param sq [CA] cel·la a comprovar / [EN] cell to check
+     * @return [CA] cert si la nota del track actual està enllaçada / [EN] true if the current track's note is linked
+     */
     private boolean isCurrentTrackNoteLinked(MyGridSquare sq) {
         if (sq == null) return false;
         final int ch = this.mixer.getCurrentChannelOfCurrentTrack();
@@ -1655,6 +1664,7 @@ public class MyController {
                         && n.isVisible() && n.isLinked());
     }
 
+    /** Linka la nota d'un square i registra el canvi al mouseSequence per undo. */
     private void linkNoteAtCell(MyGridSquare sq) {
         int ch = this.mixer.getCurrentChannelOfCurrentTrack();
         int tr = this.mixer.getCurrentTrackId();
@@ -1814,9 +1824,11 @@ public class MyController {
      * On mouse pressed, checks if a XiloKey or a MyGridSquare or a MyButton has
      * been pressed and activates it.
      *
-     * @param posX
-     * @param posY
+     * @param posX [CA] coordenada X del ratolí / [EN] mouse X coordinate
+     * @param posY [CA] coordenada Y del ratolí / [EN] mouse Y coordinate
      * @param shiftDown true if the Shift key is held (erase mode)
+     * @param ctrlDown [CA] cert amb Ctrl premut (selecció, moure, replicar) / [EN] true with Ctrl held (select, move, replicate)
+     * @param altDown [CA] cert amb Alt premut / [EN] true with Alt held
      */
     public void onMousePressed(double posX, double posY, boolean shiftDown, boolean ctrlDown, boolean altDown) {
         clipboardTipVisible = false;
@@ -2433,8 +2445,8 @@ public class MyController {
      * [EN] Currently a no-op: reserved for future right-click handling (unlike
      * {@code onMousePressed}, which does handle the left click).
      *
-     * @param posX
-     * @param posY
+     * @param posX [CA] coordenada X del ratolí / [EN] mouse X coordinate
+     * @param posY [CA] coordenada Y del ratolí / [EN] mouse Y coordinate
      */
     public void onRightMousePressed(double posX, double posY) {
     }
@@ -2445,8 +2457,8 @@ public class MyController {
      * <p>
      * [EN] Currently a no-op: reserved for future right-click-release handling.
      *
-     * @param posX
-     * @param posY
+     * @param posX [CA] coordenada X del ratolí / [EN] mouse X coordinate
+     * @param posY [CA] coordenada Y del ratolí / [EN] mouse Y coordinate
      */
     public void onRightMouseReleased(double posX, double posY) {
     }
@@ -4062,23 +4074,28 @@ public class MyController {
     // Mètodes del mapa de canvis per columna (ScoreChange)
     // ---------------------------------------------------------------------------
 
-    /**
-     * Desa un canvi pendent i mostra el missatge a la barra d'estat demanant
-     * a l'usuari que faci clic a la columna on vol aplicar el canvi.
-     *
-     * @param change      el canvi a col·locar
-     * @param description clau I18n (sense prefix) del tipus de canvi per al missatge
-     */
     /** Finestra emergent no modal que es mostra mentre hi ha un canvi pendent. */
     private javax.swing.JDialog pendingChangeDialog = null;
     /** Finestra emergent no modal que es mostra mentre s'espera que l'usuari cliqui l'arrel del patró. */
     private javax.swing.JDialog selectingDialog = null;
 
+    /**
+     * Desa un canvi pendent i obre el diàleg no modal demanant a l'usuari que
+     * faci clic a la columna on vol aplicar el canvi. Equival a cridar la
+     * variant de tres arguments amb {@code onPlaceAtStart} a null.
+     *
+     * @param change      el canvi a col·locar
+     * @param description clau I18n (sense prefix) del tipus de canvi per al missatge
+     */
     private void setPendingChange(MyGridScore.ScoreChange change, String description) {
         setPendingChange(change, description, null);
     }
 
     /**
+     * Desa un canvi pendent i obre el diàleg no modal de col·locació.
+     *
+     * @param change      el canvi a col·locar
+     * @param description clau I18n (sense prefix) del tipus de canvi per al missatge
      * @param onPlaceAtStart callback opcional executat quan l'usuari prem "A l'inici"
      *        en lloc de l'acció per defecte. Si és null s'usa placePendingChangeAt(0).
      */
@@ -4485,14 +4502,20 @@ public class MyController {
     }
 
     /**
-     * [CA] Retorna l'entrada del changeMap de la columna indicada, o una de
-     * nova amb els valors vigents per defecte quan es tracta de la columna 0
-     * (les marques inicials es dibuixen amb fallback als valors per defecte
-     * encara que el changeMap no hi tingui entrada).
+     * [CA] Còpia de l'entrada del changeMap a la columna indicada, o una entrada
+     * BUIDA si no n'hi ha cap. Els camps buits els resol després qui la fa
+     * servir: l'edició d'una marca hi posa el valor vigent, i el dibuix de les
+     * marques de la columna 0 fa el seu propi fallback als valors per defecte.
+     * Com que és una còpia, modificar-la no toca el changeMap.
      * <p>
-     * [EN] Returns the changeMap entry at the given column, or a fresh one with
-     * the current default values when it is column 0 (initial marks are drawn
-     * with a fallback to defaults even when the changeMap has no entry there).
+     * [EN] A copy of the changeMap entry at the given column, or an EMPTY entry
+     * if there is none. Empty fields are resolved by the caller: mark editing
+     * fills in the value in force, and the column-0 mark drawing does its own
+     * fallback to the defaults. Being a copy, changing it does not touch the
+     * changeMap.
+     *
+     * @param col [CA] columna de partitura / [EN] score column
+     * @return [CA] còpia de l'entrada, o una de buida / [EN] copy of the entry, or an empty one
      */
     private MyGridScore.ScoreChange markEntryAt(int col) {
         MyGridScore.ScoreChange sc = allPurposeScore.getChangeMap().get(col);
@@ -4639,12 +4662,6 @@ public class MyController {
     }
 
     /**
-     * Col·loca el canvi pendent a la columna del playBar (editingCol).
-     * Es crida quan l'usuari prem Enter mentre hi ha un canvi pendent.
-     *
-     * @return true si hi havia un canvi pendent i s'ha col·locat
-     */
-    /**
      * [CA] Col·loca el canvi pendent a la columna 0 de la partitura, que és
      * l'acció del botó "A l'inici" del diàleg.
      * <p>
@@ -4668,6 +4685,14 @@ public class MyController {
         return pendingChange != null;
     }
 
+    /**
+     * Col·loca el canvi pendent a la columna del playBar (editingCol).
+     * Es crida amb <b>Ctrl+Enter</b>: Enter sol fa el que diu el botó per
+     * defecte del diàleg, que és col·locar a la columna 0
+     * ({@link #placePendingChangeAtStart()}).
+     *
+     * @return true si hi havia un canvi pendent i s'ha col·locat
+     */
     public boolean placePendingChangeAtPlayBar() {
         if (pendingChange == null) return false;
         return placePendingChangeAt(getEditingCol());
@@ -4687,7 +4712,11 @@ public class MyController {
 
     /**
      * Aplica els canvis de paràmetres globals efectius a la columna indicada.
-     * No fa res si el changeMap és buit (tots els camps null).
+     * <b>Sempre assigna un valor</b> a tempo, tonalitat, mode, compàs i figura
+     * del beat: el de la marca vigent si n'hi ha, i si no el valor per defecte.
+     * Això és el que fa que tornar enrere d'una marca restauri els valors
+     * anteriors en lloc de deixar-los encallats. Les velocitats del changeMap
+     * també s'apliquen sempre, no només durant la reproducció.
      *
      * @param col columna de partitura
      */
@@ -4833,7 +4862,14 @@ public class MyController {
         }
     }
 
-    /** Expandeix el buffer si col és a l'última pàgina (buffer = endOfScore + 2 pàgines). */
+    /**
+     * Expandeix el buffer si {@code col} cau a l'última pàgina. La mida nova és
+     * {@code max(col, lastColWritten) + 2 pàgines}. Es dimensiona amb
+     * {@code lastColWritten} i no amb {@code stopCol}, que ara està
+     * deliberadament desactualitzat mentre s'edita.
+     *
+     * @param col [CA] columna que ha de quedar dins del buffer / [EN] column that must fit in the buffer
+     */
     private void expandBufferIfNeeded(int col) {
         int colsPerPage = allPurposeScore.getFixedColsPerPage();
         if (col + colsPerPage < allPurposeScore.getNColsBuffer()) return;
