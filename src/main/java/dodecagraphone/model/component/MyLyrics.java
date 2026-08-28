@@ -950,7 +950,7 @@ public class MyLyrics extends MyComponent {
 
             // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
             int stopC = controller.getAllPurposeScore().getStopCol();
-            if (stopC > 0) {
+            if (stopC > 0 && controller.getAllPurposeScore().isStopMarkerValid()) {
                 int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
                 Shape oldClip = g.getClip();
                 g.clipRect(x1, y1, w, h);

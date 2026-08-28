@@ -166,6 +166,7 @@ public class MyPatternScore extends MyGridScore {
 
     public void setStopCol(int c) {
         stopCol = c;
+        stopMarkerValid = true;
     }
 
     /**
@@ -275,6 +276,7 @@ public class MyPatternScore extends MyGridScore {
             stopCol = Math.max(stopCol, minStopCol);
             stopCol = Math.min(stopCol, getNumCols());
         }
+        stopMarkerValid = true;
     }
 
     /**

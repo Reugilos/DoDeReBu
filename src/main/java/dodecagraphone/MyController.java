@@ -872,7 +872,6 @@ public class MyController {
             wasLinked = note.isLinked();
             wasDotted = tr.isDotted();
             this.turningOn = false; // Subsequent dragging will setPressed rows off
-            this.allPurposeScore.updateStopMarker();
             MyGridSquare nextSq = square.next();
             if (nextSq != null && nextSq.isSqVisible()) {
                 nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
@@ -894,7 +893,6 @@ public class MyController {
             this.turningOn = true; // Subsequent dragging will setPressed rows on
             if (col + 1 > this.allPurposeScore.getLastColWritten())
                 this.allPurposeScore.setLastColWritten(col + 1);
-            this.allPurposeScore.updateStopMarker();
         }
         square.updateState();
         if (this.allPurposeScore.isNotNullAndVisible(keyId, col)) {
@@ -990,7 +988,6 @@ public class MyController {
         int lastC = headCol + moveNoteLength - 1;
         if (lastC + 1 > this.allPurposeScore.getLastColWritten())
             this.allPurposeScore.setLastColWritten(lastC + 1);
-        this.allPurposeScore.updateStopMarker();
     }
 
     // ── END MOVE helpers ─────────────────────────────────────────────────────────
@@ -1411,6 +1408,15 @@ public class MyController {
         if (clipboard == null || clipboard.isEmpty()) return;
         int nKeys = this.allPurposeScore.getnKeys();
         int nCols = this.allPurposeScore.getNumCols();
+        // El fragment pot arribar més enllà del buffer i de la vista actual.
+        // Aquest camí escriu amb addNoteToSquare, que (a diferència
+        // d'addNoteAtCell) no amplia el buffer: les notes hi eren al model i
+        // sonaven, però no hi havia offscreen on dibuixar-les.
+        int pasteLastCol = anchorCol;
+        for (ClipNote n : clipboard) {
+            pasteLastCol = Math.max(pasteLastCol, anchorCol + n.colOffset);
+        }
+        expandBufferIfNeeded(pasteLastCol);
         List<ClipNote> placed = new ArrayList<>();
         for (ClipNote n : clipboard) {
             int row = anchorRow + n.rowOffset;
@@ -1430,7 +1436,9 @@ public class MyController {
                 this.allPurposeScore.setLastColWritten(col + 1);
             placed.add(n);
         }
-        this.allPurposeScore.updateStopMarker();
+        // Redibuixa tot l'interval enganxat, no només la càmera: el fragment pot
+        // abastar pàgines que ara mateix no es veuen.
+        this.allPurposeScore.drawColRangeInOffscreen(anchorCol, pasteLastCol);
         // Enganxa accords (si n'hi ha al clipboard) i registra-ho per a undo
         Map<Integer, Chord> newChordsMap = new java.util.LinkedHashMap<>();
         Map<Integer, Chord> oldChordsMap = new java.util.LinkedHashMap<>();
@@ -1492,7 +1500,6 @@ public class MyController {
                 this.mixer.getCurrentTrack().isDotted());
         if (col + 1 > this.allPurposeScore.getLastColWritten())
             this.allPurposeScore.setLastColWritten(col + 1);
-        this.allPurposeScore.updateStopMarker();
     }
 
     /** Elimina la nota al cell (row,col) del track actual i la registra al mouseSequence. */
@@ -1503,7 +1510,6 @@ public class MyController {
         MyGridSquare.SubSquare note = this.allPurposeScore.removeNoteFromSquare(row, col,
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId());
         if (note == null) return;
-        this.allPurposeScore.updateStopMarker();
         mouseSequence.addChange(square, false,
                 this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(),
                 note.getVelocity(), note.isVisible(), !note.isAudible(), note.isLinked(),
@@ -2468,6 +2474,9 @@ public class MyController {
         //this.getCam().setPlaying(true);
         cam.setPlaying(true); // opcional: pot activar dibuix
         //cam.getTimer().reset();
+        // La doble barra (stopCol) es recalcula NOMÉS en reproduir i en desar:
+        // durant l'edició es queda quieta i no interfereix amb la navegació.
+        allPurposeScore.updateStopMarker();
         int metroBufSize = allPurposeScore.getStopCol() + Settings.getnColsBeat() * allPurposeScore.getNumBeatsMeasure() + 2;
         boolean[] metroIsBeat    = new boolean[metroBufSize];
         boolean[] metroIsMeasure = new boolean[metroBufSize];
@@ -3025,6 +3034,11 @@ public class MyController {
     
     public void onNextPageButtonPressed(MyButton togg) {
         this.stop();
+        // Amplia el buffer abans de passar pàgina: nextPage() es nega a avançar
+        // més enllà de nColsBuffer, i abans el buffer només creixia en escriure
+        // notes, de manera que no es podia navegar més enllà del contingut.
+        expandBufferIfNeeded(allPurposeScore.getCurrentCol()
+                + allPurposeScore.getFixedColsPerPage());
         this.cam.nextPage();
         this.buttons.stopPlayButton();
         this.updateTextOfButtons();
@@ -4515,6 +4529,9 @@ public class MyController {
         if (fitxer == null || "".equals(fitxer)) {
             return;
         }
+        // La doble barra (stopCol) es recalcula NOMÉS en reproduir i en desar.
+        allPurposeScore.updateStopMarker();
+        this.getUi().getPanel().repinta(true);
         File file = new File(fitxer);
         if (file.exists()) {
             int resposta = JOptionPane.showConfirmDialog(
@@ -4592,7 +4609,7 @@ public class MyController {
     private void expandBufferIfNeeded(int col) {
         int colsPerPage = allPurposeScore.getFixedColsPerPage();
         if (col + colsPerPage < allPurposeScore.getNColsBuffer()) return;
-        int newNCols = Math.max(col, allPurposeScore.getStopCol()) + 2 * colsPerPage;
+        int newNCols = Math.max(col, allPurposeScore.getLastColWritten()) + 2 * colsPerPage;
         allPurposeScore.resizeOffscreen(newNCols);
         myChordSymbolLine.resizeOffscreen(newNCols);
         myLyrics.resizeOffscreen(newNCols);
@@ -4957,21 +4974,18 @@ public class MyController {
     public void insertColumnAt(int col) {
         allPurposeScore.insertColumn(col, true);
         getMyLyrics().shiftSegmentsFrom(col, +1);
-        allPurposeScore.updateStopMarker();
     }
 
     /** Inserts a truly empty column at col without extending spanning notes (used in undo-of-delete). */
     public void insertEmptyColumnAt(int col) {
         allPurposeScore.insertColumn(col, false);
         getMyLyrics().shiftSegmentsFrom(col, +1);
-        allPurposeScore.updateStopMarker();
     }
 
     /** Deletes the column at col, shifting all content left. */
     public void deleteColumnAt(int col) {
         allPurposeScore.deleteColumn(col);
         getMyLyrics().shiftSegmentsFrom(col, -1);
-        allPurposeScore.updateStopMarker();
     }
 
     /** Invoked by Ctrl+I: asks how many, then waits for a column click. */
@@ -5213,6 +5227,5 @@ public class MyController {
         for (MyLyrics.LyricSegment seg : snapshot.lyricSegments) {
             byTrack.computeIfAbsent(seg.track, k -> new ArrayList<>()).add(seg);
         }
-        allPurposeScore.updateStopMarker();
     }
 }

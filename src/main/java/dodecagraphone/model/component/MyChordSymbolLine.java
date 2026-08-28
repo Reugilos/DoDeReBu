@@ -926,7 +926,7 @@ public class MyChordSymbolLine extends MyComponent {
 
             // Doble barra al stopCol — dibuixada sobre la vista (sempre actualitzada)
             int stopC = contr.getAllPurposeScore().getStopCol();
-            if (stopC > 0) {
+            if (stopC > 0 && contr.getAllPurposeScore().isStopMarkerValid()) {
                 int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
                 int sy1 = (int) Math.round(score.getScreenY(-nRows));
                 int sy2 = sy1 + (int) Math.round(nRows * Settings.getRowHeight());

@@ -406,6 +406,31 @@ public class MyGridScore extends MyComponent {
      * @param is_dotted  [CA] puntejada / [EN] dotted
      * @return [CA] la cel·la modificada / [EN] the modified cell
      */
+    /**
+     * [CA] Cert quan {@code stopCol} correspon al contingut actual. Es
+     * recalcula només en reproduir i en desar; qualsevol edició posterior el
+     * torna invàlid i la doble barra deixa de dibuixar-se fins al pròxim play
+     * o desat, per no mostrar un final que ja no és el de la partitura.
+     * <p>
+     * [EN] True when {@code stopCol} matches the current content. It is only
+     * recomputed on play and on save; any later edit invalidates it and the
+     * double bar stops being drawn until the next play or save, so it never
+     * shows an end that is no longer the score's.
+     */
+    protected boolean stopMarkerValid = false;
+
+    /**
+     * @return [CA] cert si la doble barra és vigent / [EN] true if the double bar is up to date
+     */
+    public boolean isStopMarkerValid() {
+        return stopMarkerValid;
+    }
+
+    /** [CA] Marca la doble barra com a caducada. / [EN] Marks the double bar as stale. */
+    public void invalidateStopMarker() {
+        stopMarkerValid = false;
+    }
+
     public MyGridSquare addNoteToSquare(
             int firstRow, int firstCol, int nCols, int nRows, MyComponent parent, MyController contr, MyGridScore score, MyCamera cam,
             int channel, int track, int volume, boolean is_visible, boolean is_mutted, boolean is_linked, boolean is_dotted) {
@@ -415,6 +440,7 @@ public class MyGridScore extends MyComponent {
         }
         sq.addNote(channel, track, volume, is_visible, is_mutted, is_linked, is_dotted);
         this.grid[firstRow + BUFFER][firstCol] = sq;
+        invalidateStopMarker();
         return sq;
     }
 
@@ -442,6 +468,7 @@ public class MyGridScore extends MyComponent {
         if (sq.getPoliNotes().isEmpty()) {
             this.grid[row + BUFFER][col] = null;
         }
+        invalidateStopMarker();
         return sbsq;
     }
 
@@ -1347,6 +1374,36 @@ public class MyGridScore extends MyComponent {
         }
     }
 
+    /**
+     * [CA] Redibuixa a l'offscreen només l'interval de columnes indicat. Serveix
+     * per a operacions que escriuen notes fora de la vista actual (enganxar un
+     * fragment que abasta una pàgina nova): {@code drawCurrentCamInOffscreen()}
+     * només cobreix la càmera i {@code drawFullGridinOffscreen()} és massa lent
+     * en partitures grans.
+     * <p>
+     * [EN] Redraws only the given column range into the offscreen buffer. Used
+     * by operations that write notes outside the current view (pasting a
+     * fragment spanning a new page): {@code drawCurrentCamInOffscreen()} only
+     * covers the camera and {@code drawFullGridinOffscreen()} is too slow on
+     * large scores.
+     *
+     * @param firstCol [CA] primera columna a redibuixar / [EN] first column to redraw
+     * @param lastCol  [CA] última columna a redibuixar (inclosa) / [EN] last column to redraw (inclusive)
+     */
+    public void drawColRangeInOffscreen(int firstCol, int lastCol) {
+        if (offscreenGraphics == null) return;
+        synchronized (offscreenGraphics) {
+            int first = Math.max(0, firstCol);
+            int last  = Math.min(lastCol, Math.min(nCols, getNColsBuffer()) - 1);
+            for (int col = last; col >= first; col--) {
+                for (int row = 0; row < nKeys; row++) {
+                    this.drawSquare(row, col, offscreenGraphics);
+                }
+            }
+            drawSelectionOverlay(offscreenGraphics);
+        }
+    }
+
     // Podem ajuntar-lo amb drawFullGridInOffscreen(), canviant paràmetres.
     public void drawCurrentCamInOffscreen() {
         synchronized (offscreenGraphics) {
@@ -1818,9 +1875,10 @@ public class MyGridScore extends MyComponent {
                 g.setClip(oldClip);
             }
 
-            // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
+            // Doble barra al stopCol. Només es dibuixa si el marcador és vigent:
+            // es recalcula en reproduir i en desar, i qualsevol edició el caduca.
             int stopC = this.controller.getAllPurposeScore().getStopCol();
-            if (stopC > 0) {
+            if (stopC > 0 && this.controller.getAllPurposeScore().isStopMarkerValid()) {
                 int sx = (int) Math.floor(this.getScreenX(stopC)) - 1;
                 Shape oldClip = g.getClip();
                 g.clipRect(x1, y1, w, h);
@@ -2894,6 +2952,7 @@ public class MyGridScore extends MyComponent {
      * (linked continuations at col) are extended with a linked copy at the new col.
      */
     public void insertColumn(int col, boolean extendLinked) {
+        invalidateStopMarker();
         if (col < 0 || col >= nCols) return;
         int totalRows = nKeys + 2 * BUFFER;
 
@@ -2954,6 +3013,7 @@ public class MyGridScore extends MyComponent {
      * that continuation is promoted to a note head (unlinked).
      */
     public void deleteColumn(int col) {
+        invalidateStopMarker();
         if (col < 0 || col >= nCols) return;
         int totalRows = nKeys + 2 * BUFFER;
 
