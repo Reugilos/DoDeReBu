@@ -60,6 +60,16 @@ public class MyLyrics extends MyComponent {
 
     // ---- inline edit mode state ----
     private boolean      editMode          = false;
+    /**
+     * [CA] Cert quan el buffer d'edició s'ha carregat a partir d'un segment que
+     * ja existia. Serveix per detectar que esborrar-lo del tot (commit amb text
+     * buit) també és un canvi que s'ha de desar.
+     * <p>
+     * [EN] True when the edit buffer was loaded from an already existing
+     * segment. Used to detect that clearing it entirely (committing empty text)
+     * is also a change that needs saving.
+     */
+    private boolean      editLoadedExisting = false;
     private int          editCursorCol     = 0;
     private int          editTrack         = 0;
     private StringBuilder editBuffer       = new StringBuilder();
@@ -374,6 +384,7 @@ public class MyLyrics extends MyComponent {
         if (existing != null) {
             editCursorCol  = existing.col;
             editTrack      = existing.track;
+            editLoadedExisting = true;
             editBuffer.append(existing.text);
             List<LyricSegment> segs = lyricsByTrack.get(existing.track);
             if (segs != null) segs.remove(existing);
@@ -385,6 +396,18 @@ public class MyLyrics extends MyComponent {
         }
         updatePreviewRow();
         if (offscreenGraphics != null) { needsDrawing = true; drawFullLyricsInOffscreen(); }
+    }
+
+    /**
+     * [CA] Passa pàgina si el cursor d'edició ha sortit de la pàgina visible,
+     * perquè es pugui continuar escrivint la lletra sense haver de navegar a mà.
+     * <p>
+     * [EN] Turns the page if the editing cursor has moved outside the visible
+     * page, so lyrics can be typed on without navigating by hand.
+     */
+    private void ensureEditCursorVisible() {
+        if (!editMode) return;
+        controller.ensureScoreColVisible(editCursorCol);
     }
 
     /**
@@ -437,11 +460,13 @@ public class MyLyrics extends MyComponent {
                     if (prev != null) {
                         editCursorCol     = prev.col;
                         editBuffer.setLength(0);
+                        editLoadedExisting = true;
                         editBuffer.append(prev.text);
                         editCursorCharPos = editBuffer.length(); // cursor al final
                         segs.remove(prev);
                         updatePreviewRow();
                         needsDrawing = true; drawFullLyricsInOffscreen();
+                        ensureEditCursorVisible();
                     }
                 }
             }
@@ -453,6 +478,7 @@ public class MyLyrics extends MyComponent {
             // Carrega text existent a la nova posició, si n'hi ha
             LyricSegment existing = findSegmentAt(prevCol, editTrack);
             if (existing != null) {
+                editLoadedExisting = true;
                 editBuffer.append(existing.text);
                 List<LyricSegment> segs = lyricsByTrack.get(editTrack);
                 if (segs != null) segs.remove(existing);
@@ -460,6 +486,7 @@ public class MyLyrics extends MyComponent {
             editCursorCharPos = 0;  // cursor al principi
             updatePreviewRow();
             needsDrawing = true; drawFullLyricsInOffscreen();
+            ensureEditCursorVisible();
         } else if (code == KeyEvent.VK_SPACE) {
             commitCurrentWord();  // reseteja editBuffer i editCursorCharPos
             // Advance to next note column (or next beat if no note found)
@@ -470,10 +497,12 @@ public class MyLyrics extends MyComponent {
                 editBuffer.append(existing.text);
                 List<LyricSegment> segs = lyricsByTrack.get(editTrack);
                 if (segs != null) segs.remove(existing);
+                editLoadedExisting = true;
             }
             editCursorCharPos = 0;  // cursor al principi del segment (nou o existent)
             updatePreviewRow();
             needsDrawing = true; drawFullLyricsInOffscreen();
+            ensureEditCursorVisible();
         }
         return true; // consume all key events while in edit mode
     }
@@ -503,10 +532,12 @@ public class MyLyrics extends MyComponent {
                 editBuffer.append(existing.text);
                 List<LyricSegment> segs = lyricsByTrack.get(editTrack);
                 if (segs != null) segs.remove(existing);
+                editLoadedExisting = true;
             }
             editCursorCharPos = 0;  // cursor al principi del segment nou
             updatePreviewRow();
             needsDrawing = true; drawFullLyricsInOffscreen();
+            ensureEditCursorVisible();
             return true;
         }
         // Normal character: insert at cursor position and advance
@@ -524,7 +555,15 @@ public class MyLyrics extends MyComponent {
         String text = editBuffer.toString().trim();
         if (!text.isEmpty()) {
             setLyric(editCursorCol, editTrack, text);
+            controller.setNeedsSaving(true);
+        } else if (editLoadedExisting) {
+            // Hi havia text i s'ha esborrat del tot: també és un canvi.
+            controller.setNeedsSaving(true);
         }
+        // setLyric no marca res per si sol: també l'usen la càrrega MIDI i
+        // l'undo, i marcar-hi deixaria una partitura acabada de carregar com a
+        // modificada. Per això la marca es fa aquí, que només s'arriba editant.
+        editLoadedExisting = false;
         editBuffer.setLength(0);
         editCursorCharPos = 0;
     }

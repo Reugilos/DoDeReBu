@@ -197,6 +197,21 @@ public class MyController {
     /** True if firstNote was already linked before the EXTEND_LEFT drag touched it. */
     private boolean firstNoteWasLinkedBeforeDrag = false;
     private boolean needsSaving = false;
+
+    /**
+     * [CA] Marca (o desmarca) la partitura com a modificada. L'usa l'edició de
+     * la lletra, que muta el model des de {@code MyLyrics} sense passar per cap
+     * de les rutes del controlador que ja ho marquen.
+     * <p>
+     * [EN] Marks (or unmarks) the score as modified. Used by lyrics editing,
+     * which mutates the model from {@code MyLyrics} without going through any
+     * of the controller routes that already set the flag.
+     *
+     * @param v [CA] cert si hi ha canvis sense desar / [EN] true if there are unsaved changes
+     */
+    public void setNeedsSaving(boolean v) {
+        this.needsSaving = v;
+    }
     private Boolean saveChordMidiChoice = null; // null = no preguntat; true/false = resposta de la sessió
     private boolean drumsMode = false;
     private boolean tremoloActive = false;
@@ -1271,6 +1286,48 @@ public class MyController {
             }
         }
         updateTextOfButtons();
+    }
+
+    /**
+     * [CA] Assegura que la columna indicada quedi dins de la pàgina visible,
+     * passant pàgina si cal (endavant o enrere). A diferència de
+     * {@link #navigateToScoreCol(int)}, que porta la columna al playbar i
+     * desplaça la vista contínuament, això conserva la paginació: només salta
+     * quan la columna surt de la pàgina. Ho fa servir l'edició de la lletra per
+     * seguir escrivint quan el cursor passa del final de la pàgina.
+     * <p>
+     * [EN] Ensures the given column is inside the visible page, turning pages
+     * (forward or back) if needed. Unlike {@link #navigateToScoreCol(int)},
+     * which brings the column to the playbar and scrolls continuously, this
+     * keeps the pagination: it only jumps when the column falls outside the
+     * page. Used by lyrics editing to keep typing past the end of a page.
+     *
+     * @param col [CA] columna de partitura que ha de ser visible / [EN] score column that must be visible
+     * @return [CA] cert si s'ha canviat de pàgina / [EN] true if the page changed
+     */
+    public boolean ensureScoreColVisible(int col) {
+        if (col < 0) return false;
+        int nColsCam = Settings.getnColsCam();
+        int startCol = allPurposeScore.getCurrentCol();
+        int guard = 0;
+        while (col >= allPurposeScore.getCurrentCol() && guard++ < 4096) {
+            // El buffer només creix sota demanda; sense això nextPage() es
+            // negaria a avançar més enllà del contingut ja escrit.
+            expandBufferIfNeeded(allPurposeScore.getCurrentCol()
+                    + allPurposeScore.getFixedColsPerPage());
+            int before = allPurposeScore.getCurrentCol();
+            cam.nextPage();
+            if (allPurposeScore.getCurrentCol() == before) break; // no es pot avançar més
+        }
+        while (col < allPurposeScore.getCurrentCol() - nColsCam && guard++ < 4096) {
+            int before = allPurposeScore.getCurrentCol();
+            cam.prevPage();
+            if (allPurposeScore.getCurrentCol() == before) break;
+        }
+        if (allPurposeScore.getCurrentCol() == startCol) return false;
+        updateTextOfButtons();
+        drawFull(true);
+        return true;
     }
 
     /** Navega perquè targetScoreCol quedi al playBar. */
