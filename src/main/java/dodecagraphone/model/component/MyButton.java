@@ -45,8 +45,22 @@ public class MyButton extends MyComponent {
     protected Color colorPressed = ColorSets.getIluminatColor(BUTO);
     /** Color of the button when it is not pressed. */
     protected Color colorUnpressed = ColorSets.getEncesColor(BUTO);
-    /** True if the button is being pressed. */
-    protected boolean isPressed;
+    /**
+     * [CA] True mentre el botó està premut. És {@code volatile} perquè
+     * l'escriuen els events de ratolí (EDT) i el llegeixen els fils de
+     * repetició de {@code MyController} (Trans+/-, Faster/Slower, Louder/
+     * Quieter, avanç de columna). Sense {@code volatile} el fil de repetició
+     * podia continuar veient el valor antic després de deixar anar el botó i
+     * executava uns quants passos de més.
+     * <p>
+     * [EN] True while the button is held down. Declared {@code volatile}
+     * because it is written by mouse events (EDT) and read by the repeat
+     * threads in {@code MyController} (Trans+/-, Faster/Slower, Louder/
+     * Quieter, column stepping). Without {@code volatile} the repeat thread
+     * could keep seeing the stale value after the button was released and run
+     * a few extra steps.
+     */
+    protected volatile boolean isPressed;
     protected String tipText;
 
     /**

@@ -229,6 +229,26 @@ public class ColorSets {
     }
 
     /**
+     * [CA] Retorna el color de la vora que separa notes contigües, triat per
+     * contrast amb el color de fons de la nota (negre sobre fons clar, blanc
+     * sobre fons fosc).
+     * <p>
+     * [EN] Returns the colour of the border that separates contiguous notes,
+     * chosen for contrast against the note background colour (black on light
+     * backgrounds, white on dark ones).
+     *
+     * @param background [CA] color de fons de la nota / [EN] note background colour
+     * @return [CA] negre o blanc, el que contrasti / [EN] black or white, whichever contrasts
+     */
+    public static Color getSeparatorColor(Color background){
+        if (background == null) return Color.BLACK;
+        double lum = (0.299 * background.getRed()
+                    + 0.587 * background.getGreen()
+                    + 0.114 * background.getBlue()) / 255.0;
+        return lum > 0.5 ? Color.BLACK : Color.WHITE;
+    }
+
+    /**
      * [CA] Retorna el color del piano per a la nota MIDI absoluta indicada
      * (blanc per a tecles blanques, ivori per a tecles negres).
      * <p>

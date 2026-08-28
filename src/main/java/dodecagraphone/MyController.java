@@ -3279,12 +3279,25 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    this.transpose(-1);
-                    allPurposeScore.drawCurrentCamInOffscreen();
-                    this.getUi().getPanel().repinta(true);
-                    Thread.sleep(25);
+                    // Transposició i redibuix han d'anar a l'EDT. Fets des
+                    // d'aquest fil, l'offscreen es reescrivia mentre l'EDT el
+                    // copiava a pantalla i s'hi veia la franja en blanc del
+                    // buffer a mig esborrar. invokeAndWait, a més, garanteix
+                    // que la pausa següent compti a partir del pas ja pintat.
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        if (!togg.isPressed()) return;
+                        this.transpose(-1);
+                        allPurposeScore.drawCurrentCamInOffscreen();
+                        this.getUi().getPanel().repinta(true);
+                    });
+                    // Mateixa cadència que la resta de botons de pas de valor
+                    // (Faster/Slower/Louder/Quieter). Amb 25 ms la repetició
+                    // saltava 2-3 semitons en una premuda curta.
+                    Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -3307,12 +3320,25 @@ public class MyController {
             }
             while (togg.isPressed()) {
                 try {
-                    this.transpose(1);
-                    allPurposeScore.drawCurrentCamInOffscreen();
-                    this.getUi().getPanel().repinta(true);
-                    Thread.sleep(25);
+                    // Transposició i redibuix han d'anar a l'EDT. Fets des
+                    // d'aquest fil, l'offscreen es reescrivia mentre l'EDT el
+                    // copiava a pantalla i s'hi veia la franja en blanc del
+                    // buffer a mig esborrar. invokeAndWait, a més, garanteix
+                    // que la pausa següent compti a partir del pas ja pintat.
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        if (!togg.isPressed()) return;
+                        this.transpose(1);
+                        allPurposeScore.drawCurrentCamInOffscreen();
+                        this.getUi().getPanel().repinta(true);
+                    });
+                    // Mateixa cadència que la resta de botons de pas de valor
+                    // (Faster/Slower/Louder/Quieter). Amb 25 ms la repetició
+                    // saltava 2-3 semitons en una premuda curta.
+                    Thread.sleep(Settings.BUTTON_REPEAT_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -4157,7 +4183,12 @@ public class MyController {
         if ("".equals(fitxer)) {
             String defMidi = allPurposeScore.getTitle();
             if (defMidi == null || defMidi.isBlank()) defMidi = "partitura";
-            defMidi = defMidi.trim().replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + ".ddcgr.mid";
+            // Nom per defecte: títol + "_" + tonalitat, tal com surt al botó de to
+            // (majúscula inicial si és major, minúscula si és menor).
+            String defKey = ToneRange.getKeyName(allPurposeScore.getMidiKey(),
+                    allPurposeScore.getScaleMode());
+            defMidi = (defMidi.trim() + "_" + defKey)
+                    .replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + ".ddcgr.mid";
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
         }
         if (fitxer == null || "".equals(fitxer)) {

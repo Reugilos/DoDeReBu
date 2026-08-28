@@ -1513,17 +1513,24 @@ public class MyGridScore extends MyComponent {
 //        }
         int screenX;
         int screenY;
-        double printScaleX = (this.controller.isPrinting() && this.printFitActive) ? this.printFitScaleX : 1.0;
+        int nextScreenX;
         if (this.controller.isPrinting()){
             screenX = (int) Math.round(this.getPrintScreenX(col));
+            nextScreenX = (int) Math.round(this.getPrintScreenX(col + Settings.getnColsSquare()));
             screenY = (int) Math.round(this.getScreenY(row * Settings.getnRowsSquare()));
         } else {
             screenX = (int) Math.round(this.getOffScreenScreenX(col));
+            nextScreenX = (int) Math.round(this.getOffScreenScreenX(col + Settings.getnColsSquare()));
             screenY = (int) Math.round(this.getOffScreenScreenY(row * Settings.getnRowsSquare()));
         }
         // this.width = Settings.getColWidth() * nCols;
         //double h = this.height;
-        int wdth = (int) Math.ceil(Settings.getSquareWidth() * printScaleX);
+        // Amplada exacta fins a l'inici de la columna següent. Amb amplades de
+        // columna fraccionàries, Math.ceil feia que cada quadrat trepitgés el
+        // primer píxel del següent; com que les columnes es dibuixen en ordre
+        // descendent, la vora esquerra de cada nota quedava pintada amb el color
+        // de la nota anterior i les notes contigües es veien enganxades.
+        int wdth = Math.max(1, nextScreenX - screenX);
         int hght = (int) Math.ceil(Settings.getSquareHeight());
         //System.out.println("MyGridSquare::Draw: hght = "+(int) hght);
 
@@ -1590,9 +1597,15 @@ public class MyGridScore extends MyComponent {
                         g.setColor(ColorSets.getGridSquareFontColor(midi));
                         g.drawString(name, (int) (2 + screenX + wdth / 3), (int) (screenY + hght * 0.8));
                     }
-                    // Border esquerre sempre en color de font (contrasta amb el fons de nota)
-                    g.setColor(ColorSets.getGridSquareFontColor(midi));
+                    // Vora esquerra: separa notes contigües. El color de font és
+                    // blanc per a 9 de les 12 notes i desapareixia sobre fons de
+                    // nota clars; ara es tria per contrast amb el fons real i
+                    // s'engruixeix a 2 px perquè sigui sempre visible.
+                    Stroke sepStroke = g.getStroke();
+                    g.setColor(ColorSets.getSeparatorColor(sq.getColor()));
+                    g.setStroke(new BasicStroke(2f));
                     g.drawLine(screenX + 1, screenY, screenX + 1, screenY + hght-1);
+                    g.setStroke(sepStroke);
 
                 }
                 if (sq.isSqDotted() && !sq.isSq_is_linked()) {
