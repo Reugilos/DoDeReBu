@@ -81,6 +81,7 @@ Conseqüències:
 - Totes les coordenades de la graella en columnes de partitura (no píxels); `Settings.getColWidth()` per convertir.
 - `nRows` = nombre de files de la franja (chord line = 3 files, lyrics = 2 files aprox.).
 - `nKeys` = nombre de tecles (files) de la graella de notes.
+- `config.properties` es llegeix **i** s'escriu en UTF-8 (`AppConfig`). Els fitxers antics, escrits en ISO-8859-1, es detecten i es rellegeixen amb aquell joc de caràcters (`readTextTolerant`); el primer desat els converteix a UTF-8.
 
 ## Durada de l'últim acord (`updateStopMarker`)
 

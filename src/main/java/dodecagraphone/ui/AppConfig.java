@@ -6,7 +6,8 @@
 package dodecagraphone.ui;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.charset.*;
 import java.nio.file.*;
 import java.util.*;
 
@@ -277,14 +278,43 @@ public final class AppConfig {
             }
         }
 
-        Files.write(userFile, out, StandardCharsets.ISO_8859_1);
+        // UTF-8, igual que loadFromFile: si s'escrivís en ISO-8859-1, els accents
+        // dels comentaris (i de valors com les últimes carpetes usades) es
+        // llegirien malament tant des de l'app com des d'un editor de text.
+        Files.write(userFile, out, StandardCharsets.UTF_8);
     }
 
     private void loadFromFile(Path path) throws IOException {
-        try (InputStream in = new FileInputStream(path.toFile());
-             Reader r = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-            props.clear();
+        props.clear();
+        try (Reader r = new StringReader(readTextTolerant(path))) {
             props.load(r);
+        }
+    }
+
+    /**
+     * [CA] Llegeix el fitxer en UTF-8 i, si conté bytes que no són UTF-8 vàlid
+     * (fitxers desats per versions anteriors, que escrivien en ISO-8859-1), el
+     * rellegeix en ISO-8859-1. Així els accents es recuperen bé vingui com
+     * vingui el fitxer, i el desat següent ja el deixa en UTF-8.
+     * <p>
+     * [EN] Reads the file as UTF-8 and, if it contains bytes that are not valid
+     * UTF-8 (files saved by earlier versions, which wrote ISO-8859-1), re-reads
+     * it as ISO-8859-1. Accented characters are thus recovered whichever
+     * encoding the file uses, and the next save leaves it in UTF-8.
+     *
+     * @param path [CA] Fitxer a llegir / [EN] File to read
+     * @return [CA] Contingut del fitxer / [EN] File content
+     * @throws IOException [CA] Si falla la lectura / [EN] If reading fails
+     */
+    private static String readTextTolerant(Path path) throws IOException {
+        byte[] bytes = Files.readAllBytes(path);
+        CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
+        try {
+            return decoder.decode(ByteBuffer.wrap(bytes)).toString();
+        } catch (CharacterCodingException ex) {
+            return new String(bytes, StandardCharsets.ISO_8859_1);
         }
     }
 
