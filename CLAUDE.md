@@ -173,6 +173,10 @@ en lloc del càlcul estàndard `relX / colWidth`.
 ## Punts de retorn (tags)
 - `punt-de-partida` — abans de la sèrie de correccions de l'agost del 2026.
 - `divendres-28-8-26` — amb les sis tandes de correccions fetes.
+- `29-8-26` — ajuda reescrita i javadoc revisat, encara sense castellà.
+- `castella-29-8-26` — tot l'anterior més la interfície en castellà (`ca`/`en`/`es`).
+
+Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
 
 ## Historial de canvis recents (commits rellevants)
 - **be0a658** Castellà: `messages_es.properties` amb les 496 claus traduïdes; s'activa amb `ui.language=es`. Els textos de `ca`/`en` sobre l'idioma esmenten els tres.
