@@ -27,6 +27,7 @@ El codi font és a `src/main/java/dodecagraphone/`.
 | `ui/I18n.java` | Internacionalització (`I18n.t("clau")`, `I18n.f("clau", arg)`) |
 | `resources/i18n/messages_ca.properties` | Textos en català |
 | `resources/i18n/messages_en.properties` | Textos en anglès |
+| `resources/i18n/messages_es.properties` | Textos en castellà |
 
 ## Conceptes arquitectònics essencials
 
@@ -76,6 +77,7 @@ Conseqüències:
 
 ## Convencions de codi
 - `I18n.t("clau")` per a textos UI; `I18n.f("clau", arg)` per a textos amb paràmetres.
+- Els tres bundles (`ca`, `en`, `es`) han de tenir **el mateix joc de claus** i el mateix nombre de placeholders per clau. Es llegeixen en UTF-8 (`I18n.UTF8Control`), o sigui que els accents es poden escriure directament; els `\uXXXX` que hi ha són històrics. Als textos que passen per `I18n.f()`, l'apòstrof s'ha de doblar (`''`) perquè `MessageFormat` no se'l mengi.
 - Totes les coordenades de la graella en columnes de partitura (no píxels); `Settings.getColWidth()` per convertir.
 - `nRows` = nombre de files de la franja (chord line = 3 files, lyrics = 2 files aprox.).
 - `nKeys` = nombre de tecles (files) de la graella de notes.
@@ -173,6 +175,8 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `divendres-28-8-26` — amb les sis tandes de correccions fetes.
 
 ## Historial de canvis recents (commits rellevants)
+- **be0a658** Castellà: `messages_es.properties` amb les 496 claus traduïdes; s'activa amb `ui.language=es`. Els textos de `ca`/`en` sobre l'idioma esmenten els tres.
+- **de7c080** Ajuda reescrita (15 seccions amb índex i àncores, inclosa la de `config.properties`) i revisió completa del javadoc.
 - **e31d005** Marca de transposició (groga, per track), tips de marca amb valors, franja d'acords a 6 files, transposició amb tres opcions, fixes del blink d'arrencada.
 - **c72c1ee** MIDI extern: compàs i tonalitat es llegeixen de totes les pistes abans de convertir notes (`applyInitialMetaFromSequence`). El `case 0x58` desxifrava el compàs i no l'aplicava, i la pista de direcció no es llegia mai.
 - **da5c6c1** Lletra: salt de pàgina automàtic (`ensureScoreColVisible`); editar la lletra marca la partitura com a modificada.
