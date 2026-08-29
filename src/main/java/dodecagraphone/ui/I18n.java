@@ -20,13 +20,15 @@ import java.util.ResourceBundle;
 /**
  * [CA] Gestió de la internacionalització (i18n) de l'aplicació. Carrega els
  * fitxers de missatges {@code messages_ca.properties} / {@code messages_en.properties}
- * en UTF-8 i ofereix els mètodes {@link #t(String)} i {@link #f(String, Object...)}
- * per obtenir textos traduïts. L'idioma per defecte és l'anglès.
+ * / {@code messages_es.properties} en UTF-8 i ofereix els mètodes
+ * {@link #t(String)} i {@link #f(String, Object...)} per obtenir textos
+ * traduïts. L'idioma per defecte és l'anglès.
  * <p>
  * [EN] Application internationalisation (i18n) management. Loads the message
- * files {@code messages_ca.properties} / {@code messages_en.properties} in
- * UTF-8 and provides the methods {@link #t(String)} and {@link #f(String, Object...)}
- * for translated strings. The default language is English.
+ * files {@code messages_ca.properties} / {@code messages_en.properties} /
+ * {@code messages_es.properties} in UTF-8 and provides the methods
+ * {@link #t(String)} and {@link #f(String, Object...)} for translated strings.
+ * The default language is English.
  *
  * @author Pau Bofill
  * @author Claude IA
