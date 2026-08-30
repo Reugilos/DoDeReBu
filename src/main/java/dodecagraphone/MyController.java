@@ -2977,9 +2977,7 @@ public class MyController {
     }
 
     public void onPrintButtonPressed(MyButton togg) {
-        String defaultName = allPurposeScore.getTitle();
-        if (defaultName == null || defaultName.isBlank()) defaultName = "partitura";
-        defaultName = defaultName.trim().replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + ".ddcgr.pdf";
+        String defaultName = defaultFileName(".ddcgr.pdf");
         String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
         if (fitxer == null || fitxer.isBlank()) {
             if (togg != null) togg.setPressed(false);
@@ -4800,16 +4798,35 @@ public class MyController {
         }
     }
 
+    /**
+     * [CA] Construeix el nom que es proposa en desar: el títol de la partitura,
+     * un guió baix i la tonalitat tal com surt al botó de to (majúscula inicial
+     * si és major, minúscula si és menor), més l'extensió. Els caràcters que no
+     * valen en un nom de fitxer es substitueixen per guions baixos. Si la
+     * partitura no té títol, la base és "partitura".
+     * <p>
+     * [EN] Builds the name proposed when saving: the score title, an underscore
+     * and the key as shown on the key button (initial capital for major,
+     * lowercase for minor), plus the extension. Characters that are not valid
+     * in a file name are replaced with underscores. If the score has no title,
+     * the base is "partitura".
+     *
+     * @param extension [CA] Extensió amb el punt, p.ex. {@code ".ddcgr.mid"} /
+     *                  [EN] Extension including the dot, e.g. {@code ".ddcgr.mid"}
+     * @return [CA] Nom de fitxer proposat / [EN] Proposed file name
+     */
+    private String defaultFileName(String extension) {
+        String base = allPurposeScore.getTitle();
+        if (base == null || base.isBlank()) base = "partitura";
+        String key = ToneRange.getKeyName(allPurposeScore.getMidiKey(),
+                allPurposeScore.getScaleMode());
+        return (base.trim() + "_" + key)
+                .replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + extension;
+    }
+
     public void saveScore(String fitxer) {
         if ("".equals(fitxer)) {
-            String defMidi = allPurposeScore.getTitle();
-            if (defMidi == null || defMidi.isBlank()) defMidi = "partitura";
-            // Nom per defecte: títol + "_" + tonalitat, tal com surt al botó de to
-            // (majúscula inicial si és major, minúscula si és menor).
-            String defKey = ToneRange.getKeyName(allPurposeScore.getMidiKey(),
-                    allPurposeScore.getScaleMode());
-            defMidi = (defMidi.trim() + "_" + defKey)
-                    .replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + ".ddcgr.mid";
+            String defMidi = defaultFileName(".ddcgr.mid");
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
         }
         if (fitxer == null || "".equals(fitxer)) {
