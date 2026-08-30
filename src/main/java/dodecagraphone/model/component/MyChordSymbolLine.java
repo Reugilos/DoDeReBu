@@ -315,9 +315,21 @@ public class MyChordSymbolLine extends MyComponent {
      * cancel·la retorna l'acord original; si deixa el camp buit retorna null
      * (senyal d'esborrar).
      * <p>
+     * Després demana en quina columna del temps ha de sonar (d'1 a
+     * {@code nColsBeat} de cara a l'usuari; el model guarda 0..nColsBeat-1).
+     * Cancel·lar aquest segon diàleg, o respondre-hi una cosa que no sigui un
+     * número dins del rang, equival a cancel·lar tota l'edició: l'acord es
+     * queda tal com estava. Deixar el camp buit manté la columna que ja tenia.
+     * <p>
      * [EN] Opens a dialog to enter or edit a chord symbol. If the user
      * confirms a valid text, returns the new {@link Chord}; if cancelled
      * returns the original chord; if left empty returns null (delete signal).
+     * <p>
+     * It then asks which column within the beat it should sound on (1 to
+     * {@code nColsBeat} for the user; the model stores 0..nColsBeat-1).
+     * Cancelling that second dialog, or answering it with anything that is not
+     * a number within range, cancels the whole edit: the chord stays as it
+     * was. Leaving the field empty keeps the column it already had.
      *
      * @param oldChord [CA] acord existent (pot ser null) / [EN] existing chord (may be null)
      * @return [CA] nou acord, acord original (cancel·lació) o null (esborrar) /
@@ -357,15 +369,29 @@ public class MyChordSymbolLine extends MyComponent {
         // graella; el model les guarda com a offset 0..nColsBeat-1.
         int nColsBeat = Settings.getnColsBeat();
         int defOffset = (oldChord != null) ? oldChord.getBeatColOffset() : 0;
-        String offsetStr = MyDialogs.mostraInputDialog(
+        // AllowEmpty per distingir Cancel (null) de camp buit (""): amb
+        // mostraInputDialog les dues coses arriben com a null.
+        String offsetStr = MyDialogs.mostraInputDialogAllowEmpty(
                 I18n.f("myChordSymbolLine.enterBeatColOffset.prompt", nColsBeat),
                 I18n.t("myChordSymbolLine.enterBeatColOffset.title"),
                 "" + (defOffset + 1));
-        if (offsetStr != null && !offsetStr.trim().isEmpty()) {
+        if (offsetStr == null) {
+            return oldChord; // cancel·lat: l'acord es queda tal com estava
+        }
+        String offsetTxt = offsetStr.trim();
+        if (offsetTxt.isEmpty()) {
+            chord.setBeatColOffset(defOffset); // sense resposta: manté la columna
+        } else {
+            int offset;
             try {
-                int offset = Integer.parseInt(offsetStr.trim()) - 1;
-                chord.setBeatColOffset(Math.max(0, Math.min(nColsBeat - 1, offset)));
-            } catch (NumberFormatException ignore) { /* deixem 0 */ }
+                offset = Integer.parseInt(offsetTxt) - 1;
+            } catch (NumberFormatException ex) {
+                return oldChord; // no és un número: com cancel·lar
+            }
+            if (offset < 0 || offset >= nColsBeat) {
+                return oldChord; // fora de rang: com cancel·lar
+            }
+            chord.setBeatColOffset(offset);
         }
         return chord;
 //        String defStr = "";
