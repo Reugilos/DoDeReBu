@@ -423,10 +423,38 @@ public class MyController {
      * data. Respects {@code Settings.isTipsVisible()} automatically.
      */
     public void showClipboardTip() {
+        showCenteredTip(I18n.t("clipboard.full.tip"));
+    }
+
+    /**
+     * [CA] Mostra el missatge flotant que demana on s'ha d'enganxar. Es crida
+     * des de {@link #startPaste()}, un cop el porta-retalls i el track de
+     * destí ja estan resolts, i desapareix al primer clic.
+     * <p>
+     * [EN] Shows the floating message asking where to paste. Called from
+     * {@link #startPaste()} once the clipboard and target track are resolved;
+     * it disappears on the first click.
+     */
+    public void showPasteTip() {
+        showCenteredTip(I18n.t("paste.clickToPlace.tip"));
+    }
+
+    /**
+     * [CA] Mostra un tip centrat a sobre de la franja d'acords i el marca com
+     * a visible, de manera que {@code onMouseMoved} no el tapi amb els tips
+     * normals fins que l'usuari faci clic.
+     * <p>
+     * [EN] Shows a tooltip centred above the chord strip and marks it visible,
+     * so that {@code onMouseMoved} does not replace it with the regular
+     * tooltips until the user clicks.
+     *
+     * @param text [CA] Text ja traduït / [EN] Already translated text
+     */
+    private void showCenteredTip(String text) {
         double tipX = Settings.getScreenWidth() / 2.0;
         double tipY = Settings.getChordFirstRow() * Settings.getRowHeight() + 30;
         this.buttons.hideTip();
-        this.buttons.showCustomTip(I18n.t("clipboard.full.tip"), tipX, tipY);
+        this.buttons.showCustomTip(text, tipX, tipY);
         this.clipboardTipVisible = true;
         this.lastTipButton = -1;
     }
@@ -1407,6 +1435,7 @@ public class MyController {
             this.pasteCh     = this.mixer.getCurrentChannelOfTrack(targetTr);
             this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
         }
+        showPasteTip();
     }
 
     public boolean isPendingPaste() { return pendingPaste; }
