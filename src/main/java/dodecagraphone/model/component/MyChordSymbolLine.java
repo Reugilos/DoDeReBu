@@ -352,16 +352,18 @@ public class MyChordSymbolLine extends MyComponent {
         if (!chord.isValidChord() || chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) {
             return chord; // text lliure o acord no vàlid: no demanem offset
         }
-        // Preguntem en quina columna del beat ha de sonar
+        // Preguntem en quina columna del beat ha de sonar. De cara a l'usuari
+        // les columnes van d'1 a nColsBeat, com al tip del cursor de la
+        // graella; el model les guarda com a offset 0..nColsBeat-1.
         int nColsBeat = Settings.getnColsBeat();
         int defOffset = (oldChord != null) ? oldChord.getBeatColOffset() : 0;
         String offsetStr = MyDialogs.mostraInputDialog(
-                I18n.f("myChordSymbolLine.enterBeatColOffset.prompt", nColsBeat - 1),
+                I18n.f("myChordSymbolLine.enterBeatColOffset.prompt", nColsBeat),
                 I18n.t("myChordSymbolLine.enterBeatColOffset.title"),
-                "" + defOffset);
+                "" + (defOffset + 1));
         if (offsetStr != null && !offsetStr.trim().isEmpty()) {
             try {
-                int offset = Integer.parseInt(offsetStr.trim());
+                int offset = Integer.parseInt(offsetStr.trim()) - 1;
                 chord.setBeatColOffset(Math.max(0, Math.min(nColsBeat - 1, offset)));
             } catch (NumberFormatException ignore) { /* deixem 0 */ }
         }
