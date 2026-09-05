@@ -176,6 +176,7 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `divendres-28-8-26` — amb les sis tandes de correccions fetes.
 - `29-8-26` — ajuda reescrita i javadoc revisat, encara sense castellà.
 - `castella-29-8-26` — tot l'anterior, més la interfície en castellà (`ca`/`en`/`es`), el `config.properties` en UTF-8 i `ConfigManager` esborrat.
+- `5-9-26` — tot l'anterior, més la columna de l'acord numerada d'1 a 12, el tip de Ctrl-V i el nom del PDF igual que el del MIDI.
 
 Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
 
