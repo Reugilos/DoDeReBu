@@ -69,8 +69,10 @@ O sigui `displayOffset = dibuix − so`. **Negatiu vol dir que sona per sobre de
 **No es desa mai al fitxer.** El calcula `InstrumentRange.calcDisplayOffset(programa, lowestMidi, highestMidi)`, que tria el múltiple de 12 que maximitza la superposició entre la tessitura del CSV i la graella. Conseqüències:
 
 - En **desar**, cada pista no percussiva rep un `PROGRAM_CHANGE` a la seva primera nota (`pcEscrit` a `saveMidiScore`). El bucle va per columnes, no per pistes, o sigui que les pistes hi surten barrejades i cal portar el compte. Sense això, les pistes segona i següents carregarien amb offset 0.
-- En **carregar**, un pre-scan busca el primer `PROGRAM_CHANGE` de cada pista i fixa l'offset **abans** de convertir cap nota. Cal el pre-scan perquè el `PROGRAM_CHANGE` va al mateix tick que la primera nota i pot quedar-hi després.
+- En **carregar**, `applyInitialProgramsFromSequence` escaneja **totes** les pistes i assigna a cada canal el programa del seu tick més baix. Després, un pre-scan per pista busca el seu primer `PROGRAM_CHANGE` i fixa l'offset **abans** de convertir cap nota; si la pista no en porta cap, pren l'offset del canal on toquen les seves notes.
 - Els fitxers antics porten un text meta `displayOffset=`; **ja no es llegeix**.
+
+**Per què cal escanejar totes les pistes.** Molts MIDI externs (MuseScore i companyia) posen tots els `PROGRAM_CHANGE` a la pista de direcció. Aquella pista no té notes, `isMetaTrack` la dóna per capçalera i el bucle de càrrega **se la salta sencera**: l'instrument no s'assignava mai. Les notes es col·locaven amb offset 0 per accident i, pitjor, en desar s'escrivia el `PROGRAM_CHANGE` de l'instrument *per defecte* del canal, o sigui que la càrrega següent calculava un altre offset i desplaçava la partitura avall. **El cicle no tancava: cada desat empitjorava.** És el mateix motiu pel qual ja existia `applyInitialMetaFromSequence` per al compàs i la tonalitat.
 
 ### Els dos modes de graella i `MIDDLE_C`
 
@@ -92,6 +94,29 @@ Que `MIDDLE_C` no depengui del mode té una conseqüència important: **la tonal
 Els dos `while` de `midiToKeyId` no tenen topall (a diferència de `clampToRange`). És segur mentre el rang tingui almenys una octava; `placeNote` comprova el `keyId` abans d'indexar, com ja feia `placeNoteAtRow`.
 
 El nom del fitxer **no es mira mai** en carregar: `.ddcgr` només surt als diàlegs de desar. El que distingeix un MIDI extern és que no porta les metadades 0x7F de l'app.
+
+### Idiomes i diàleg de benvinguda
+
+Els idiomes **es descobreixen sols**: `I18n.getInstalledLanguageTags()` escaneja `i18n/messages_*.properties`, tant des d'un directori de classes (NetBeans) com de dins del JAR (portable). `LANGUAGE_TAGS_IN_ORDER` (`en`, `ca`, `es`) **no és la llista de disponibles**, només diu quins van al davant; la resta s'afegeix al final per ordre alfabètic. Si l'escaneig falla, cau a comprovar aquells tags un per un.
+
+Per afegir un idioma n'hi ha prou amb deixar el seu `messages_XX.properties` a `resources/i18n/`. Si li falta `language.name`, el botó cau al nom que en dóna Java (`Locale.getDisplayLanguage`); si li falta `main.selectLanguage`, no posa línia a la pregunta però conserva el botó. Mai s'ensenya un `??clau??`.
+
+`I18n.tIn(Locale, clau)` i `fIn(Locale, clau, args)` llegeixen una clau en un idioma concret **sense canviar l'idioma actiu**; és el que permet muntar un text multilingüe. Els bundles queden a la memòria cau.
+
+**Arrencada** (`MyMain`), només si `showWelcomeDialog=true`:
+1. `MyDialogs.triaIdioma()` pregunta l'idioma en tots els instal·lats alhora, amb un botó per idioma. Va **abans** de construir la finestra principal, perquè tota la interfície es munti ja en l'idioma triat i no calgui reiniciar.
+2. `MyDialogs.mostraBenvinguda()` explica on és el `config.properties`, ja només en aquell idioma. A la portable ningú no veu la consola.
+3. Es desen `ui.language` i `showWelcomeDialog=false`. Aquest desat també reescriu els comentaris del config en l'idioma nou.
+
+`showWelcomeDialog` s'entrega a `true` als defaults; l'usuari el pot tornar a posar a `true` a mà sense esborrar el config sencer.
+
+### El calaix de sastre de les metadades
+
+En carregar, tota metadada de text 0x7F que no comenci per cap dels prefixos coneguts s'acumula a `this.messages` unida amb `"; "` (`MyMidiScore`), i en desar es torna a escriure. **Si una clau que el desat escriu no és a la llista d'exclusions, la cadena es duplica a cada cicle obrir-desar** i el fitxer creix sense fre.
+
+Va passar amb `choiceExtended=`: la llista tenia `choice=`, i `"choiceExtended=false"` no comença per `"choice="`. Cinc fitxers de `SongsInBooklet` van arribar a acumular fins a 22 KB de brossa. En afegir el prefix, la brossa existent també desapareix sola al següent desat, perquè passa a quedar exclosa.
+
+**Regla**: qualsevol clau nova que s'escrigui amb `addTextMeta(metaTrack, ...)` s'ha d'afegir alhora a la llista d'exclusions. Les de pista (`addTextMeta(midiTrack, ...)`) van per `readTrackData` i no toquen aquest calaix.
 
 ### getEditingCol()
 Converteix la posició del playbar (càmera) en columna de partitura, afegint el delay:
@@ -116,7 +141,7 @@ Conseqüències:
 
 ## Convencions de codi
 - `I18n.t("clau")` per a textos UI; `I18n.f("clau", arg)` per a textos amb paràmetres.
-- Els tres bundles (`ca`, `en`, `es`) han de tenir **el mateix joc de claus** i el mateix nombre de placeholders per clau. Es llegeixen en UTF-8 (`I18n.UTF8Control`), o sigui que els accents es poden escriure directament; els `\uXXXX` que hi ha són històrics. Als textos que passen per `I18n.f()`, l'apòstrof s'ha de doblar (`''`) perquè `MessageFormat` no se'l mengi.
+- Els bundles (`ca`, `en`, `es`, i els que s'afegeixin) han de tenir **el mateix joc de claus** i el mateix nombre de placeholders per clau. Es llegeixen en UTF-8 (`I18n.UTF8Control`), o sigui que els accents es poden escriure directament; els `\uXXXX` que hi ha són històrics. Als textos que passen per `I18n.f()`, l'apòstrof s'ha de doblar (`''`) perquè `MessageFormat` no se'l mengi.
 - Totes les coordenades de la graella en columnes de partitura (no píxels); `Settings.getColWidth()` per convertir.
 - `nRows` = nombre de files de la franja (chord line = 3 files, lyrics = 2 files aprox.).
 - `nKeys` = nombre de tecles (files) de la graella de notes.
@@ -239,6 +264,9 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **5c8dc50** Multipista: `applyInitialProgramsFromSequence` llegeix el `PROGRAM_CHANGE` de la pista de direcció. Sense això, un MIDI extern es desplaçava avall a cada desat.
+- **1cd1e04** Fix del `choiceExtended`, que inflava els fitxers a cada desat; javadoc de `main()` recol·locat.
+- **47d062b** Diàleg de benvinguda amb tria d'idioma, flag `showWelcomeDialog` i detecció automàtica d'idiomes.
 - **tag `7-9-26`** Do central = do4 en tots dos modes de graella. CSV: glock 67–96 → 79–103. `ToneRange`: metal·lòfon 55–79 i `MIDDLE_C` sempre 60. El `displayOffset` deixa de desar-se i es calcula sempre de l'instrument; un `PROGRAM_CHANGE` per pista en desar; `transposeChoiceAndKey`, el lector de `displayOffset=` i `displayOffsetFromMetadata` eliminats. Marca de transposició amb signe de músic (t+24). Guarda de `keyId` a `placeNote`.
 - **be0a658** Castellà: `messages_es.properties` amb les 496 claus traduïdes; s'activa amb `ui.language=es`. Els textos de `ca`/`en` sobre l'idioma esmenten els tres.
 - **de7c080** Ajuda reescrita (15 seccions amb índex i àncores, inclosa la de `config.properties`) i revisió completa del javadoc.
