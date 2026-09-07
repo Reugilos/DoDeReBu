@@ -11,6 +11,7 @@ import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.model.component.*;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -59,6 +60,18 @@ public class DodecagramPdfPrinter {
     private static final int   TARGET_ROWS     = 4;
     /** Max row image height as fraction of usable page height (single-row case). */
     private static final float MAX_ROW_FRAC    = 0.5f;
+    /**
+     * [CA] Estirament vertical maxim de la franja de lletra al PDF. La fila es
+     * dibuixa amb escala no uniforme (amplada a scaleX, alcada a scaleY, menor
+     * quan calen mes files per pagina), i el text hi sortia aixafat. La lletra
+     * es dibuixa estirada per compensar-ho, fins a aquest limit.
+     * <p>
+     * [EN] Maximum vertical stretch of the lyrics band in the PDF. The row is
+     * drawn with a non-uniform scale (width at scaleX, height at scaleY, which
+     * is smaller once more rows per page are needed), which flattened the text.
+     * The lyrics are drawn stretched to compensate, up to this limit.
+     */
+    private static final float MAX_LYRICS_STRETCH = 2.5f;
 
     /**
      * [CA] Crea un nou DodecagramPdfPrinter per al controlador especificat.
@@ -146,15 +159,28 @@ public class DodecagramPdfPrinter {
         float availFirst = PAGE_H - 2 * MARGIN - firstHeaderH;
         int   chordH     = chordImg.getHeight();
         int   gridH      = gridImg.getHeight();
-        int   lyricsH    = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
-        int   scoreRowH  = chordH + gridH + lyricsH;
-        if (scoreRowH <= 0) return;
+        int   lyricsSrcH = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
+        int   scoreRowH0 = chordH + gridH + lyricsSrcH;
+        if (scoreRowH0 <= 0) return;
 
         // Dynamic row height: use fewer "target rows" when content is small so rows grow.
         // Cap at MAX_ROW_FRAC of available height (e.g. half page for a single row).
         int   effectiveTarget = Math.max(1, Math.min(totalRows, TARGET_ROWS));
         float maxRowImgH = (availFirst + ROW_GAP) / effectiveTarget - ROW_GAP - MEASURE_LABEL_H;
         maxRowImgH = Math.min(maxRowImgH, availFirst * MAX_ROW_FRAC - MEASURE_LABEL_H);
+
+        // Quant s'aixafa la fila: scaleY < scaleX vol dir compressio vertical.
+        // La franja de lletra es dibuixa estirada per aquest mateix factor, o
+        // sigui que despres de la compressio el text torna a la seva proporcio.
+        // L'alcada de la fila al paper esta topada per maxRowImgH, o sigui que
+        // el que hi guanya la lletra ho perden les altres franges: com que la
+        // lletra son 3 files de ~61, el cost per a la graella es d'un 2-3%.
+        float scaleY0    = (maxRowImgH > 0) ? Math.min(scaleX, maxRowImgH / scoreRowH0) : scaleX;
+        float lyricsStretch = (scaleY0 > 0)
+                ? Math.min(MAX_LYRICS_STRETCH, Math.max(1f, scaleX / scaleY0))
+                : 1f;
+        int   lyricsH    = Math.round(lyricsSrcH * lyricsStretch);
+        int   scoreRowH  = chordH + gridH + lyricsH;
         float scaleY     = (maxRowImgH > 0) ? Math.min(scaleX, maxRowImgH / scoreRowH) : scaleX;
         float keyPdfW    = keyWidthPx * scaleX;
         float rowImgPdfH = scoreRowH * scaleY;
@@ -216,7 +242,8 @@ public class DodecagramPdfPrinter {
                 int drawSliceW  = Math.max(0, Math.min(sliceW, contentPx));
 
                 BufferedImage rowImg = composeRow(keyImg, chordImg, gridImg, lyricsImg,
-                        keyWidthPx, startPx, drawSliceW, rowSlicePx, scoreRowH, chordH, gridH, lyricsH);
+                        keyWidthPx, startPx, drawSliceW, rowSlicePx, scoreRowH, chordH, gridH,
+                        lyricsH, lyricsSrcH);
 
                 // Les marques de la columna 0 no s'hi dibuixen aqui: print() crida
                 // drawFullCamInOffscreen(), que ja les ha pintades a la imatge
@@ -292,7 +319,7 @@ public class DodecagramPdfPrinter {
     private BufferedImage composeRow(BufferedImage keyImg, BufferedImage chordImg,
             BufferedImage gridImg, BufferedImage lyricsImg,
             int keyW, int startPx, int sliceW, int fullSliceW,
-            int totalH, int chordH, int gridH, int lyricsH) {
+            int totalH, int chordH, int gridH, int lyricsH, int lyricsSrcH) {
         int rowImgW = keyW + fullSliceW;
         BufferedImage row = new BufferedImage(rowImgW, totalH, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = row.createGraphics();
@@ -321,14 +348,19 @@ public class DodecagramPdfPrinter {
                 g.drawImage(gridImg, keyW, chordH, keyW + gSrcW, chordH + gSrcH,
                         startPx, 0, startPx + gSrcW, gSrcH, null);
 
-            // Lyrics band
+            // Lyrics band: l'origen es l'alcada natural de la franja i la
+            // destinacio la estirada, per compensar la compressio vertical de la
+            // fila. Interpolacio bilineal perque el text no quedi dentat.
             if (lyricsImg != null && lyricsH > 0) {
                 int lSrcW = Math.min(sliceW, Math.max(0, lyricsImg.getWidth() - startPx));
-                int lSrcH = Math.min(lyricsH, lyricsImg.getHeight());
-                if (lSrcW > 0 && lSrcH > 0)
+                int lSrcH = Math.min(lyricsSrcH, lyricsImg.getHeight());
+                if (lSrcW > 0 && lSrcH > 0) {
+                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                            RenderingHints.VALUE_INTERPOLATION_BILINEAR);
                     g.drawImage(lyricsImg, keyW, chordH + gridH,
-                            keyW + lSrcW, chordH + gridH + lSrcH,
+                            keyW + lSrcW, chordH + gridH + lyricsH,
                             startPx, 0, startPx + lSrcW, lSrcH, null);
+                }
             }
         }
 
