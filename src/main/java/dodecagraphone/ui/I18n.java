@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import javax.swing.UIManager;
 
 /**
  * [CA] Gestió de la internacionalització (i18n) de l'aplicació. Carrega els
@@ -322,6 +323,55 @@ public final class I18n {
         }
         locale = newLocale;
         bundle = loadBundle(locale);
+        applySwingDefaults();
+    }
+
+    /**
+     * [CA] Tradueix el que Swing es dibuixa sol: els botons del
+     * {@link javax.swing.JOptionPane} (Yes/No/OK/Cancel) i els textos del
+     * {@link javax.swing.JFileChooser} (Open/Save/Cancel, «Look in», «File name»,
+     * «Files of type» i els tooltips de la barra). Swing els treu dels seus propis bundles, que només cobreixen
+     * els idiomes que porta el JDK: en català sortien en anglès encara que
+     * {@code Locale.getDefault()} fos {@code ca}. Aquí es prenen del nostre bundle.
+     * <p>
+     * <b>Ordre</b>: {@code UIManager.setLookAndFeel()} reinicialitza els valors per
+     * defecte i s'emporta aquests, o sigui que s'ha de tornar a cridar <b>després</b>
+     * de fixar el look-and-feel. Es crida sola a cada {@link #setLocale(Locale)}, i
+     * {@code MyMain} la torna a cridar un cop instal·lat el L&amp;F.
+     * <p>
+     * [EN] Translates the buttons Swing draws by itself in {@link javax.swing.JOptionPane}
+     * (Yes/No/OK/Cancel). Swing takes them from its own bundles, which only cover the
+     * languages the JDK ships: in Catalan they came out in English even with
+     * {@code Locale.getDefault()} set to {@code ca}. Here they are taken from our bundle.
+     * <p>
+     * <b>Ordering</b>: {@code UIManager.setLookAndFeel()} resets the defaults and wipes
+     * these, so it must be called <b>after</b> the look-and-feel is set. It runs on every
+     * {@link #setLocale(Locale)}, and {@code MyMain} calls it again once the L&amp;F is in.
+     */
+    public static void applySwingDefaults() {
+        UIManager.put("OptionPane.yesButtonText",    t("btn.yes"));
+        UIManager.put("OptionPane.noButtonText",     t("btn.no"));
+        UIManager.put("OptionPane.okButtonText",     t("btn.ok"));
+        UIManager.put("OptionPane.cancelButtonText", t("btn.cancel"));
+
+        // El JFileChooser ja rep el titol i els filtres traduits de MyDialogs;
+        // aixo es tot el que Swing s'hi dibuixa sol.
+        UIManager.put("FileChooser.openButtonText",   t("btn.open"));
+        UIManager.put("FileChooser.saveButtonText",   t("btn.save"));
+        UIManager.put("FileChooser.cancelButtonText", t("btn.cancel"));
+        UIManager.put("FileChooser.openButtonToolTipText",   t("btn.open"));
+        UIManager.put("FileChooser.saveButtonToolTipText",   t("btn.save"));
+        UIManager.put("FileChooser.cancelButtonToolTipText", t("btn.cancel"));
+        UIManager.put("FileChooser.lookInLabelText",        t("filechooser.lookIn"));
+        UIManager.put("FileChooser.saveInLabelText",        t("filechooser.saveIn"));
+        UIManager.put("FileChooser.fileNameLabelText",      t("filechooser.fileName"));
+        UIManager.put("FileChooser.filesOfTypeLabelText",   t("filechooser.filesOfType"));
+        UIManager.put("FileChooser.acceptAllFileFilterText", t("filechooser.allFiles"));
+        UIManager.put("FileChooser.upFolderToolTipText",   t("filechooser.upFolder"));
+        UIManager.put("FileChooser.newFolderToolTipText",  t("filechooser.newFolder"));
+        UIManager.put("FileChooser.homeFolderToolTipText", t("filechooser.home"));
+        UIManager.put("FileChooser.listViewButtonToolTipText",    t("filechooser.list"));
+        UIManager.put("FileChooser.detailsViewButtonToolTipText", t("filechooser.details"));
     }
 
     /**

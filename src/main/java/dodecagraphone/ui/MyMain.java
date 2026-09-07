@@ -69,6 +69,9 @@ public class MyMain {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {
         }
+        // Despres del L&F: instal·lar-lo esborra els valors del UIManager, i amb
+        // ells els botons Yes/No/OK/Cancel que hem traduit.
+        I18n.applySwingDefaults();
 
         SwingUtilities.invokeLater(() -> {
             // Primera arrencada: triar idioma i explicar on és el config, un sol cop.
