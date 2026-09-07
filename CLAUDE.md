@@ -232,7 +232,7 @@ displayOffset=  →  -24
 
 El `+ displayOffset_antic` no és sempre +12: `Vem kan segla forutan vind_mi` el tenia a 0 i les seves notes no s'havien de moure gens. La percussió (canal 9, `displayOffset=0`) no es toca.
 
-Migrats: els 16 `.ddcgr.mid` de `SongsInBooklet/` i els 10 de `../Complements_Bu/OtherSongsBu/`. **Còpies de seguretat** a `SongsInBooklet_bkp_20260907/` i `../Complements_Bu/OtherSongsBu_bkp_20260907/`.
+Migrats: els 16 `.ddcgr.mid` de `SongsInBooklet/` i els 10 de `../Complements_Bu/OtherSongsBu/`. **Còpies de seguretat**, totes dues fora del control de versions: `../Complements_Bu/SongsInBooklet_bkp_20260907/` i `../Complements_Bu/OtherSongsBu_bkp_20260907/`.
 
 Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mid`, `CucutILaGuimbarda.mid` i tot `../Complements_Bu/OtherSongFullRange/`. Els PDFs de `OtherSongsBu/Dodecagrams/` han quedat desfasats: mostren l'octava antiga.
 
