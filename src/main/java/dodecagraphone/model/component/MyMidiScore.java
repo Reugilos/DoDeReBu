@@ -751,7 +751,12 @@ public class MyMidiScore extends MyExercise {
                             System.out.println("Chord loaded at col " + col + ": " + chord.basicString());
                         }
                     } else {
+                        // Compte: "choiceExtended=" NO comenca per "choice=", i si
+                        // no s'exclou explicitament cau al calaix de sastre de sota,
+                        // s'acumula a this.messages i es torna a desar. Cada desat
+                        // duplicava la cadena; els fitxers creixien sense fre.
                         if (!(text.startsWith("choice=")
+                                || text.startsWith("choiceExtended=")
                                 || text.startsWith("midiKey=")
                                 || text.startsWith("scaleMode=")
                                 || text.startsWith("usePentagramaStrips=")

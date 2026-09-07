@@ -25,20 +25,6 @@ import javax.swing.UIManager;
 public class MyMain {
 
     /**
-     * [CA] Mètode principal. Carrega la configuració, configura l'idioma,
-     * aplica el look-and-feel del sistema i crea la finestra principal.
-     * Un {@link javax.swing.Timer} crida {@code update()} cada
-     * {@link Settings#REFRESH_PERIOD} ms per refrescar la UI.
-     * <p>
-     * [EN] Main method. Loads configuration, sets the locale, applies the
-     * system look-and-feel and creates the main window. A
-     * {@link javax.swing.Timer} calls {@code update()} every
-     * {@link Settings#REFRESH_PERIOD} ms to refresh the UI.
-     *
-     * @param args [CA] arguments de línia de comandes (no s'utilitzen) /
-     *             [EN] command-line arguments (unused)
-     */
-    /**
      * [CA] Clau del {@code config.properties} que decideix si a l'arrencada surt
      * el diàleg de benvinguda: la tria d'idioma i, tot seguit, l'explicació d'on
      * és la configuració. S'entrega a {@code true}; un cop mostrat, l'aplicació
@@ -53,6 +39,20 @@ public class MyMain {
      */
     private static final String CLAU_BENVINGUDA = "showWelcomeDialog";
 
+    /**
+     * [CA] Mètode principal. Carrega la configuració, configura l'idioma,
+     * aplica el look-and-feel del sistema i crea la finestra principal.
+     * Un {@link javax.swing.Timer} crida {@code update()} cada
+     * {@link Settings#REFRESH_PERIOD} ms per refrescar la UI.
+     * <p>
+     * [EN] Main method. Loads configuration, sets the locale, applies the
+     * system look-and-feel and creates the main window. A
+     * {@link javax.swing.Timer} calls {@code update()} every
+     * {@link Settings#REFRESH_PERIOD} ms to refresh the UI.
+     *
+     * @param args [CA] arguments de línia de comandes (no s'utilitzen) /
+     *             [EN] command-line arguments (unused)
+     */
     public static void main(String[] args) {
         AppConfig.get().init();
         String langTag = AppConfig.get().get("ui.language", "ca");
