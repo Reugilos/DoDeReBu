@@ -38,6 +38,21 @@ public class MyMain {
      * @param args [CA] arguments de línia de comandes (no s'utilitzen) /
      *             [EN] command-line arguments (unused)
      */
+    /**
+     * [CA] Clau del {@code config.properties} que decideix si a l'arrencada surt
+     * el diàleg de benvinguda: la tria d'idioma i, tot seguit, l'explicació d'on
+     * és la configuració. S'entrega a {@code true}; un cop mostrat, l'aplicació
+     * la posa a {@code false}. L'usuari la pot tornar a posar a {@code true} per
+     * veure-ho un altre cop, sense haver d'esborrar el config sencer.
+     * <p>
+     * [EN] {@code config.properties} key deciding whether the welcome dialog
+     * appears at startup: the language choice and then the explanation of where
+     * the configuration lives. Shipped as {@code true}; once shown, the
+     * application sets it to {@code false}. The user can set it back to
+     * {@code true} to see it again, without deleting the whole config.
+     */
+    private static final String CLAU_BENVINGUDA = "showWelcomeDialog";
+
     public static void main(String[] args) {
         AppConfig.get().init();
         String langTag = AppConfig.get().get("ui.language", "ca");
@@ -56,9 +71,33 @@ public class MyMain {
         }
 
         SwingUtilities.invokeLater(() -> {
+            // Primera arrencada: triar idioma i explicar on és el config, un sol cop.
+            // La tria va ABANS de construir la finestra, perquè tota la interfície
+            // es munti ja en l'idioma escollit.
+            boolean mostrarBenvinguda = AppConfig.get().getBool(CLAU_BENVINGUDA, true);
+            if (mostrarBenvinguda) {
+                String tria = MyDialogs.triaIdioma(null);
+                if (tria != null) {
+                    I18n.setLanguageTag(tria);
+                    AppConfig.get().set("ui.language", tria);
+                    Locale.setDefault(I18n.getLocale());
+                    JComponent.setDefaultLocale(I18n.getLocale());
+                }
+            }
+
             MyUserInterface iu = new MyUserInterface();
             iu.setVisible(true);
             System.out.println(I18n.f("main.welcome", iu.getVersion(), AppConfig.get().getConfigPathForDebug()));
+
+            if (mostrarBenvinguda) {
+                // A la portable ningú no veu la consola: el mateix missatge, ja en
+                // l'idioma triat, en una finestra amb un botó OK.
+                MyDialogs.mostraBenvinguda(iu, iu.getVersion(), AppConfig.get().getConfigPathForDebug());
+                AppConfig.get().set(CLAU_BENVINGUDA, "false");
+                // Aquest desat també reescriu els comentaris del config en l'idioma nou.
+                try { AppConfig.get().save(); } catch (IOException ignored) {}
+            }
+
             new javax.swing.Timer(Settings.REFRESH_PERIOD, e -> iu.update()).start();
         });
     }

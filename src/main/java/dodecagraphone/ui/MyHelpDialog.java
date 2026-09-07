@@ -410,6 +410,7 @@ public class MyHelpDialog {
     private static String[][] helpConfig() {
         return new String[][] {
             { "ui.language",                          I18n.t("help.config.language.desc") },
+            { "showWelcomeDialog",                    I18n.t("help.config.showWelcomeDialog.desc") },
             { "isMetallophone",                       I18n.t("help.config.metallophone.desc") },
             { "lowestMidi / highestMidi",             I18n.t("help.config.midirange.desc") },
             { "screenWidthRatio / screenHeightRatio", I18n.t("help.config.window.desc") },

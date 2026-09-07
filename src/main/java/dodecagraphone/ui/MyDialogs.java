@@ -7,6 +7,8 @@ package dodecagraphone.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -198,6 +200,115 @@ public class MyDialogs {
      * @param missatge [CA] Missatge a mostrar / [EN] Message to display
      * @param titol    [CA] Títol del diàleg / [EN] Dialog title
      */
+    /**
+     * [CA] Demana l'idioma de la interfície. La pregunta surt en <b>tots</b> els
+     * idiomes instal·lats alhora, perquè a la primera arrencada no se sap quin
+     * entén qui mira la pantalla, i hi ha un botó per idioma retolat amb el nom
+     * que aquell idioma es dóna a si mateix.
+     * <p>
+     * Els idiomes es descobreixen sols: deixar un {@code messages_XX.properties}
+     * a {@code resources/i18n/} ja hi afegeix el botó, sense tocar codi. Si
+     * aquell fitxer encara no porta {@code main.selectLanguage}, la seva línia
+     * no surt a la pregunta, però el botó hi és igualment; i si no porta
+     * {@code language.name}, el botó es reretola amb el nom que en dóna Java.
+     * <p>
+     * Es crida <b>abans</b> de construir la finestra principal, perquè tota la
+     * interfície es munti ja en l'idioma triat.
+     * <p>
+     * [EN] Asks for the interface language. The question appears in <b>every</b>
+     * installed language at once, because on first run there is no way to know
+     * which one the person reads, and there is one button per language labelled
+     * with the name that language gives itself.
+     * <p>
+     * Languages are discovered automatically: dropping a
+     * {@code messages_XX.properties} into {@code resources/i18n/} adds its
+     * button with no code change. If that file does not carry
+     * {@code main.selectLanguage} yet, its line is left out of the question but
+     * the button is still there; and without {@code language.name} the button
+     * falls back to Java's own name for the language.
+     *
+     * @param parent [CA] Component pare (pot ser null) / [EN] Parent component (may be null)
+     * @return [CA] Tag de l'idioma triat, o {@code null} si es tanca sense triar /
+     *         [EN] Chosen language tag, or {@code null} if closed without choosing
+     */
+    public static String triaIdioma(Component parent) {
+        List<String> tags = I18n.getInstalledLanguageTags();
+
+        // La pregunta, en cada idioma que l'hagi traduïda. Un idioma acabat
+        // d'afegir que encara no porti la clau no hi posa línia, per no ensenyar
+        // un ??main.selectLanguage??, però sí que té el seu botó.
+        StringBuilder sb = new StringBuilder();
+        for (String tag : tags) {
+            if (!I18n.hasKey(tag, "main.selectLanguage")) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(System.lineSeparator());
+            }
+            sb.append(I18n.tIn(java.util.Locale.forLanguageTag(tag), "main.selectLanguage"));
+        }
+        if (sb.length() == 0) {
+            sb.append("Select input language"); // cap bundle amb la clau: millor això que res
+        }
+
+        String[] botons = new String[tags.size()];
+        for (int i = 0; i < tags.size(); i++) {
+            botons[i] = I18n.getLanguageDisplayName(tags.get(i));
+        }
+
+        JTextArea area = new JTextArea(sb.toString());
+        area.setEditable(false);
+        area.setOpaque(false);
+        area.setFocusable(false);
+        area.setFont(UIManager.getFont("Label.font") != null
+                ? UIManager.getFont("Label.font")
+                : new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+
+        int tria = JOptionPane.showOptionDialog(parent, area, I18n.tIn(java.util.Locale.ENGLISH, "main.selectLanguage"),
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, botons, botons[0]);
+
+        return (tria >= 0 && tria < tags.size()) ? tags.get(tria) : null;
+    }
+
+    /**
+     * [CA] Mostra el missatge que explica on és el {@code config.properties},
+     * en l'idioma actiu — que a l'arrencada és el que s'acaba de triar a
+     * {@link #triaIdioma(Component)}. Substitueix el
+     * {@code System.out.println} que hi havia: a la versió portable ningú no
+     * veu la consola.
+     * <p>
+     * [EN] Shows the message explaining where {@code config.properties} lives,
+     * in the active language — at startup, the one just picked in
+     * {@link #triaIdioma(Component)}. This replaces the former
+     * {@code System.out.println}: nobody sees the console in the portable build.
+     *
+     * @param parent     [CA] Component pare per centrar-hi el diàleg (pot ser null) /
+     *                   [EN] Parent component to centre on (may be null)
+     * @param appName    [CA] Nom i versió de l'aplicació / [EN] Application name and version
+     * @param configPath [CA] Ruta del config.properties / [EN] Path to config.properties
+     */
+    public static void mostraBenvinguda(Component parent, String appName, String configPath) {
+        JTextArea area = new JTextArea(I18n.f("main.welcome", appName, configPath));
+        area.setEditable(false);
+        area.setOpaque(false);
+        area.setFocusable(false);
+        area.setFont(UIManager.getFont("Label.font") != null
+                ? UIManager.getFont("Label.font")
+                : new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+
+        JScrollPane scroll = new JScrollPane(area);
+        scroll.setBorder(null);
+        scroll.getViewport().setOpaque(false);
+        scroll.setOpaque(false);
+        // Prou alt per als tres idiomes; amb més, el scroll s'encarrega de la resta.
+        Dimension pref = area.getPreferredSize();
+        scroll.setPreferredSize(new Dimension(
+                Math.min(pref.width + 30, 900),
+                Math.min(pref.height + 10, 600)));
+
+        JOptionPane.showMessageDialog(parent, scroll, appName, JOptionPane.INFORMATION_MESSAGE);
+    }
+
     public static void mostraMissatge(String missatge, String titol) {
         JOptionPane.showMessageDialog(null, missatge, titol, JOptionPane.PLAIN_MESSAGE);
     }
