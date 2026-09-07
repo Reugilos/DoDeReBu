@@ -80,8 +80,24 @@ public class Settings {
      * marks (transposition, tempo, key and volume) PLUS the pixels reserved at
      * the bottom for the attack triangle. With 5 rows they only fitted from
      * 1200 px screen height upwards; with 6 they fit from 720 px.
+     * <p>
+     * [CA] Van pujar a 8 pel PDF. El printer dibuixa la fila amb escala no
+     * uniforme (l'amplada a scaleX i l'alcada a scaleY, que es menor quan calen
+     * mes de quatre files per pagina), o sigui que la banda es comprimeix
+     * verticalment. Amb 6 files la pila de quatre marques i el trianglet
+     * omplien la banda del PDF exactament, sense marge, i fitMarkStack havia
+     * d'encongir la font fins al minim. Amb 8 la banda passa del 10% al 13% de
+     * l'alcada de la fila i les marques hi surten prou grosses.
+     * <p>
+     * [EN] Raised to 8 for the PDF. The printer draws the row with a
+     * non-uniform scale (width at scaleX, height at scaleY, which is smaller
+     * once more than four rows are needed per page), so the strip is
+     * compressed vertically. With 6 rows the stack of four marks plus the
+     * attack triangle filled the PDF strip exactly, with no margin, and
+     * fitMarkStack had to shrink the font to its minimum. With 8 the strip goes
+     * from 10% to 13% of the row height and the marks come out big enough.
      */
-    private static final int    DEFAULT_NROWS_CHORD         = 6;
+    private static final int    DEFAULT_NROWS_CHORD         = 8;
     private static final int    DEFAULT_NROWS_LYRICS        = 3;
     private static final int    DEFAULT_NCOLS_SQUARE        = 1;
     private static final int    DEFAULT_NROWS_BUTTON        = 2;

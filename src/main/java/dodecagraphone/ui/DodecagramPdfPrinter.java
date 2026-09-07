@@ -218,12 +218,10 @@ public class DodecagramPdfPrinter {
                 BufferedImage rowImg = composeRow(keyImg, chordImg, gridImg, lyricsImg,
                         keyWidthPx, startPx, drawSliceW, rowSlicePx, scoreRowH, chordH, gridH, lyricsH);
 
-                if (startCol == 0) {
-                    Graphics2D g2 = rowImg.createGraphics();
-                    g2.translate(keyWidthPx, 0);
-                    chordLine.drawInitialMarkersAt(g2);
-                    g2.dispose();
-                }
+                // Les marques de la columna 0 no s'hi dibuixen aqui: print() crida
+                // drawFullCamInOffscreen(), que ja les ha pintades a la imatge
+                // offscreen de la banda d'acords. Abans s'hi tornaven a passar per
+                // sobre i quedaven dibuixades dues vegades al mateix lloc.
 
                 float yImgBottom = yPos - rowTotalH;
                 float yImgTop    = yImgBottom + rowImgPdfH;
