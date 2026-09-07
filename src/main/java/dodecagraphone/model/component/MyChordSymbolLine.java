@@ -756,13 +756,6 @@ public class MyChordSymbolLine extends MyComponent {
         return offscreenImage;
     }
 
-    public int drawInitialMarkersAt(Graphics2D g, int tempo, int midiKey, char scaleMode) {
-        int yOff = 0;
-        if (tempo > 0) yOff += drawTempoMark(0, tempo, g, true, yOff);
-        if (midiKey >= 0) yOff += drawKeyMark(0, midiKey, scaleMode, g, true, yOff);
-        return yOff;
-    }
-
     /**
      * [CA] Volum vigent del track actual quan no hi ha marca explícita.
      * <p>
@@ -776,15 +769,35 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * [CA] Marques de la columna 0 (tempo, tonalitat i volum) amb fallback als
-     * valors per defecte. És el camí d'<b>impressió/PDF</b>: la pantalla les
-     * dibuixa a {@code drawFullChordLineInOffscreen()}, que hi afegeix la de
-     * transposició i només mostra el volum del track actual.
+     * [CA] Marques de la columna 0 per al camí d'<b>impressió/PDF</b>. Calca el
+     * que fa {@code drawFullChordLineInOffscreen()} a la pantalla: les mateixes
+     * quatre marques (transposició, tempo, tonalitat i volum), en el mateix
+     * ordre d'apilat i amb el mateix {@link #fitMarkStack(Graphics2D, int)}.
      * <p>
-     * [EN] Column-0 marks (tempo, key and volume) with a fallback to the
-     * defaults. This is the <b>print/PDF</b> path: on screen they are drawn by
-     * {@code drawFullChordLineInOffscreen()}, which also adds the transposition
-     * one and shows only the current track's volume.
+     * Abans no eren iguals: aquí no es cridava {@code fitMarkStack}, faltava la
+     * marca de transposició i el volum es dibuixava <b>un per cada pista</b> amb
+     * velocitat explícita al {@code changeMap}. Amb dues o tres pistes la pila
+     * passava de quatre elements i sortia de la banda, o sigui que l'alçada que
+     * es va ajustar a {@code DEFAULT_NROWS_CHORD} no la respectava el PDF.
+     * <p>
+     * El {@code Graphics2D} que arriba aquí no és {@code offscreenGraphics}, o
+     * sigui que {@code drawChangeMark} no registra {@code markBoxes} ni pinta la
+     * selecció: el PDF no toca l'estat de la pantalla.
+     * <p>
+     * [EN] Column-0 marks for the <b>print/PDF</b> path. It mirrors what
+     * {@code drawFullChordLineInOffscreen()} does on screen: the same four marks
+     * (transposition, tempo, key and volume), stacked in the same order and with
+     * the same {@link #fitMarkStack(Graphics2D, int)}.
+     * <p>
+     * They used to differ: {@code fitMarkStack} was not called here, the
+     * transposition mark was missing, and the volume was drawn <b>once per
+     * track</b> holding an explicit velocity in the {@code changeMap}. With two
+     * or three tracks the stack grew past four and overflowed the strip, so the
+     * height tuned in {@code DEFAULT_NROWS_CHORD} was not honoured by the PDF.
+     * <p>
+     * The {@code Graphics2D} arriving here is not {@code offscreenGraphics}, so
+     * {@code drawChangeMark} registers no {@code markBoxes} and paints no
+     * selection: the PDF never touches the screen's state.
      *
      * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
@@ -793,12 +806,19 @@ public class MyChordSymbolLine extends MyComponent {
         int tempo      = (sc0 != null && sc0.tempo     != null) ? sc0.tempo     : Settings.DEFAULT_TEMPO;
         int midiKey    = (sc0 != null && sc0.midiKey   != null) ? sc0.midiKey   : ToneRange.getDefaultKey();
         char scaleMode = (sc0 != null && sc0.scaleMode != null) ? sc0.scaleMode : ToneRange.getDefaultMode();
-        int yOff = drawInitialMarkersAt(g, tempo, midiKey, scaleMode);
-        if (sc0 != null) {
-            for (Map.Entry<Integer, Integer> e : sc0.trackVelocities.entrySet()) {
-                yOff += drawVolumeMark(0, e.getValue(), g, true, yOff);
-            }
-        }
+        Integer vel0   = (sc0 != null)
+                ? sc0.trackVelocities.get(contr.getMixer().getCurrentTrackId())
+                : null;
+        int vel0Shown  = (vel0 != null) ? vel0 : currentTrackVelocity();
+
+        fitMarkStack(g, 4);
+        int yOff = 0;
+        // Primera de la pila = fila inferior (les marques s'apilen cap amunt).
+        yOff += drawTransposeMark(0, currentTrackTranspose(), g, true, yOff);
+        yOff += drawTempoMark(0, tempo, g, true, yOff);
+        yOff += drawKeyMark(0, midiKey, scaleMode, g, true, yOff);
+        yOff += drawVolumeMark(0, vel0Shown, g, true, yOff);
+        clearMarkStackFit();
     }
 
     public void initOffscreen() {
