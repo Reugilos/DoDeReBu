@@ -293,14 +293,22 @@ Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: �
 - **65c8085** Botó Fit anacrusis + fixes alineació chord/lyrics i drawMeasureLine.
 
 ## Build
-Maven (`pom.xml`). Java 16. Maven no és al PATH; cal obrir-lo des de NetBeans o des del BAT:
-```
-02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat
-```
-El JAR resultant va a `target/`. L'executable portable va a `portable/DoDeReBu_v4.1/`.
+Maven (`pom.xml`). Java 16. Maven no és al PATH, però n'hi ha un dins del NetBeans: `C:\Program Files\NetBeans-15\netbeans\java\maven\bin\mvn.cmd`, amb `JAVA_HOME` a `C:\Program Files\Microsoft\jdk-21.0.9.10-hotspot`.
+
+Els tres passos, en ordre:
+
+1. **Compilar**: `mvn clean package` (o Clean & Build al NetBeans). El JAR va a `target/`.
+2. **Portable**: `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` → `portable/DoDeReBu_v4.1/`.
+3. **Zip**: `03_BuildZip.bat` → `DoDeReBu_v4.1.zip` a l'arrel.
+
+**Compte amb el pas 1**: malgrat el nom, el script `02_...CleanNBuild...` **no compila res**. Només agafa el JAR més recent de `target/` i el passa pel `jpackage`. Si no s'ha compilat abans, la portable surt amb codi vell sense avisar de res.
+
+**Què hi ha al paquet**: el zip conté el contingut de `portable/DoDeReBu_v4.1/` (sense la carpeta arrel, per evitar el doble directori en extreure), més `SongsInBooklet/` i `Dodecagrams/`, que el script hi copia abans de comprimir i en treu després. Si `Dodecagrams/` no hi és, avisa i continua.
 
 **Dependències a `target/libs/`**: el JAR de `target/` és prim (només les classes del projecte). Perquè la portable funcioni, `maven-dependency-plugin` copia jMusic, PDFBox i Batik a `target/libs/` i `maven-jar-plugin` escriu al manifest un `Class-Path` amb prefix `libs/`. El `jpackage` copia tot l'arbre de `target/` dins d'`app/`, o sigui que `app/libs/` hi arriba i el manifest la hi troba. **No** treure cap dels dos plugins del `pom.xml`: sense ells la portable arrenca i peta amb `NoClassDefFoundError`. El script busca l'únic `.jar` de l'arrel de `target/` per decidir el `--main-jar`, per això les dependències han d'anar a `libs/` i no a l'arrel.
 
 **Ubicació dels scripts de build**: `01_baixa_jre21_FET_A_HP.bat`, `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` i `03_BuildZip.bat` ja no són a l'arrel del projecte: ara viuen a `../Complements_Bu/` (germana de `DoDeReBu_v4.1/`), fora del control de versions. **Important**: aquests scripts assumeixen que s'executen des de la carpeta del projecte (`pushd "%~dp0"`, `APP_NAME` = nom de la carpeta on és el `.bat`, rutes relatives com `target/`, `vendor/jre21/`) — si s'executen directament des de `Complements_Bu/` fallaran (`target/`, `vendor/` no hi són). Cal copiar-los (o crear un enllaç/còpia) a l'arrel de `DoDeReBu_v4.1/` abans d'executar-los, o adaptar-los per acceptar la ruta del projecte com a paràmetre.
+
+**Una trampa del `cmd` al `:log` dels scripts**: `echo %~1` analitza la redirecció **abans** d'imprimir, o sigui que qualsevol `>` dins d'un missatge (el `->` dels passos 10, 11, 12 i 44 del `03_BuildZip.bat`) se'l menjava i provava d'escriure en un fitxer inexistent. La rutina desa ara el text en una variable i l'imprimeix amb expansió retardada (`echo(!MSG!`), que ja no es reanalitza. Si es toca cap dels altres scripts, tenir-ho present.
 
 També s'han mogut a `../Complements_Bu/`: `AllSymbols.csv`, `ChordSymbols.csv` (dades de referència, no llegides en temps d'execució — `ChordSymbols.java` té les dades hardcoded), `MeMima.ttf` (no referenciat des de `src/`), `Liam/`, `Prompts/`, `SongsInBooklet - bkp/`, `portable/`, `portable_bkp/` i el zip de distribució.
