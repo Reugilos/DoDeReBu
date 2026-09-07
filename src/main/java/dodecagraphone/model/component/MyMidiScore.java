@@ -441,6 +441,7 @@ public class MyMidiScore extends MyExercise {
         // de ticks a columnes depèn de beatFigure, i adjustResolution de
         // numBeatsMeasure. Vegeu applyInitialMetaFromSequence.
         applyInitialMetaFromSequence(tracks);
+        applyInitialProgramsFromSequence(tracks);
         this.ticksPerQuarter = adjustResolution(this.ticksPerQuarter);
 
         int first = 0;
@@ -477,6 +478,7 @@ public class MyMidiScore extends MyExercise {
             // PROGRAM_CHANGE pot estar al mateix tick que la primera nota i aparèixer
             // després. L'offset es calcula sempre de l'instrument: ni es desa al
             // fitxer ni se'n llegeix cap valor desat.
+            boolean pcPropi = false;
             for (int j = 0; j < track.size(); j++) {
                 MidiMessage msg = track.get(j).getMessage();
                 if (msg instanceof ShortMessage) {
@@ -488,7 +490,31 @@ public class MyMidiScore extends MyExercise {
                         // Actualitza l'offset del canal ABANS del primer NOTE_ON
                         mixerTrack.setDisplayOffset(newOff);
                         if (chan2 >= 0 && chan2 < 16) loadChannelDisplayOffset[chan2] = newOff;
+                        pcPropi = true;
                         break;
+                    }
+                }
+            }
+            // Pla B: molts MIDI externs (MuseScore i companyia) posen tots els
+            // PROGRAM_CHANGE a la pista de direccio, no dins de cada pista de
+            // notes. Aquella pista no te notes, o sigui que isMetaTrack la dona
+            // per capcalera i el bucle se la salta. Aleshores el canal ja porta
+            // el programa correcte, perque applyInitialProgramsFromSequence l'ha
+            // llegit de tota la sequencia: agafem l'offset del canal on toca
+            // aquesta pista, que ens diuen les seves propies notes.
+            if (!pcPropi) {
+                for (int j = 0; j < track.size(); j++) {
+                    MidiMessage msg = track.get(j).getMessage();
+                    if (msg instanceof ShortMessage) {
+                        ShortMessage sm2 = (ShortMessage) msg;
+                        int cmd2 = sm2.getCommand();
+                        if (cmd2 == ShortMessage.NOTE_ON || cmd2 == ShortMessage.NOTE_OFF) {
+                            int chan2 = sm2.getChannel();
+                            if (chan2 >= 0 && chan2 < 16 && chan2 != 9) {
+                                mixerTrack.setDisplayOffset(loadChannelDisplayOffset[chan2]);
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -1719,6 +1745,70 @@ public class MyMidiScore extends MyExercise {
      *
      * @param tracks [CA] pistes de la seqüència / [EN] tracks of the sequence
      */
+    /**
+     * [CA] Llegeix el {@code PROGRAM_CHANGE} de cada canal escanejant
+     * <b>totes</b> les pistes, abans de convertir cap nota, i n'assigna
+     * l'instrument al canal i el {@code displayOffset} corresponent.
+     * <p>
+     * Cal fer-ho perque molts MIDI externs (MuseScore, per exemple) posen tots
+     * els {@code PROGRAM_CHANGE} a la pista de direccio. Aquella pista no te
+     * notes, {@link #isMetaTrack(Track)} la dona per capcalera i el bucle de
+     * carrega se la salta sencera: l'instrument no s'assignava mai. Les notes
+     * es col·locaven amb offset 0 i, pitjor, en desar s'escrivia el
+     * {@code PROGRAM_CHANGE} de l'instrument per defecte en lloc del real, o
+     * sigui que la seguent carrega les desplacava encara mes.
+     * <p>
+     * Es queda el programa del tick mes baix de cada canal. El canal 9 no en
+     * te: es percussio.
+     * <p>
+     * [EN] Reads each channel's {@code PROGRAM_CHANGE} by scanning <b>all</b>
+     * tracks, before converting any note, and assigns the instrument to the
+     * channel along with the matching {@code displayOffset}.
+     * <p>
+     * This is needed because many external MIDI files (MuseScore, for one) put
+     * every {@code PROGRAM_CHANGE} in the conductor track. That track has no
+     * notes, {@link #isMetaTrack(Track)} treats it as a header and the load
+     * loop skips it entirely: the instrument was never assigned. Notes were
+     * placed with offset 0 and, worse, saving wrote the default instrument's
+     * {@code PROGRAM_CHANGE} instead of the real one, so the next load shifted
+     * them further still.
+     * <p>
+     * The program at the lowest tick wins for each channel. Channel 9 has none:
+     * it is percussion.
+     *
+     * @param tracks [CA] pistes de la sequencia / [EN] tracks of the sequence
+     */
+    private void applyInitialProgramsFromSequence(Track[] tracks) {
+        long[] millorTick = new long[16];
+        int[] programa = new int[16];
+        Arrays.fill(millorTick, Long.MAX_VALUE);
+        Arrays.fill(programa, -1);
+
+        for (Track t : tracks) {
+            for (int j = 0; j < t.size(); j++) {
+                MidiEvent ev = t.get(j);
+                if (!(ev.getMessage() instanceof ShortMessage)) continue;
+                ShortMessage sm = (ShortMessage) ev.getMessage();
+                if (sm.getCommand() != ShortMessage.PROGRAM_CHANGE) continue;
+                int ch = sm.getChannel();
+                if (ch < 0 || ch > 15 || ch == 9) continue;
+                if (ev.getTick() < millorTick[ch]) {
+                    millorTick[ch] = ev.getTick();
+                    programa[ch] = sm.getData1();
+                }
+            }
+        }
+
+        for (int ch = 0; ch < 16; ch++) {
+            if (programa[ch] >= 0) {
+                SoundWithMidi.assignInstToChannel(ch, programa[ch]);
+                SoundWithMidi.runProgramChange(ch, programa[ch]);
+                loadChannelDisplayOffset[ch] = InstrumentRange.calcDisplayOffset(
+                        programa[ch], ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+            }
+        }
+    }
+
     private void applyInitialMetaFromSequence(Track[] tracks) {
         long bestTsTick = Long.MAX_VALUE;
         long bestKsTick = Long.MAX_VALUE;
