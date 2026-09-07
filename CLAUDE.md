@@ -241,7 +241,7 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `29-8-26` — ajuda reescrita i javadoc revisat, encara sense castellà.
 - `castella-29-8-26` — tot l'anterior, més la interfície en castellà (`ca`/`en`/`es`), el `config.properties` en UTF-8 i `ConfigManager` esborrat.
 - `5-9-26` — tot l'anterior, més la columna de l'acord numerada d'1 a 12, el tip de Ctrl-V i el nom del PDF igual que el del MIDI.
-- `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada. Inclou també el diàleg de benvinguda amb tria d'idioma, el fix del `choiceExtended`, el del `PROGRAM_CHANGE` de la pista de direcció i el de la pila de marques del PDF.
+- `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada. Inclou també el diàleg de benvinguda amb tria d'idioma, el fix del `choiceExtended`, el del `PROGRAM_CHANGE` de la pista de direcció, els de la banda d'acords i la lletra al PDF, i els botons de Swing traduïts. Inclou també la nomenclatura nova de les cançons i els dodecagrames al repositori.
 
 Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
 
@@ -264,6 +264,10 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **f027e33** Cançons amb la nomenclatura nova `Titol_To`; `Dodecagrams/` surt del `.gitignore` i els 16 PDFs entren al repositori. En tornar-les a desar, la brossa del `choiceExtended` ha desaparegut de totes.
+- **72eeb59** La lletra del PDF es dibuixa estirada verticalment per compensar la compressió de la fila; el text passa del 52% al 96% de la seva proporció.
+- **06d17f9** `I18n.applySwingDefaults()`: els botons que Swing es dibuixa sol (Yes/No/OK/Cancel del JOptionPane i tot el JFileChooser). S'ha de cridar **després** de `setLookAndFeel`, que esborra els valors del UIManager.
+- **42003ca** Banda d'acords a 8 files pel PDF i fora la duplicació de marques (l'offscreen ja les portava).
 - **5e283c3** El PDF dibuixava una pila de marques diferent de la de pantalla: sense `fitMarkStack`, sense la de transposició i amb un volum per cada pista. Ara `drawInitialMarkersAt` calca `drawFullChordLineInOffscreen`.
 - **5c8dc50** Multipista: `applyInitialProgramsFromSequence` llegeix el `PROGRAM_CHANGE` de la pista de direcció. Sense això, un MIDI extern es desplaçava avall a cada desat.
 - **1cd1e04** Fix del `choiceExtended`, que inflava els fitxers a cada desat; javadoc de `main()` recol·locat.
