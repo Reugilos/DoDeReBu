@@ -658,23 +658,33 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * [CA] Marca de transposició: el {@code displayOffset} de la pista actual en
-     * semitons. Ve de l'instrument (no del changeMap), o sigui que és
-     * informativa: no es pot editar ni esborrar.
+     * [CA] Marca de transposició: quants semitons amunt sona la pista respecte
+     * del que es dibuixa, amb el signe de l'8va clàssica (el glockenspiel, que
+     * sona dues octaves amunt, hi surt com a t+24). És el {@code displayOffset}
+     * canviat de signe: el camp guarda dibuix−so i aquí volem so−dibuix.
+     * Ve de l'instrument (no del changeMap), o sigui que és informativa: no es
+     * pot editar ni esborrar.
      * <p>
-     * [EN] Transposition mark: the current track's {@code displayOffset} in
-     * semitones. It comes from the instrument (not from the changeMap), so it
-     * is informational: it cannot be edited or deleted.
+     * [EN] Transposition mark: how many semitones above the drawn pitch the
+     * track sounds, with the sign of classical 8va (the glockenspiel, sounding
+     * two octaves up, shows as t+24). It is {@code displayOffset} negated: the
+     * field stores drawn−sounding and here we want sounding−drawn.
+     * It comes from the instrument (not from the changeMap), so it is
+     * informational: it cannot be edited or deleted.
      */
     private int drawTransposeMark(int col, int semitones, Graphics2D g, boolean offscreen, int existingYOff) {
         String txt = "t" + (semitones > 0 ? "+" : "") + semitones;
         return drawChangeMark(col, txt, COLOR_TRANSPOSE_BG, MarkKind.TRANSPOSE, g, offscreen, existingYOff);
     }
 
-    /** Transposició vigent de la pista actual, en semitons. */
+    /**
+     * Transposició vigent de la pista actual, en semitons, amb el signe que
+     * espera un músic: positiu vol dir que sona més amunt del que es dibuixa.
+     * Alimenta tant el text de la marca com el càlcul de la seva amplada.
+     */
     private int currentTrackTranspose() {
         dodecagraphone.model.mixer.MyTrack t = contr.getMixer().getCurrentTrack();
-        return (t != null) ? t.getDisplayOffset() : 0;
+        return (t != null) ? -t.getDisplayOffset() : 0;
     }
 
     private int drawVolumeMark(int col, int velocity, Graphics2D g, boolean offscreen, int existingYOff) {

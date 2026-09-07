@@ -19,6 +19,32 @@ import java.util.HashMap;
  * Provides MIDI range constants, note names in movable-do notation
  * (do, re, mi...), MIDI ↔ name conversions, key signature calculation,
  * and a General MIDI drum name map.
+ * <p>
+ * [CA] <b>Els dos modes de graella.</b> {@code isMetallophone=true} (per defecte)
+ * dóna un teclat de dues octaves de so a so: 55–79 (so3–so5). Amb
+ * {@code isMetallophone=false} manen {@code lowestMidi} i {@code highestMidi}
+ * de {@code config.properties} (36–84 per defecte). En tots dos casos
+ * {@code MIDDLE_C} val <b>60</b>: el do central és do4, com a la notació
+ * internacional. Abans el mode metal·lòfon el posava a 84 i la graella era
+ * 79–103, o sigui l'altura que <i>sona</i>; ara la graella és l'altura
+ * <i>escrita</i> i la diferència la cobreix el {@code displayOffset} de la
+ * pista (vegeu {@link InstrumentRange}).
+ * <p>
+ * Que {@code MIDDLE_C} ja no depengui del mode vol dir que la tonalitat d'una
+ * partitura es llegeix igual en tots dos: no cal transposar-la en carregar.
+ * <p>
+ * [EN] <b>The two grid modes.</b> {@code isMetallophone=true} (the default)
+ * gives a two-octave G-to-G keyboard: 55–79 (G3–G5). With
+ * {@code isMetallophone=false}, {@code lowestMidi} and {@code highestMidi} from
+ * {@code config.properties} rule (36–84 by default). In both cases
+ * {@code MIDDLE_C} is <b>60</b>: middle C is C4, as in international notation.
+ * Metallophone mode used to set it to 84 with a 79–103 grid, i.e. the
+ * <i>sounding</i> pitch; the grid is now the <i>written</i> pitch and the
+ * difference is covered by the track's {@code displayOffset} (see
+ * {@link InstrumentRange}).
+ * <p>
+ * Because {@code MIDDLE_C} no longer depends on the mode, a score's key reads
+ * the same in both: it needs no transposition on load.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -30,7 +56,8 @@ public class ToneRange {
     public static final int DEFAULT_OCTAVES_UP = 0;
     public static final boolean DEFAULT_IS_METALLOPHONE = true;
     public static final int MAX_NKEYS = 50;
-    public static final int MIDDLE_C; // = 60;
+    /** Do central. Sempre 60 (do4): no depèn del mode de graella. */
+    public static final int MIDDLE_C;
     public static final int DEFAULT_KEY;
     private static final char DEFAULT_MODE = 'M'; // Major
     private static int lowestMidi; //= 55;
@@ -72,13 +99,13 @@ public class ToneRange {
         octavesUp  = DEFAULT_OCTAVES_UP;
         isMetallophone = Boolean.parseBoolean(AppConfig.get().get("isMetallophone", "" + DEFAULT_IS_METALLOPHONE));
         if (isMetallophone()){
-            lowestMidi = 79;
-            highestMidi = 103;
+            lowestMidi = 55;
+            highestMidi = 79;
 //            octavesUp = 2;  // OLD: eliminat - la transposició la gestiona displayOffset (I/O)
         }
-//        MIDDLE_C = 60 + 12 * octavesUp;  // OLD
-        MIDDLE_C = isMetallophone() ? 84 : (60 + 12 * octavesUp);
-        // Metall: C6=84 (5 semitons per sobre de lowestMidi=79). Estàndard: C4=60.
+        MIDDLE_C = 60 + 12 * octavesUp;
+        // Teclat de metal·lòfon: dues octaves so3–so5 (55–79), do central = do4 = 60.
+        // El glockenspiel sona 24 semitons per sobre; ho resol el displayOffset.
         DEFAULT_KEY = MIDDLE_C;
         lowestPau = MIDDLE_C - 20;
         highestPau = MIDDLE_C + 4;
@@ -684,10 +711,26 @@ public class ToneRange {
 
     /**
      * [CA] Converteix un valor MIDI en l'identificador de tecla del grid (fila des de dalt).
-     * Ajusta el MIDI al rang actiu si cal.
+     * Si el valor cau fora de [{@code lowestMidi}, {@code highestMidi}] el
+     * <b>desplaça per octaves</b> fins encabir-lo: es conserva el nom de la nota
+     * i es perd el registre. És el que fa que un MIDI extern de quatre octaves
+     * es pugui dibuixar en un teclat de dues, a costa del perfil melòdic.
+     * <p>
+     * Els dos bucles no porten topall (a diferència de {@link #clampToRange(int)}).
+     * És segur mentre el rang tingui almenys una octava d'amplada; per sota
+     * d'això tornaria un identificador fora de {@code 0..nKeys-1}, i per això
+     * qui el crida el comprova abans d'indexar la graella.
      * <p>
      * [EN] Converts a MIDI value to the grid key identifier (row from top).
-     * Adjusts the MIDI to the active range if necessary.
+     * If the value falls outside [{@code lowestMidi}, {@code highestMidi}] it is
+     * <b>shifted by octaves</b> until it fits: the note name is kept and the
+     * register is lost. This is what lets an external four-octave MIDI be drawn
+     * on a two-octave keyboard, at the cost of the melodic contour.
+     * <p>
+     * Neither loop has a bound (unlike {@link #clampToRange(int)}). That is safe
+     * as long as the range spans at least an octave; below that it would return
+     * an identifier outside {@code 0..nKeys-1}, which is why callers check
+     * before indexing the grid.
      *
      * @param midi [CA] valor MIDI de la nota / [EN] MIDI note value
      * @return [CA] identificador de tecla al grid / [EN] grid key identifier

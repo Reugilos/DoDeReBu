@@ -43,7 +43,6 @@ public class MyTrack {
     private boolean audible;
     private boolean isNew = false;
     private int displayOffset = 0;
-    private boolean displayOffsetFromMetadata = false;
 
     /**
      * [CA] Crea una nova pista amb l'identificador i el nom indicats.
@@ -454,11 +453,20 @@ public class MyTrack {
     }
 
     /**
-     * [CA] Retorna el desplaçament de visualització de la pista (en columnes de partitura).
+     * [CA] Retorna el desplaçament de visualització de la pista, en semitons:
+     * {@code dibuix − so}. Negatiu vol dir que la pista sona <b>per sobre</b>
+     * del que es dibuixa (el glockenspiel, dues octaves amunt, val −24). No es
+     * desa al fitxer: el calcula
+     * {@link dodecagraphone.model.InstrumentRange#calcDisplayOffset(int, int, int)}
+     * a partir de l'instrument.
      * <p>
-     * [EN] Returns the display offset of the track (in score columns).
+     * [EN] Returns the track's display offset in semitones: {@code drawn −
+     * sounding}. Negative means the track sounds <b>above</b> what is drawn
+     * (the glockenspiel, two octaves up, is −24). It is not stored in the file:
+     * {@link dodecagraphone.model.InstrumentRange#calcDisplayOffset(int, int, int)}
+     * computes it from the instrument.
      *
-     * @return [CA] desplaçament de visualització en columnes / [EN] display offset in columns
+     * @return [CA] desplaçament de visualització en semitons / [EN] display offset in semitones
      */
     public int getDisplayOffset() {
         return displayOffset;
@@ -469,36 +477,10 @@ public class MyTrack {
      * <p>
      * [EN] Sets the display offset of the track.
      *
-     * @param displayOffset [CA] desplaçament en columnes de partitura / [EN] offset in score columns
+     * @param displayOffset [CA] desplaçament en semitons / [EN] offset in semitones
      */
     public void setDisplayOffset(int displayOffset) {
         this.displayOffset = displayOffset;
     }
 
-    /**
-     * [CA] Indica si el desplaçament de visualització prové de metadades MIDI
-     * (en lloc d'haver-se establert manualment).
-     * <p>
-     * [EN] Returns whether the display offset comes from MIDI metadata
-     * (instead of having been set manually).
-     *
-     * @return {@code true} si el desplaçament prové de metadades /
-     *         {@code true} if the offset comes from metadata
-     */
-    public boolean isDisplayOffsetFromMetadata() {
-        return displayOffsetFromMetadata;
-    }
-
-    /**
-     * [CA] Estableix el desplaçament de visualització a partir de metadades MIDI
-     * i marca el flag corresponent.
-     * <p>
-     * [EN] Sets the display offset from MIDI metadata and marks the corresponding flag.
-     *
-     * @param displayOffset [CA] desplaçament en columnes de partitura / [EN] offset in score columns
-     */
-    public void setDisplayOffsetFromMetadata(int displayOffset) {
-        this.displayOffset = displayOffset;
-        this.displayOffsetFromMetadata = true;
-    }
 }

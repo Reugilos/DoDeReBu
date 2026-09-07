@@ -24,10 +24,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 import javax.swing.JOptionPane;
 
 /**
@@ -43,6 +44,35 @@ import javax.swing.JOptionPane;
  * and serialises the grid back to MIDI. Includes the {@code changeMap}
  * ({@link MyGridScore.ScoreChange}) to save parameter changes (tempo, key,
  * time signature, volume) as 0x7F meta-messages embedded in track 0.
+ * <p>
+ * [CA] <b>El {@code displayOffset} no es persisteix.</b> Cada pista es dibuixa
+ * a l'altura escrita i sona a la real; la diferència la dóna
+ * {@link dodecagraphone.model.InstrumentRange#calcDisplayOffset(int, int, int)}
+ * a partir de l'instrument. En desar, cada pista rep un {@code PROGRAM_CHANGE}
+ * a la seva primera nota, i en carregar un pre-scan el busca i fixa l'offset
+ * abans de convertir cap nota — cal el pre-scan perquè el {@code PROGRAM_CHANGE}
+ * va al mateix tick que la primera nota i pot quedar-hi després.
+ * <p>
+ * Els fitxers antics porten un text meta {@code displayOffset=}; ja no es
+ * llegeix. Mentre existia, la seva diferència amb el valor recalculat movia la
+ * tonalitat i el choice, per compensar que {@code MIDDLE_C} canviés amb el mode
+ * de graella. Ara {@code MIDDLE_C} val 60 sempre i aquella correcció ja no té
+ * sentit, o sigui que s'ha eliminat.
+ * <p>
+ * [EN] <b>{@code displayOffset} is not persisted.</b> Each track is drawn at
+ * written pitch and sounds at real pitch; the difference comes from
+ * {@link dodecagraphone.model.InstrumentRange#calcDisplayOffset(int, int, int)}
+ * given the instrument. On save, every track gets a {@code PROGRAM_CHANGE} at
+ * its first note; on load a pre-scan finds it and fixes the offset before
+ * converting any note — the pre-scan is needed because the
+ * {@code PROGRAM_CHANGE} sits at the same tick as the first note and may come
+ * after it.
+ * <p>
+ * Older files carry a {@code displayOffset=} text meta; it is no longer read.
+ * While it existed, its difference from the recomputed value shifted the key
+ * and the choice list, to compensate for {@code MIDDLE_C} changing with the
+ * grid mode. {@code MIDDLE_C} is now always 60, so that correction no longer
+ * makes sense and has been removed.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -154,8 +184,6 @@ public class MyMidiScore extends MyExercise {
                     track.setDotted(Boolean.parseBoolean(text.substring(7)));
                 } else if (text.startsWith("velocity=")) {
                     track.setVelocity(Integer.parseInt(text.substring(9)));
-                } else if (text.startsWith("displayOffset=")) {
-                    track.setDisplayOffsetFromMetadata(Integer.parseInt(text.substring(14)));
                 } else if (text.startsWith("canals=")) {
                     List<Integer> canals = readCanals(text.substring(7));
                     for (int c : canals) {
@@ -399,7 +427,6 @@ public class MyMidiScore extends MyExercise {
             return;
         }
         Arrays.fill(loadChannelDisplayOffset, 0);
-        boolean choiceTransposed = false; // s'aplica la transposició només al primer PROGRAM_CHANGE amb metadata
         boolean ok = this.analyzeMidiHeader(sequence);
         if (!ok) {
             this.controller.updateTextOfButtons();
@@ -427,12 +454,6 @@ public class MyMidiScore extends MyExercise {
             Track track = tracks[tr];
             MyTrack mixerTrack = new MyTrack(tr - first, "");
             int trId = readTrackData(mixerTrack, track);
-            if (mixerTrack.isDisplayOffsetFromMetadata()) {
-                int chan = mixerTrack.getCurrentChannel();
-                if (chan >= 0 && chan < 16) {
-                    loadChannelDisplayOffset[chan] = mixerTrack.getDisplayOffset();
-                }
-            }
             MyMixer mixer = this.controller.getMixer();
             if (trId == mixer.getChordTrackId()){
                 mixer.setChordTrack(mixerTrack);
@@ -451,25 +472,23 @@ public class MyMidiScore extends MyExercise {
                 System.out.println("Processant pista " + (tr - first));
             }
 
-            // Pre-scan: aplica la transposició de choice/midiKey abans del primer NOTE_ON.
-            // El PROGRAM_CHANGE pot estar al mateix tick que la primera nota i aparèixer després.
-            if (!choiceTransposed && mixerTrack.isDisplayOffsetFromMetadata()) {
-                for (int j = 0; j < track.size(); j++) {
-                    MidiMessage msg = track.get(j).getMessage();
-                    if (msg instanceof ShortMessage) {
-                        ShortMessage sm2 = (ShortMessage) msg;
-                        if (sm2.getCommand() == ShortMessage.PROGRAM_CHANGE) {
-                            int instr2 = sm2.getData1();
-                            int chan2  = sm2.getChannel();
-                            int newOff = InstrumentRange.calcDisplayOffset(instr2, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
-                            int shift = newOff - mixerTrack.getDisplayOffset();
-                            if (shift != 0) transposeChoiceAndKey(shift);
-                            // Actualitza l'offset del canal ABANS del primer NOTE_ON
-                            mixerTrack.setDisplayOffset(newOff);
-                            if (chan2 >= 0 && chan2 < 16) loadChannelDisplayOffset[chan2] = newOff;
-                            choiceTransposed = true;
-                            break;
-                        }
+            // Pre-scan: fixa el displayOffset de la pista a partir del seu primer
+            // PROGRAM_CHANGE, abans de convertir cap nota. Cal fer-ho aquí perquè el
+            // PROGRAM_CHANGE pot estar al mateix tick que la primera nota i aparèixer
+            // després. L'offset es calcula sempre de l'instrument: ni es desa al
+            // fitxer ni se'n llegeix cap valor desat.
+            for (int j = 0; j < track.size(); j++) {
+                MidiMessage msg = track.get(j).getMessage();
+                if (msg instanceof ShortMessage) {
+                    ShortMessage sm2 = (ShortMessage) msg;
+                    if (sm2.getCommand() == ShortMessage.PROGRAM_CHANGE) {
+                        int instr2 = sm2.getData1();
+                        int chan2  = sm2.getChannel();
+                        int newOff = InstrumentRange.calcDisplayOffset(instr2, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                        // Actualitza l'offset del canal ABANS del primer NOTE_ON
+                        mixerTrack.setDisplayOffset(newOff);
+                        if (chan2 >= 0 && chan2 < 16) loadChannelDisplayOffset[chan2] = newOff;
+                        break;
                     }
                 }
             }
@@ -533,20 +552,11 @@ public class MyMidiScore extends MyExercise {
                             int instr = ((ShortMessage) message).getData1();
                             SoundWithMidi.assignInstToChannel(channel, instr);
                             SoundWithMidi.runProgramChange(channel, instr);
-                            // Recalcula sempre l'offset per al grid actual (lowestMidi/highestMidi).
-                            // L'offset de la metadata era vàlid per al grid en el moment de desar,
-                            // però pot ser incorrecte si el mode ha canviat (ex. metallòfon ↔ estàndard).
+                            // L'offset surt sempre de l'instrument i del grid actual
+                            // (lowestMidi/highestMidi). Un canvi de programa a mig fitxer
+                            // el torna a calcular per a les notes que vinguin després.
                             {
                                 int newOffset = InstrumentRange.calcDisplayOffset(instr, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
-                                // Si el track tenia offset de metadata, la diferència revela el shift de MIDDLE_C.
-                                // Apliquem la transposició al choice list i midiKey (una sola vegada).
-                                if (!choiceTransposed && mixerTrack.isDisplayOffsetFromMetadata()) {
-                                    int shift = newOffset - mixerTrack.getDisplayOffset();
-                                    if (shift != 0) {
-                                        transposeChoiceAndKey(shift);
-                                    }
-                                    choiceTransposed = true;
-                                }
                                 mixerTrack.setDisplayOffset(newOffset);
                                 loadChannelDisplayOffset[channel] = newOffset;
                             }
@@ -853,7 +863,10 @@ public class MyMidiScore extends MyExercise {
             addTextMeta(midiTrack, "audible=" + track.isAudible());
             addTextMeta(midiTrack, "dotted=" + track.isDotted());
             addTextMeta(midiTrack, "velocity=" + track.getVelocity());
-            addTextMeta(midiTrack, "displayOffset=" + track.getDisplayOffset());
+            // El displayOffset ja no es desa: es calcula de l'instrument en carregar
+            // (vegeu el pre-scan del PROGRAM_CHANGE a loadMidiScore). Els fitxers
+            // antics que encara el porten es continuen llegint, nomes per saber
+            // quant s'han de moure la tonalitat i el choice.
             addTextMeta(midiTrack, "canals=" + track.getCanals().toString());
 
         } catch (Exception e) {
@@ -871,6 +884,18 @@ public class MyMidiScore extends MyExercise {
      * track 0 header (tempo, time signature, key, metadata, chords, lyrics,
      * changeMap) and one MIDI track per mixer track with the corresponding
      * NOTE_ON/OFF events.
+     * <p>
+     * [CA] Escriu un {@code PROGRAM_CHANGE} a la primera nota de <b>cada</b>
+     * pista no percussiva. És imprescindible: en carregar és l'única font del
+     * {@code displayOffset}, que ja no es desa. El bucle recorre columnes, no
+     * pistes, o sigui que les pistes hi surten barrejades i cal portar el
+     * compte de quines ja en tenen ({@code pcEscrit}).
+     * <p>
+     * [EN] Writes a {@code PROGRAM_CHANGE} at the first note of <b>every</b>
+     * non-drum track. This is essential: on load it is the only source of the
+     * {@code displayOffset}, which is no longer stored. The loop runs over
+     * columns, not tracks, so tracks appear interleaved and it must track which
+     * ones already have one ({@code pcEscrit}).
      *
      * @param filePath           [CA] ruta de sortida del fitxer MIDI /
      *                           [EN] output path for the MIDI file
@@ -878,7 +903,11 @@ public class MyMidiScore extends MyExercise {
      *                           [EN] true to include the chord MIDI track
      */
     public void saveMidiScore(String filePath, boolean saveChordMidiTrack) {
-        boolean isFirstNoteOn = true;
+        // Pistes que ja tenen el seu PROGRAM_CHANGE escrit. Ha de ser una per pista i
+        // no un sol booleà: el bucle de desat va per columnes, o sigui que les pistes
+        // hi surten barrejades, i en carregar el PROGRAM_CHANGE és l'única font del
+        // displayOffset de cada pista.
+        Set<Integer> pcEscrit = new HashSet<>();
         this.ticksPerQuarter = SoundWithMidi.DEFAULT_TICKS_PER_QUARTER;
         // Crear la seqüència amb format 1 i la resolució de la partitura
         Sequence sequence = null;
@@ -991,11 +1020,11 @@ public class MyMidiScore extends MyExercise {
                                         "MyMidiScore::saveMidiScore() col = " + col + " > lastColWritten = " + getLastColWritten());
                             }
                             if (track != null) {
-                                if (isFirstNoteOn && channel != 9) {
-                                    // Escriu sempre el PROGRAM_CHANGE de l'instrument de la pista
-                                    // a la primera nota, perquè el load pugui recalcular el displayOffset
-                                    // fins i tot si la metadata té offset=0 (fitxers de metallòfon o antics).
-                                    isFirstNoteOn = false;
+                                if (channel != 9 && !pcEscrit.contains(trackIndex)) {
+                                    // Escriu el PROGRAM_CHANGE de l'instrument a la primera nota
+                                    // de CADA pista: en carregar és l'única font del displayOffset,
+                                    // que ja no es desa com a metadada.
+                                    pcEscrit.add(trackIndex);
                                     MyTrack trackObjPC = this.controller.getMixer().getTrackFromId(trackIndex);
                                     int instrPC = (trackObjPC != null)
                                             ? SoundWithMidi.getInstrumentInChannel(trackObjPC.getCurrentChannel())
@@ -1731,16 +1760,6 @@ public class MyMidiScore extends MyExercise {
     
     private long noteKey(int pitch, int channel, int track) {
         return ((long) track << 16) | ((long) channel << 8) | (long) (pitch & 0x7F);
-    }
-
-    private void transposeChoiceAndKey(int shift) {
-        if (this.choice.getChoiceList() != null && !this.choice.getChoiceList().isEmpty()) {
-            List<Integer> transposed = this.choice.getChoiceList().stream()
-                    .map(n -> n + shift)
-                    .collect(Collectors.toList());
-            this.choice.setChoiceList(transposed);
-        }
-        this.midiKey += shift;
     }
 
     private void processNoteOff(long key, long tick) {

@@ -19,23 +19,45 @@ import java.nio.charset.StandardCharsets;
  * Read from {@code defaults/GeneralMidiInstruments.csv} (fields 3 and 4: lowestMidi and highestMidi).
  * Used to calculate the {@code displayOffset} of each track based on the instrument.
  *
-     * <p>
-     * <b>Compte</b>: el rang surt de {@code defaults/GeneralMidiInstruments.csv}
-     * i no sempre correspon a l'instrument que modela l'app. El glockenspiel hi
-     * consta com a 67–96 (so4–do7), una octava per sota del metal·lòfon que
-     * representa la graella (79–103, so5–so7), i per això li surt un offset de
-     * +12 que fa sonar i exportar una octava per sota del que es veu. Corregir-ho
-     * vol dir ajustar el CSV i fer que la càrrega respecti el {@code displayOffset}
-     * desat als fitxers antics, per no desafinar-los.
-     * <p>
-     * <b>Note</b>: the range comes from {@code defaults/GeneralMidiInstruments.csv}
-     * and does not always match the instrument the app models. The glockenspiel
-     * is listed as 67–96 (G4–C7), one octave below the metallophone the grid
-     * represents (79–103, G5–G7), which is why it gets a +12 offset that makes it
-     * sound and export one octave below what is shown. Fixing it means adjusting
-     * the CSV and making loading honour the {@code displayOffset} stored in older
-     * files, so they are not detuned.
-     *
+ * <p>
+ * <b>Convenció de signe</b>: {@code displayOffset = dibuix − so}. Negatiu vol
+ * dir que l'instrument sona <i>per sobre</i> del que es dibuixa. El glockenspiel,
+ * que el CSV declara 79–103 (so5–so7, la seva tessitura real), contra una graella
+ * de metal·lòfon de 55–79 (so3–so5, l'altura escrita) dóna {@code -24}: es veu do4
+ * i sona do6. La marca groga de la franja d'acords ho ensenya amb el signe
+ * contrari, t+24, que és el que espera un músic acostumat a l'8va.
+ * <p>
+ * El valor <b>no es desa mai</b> al fitxer MIDI: es recalcula en carregar, a
+ * partir del {@code PROGRAM_CHANGE} de cada pista. Per això el desat n'escriu
+ * un per pista, a la primera nota.
+ * <p>
+ * <b>Compte</b>: el rang del CSV no sempre correspon a l'instrument que modela
+ * l'app. El glockenspiel hi constava com a 67–96, una octava per sota del que
+ * sona de debò, i això li donava un offset equivocat. Si es torna a tocar cap
+ * fila del CSV, els fitxers ja desats es dibuixaran on digui el nou offset:
+ * les altures MIDI desades no canvien (i per tant el que sona tampoc), però
+ * les que quedin fora de [{@code lowestMidi}, {@code highestMidi}] les octava
+ * {@link ToneRange#midiToKeyId(int)} en carregar.
+ * <p>
+ * <b>Sign convention</b>: {@code displayOffset = drawn − sounding}. Negative
+ * means the instrument sounds <i>above</i> what is drawn. The glockenspiel,
+ * declared 79–103 in the CSV (G5–G7, its real sounding range), against a
+ * metallophone grid of 55–79 (G3–G5, the written pitch) yields {@code -24}:
+ * C4 is shown and C6 sounds. The yellow mark on the chord strip displays the
+ * opposite sign, t+24, which is what a musician used to 8va expects.
+ * <p>
+ * The value is <b>never stored</b> in the MIDI file: it is recomputed on load
+ * from each track's {@code PROGRAM_CHANGE}. That is why saving writes one per
+ * track, at its first note.
+ * <p>
+ * <b>Note</b>: the CSV range does not always match the instrument the app
+ * models. The glockenspiel used to be listed as 67–96, one octave below what
+ * it really sounds, which gave it the wrong offset. If any CSV row is changed
+ * again, already-saved files will be drawn wherever the new offset says: the
+ * stored MIDI pitches do not change (nor, therefore, what sounds), but any
+ * falling outside [{@code lowestMidi}, {@code highestMidi}] get octave-shifted
+ * by {@link ToneRange#midiToKeyId(int)} on load.
+ *
  * @author Pau Bofill
  * @author Claude IA
  * @version 4.0

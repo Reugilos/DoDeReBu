@@ -19,7 +19,8 @@ El codi font és a `src/main/java/dodecagraphone/`.
 | `model/component/MyChordSymbolLine.java` | Franja d'acords + marques de canvi (tempo/to) |
 | `model/component/MyLyrics.java` | Franja de lletra |
 | `model/MyTempo.java` | Gestió de tempo (estàtica): `scoreTempo` vs `playbackTempo` |
-| `model/ToneRange.java` | Notes, tonalitats, `getDefaultKey()`, `getDefaultMode()` |
+| `model/ToneRange.java` | Notes, tonalitats, rang de la graella, `MIDDLE_C`, `midiToKeyId()` |
+| `model/InstrumentRange.java` | Tessitures GM del CSV; `calcDisplayOffset()` |
 | `ui/Settings.java` | Paràmetres globals (estàtica); `DEFAULT_TEMPO`, `getColWidth()`, etc. |
 | `ui/MyNewPanel.java` | JPanel principal; events de ratolí i teclat |
 | `model/component/MyCamera.java` | Viewport (càmera) |
@@ -53,6 +54,44 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - `drawFullGridinOffscreen()` — redibuixa tota la graella (esborra el buffer primer amb blanc).
 - `drawCurrentCamInOffscreen()` — redibuixa la vista de la càmera actual (més ràpid).
 - `drawFullChordLineInOffscreen()` — redibuixa tota la franja d'acords.
+
+### Altura dibuixada vs altura que sona (`displayOffset`)
+
+La graella representa l'altura **escrita**; l'instrument pot sonar en un altre registre. La conversió és una resta:
+
+```
+so     = keyIdToMidi(fila) − displayOffset      (MyGridSquare, en desar i sonar)
+dibuix = altura_desada      + displayOffset      (MyMidiScore, en carregar)
+```
+
+O sigui `displayOffset = dibuix − so`. **Negatiu vol dir que sona per sobre del que es veu.** El glockenspiel val −24. La marca groga de la franja d'acords ho ensenya amb el signe girat (**t+24**), que és el que espera un músic acostumat a l'8va; el gir és només de visualització (`currentTrackTranspose()` i `markTipText`).
+
+**No es desa mai al fitxer.** El calcula `InstrumentRange.calcDisplayOffset(programa, lowestMidi, highestMidi)`, que tria el múltiple de 12 que maximitza la superposició entre la tessitura del CSV i la graella. Conseqüències:
+
+- En **desar**, cada pista no percussiva rep un `PROGRAM_CHANGE` a la seva primera nota (`pcEscrit` a `saveMidiScore`). El bucle va per columnes, no per pistes, o sigui que les pistes hi surten barrejades i cal portar el compte. Sense això, les pistes segona i següents carregarien amb offset 0.
+- En **carregar**, un pre-scan busca el primer `PROGRAM_CHANGE` de cada pista i fixa l'offset **abans** de convertir cap nota. Cal el pre-scan perquè el `PROGRAM_CHANGE` va al mateix tick que la primera nota i pot quedar-hi després.
+- Els fitxers antics porten un text meta `displayOffset=`; **ja no es llegeix**.
+
+### Els dos modes de graella i `MIDDLE_C`
+
+| mode | graella | notes |
+|---|---|---|
+| `isMetallophone=true` (per defecte) | **55–79** (so3–so5) | teclat de dues octaves, de so a so |
+| `isMetallophone=false` | `lowestMidi`..`highestMidi` (36–84) | del `config.properties` |
+
+`MIDDLE_C` val **60 en tots dos** (`octavesUp` és sempre 0; tots els seus usos estan comentats). Abans el mode metal·lòfon el posava a 84 amb graella 79–103 — o sigui l'altura que *sona*. Ara la graella és l'altura *escrita*.
+
+Que `MIDDLE_C` no depengui del mode té una conseqüència important: **la tonalitat d'una partitura es llegeix igual en tots dos modes**, i per tant no s'ha de transposar en carregar. Existia un `transposeChoiceAndKey(newOffset − offsetDesat)` per compensar-ho; s'ha eliminat perquè ja no compensa res (i calculava malament en tots els casos que quedaven).
+
+### Notes fora de rang
+
+`ToneRange.midiToKeyId` **desplaça per octaves** fins encabir la nota: conserva el nom i perd el registre. És el que permet dibuixar un MIDI extern de quatre octaves en un teclat de dues, a costa del perfil melòdic. `MyMidiScore` les compta (`outOfRangeCount`) i `MyController` avisa amb `load.outOfRange.warning`.
+
+**És irreversible en desar**: la graella només guarda la fila ja desplaçada. Carregar un MIDI extern i desar-lo transposa aquelles notes per sempre.
+
+Els dos `while` de `midiToKeyId` no tenen topall (a diferència de `clampToRange`). És segur mentre el rang tingui almenys una octava; `placeNote` comprova el `keyId` abans d'indexar, com ja feia `placeNoteAtRow`.
+
+El nom del fitxer **no es mira mai** en carregar: `.ddcgr` només surt als diàlegs de desar. El que distingeix un MIDI extern és que no porta les metadades 0x7F de l'app.
 
 ### getEditingCol()
 Converteix la posició del playbar (càmera) en columna de partitura, afegint el delay:
@@ -120,7 +159,7 @@ El buffer no depèn de `stopCol`: `expandBufferIfNeeded` es dimensiona amb `last
 - `MyGridScore.putScoreChange` **substitueix** l'entrada sencera (i l'elimina si queda buida), a diferència de `setScoreChange`, que fa merge i el segueixen usant la càrrega MIDI i el paste. La col·locació de marques també usa `putScoreChange`.
 - Editar una marca la **deselecciona** en acabar (`clearMarkSelection()` al final d'`editSelectedMark`).
 - Hi ha **quatre** tipus de marca (`MarkKind`): TEMPO (blau), KEY (granate), VOLUME (verd) i TRANSPOSE (groc). La de volum i la de transposició són **per track**; les altres dues, globals.
-- **TRANSPOSE** mostra el `displayOffset` de la pista en semitons. Ve de l'instrument, no del `changeMap`: és informativa i `editSelectedMark`/`deleteSelectedMark` la ignoren.
+- **TRANSPOSE** mostra quants semitons amunt sona la pista respecte del que es dibuixa, o sigui el `displayOffset` **canviat de signe** (glock: camp −24 → marca `t+24`). Ve de l'instrument, no del `changeMap`: és informativa i `editSelectedMark`/`deleteSelectedMark` la ignoren.
 - A la columna 0 es dibuixen sempre les quatre, amb fallback als valors per defecte quan no hi ha entrada explícita. `fitMarkStack()` encongeix la font si la pila no hi cabés; amb `DEFAULT_NROWS_CHORD = 6` no hauria de caldre (amb 5 files no hi cabien per sota de 1200 px d'alçada de pantalla).
 - El text de la caixeta es tria per contrast amb el fons (`ColorSets.getSeparatorColor`): blanc sobre els fons foscos, negre sobre el groc.
 - El tip d'una marca (`MyController.markTipText`) mostra què és i quant val. La condició de refresc compara **columna i tipus** (`lastTipMarkKind`): com que les quatre marques inicials són a la columna 0, mirant només la columna no es refrescava en passar d'una a l'altra.
@@ -177,10 +216,30 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `29-8-26` — ajuda reescrita i javadoc revisat, encara sense castellà.
 - `castella-29-8-26` — tot l'anterior, més la interfície en castellà (`ca`/`en`/`es`), el `config.properties` en UTF-8 i `ConfigManager` esborrat.
 - `5-9-26` — tot l'anterior, més la columna de l'acord numerada d'1 a 12, el tip de Ctrl-V i el nom del PDF igual que el del MIDI.
+- `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada.
 
 Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
 
+## Migració de la biblioteca (7-9-26)
+
+En baixar la graella de 79–103 a 55–79, els fitxers ja desats s'havien de reescriure: guardaven l'altura amb el `displayOffset` antic i la tonalitat en coordenades de la graella vella. La regla aplicada, **per pista**:
+
+```
+nou_desat = desat_antic + displayOffset_antic     (conservar el dibuix)
+midiKey / choice / CHANGEMAP:midiKey  −24         (la finestra ha baixat 24)
+displayOffset=  →  -24
+```
+
+El `+ displayOffset_antic` no és sempre +12: `Vem kan segla forutan vind_mi` el tenia a 0 i les seves notes no s'havien de moure gens. La percussió (canal 9, `displayOffset=0`) no es toca.
+
+Migrats: els 16 `.ddcgr.mid` de `SongsInBooklet/` i els 10 de `../Complements_Bu/OtherSongsBu/`. **Còpies de seguretat** a `SongsInBooklet_bkp_20260907/` i `../Complements_Bu/OtherSongsBu_bkp_20260907/`.
+
+Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mid`, `CucutILaGuimbarda.mid` i tot `../Complements_Bu/OtherSongFullRange/`. Els PDFs de `OtherSongsBu/Dodecagrams/` han quedat desfasats: mostren l'octava antiga.
+
+Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
+
 ## Historial de canvis recents (commits rellevants)
+- **tag `7-9-26`** Do central = do4 en tots dos modes de graella. CSV: glock 67–96 → 79–103. `ToneRange`: metal·lòfon 55–79 i `MIDDLE_C` sempre 60. El `displayOffset` deixa de desar-se i es calcula sempre de l'instrument; un `PROGRAM_CHANGE` per pista en desar; `transposeChoiceAndKey`, el lector de `displayOffset=` i `displayOffsetFromMetadata` eliminats. Marca de transposició amb signe de músic (t+24). Guarda de `keyId` a `placeNote`.
 - **be0a658** Castellà: `messages_es.properties` amb les 496 claus traduïdes; s'activa amb `ui.language=es`. Els textos de `ca`/`en` sobre l'idioma esmenten els tres.
 - **de7c080** Ajuda reescrita (15 seccions amb índex i àncores, inclosa la de `config.properties`) i revisió completa del javadoc.
 - **e31d005** Marca de transposició (groga, per track), tips de marca amb valors, franja d'acords a 6 files, transposició amb tres opcions, fixes del blink d'arrencada.

@@ -672,14 +672,21 @@ public class MyPatternScore extends MyGridScore {
     }
     
     /**
-     * Places a note and sets its square's midi channel.
+     * [CA] Col·loca una nota a una fila concreta de la graella, sense passar per
+     * {@link ToneRange#midiToKeyId(int)}. És el camí de la percussió, on la fila
+     * ja ve calculada i no s'hi val a transposar per octaves.
+     * <p>
+     * [EN] Places a note at a specific grid row, bypassing
+     * {@link ToneRange#midiToKeyId(int)}. This is the drum path, where the row
+     * is already computed and octave-shifting would be wrong.
      *
-     * @param midi [CA] nota MIDI absoluta / [EN] absolute MIDI note
-     * @param ncols [CA] durada en columnes / [EN] duration in columns
-     * @param mutted [CA] cert si la nota va silenciada / [EN] true if the note is muted
-     * @param channel [CA] canal MIDI / [EN] MIDI channel
+     * @param row      [CA] fila de la graella / [EN] grid row
+     * @param ncols    [CA] durada en columnes / [EN] duration in columns
+     * @param linked   [CA] cert si continua la nota anterior / [EN] true if it continues the previous note
+     * @param channel  [CA] canal MIDI / [EN] MIDI channel
+     * @param trackId  [CA] identificador de pista / [EN] track identifier
+     * @param velocity [CA] velocitat MIDI / [EN] MIDI velocity
      */
-    /** Col·loca una nota a una fila específica del grid (no usa midiToKeyId). Per drums. */
     public void placeNoteAtRow(int row, int ncols, boolean linked, int channel, int trackId, int velocity) {
         int col = currentWriteCol;
         if (row < 0 || row >= nKeys) return;
@@ -695,9 +702,43 @@ public class MyPatternScore extends MyGridScore {
         if (currentWriteCol > lastColWritten) lastColWritten = currentWriteCol;
     }
 
+    /**
+     * [CA] Col·loca una nota a la graella a partir de la seva altura MIDI de
+     * <b>dibuix</b> (no la que sona: qui passa d'una a l'altra és el
+     * {@code displayOffset} de la pista).
+     * <p>
+     * Si l'altura cau fora de [{@code lowestMidi}, {@code highestMidi}],
+     * {@link ToneRange#midiToKeyId(int)} la desplaça per octaves fins encabir-la:
+     * es conserva el nom de la nota i es perd el registre. Qui carrega un MIDI
+     * compta aquests casos i n'avisa l'usuari. <b>És irreversible en desar</b>:
+     * la graella només guarda la fila ja desplaçada.
+     * <p>
+     * [EN] Places a note on the grid from its <b>drawn</b> MIDI pitch (not the
+     * sounding one: the track's {@code displayOffset} converts between them).
+     * <p>
+     * If the pitch falls outside [{@code lowestMidi}, {@code highestMidi}],
+     * {@link ToneRange#midiToKeyId(int)} shifts it by octaves until it fits:
+     * the note name is kept and the register is lost. MIDI loading counts these
+     * and warns the user. <b>This is irreversible once saved</b>: the grid only
+     * holds the already-shifted row.
+     *
+     * @param midi     [CA] altura MIDI de dibuix / [EN] drawn MIDI pitch
+     * @param ncols    [CA] durada en columnes / [EN] duration in columns
+     * @param mutted   [CA] cert si la nota va silenciada / [EN] true if the note is muted
+     * @param linked   [CA] cert si continua la nota anterior / [EN] true if it continues the previous note
+     * @param channel  [CA] canal MIDI / [EN] MIDI channel
+     * @param trackId  [CA] identificador de pista / [EN] track identifier
+     * @param velocity [CA] velocitat MIDI / [EN] MIDI velocity
+     */
     public void placeNote(int midi, int ncols, boolean mutted, boolean linked, int channel, int trackId, int velocity) {
         int col = currentWriteCol;
         int keyId = ToneRange.midiToKeyId(midi);
+        // midiToKeyId desplaça per octaves fins encabir la nota, però els seus dos
+        // while no tenen topall: si el rang del teclat fos més estret que una octava
+        // (lowestMidi/highestMidi es poden posar a mà a config.properties), en tornaria
+        // un de fora de 0..nKeys-1. Igual que placeNoteAtRow, descartem la nota en
+        // comptes d'indexar fora del grid.
+        if (keyId < 0 || keyId >= nKeys) return;
         for (int i = 0; i < ncols; i++) {
             boolean lnkd = true;
             if (i==0) lnkd = linked;

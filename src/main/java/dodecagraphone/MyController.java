@@ -4251,7 +4251,9 @@ public class MyController {
                 break;
             }
             case TRANSPOSE: {
-                int semis = (track != null) ? track.getDisplayOffset() : 0;
+                // Signe de músic (8va): positiu = sona per sobre del que es
+                // dibuixa. displayOffset guarda dibuix−so, per això es nega.
+                int semis = (track != null) ? -track.getDisplayOffset() : 0;
                 info = I18n.f("scoreChange.mark.info.transpose", "" + semis);
                 actionsKey = "scoreChange.mark.transpose.tip";
                 break;
