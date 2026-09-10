@@ -800,6 +800,38 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
+     * [CA] Cert mentre la franja s'ha de dibuixar sense la pila de marques de la
+     * columna 0 (transposició, tempo, tonalitat i volum). Només l'aixeca la
+     * impressió d'un dodecagrama en blanc, entre el redibuix del buffer i el final
+     * del PDF; el PDF copia aquest mateix offscreen, o sigui que treure-les d'aquí
+     * les treu de la pàgina. Fora d'aquell tram val sempre fals: les marques
+     * inicials són la base de la partitura i a la pantalla no s'amaguen mai.
+     * <p>
+     * [EN] True while the band must be drawn without the column 0 mark stack
+     * (transpose, tempo, key and volume). Only the blank dodecagram printout
+     * raises it, between the buffer redraw and the end of the PDF; the PDF copies
+     * this very offscreen, so dropping them here drops them from the page. Outside
+     * that window it is always false: initial marks are the score's baseline and
+     * are never hidden on screen.
+     */
+    private boolean hideInitialMarks = false;
+
+    /**
+     * [CA] Amaga o mostra la pila de marques de la columna 0. Qui l'aixequi ha de
+     * tornar-la a baixar (en un {@code finally}) i forçar un redibuix, o la franja
+     * es quedaria sense marques a la pantalla.
+     * <p>
+     * [EN] Hides or shows the column 0 mark stack. Whoever raises it must lower it
+     * again (in a {@code finally}) and force a redraw, or the band would stay
+     * without marks on screen.
+     *
+     * @param hide [CA] cert per amagar-les / [EN] true to hide them
+     */
+    public void setHideInitialMarks(boolean hide) {
+        this.hideInitialMarks = hide;
+    }
+
+    /**
      * Draws the complete chord symbol line (all columns) into the offscreen
      * buffer using absolute pixel coordinates (col * colWidth, 0).
      */
@@ -827,8 +859,9 @@ public class MyChordSymbolLine extends MyComponent {
             // Només mostrem la marca de volum del track actual.
             int currentTrackId = contr.getMixer().getCurrentTrackId();
 
-            // Col 0: sempre es dibuixa (amb fallback als defaults si el changeMap no té entrada).
-            {
+            // Col 0: sempre es dibuixa (amb fallback als defaults si el changeMap no té
+            // entrada), tret que s'hagi demanat un dodecagrama en blanc sense marques.
+            if (!hideInitialMarks) {
                 MyGridScore.ScoreChange sc0 = changeMap.get(0);
                 int tempo0   = (sc0 != null && sc0.tempo    != null) ? sc0.tempo    : Settings.DEFAULT_TEMPO;
                 int midiKey0 = (sc0 != null && sc0.midiKey  != null) ? sc0.midiKey  : ToneRange.getDefaultKey();

@@ -58,6 +58,16 @@ public class DodecagramPdfPrinter {
     private static final float ROW_GAP         = 6f;
     private static final float MEASURE_LABEL_H = 10f;
     private static final int   TARGET_ROWS     = 4;
+    /**
+     * [CA] Files d'un dodecagrama en blanc, quan s'imprimeix una partitura
+     * sense notes. Coincideix amb {@link #TARGET_ROWS}: són les files que la
+     * distribució de pàgina ja mira d'encabir en una sola plana.
+     * <p>
+     * [EN] Number of rows of a blank dodecagram, when printing a score with no
+     * notes. It matches {@link #TARGET_ROWS}: those are the rows the page
+     * layout already aims to fit on a single page.
+     */
+    public static final int    BLANK_ROWS      = 4;
     /** Max row image height as fraction of usable page height (single-row case). */
     private static final float MAX_ROW_FRAC    = 0.5f;
     /**
@@ -85,6 +95,57 @@ public class DodecagramPdfPrinter {
     }
 
     /**
+     * [CA] Files del dodecagrama en blanc que s'ha de generar; 0 vol dir
+     * impressió normal de la partitura.
+     * <p>
+     * [EN] Rows of the blank dodecagram to be generated; 0 means a normal
+     * score printout.
+     */
+    private int blankRows = 0;
+
+    /**
+     * [CA] Genera un dodecagrama en blanc de {@link #BLANK_ROWS} files. És per a
+     * la partitura buida, on {@link #print(File)} només trauria la pàgina única
+     * que marca {@code stopCol}.
+     * <p>
+     * Amb {@code dropInitialMarks} fals, la pàgina porta el tempo, la tonalitat,
+     * el volum i la transposició vigents (les marques de la columna 0); amb cert
+     * no porta res, que és el paper pautat genèric. El PDF copia l'offscreen de
+     * la franja d'acords, o sigui que amagar-les allà és el que les treu de la
+     * pàgina; el {@code finally} les torna i redibuixa la pantalla.
+     * <p>
+     * [EN] Generates a blank dodecagram of {@link #BLANK_ROWS} rows. Meant for
+     * the empty score, where {@link #print(File)} would only output the single
+     * page given by {@code stopCol}.
+     * <p>
+     * With {@code dropInitialMarks} false the page carries the current tempo,
+     * key, volume and transposition (the column 0 marks); with true it carries
+     * none, which is the generic staff paper. The PDF copies the chord band
+     * offscreen, so hiding them there is what removes them from the page; the
+     * {@code finally} brings them back and redraws the screen.
+     *
+     * @param outputFile       [CA] Fitxer de sortida PDF / [EN] Output PDF file
+     * @param dropInitialMarks [CA] cert per treure les marques de la columna 0 /
+     *                         [EN] true to drop the column 0 marks
+     * @throws IOException [CA] Si falla la creació o l'escriptura del PDF /
+     *                     [EN] If creating or writing the PDF fails
+     */
+    public void printBlank(File outputFile, boolean dropInitialMarks) throws IOException {
+        MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
+        blankRows = BLANK_ROWS;
+        if (dropInitialMarks) chordLine.setHideInitialMarks(true);
+        try {
+            print(outputFile);
+        } finally {
+            blankRows = 0;
+            if (dropInitialMarks) {
+                chordLine.setHideInitialMarks(false);
+                controller.redrawChordLine();
+            }
+        }
+    }
+
+    /**
      * [CA] Genera el fitxer PDF al camí indicat. Divideix la partitura en
      * files de mida fixa, les compon com a imatges rasteritzades i afegeix
      * les línies vectorials de compàs, beat i doble barra.
@@ -101,21 +162,6 @@ public class DodecagramPdfPrinter {
         MyAllPurposeScore score = controller.getAllPurposeScore();
         MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
         MyLyrics lyrics = controller.getMyLyrics();
-        controller.getCam().drawFullCamInOffscreen();
-
-        BufferedImage gridImg   = score.getOffscreenImage();
-        BufferedImage chordImg  = chordLine.getOffscreenImage();
-        BufferedImage lyricsImg = lyrics.getOffscreenImage();
-
-        if (gridImg == null || chordImg == null) return;
-
-        int stopCol = score.getStopCol();
-        if (stopCol <= 0) return;
-
-        // Precompute beat/measure boundaries (lines are now screen-space in draw(), not in offscreen)
-        boolean[] isBeat    = new boolean[stopCol + 2];
-        boolean[] isMeasure = new boolean[stopCol + 2];
-        score.computeBeatMeasureLines(stopCol + 2, isBeat, isMeasure);
 
         double colWidthF   = Settings.getColWidth();
         int colWidthPx     = (int) Math.max(1, Math.round(colWidthF));
@@ -129,8 +175,41 @@ public class DodecagramPdfPrinter {
         int fixedSlicePx = (int) Math.round(fixedCols * colWidthF);
         int keyWidthPx   = 4 * colWidthPx;
 
-        // Amb fit-anacrusis, la primera fila mostra un compàs extra (anacrusis comprimida)
-        boolean fitFirstRow = Settings.isFitAnacrusis() && Settings.isHasAnacrusis();
+        // El buffer offscreen d'una partitura nova només cobreix un parell de
+        // pàgines, i les files del dodecagrama en blanc se'n retallen: s'ha
+        // d'ampliar ABANS de redibuixar-lo.
+        if (blankRows > 0) {
+            ensureBufferFor(score, chordLine, lyrics, blankRows * fixedCols + 1);
+            // El buffer d'acords no es regenera sol; el dodecagrama en blanc
+            // necessita un dibuix fresc, que és on es decideix si hi van les
+            // marques inicials o no.
+            chordLine.setNeedsDrawing(true);
+        }
+
+        controller.getCam().drawFullCamInOffscreen();
+
+        BufferedImage gridImg   = score.getOffscreenImage();
+        BufferedImage chordImg  = chordLine.getOffscreenImage();
+        BufferedImage lyricsImg = lyrics.getOffscreenImage();
+
+        if (gridImg == null || chordImg == null) return;
+
+        // En blanc no hi ha contingut que doni stopCol: són les files
+        // demanades, topades pel que el buffer hagi pogut créixer.
+        int stopCol = (blankRows > 0)
+                ? Math.min(blankRows * fixedCols, score.getNColsBuffer())
+                : score.getStopCol();
+        if (stopCol <= 0) return;
+
+        // Precompute beat/measure boundaries (lines are now screen-space in draw(), not in offscreen)
+        boolean[] isBeat    = new boolean[stopCol + 2];
+        boolean[] isMeasure = new boolean[stopCol + 2];
+        score.computeBeatMeasureLines(stopCol + 2, isBeat, isMeasure);
+
+        // Amb fit-anacrusis, la primera fila mostra un compàs extra (anacrusis comprimida).
+        // Un dodecagrama en blanc no té anacrusa: totes les files són iguals.
+        boolean fitFirstRow = blankRows == 0
+                && Settings.isFitAnacrusis() && Settings.isHasAnacrusis();
         int firstRowExtraCols = fitFirstRow ? colsPerMeasure : 0;
         int firstRowCols   = fixedCols + firstRowExtraCols;
         int firstSlicePx   = (int) Math.round(firstRowCols * colWidthF);
@@ -294,8 +373,8 @@ public class DodecagramPdfPrinter {
                     }
                 }
 
-                // Double bar at stopCol
-                if (startCol < stopCol && stopCol <= endCol) {
+                // Double bar at stopCol (un dodecagrama en blanc no té final)
+                if (blankRows == 0 && startCol < stopCol && stopCol <= endCol) {
                     float stopXPdf = MARGIN + (float) ((keyWidthPx + (stopCol - startCol) * colWidthF) * rowScaleX);
                     pdf.drawDoubleBar(stopXPdf, yImgBottom, rowImgPdfH);
                 }
@@ -310,6 +389,30 @@ public class DodecagramPdfPrinter {
             if (outputFile.exists()) outputFile.delete();
             doc.save(outputFile);
         }
+    }
+
+    /**
+     * [CA] Amplia els buffers offscreen de les tres franges fins a
+     * {@code neededCols} columnes, si encara no hi arriben. És el mateix que fa
+     * la navegació en passar pàgina; aquí cal perquè el dodecagrama en blanc
+     * demana més columnes de les que té el buffer d'una partitura nova.
+     * <p>
+     * [EN] Grows the offscreen buffers of the three bands up to
+     * {@code neededCols} columns, if they do not reach it yet. It is what
+     * paging does when navigating; here it is needed because the blank
+     * dodecagram asks for more columns than a new score's buffer holds.
+     *
+     * @param score      [CA] partitura activa / [EN] active score
+     * @param chordLine  [CA] franja d'acords / [EN] chord band
+     * @param lyrics     [CA] franja de lletra / [EN] lyrics band
+     * @param neededCols [CA] columnes que hi han de cabre / [EN] columns that must fit
+     */
+    private void ensureBufferFor(MyAllPurposeScore score, MyChordSymbolLine chordLine,
+            MyLyrics lyrics, int neededCols) {
+        if (score.getNColsBuffer() >= neededCols) return;
+        score.resizeOffscreen(neededCols);
+        chordLine.resizeOffscreen(neededCols);
+        lyrics.resizeOffscreen(neededCols);
     }
 
     // -----------------------------------------------------------------------

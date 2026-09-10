@@ -15,6 +15,7 @@ import dodecagraphone.model.component.MyGridSquare.SubSquare;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
+import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.AlphaComposite;
@@ -991,9 +992,13 @@ public class MyGridScore extends MyComponent {
         backgroundChordLine = new HashMap<>();
         messages = new HashMap<>();
         midiMessages = new HashMap<>();
-        title = "Títol";
-        author = "Autor";
-        description = "Descripció";
+        // Marcadors de posició, en l'idioma de la interfície: es veuen als
+        // botons de metadades i el títol és la base del nom de fitxer que
+        // proposen Desa i PDF. El que ja porta un fitxer desat no es toca mai:
+        // això només val per a la partitura nova.
+        title = I18n.t("score.default.title");
+        author = I18n.t("score.default.author");
+        description = I18n.t("score.default.description");
         gridColorsHaveChanged = true;
         setNumBeatsMeasure(Settings.getnBeatsMeasure());
         setBeatFigure(Settings.getBeatFigure());

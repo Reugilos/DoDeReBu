@@ -26,7 +26,8 @@ import javax.sound.midi.MidiMessage;
  * ció i endevinament. Les notes es col·loquen a {@code currentWriteCol}, que
  * s'actualitza automàticament. El mètode {@code updateStopMarker()} recalcula
  * la durada de l'últim acord del {@code chordSymbolLine} fins a {@code endOfScore}
- * (= final de l'última nota, no del compàs) i valida {@code stopMarkerValid}.
+ * (= final de l'última nota, no del compàs) i valida {@code stopMarkerValid},
+ * excepte si la partitura és buida, que aleshores el deixa fals.
  * Es crida <b>només en reproduir i en desar</b>, més la inicialització: durant
  * l'edició la doble barra ha de quedar quieta.
  * <p>
@@ -35,7 +36,8 @@ import javax.sound.midi.MidiMessage;
  * Notes are placed at {@code currentWriteCol}, which is updated automatically.
  * The method {@code updateStopMarker()} recomputes the duration of the last
  * chord in {@code chordSymbolLine} up to {@code endOfScore} (= end of the last
- * note, not of the measure) and validates {@code stopMarkerValid}. It is called
+ * note, not of the measure) and validates {@code stopMarkerValid}, unless the
+ * score is empty, in which case it leaves it false. It is called
  * <b>only on playback and on save</b>, plus initialisation: while editing, the
  * double bar must stay put.
  *
@@ -241,6 +243,15 @@ public class MyPatternScore extends MyGridScore {
      * {@code chordSymbolLine} to reach {@code endOfScore}, and sets
      * {@code stopCol} to the end of the measure containing {@code endOfScore}.
      * Must be called both when adding and when deleting notes.
+     * <p>
+     * [CA] Si la partitura no té contingut ({@code endOfScore <= 0}),
+     * {@code stopCol} es queda amb el mínim d'una pàgina però
+     * {@code stopMarkerValid} val <b>fals</b>: sense notes ni acords no hi ha
+     * cap final que dibuixar.
+     * <p>
+     * [EN] If the score has no content ({@code endOfScore <= 0}),
+     * {@code stopCol} keeps the one-page minimum but {@code stopMarkerValid} is
+     * <b>false</b>: with no notes and no chords there is no end to draw.
      */
     public void updateStopMarker() {
         int noteEnd = computeNoteEndCol();
@@ -284,12 +295,23 @@ public class MyPatternScore extends MyGridScore {
         if (colsPerMeasure <= 0) colsPerMeasure = 1;
         int minStopCol = Settings.getnColsCam(); // sempre almenys una pàgina
         if (endOfScore <= 0) {
+            // Sense contingut no hi ha final. stopCol es queda amb el mínim
+            // d'una pàgina perquè qui el llegeix tingui un valor sensat (el
+            // buffer del metrònom, els límits de la graella), però el marcador
+            // NO es valida: una partitura buida no ha de dibuixar doble barra.
+            //
+            // Aquest mínim, a més, es calcula amb l'amplada de pàgina vigent
+            // ARA (Settings.getnColsCam()), i en canviar el compàs base
+            // refreshAfterChangeMapEdit crida aquest mètode ABANS que
+            // applyChangesAt actualitzi Settings: validar-lo aquí deixava la
+            // barra plantada al mig de la pàgina nova.
             stopCol = minStopCol;
-        } else {
-            stopCol = ((endOfScore + colsPerMeasure - 1) / colsPerMeasure) * colsPerMeasure;
-            stopCol = Math.max(stopCol, minStopCol);
-            stopCol = Math.min(stopCol, getNumCols());
+            stopMarkerValid = false;
+            return;
         }
+        stopCol = ((endOfScore + colsPerMeasure - 1) / colsPerMeasure) * colsPerMeasure;
+        stopCol = Math.max(stopCol, minStopCol);
+        stopCol = Math.min(stopCol, getNumCols());
         stopMarkerValid = true;
     }
 
@@ -529,6 +551,26 @@ public class MyPatternScore extends MyGridScore {
 
     public boolean hasAnyChords() {
         return chordSymbolLine.values().stream().anyMatch(c -> c != null && c.isValidChord());
+    }
+
+    /**
+     * [CA] Cert quan la partitura no té ni notes ni acords. És la condició que
+     * fa que el botó PDF ofereixi un dodecagrama en blanc en comptes d'imprimir
+     * la partitura.
+     * <p>
+     * Amb acords i sense notes la partitura NO és buida: hi ha contingut a
+     * imprimir.
+     * <p>
+     * [EN] True when the score has neither notes nor chords. It is the condition
+     * that makes the PDF button offer a blank dodecagram instead of printing the
+     * score.
+     * <p>
+     * A score with chords and no notes is NOT empty: there is content to print.
+     *
+     * @return [CA] cert si la partitura és buida / [EN] true if the score is empty
+     */
+    public boolean isBlankScore() {
+        return computeNoteEndCol() == 0 && !hasAnyChords();
     }
 
     public void placeChordSymbol(Chord chord) {

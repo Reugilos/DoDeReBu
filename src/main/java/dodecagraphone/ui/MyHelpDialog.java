@@ -220,11 +220,11 @@ public class MyHelpDialog {
     }
 
     /**
-     * [CA] Afegeix la secció de configuració (ruta del fitxer config.properties)
-     * al StringBuilder HTML.
+     * [CA] Afegeix la secció de configuració (ruta del fitxer config.properties
+     * i taula dels paràmetres que s'hi poden tocar) al StringBuilder HTML.
      * <p>
-     * [EN] Appends the configuration section (config.properties file path) to
-     * the HTML StringBuilder.
+     * [EN] Appends the configuration section (config.properties file path and
+     * the table of the settings it accepts) to the HTML StringBuilder.
      *
      * @param sb [CA] StringBuilder de sortida / [EN] output StringBuilder
      */
@@ -237,6 +237,12 @@ public class MyHelpDialog {
         sb.append("<p style=\"font-family:monospace;font-size:11px;background:#e8e8e8;padding:3px 6px;margin:2px 0;\">")
           .append(path).append("</p>");
         sb.append("<p class=\"note\">").append(I18n.t("help.config.path.note2")).append("</p>");
+        sb.append("<table>");
+        for (String[] row : helpConfig()) {
+            sb.append("<tr><td class=\"key\">").append(row[0])
+              .append("</td><td>").append(row[1]).append("</td></tr>");
+        }
+        sb.append("</table>");
         appendBackToIndex(sb);
     }
 
@@ -362,6 +368,7 @@ public class MyHelpDialog {
             { I18n.t("help.playback.speed.key"),        I18n.t("help.playback.speed.desc") },
             { I18n.t("help.playback.transpose.key"),    I18n.t("help.playback.transpose.desc") },
             { I18n.t("help.playback.tremolo.key"),      I18n.t("help.playback.tremolo.desc") },
+            { I18n.t("help.playback.metronome.key"),    I18n.t("help.playback.metronome.desc") },
         };
     }
 
@@ -402,7 +409,8 @@ public class MyHelpDialog {
             { I18n.t("help.export.load.key"), I18n.t("help.export.load.desc") },
             { I18n.t("help.export.midi.key"), I18n.t("help.export.midi.desc") },
             { I18n.t("help.export.svg.key"),  I18n.t("help.export.svg.desc") },
-            { I18n.t("help.export.pdf.key"),  I18n.t("help.export.pdf.desc") },
+            { I18n.t("help.export.pdf.key"),      I18n.t("help.export.pdf.desc") },
+            { I18n.t("help.export.pdfBlank.key"), I18n.t("help.export.pdfBlank.desc") },
         };
     }
 

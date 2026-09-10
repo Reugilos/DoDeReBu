@@ -140,7 +140,7 @@ Conseqüències:
 - Abans, `applyChangesAt` reaplicava la marca després de cada premuda i esborrava l'ajust; per això els botons de tempo semblaven no respondre.
 
 ## Convencions de codi
-- `I18n.t("clau")` per a textos UI; `I18n.f("clau", arg)` per a textos amb paràmetres.
+- `I18n.t("clau")` per a textos UI; `I18n.f("clau", arg)` per a textos amb paràmetres. També al model quan el valor acaba a la vista: el títol, l'autor i la descripció d'una partitura nova surten de `score.default.*` a `MyGridScore.clearScore()`, no de literals en català. El títol, a més, és la base del nom que proposen Desa i PDF.
 - Els bundles (`ca`, `en`, `es`, i els que s'afegeixin) han de tenir **el mateix joc de claus** i el mateix nombre de placeholders per clau. Es llegeixen en UTF-8 (`I18n.UTF8Control`), o sigui que els accents es poden escriure directament; els `\uXXXX` que hi ha són històrics. Als textos que passen per `I18n.f()`, l'apòstrof s'ha de doblar (`''`) perquè `MessageFormat` no se'l mengi.
 - Totes les coordenades de la graella en columnes de partitura (no píxels); `Settings.getColWidth()` per convertir.
 - `nRows` = nombre de files de la franja (chord line = 3 files, lyrics = 2 files aprox.).
@@ -159,7 +159,40 @@ Conseqüències:
 
 `stopMarkerValid` (a `MyGridScore`) diu si `stopCol` correspon al contingut actual. Es valida a `updateStopMarker`/`setStopCol` i es **caduca a qualsevol mutació de contingut**; la invalidació viu dins del model (`addNoteToSquare`, `removeNoteFromSquare`, `insertColumn`, `deleteColumn`) perquè cap ruta d'edició se n'escapi. Els tres llocs que dibuixen la doble barra (graella, acords, lletra) comproven el flag: si no és vigent, no la dibuixen.
 
+**Partitura buida = cap doble barra.** `updateStopMarker` validava el marcador *sempre*, també quan no hi ha ni notes ni acords (`endOfScore <= 0`), i allà `stopCol` no és cap final: és el mínim d'una pàgina, `Settings.getnColsCam()`. O sigui que una partitura nova arrencava amb barra. Pitjor en canviar el compàs base: `refreshAfterChangeMapEdit` crida `updateStopMarker` **abans** que `applyChangesAt` actualitzi el `Settings`, i per tant `minStopCol` es calculava amb l'amplada de pàgina *vella* mentre la vista ja dibuixava la nova — la barra quedava plantada al mig. Ara el cas buit surt amb `stopMarkerValid = false`, i `stopCol` es manté només per als qui el llegeixen com a límit (el buffer del metrònom, `MyGridScore` línia 2491).
+
 El buffer no depèn de `stopCol`: `expandBufferIfNeeded` es dimensiona amb `lastColWritten`, i **passar pàgina l'amplia** (`onNextPageButtonPressed`), altrament `nextPage()` es negava a avançar més enllà del contingut escrit.
+
+## Dodecagrama en blanc (PDF d'una partitura buida)
+
+Si en prémer el botó de PDF la partitura no té **ni notes ni acords** (`MyPatternScore.isBlankScore()`), `onPrintButtonPressed` fa **dues preguntes**:
+
+1. `print.blank.question` — vols un dodecagrama en blanc? Si es respon que no, no s'imprimeix res.
+2. `print.blank.dropMarks.question` — en vols treure les marques inicials? Si es respon que sí, la pàgina surt sense la pila de la columna 0 (volum, tonalitat, tempo i transposició): paper pautat genèric, bo per a qualsevol tonalitat i qualsevol tempo.
+
+Després, `DodecagramPdfPrinter.printBlank(file, dropInitialMarks)` treu **`BLANK_ROWS` = 4 files buides**.
+
+Amb acords i sense notes s'imprimeix com sempre: hi ha contingut a treure.
+
+**Com es treuen les marques.** Des de `42003ca` el PDF no les dibuixa ell: copia l'offscreen de la banda d'acords, que ja les porta. O sigui que treure-les és amagar-les d'aquell offscreen i prou. Ho fa `MyChordSymbolLine.hideInitialMarks`, un senyal que **només** viu entre el redibuix del buffer i el final del PDF: `printBlank` l'aixeca, força `setNeedsDrawing(true)` (sense això `drawFullChordLineInOffscreen` no refà res i el buffer sortiria amb les marques velles) i, en un `finally`, el baixa i crida `redrawChordLine()` perquè la pantalla les recuperi. A la pantalla no s'amaguen mai: són la base de la partitura i a la columna 0 continuen sent editables però no esborrables.
+
+Dues coses que el mode en blanc canvia dins de `print()`:
+
+- **`stopCol` no ve del contingut** (no n'hi ha: valdria una sola pàgina), sinó de `blankRows * fixedCols`. Per això el càlcul de `fixedCols` s'ha mogut **abans** de llegir `stopCol`.
+- **El buffer offscreen s'ha d'ampliar abans de redibuixar** (`ensureBufferFor`): una partitura nova en té prou amb un parell de pàgines (`computeInitialBufferSize`) i les files de més sortirien retallades. `drawFullCamInOffscreen()` va després.
+
+La doble barra i el fit-anacrusi queden desactivats: un dodecagrama en blanc no té final ni anacrusa.
+
+A l'ajuda hi és a la secció «Fitxers i Exportació» (`help.export.pdfBlank.*`).
+
+## L'ajuda (`MyHelpDialog`)
+
+L'HTML es munta a `buildHtml()` amb claus i18n. Dues coses que no es veuen mirant només el codi de les seccions:
+
+- Els títols de secció i els `*.intro` **no passen per cap crida `I18n.t(...)` literal**: van a l'array `sections` i als arguments d'`appendSection`. Un grep de `I18n.t("help.` els dóna per orfes; no ho són.
+- La secció de config no usa `appendSection`: la munta `appendSectionConfig`, que hi afegeix la ruta del `config.properties` **i** la taula de `helpConfig()`. Aquesta taula ha d'anar en paral·lel a `resources/defaults/config.properties`: si s'hi afegeix un paràmetre, hi ha d'entrar també una fila. Fins al 8-9-26 `helpConfig()` no la cridava ningú i les nou files no sortien enlloc.
+
+Els botons documentats han de cobrir `resources/defaults/ButtonLayout.csv`. Hi faltava el metrònom (`help.playback.metronome.*`).
 
 ## Selecció, porta-retalls i undo/redo
 
