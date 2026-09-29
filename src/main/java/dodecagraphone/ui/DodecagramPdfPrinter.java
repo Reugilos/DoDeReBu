@@ -146,6 +146,161 @@ public class DodecagramPdfPrinter {
     }
 
     /**
+     * [CA] Genera un dodecagrama en blanc apaisat d'una sola pàgina sencera:
+     * teclat, línies grises del pentagrama i vermella del do (ja incloses en
+     * la imatge offscreen de la graella), amb espai per a acords i lletra.
+     * Sense marques inicials (sempre) i sense cap barra de compàs; només hi
+     * ha les línies de temps. Les columnes conserven l'amplada que tenen a la
+     * pantalla i n'hi caben tantes com doni l'amplada de la fulla. Pensat com
+     * a paper pautat genèric per escriure-hi a mà.
+     * <p>
+     * [EN] Generates a one-page landscape blank dodecagram: keyboard, gray
+     * staff lines and the red C line (already part of the grid's offscreen
+     * image), with room for chords and lyrics. No initial marks (always) and
+     * no measure bars at all; only beat lines. Columns keep the width they
+     * have on screen and as many fit as the sheet width allows. Meant as
+     * generic staff paper to write on by hand.
+     *
+     * @param outputFile [CA] Fitxer de sortida PDF / [EN] Output PDF file
+     * @throws IOException [CA] Si falla la creació o l'escriptura del PDF /
+     *                     [EN] If creating or writing the PDF fails
+     */
+    public void printBlankLandscape(File outputFile) throws IOException {
+        MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
+        chordLine.setHideInitialMarks(true);
+        try {
+            printLandscape(outputFile);
+        } finally {
+            chordLine.setHideInitialMarks(false);
+            controller.redrawChordLine();
+        }
+    }
+
+    private void printLandscape(File outputFile) throws IOException {
+        MyAllPurposeScore score = controller.getAllPurposeScore();
+        MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
+        MyLyrics lyrics = controller.getMyLyrics();
+
+        double colWidthF = Settings.getColWidth();
+        int colWidthPx   = (int) Math.max(1, Math.round(colWidthF));
+        int keyWidthPx   = 4 * colWidthPx;
+
+        // Pàgina A4 apaisada: amplada i alçada intercanviades respecte de la
+        // A4 vertical que fan servir la resta de mètodes d'aquesta classe.
+        float pageW = PAGE_H;
+        float pageH = PAGE_W;
+        float usableW = pageW - 2 * MARGIN;
+
+        String desc = nullSafe(score.getDescription());
+        int descLineCount = desc.isEmpty() ? 0 : pdf.wrapLines(desc, usableW).size();
+        float headerH = FIRST_HEADER_H + Math.max(0, descLineCount - 1) * DESC_LINE_H;
+
+        float usableH = pageH - 2 * MARGIN - headerH;
+        if (usableH <= 0) return;
+
+        // Les alçades de les tres franges no depenen de les columnes, o sigui
+        // que es poden llegir abans d'ampliar el buffer (resizeOffscreen només
+        // en canvia l'amplada).
+        BufferedImage chordImg  = chordLine.getOffscreenImage();
+        BufferedImage gridImg   = score.getOffscreenImage();
+        BufferedImage lyricsImg = lyrics.getOffscreenImage();
+        if (gridImg == null || chordImg == null) return;
+
+        int chordH     = chordImg.getHeight();
+        int gridH      = gridImg.getHeight();
+        int lyricsSrcH = (lyricsImg != null) ? lyricsImg.getHeight() : 0;
+        int scoreRowH  = chordH + gridH + lyricsSrcH;
+        if (scoreRowH <= 0) return;
+
+        // L'escala la mana l'alçada, i és la mateixa per a les dues
+        // direccions: així les columnes mantenen l'amplada que tenen a la
+        // pantalla en comptes de sortir estirades. El nombre de columnes surt
+        // després, de l'amplada que quedi, arrodonit a temps sencers perquè la
+        // fulla no acabi amb un temps a mitges.
+        float scale   = usableH / scoreRowH;
+        int nColsBeat = (score.getBaseNColsBeat() > 0)
+                ? score.getBaseNColsBeat() : Settings.getnColsBeat();
+        if (nColsBeat <= 0) nColsBeat = 1;
+        int rawCols = (int) Math.round((usableW / scale - keyWidthPx) / colWidthF);
+        int cols    = Math.max(1, Math.round((float) rawCols / nColsBeat)) * nColsBeat;
+
+        // Una partitura nova en té prou amb un parell de pàgines; cal
+        // assegurar que el buffer offscreen cobreix les columnes demanades.
+        ensureBufferFor(score, chordLine, lyrics, cols + 1);
+        chordLine.setNeedsDrawing(true);
+        controller.getCam().drawFullCamInOffscreen();
+
+        // resizeOffscreen crea imatges noves: s'han de tornar a demanar.
+        gridImg   = score.getOffscreenImage();
+        chordImg  = chordLine.getOffscreenImage();
+        lyricsImg = lyrics.getOffscreenImage();
+        if (gridImg == null || chordImg == null) return;
+
+        // El buffer pot no haver arribat a les columnes demanades (topa amb el
+        // total de la partitura); les que no hi són sortirien en blanc.
+        cols = Math.min(cols, Math.max(1, score.getNColsBuffer() - 1));
+
+        boolean[] isBeat    = new boolean[cols + 2];
+        boolean[] isMeasure = new boolean[cols + 2];
+        score.computeBeatMeasureLines(cols + 2, isBeat, isMeasure);
+
+        int slicePx    = (int) Math.round(cols * colWidthF);
+        int contentPxW = keyWidthPx + slicePx;
+
+        // Arrodonir a temps sencers pot passar-se un pèl de l'amplada; en
+        // aquest cas mana l'amplada i l'alçada queda un pèl curta.
+        scale = Math.min(scale, usableW / contentPxW);
+
+        float rowImgPdfW = contentPxW * scale;
+        float rowImgPdfH = scoreRowH  * scale;
+
+        BufferedImage keyImg = renderNarrowKeyboard(colWidthPx, gridH);
+        BufferedImage rowImg = composeRow(keyImg, chordImg, gridImg, lyricsImg,
+                keyWidthPx, 0, slicePx, slicePx, scoreRowH, chordH, gridH, lyricsSrcH, lyricsSrcH);
+
+        try (PDDocument doc = new PDDocument()) {
+            PDPage pdfPage = new PDPage(new PDRectangle(pageW, pageH));
+            doc.addPage(pdfPage);
+            try (PDPageContentStream cs = new PDPageContentStream(doc, pdfPage)) {
+                pdf.setContentStream(cs);
+                float yPos = pageH - MARGIN;
+                pdf.drawTitle(MARGIN, yPos - 16, nullSafe(score.getTitle()));
+                pdf.drawAuthor(MARGIN, yPos - 30, nullSafe(score.getAuthor()));
+                if (!desc.isEmpty())
+                    pdf.drawDescription(MARGIN, yPos - 42, desc, usableW);
+
+                float yImgBottom = MARGIN;
+                float yImgTop    = yImgBottom + rowImgPdfH;
+                float xRight     = MARGIN + rowImgPdfW;
+
+                PDImageXObject pdImg = PDImageXObject.createFromByteArray(
+                        doc, toBytes(rowImg), "row0");
+                cs.drawImage(pdImg, MARGIN, yImgBottom, rowImgPdfW, rowImgPdfH);
+                pdf.drawImageBorder(MARGIN, yImgBottom, rowImgPdfW, rowImgPdfH);
+
+                if (chordH > 0 && gridH > 0) {
+                    float sepY = yImgTop - chordH * scale;
+                    pdf.drawBandSeparator(MARGIN, xRight, sepY);
+                }
+                if (lyricsSrcH > 0) {
+                    float sepY = yImgBottom + lyricsSrcH * scale;
+                    pdf.drawBandSeparator(MARGIN, xRight, sepY);
+                }
+
+                // Només línies de temps (beat): cap barra de compàs ni doble barra.
+                for (int col = 0; col <= cols; col++) {
+                    if (col >= isBeat.length || !isBeat[col]) continue;
+                    float lineX = MARGIN + (float) ((keyWidthPx + col * colWidthF) * scale);
+                    if (lineX <= MARGIN || lineX >= xRight) continue;
+                    pdf.drawBeatLine(lineX, yImgBottom, rowImgPdfH);
+                }
+            }
+            if (outputFile.exists()) outputFile.delete();
+            doc.save(outputFile);
+        }
+    }
+
+    /**
      * [CA] Genera el fitxer PDF al camí indicat. Divideix la partitura en
      * files de mida fixa, les compon com a imatges rasteritzades i afegeix
      * les línies vectorials de compàs, beat i doble barra.

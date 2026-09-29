@@ -62,6 +62,33 @@ public class MyDialogs {
     }
 
     /**
+     * [CA] Pregunta l'orientació del dodecagrama en blanc: vertical (files
+     * apilades, amb l'opció de conservar les marques inicials) o apaisat
+     * (una sola pàgina sencera, sempre sense marques ni barres de compàs).
+     * <p>
+     * [EN] Asks the orientation of the blank dodecagram: portrait (stacked
+     * rows, with the option to keep the initial marks) or landscape (one
+     * full page, always with no marks and no measure bars).
+     *
+     * @param missatge [CA] pregunta / [EN] question
+     * @param titol    [CA] títol del diàleg / [EN] dialog title
+     * @return [CA] cert per apaisat, fals per vertical (també si es tanca el diàleg) /
+     *         [EN] true for landscape, false for portrait (also if the dialog is closed)
+     */
+    public static boolean demanaOrientacioBuit(String missatge, String titol) {
+        Object[] opcions = {
+            I18n.t("print.blank.orientation.vertical"),
+            I18n.t("print.blank.orientation.landscape")
+        };
+        int r = JOptionPane.showOptionDialog(
+                null, missatge, titol,
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null, opcions, opcions[0]);
+        return r == 1;   // apaisat
+    }
+
+    /**
      * [CA] Mostra un diàleg de confirmació amb opcions Sí i No.
      * <p>
      * [EN] Shows a confirmation dialog with Yes and No options.

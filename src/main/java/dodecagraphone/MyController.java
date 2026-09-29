@@ -2978,24 +2978,30 @@ public class MyController {
 
     /**
      * [CA] Genera el PDF de la partitura. Si la partitura és buida (ni notes ni
-     * acords), pregunta dues coses: si es vol un dodecagrama en blanc de quatre
-     * files, i si se n'han de treure les marques inicials (volum, tonalitat,
-     * tempo i transposició). Sense marques la pàgina és paper pautat genèric,
-     * bo per a qualsevol tonalitat i qualsevol tempo. Si es respon que no a la
-     * primera, no s'imprimeix res (no hi hauria contingut a treure).
+     * acords), pregunta si es vol un dodecagrama en blanc i, si es respon que
+     * sí, l'orientació: vertical (quatre files apilades, amb la tria de
+     * treure'n o no les marques inicials de volum, tonalitat, tempo i
+     * transposició) o apaisat (una sola pàgina sencera, sempre sense marques
+     * ni barres de compàs, només amb línies de temps). Sense marques la
+     * pàgina és paper pautat genèric, bo per a qualsevol tonalitat i
+     * qualsevol tempo. Si es respon que no a la primera pregunta, no
+     * s'imprimeix res (no hi hauria contingut a treure).
      * <p>
      * [EN] Generates the score PDF. If the score is empty (neither notes nor
-     * chords), it asks two things: whether a blank four-row dodecagram is
-     * wanted, and whether its initial marks (volume, key, tempo and transpose)
-     * should be dropped. With no marks the page is generic staff paper, good
-     * for any key and any tempo. Answering no to the first one prints nothing
-     * (there would be no content to output).
+     * chords), it asks whether a blank dodecagram is wanted and, if so, its
+     * orientation: portrait (four stacked rows, with the choice of dropping
+     * or keeping the initial volume, key, tempo and transpose marks) or
+     * landscape (one full page, always with no marks and no measure bars,
+     * only beat lines). With no marks the page is generic staff paper, good
+     * for any key and any tempo. Answering no to the first question prints
+     * nothing (there would be no content to output).
      *
      * @param togg [CA] botó que ha llançat l'acció / [EN] button that triggered the action
      */
     public void onPrintButtonPressed(MyButton togg) {
         boolean blank = this.allPurposeScore.isBlankScore();
         boolean dropInitialMarks = false;
+        boolean landscape = false;
         if (blank) {
             int resposta = MyDialogs.demanaConfirmacio(
                     I18n.t("print.blank.question"),
@@ -3004,9 +3010,14 @@ public class MyController {
                 if (togg != null) togg.setPressed(false);
                 return;
             }
-            dropInitialMarks = MyDialogs.demanaConfirmacio(
-                    I18n.t("print.blank.dropMarks.question"),
-                    I18n.t("print.blank.title")) == JOptionPane.YES_OPTION;
+            landscape = MyDialogs.demanaOrientacioBuit(
+                    I18n.t("print.blank.orientation.question"),
+                    I18n.t("print.blank.title"));
+            if (!landscape) {
+                dropInitialMarks = MyDialogs.demanaConfirmacio(
+                        I18n.t("print.blank.dropMarks.question"),
+                        I18n.t("print.blank.title")) == JOptionPane.YES_OPTION;
+            }
         }
         String defaultName = defaultFileName(".ddcgr.pdf");
         String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
@@ -3029,8 +3040,9 @@ public class MyController {
         }
         try {
             DodecagramPdfPrinter printer = new DodecagramPdfPrinter(this);
-            if (blank) printer.printBlank(file, dropInitialMarks);
-            else       printer.print(file);
+            if (landscape)   printer.printBlankLandscape(file);
+            else if (blank)  printer.printBlank(file, dropInitialMarks);
+            else             printer.print(file);
         } catch (Exception ex) {
             MyDialogs.mostraError(
                     I18n.f("print.error", ex.getMessage()),
