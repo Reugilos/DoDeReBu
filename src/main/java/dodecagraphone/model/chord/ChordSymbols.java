@@ -201,6 +201,10 @@ public class ChordSymbols {
             "[1,2,5,b7]",  new boolean[]{false,false,false,true},    ""),
         new Template(new int[]{0,5,7,10},   "7sus4", new String[]{},
             "[1,4,5,b7]",  new boolean[]{false,false,false,true},    ""),
+        new Template(new int[]{0,4,6,10},   "7b5",   new String[]{"7-5","dom7b5"},
+            "[1,3,b5,b7]", new boolean[]{false,false,true,true},     "Dominant amb quinta bemoll"),
+        new Template(new int[]{0,4,8,10},   "7#5",   new String[]{"7+5","aug7","dom7#5"},
+            "[1,3,#5,b7]", new boolean[]{false,false,false,true},    "Dominant amb quinta augmentada"),
         new Template(new int[]{0,3,6,9},    "dim7",
             new String[]{"°","o","°7","o7","mb5bb7"},
             "[1,b3,b5,bb7]",new boolean[]{false,true,true,true},     "Completament disminuït"),
@@ -409,9 +413,12 @@ public class ChordSymbols {
         int[] baseIvs    = filterBase(ivs);
         int[] extIvs     = filterExt(ivs);
 
-        Template t = BY_INTERVALS.get(Arrays.toString(baseIvs));
-        // If no exact match, try with all intervals (might be a named combined chord)
-        if (t == null) t = BY_INTERVALS.get(Arrays.toString(ivs));
+        // La plantilla que casa amb TOTS els intervals mana sobre la de la base:
+        // maj9, m9, 9, m9b5, add9 i madd9 declaren el seu propi sufix i no s'han
+        // de reconstruir com a base + tensió (maj7+9 = "maj79", o pitjor, m+9 =
+        // "m9", que és el símbol del menor novena i no el del menor add9).
+        Template exact = BY_INTERVALS.get(Arrays.toString(ivs));
+        Template t = (exact != null) ? exact : BY_INTERVALS.get(Arrays.toString(baseIvs));
 
         String rootCap   = cap(DODECA[rootPc]);
         String rootAnglo = ANGLO_ROOT[rootPc];
@@ -433,8 +440,10 @@ public class ChordSymbols {
                 Template base = (t != null) ? t : findBaseTemplate(baseIvs);
                 if (base == null) return null;
                 String suffix = base.suffix;
-                for (int i = 0; i < TENSION_IVLS.length; i++) {
-                    for (int ev : extIvs) if (ev == TENSION_IVLS[i]) { suffix += TENSION_SUFFIX[i]; break; }
+                if (exact == null) { // acord no tabulat: base + sufix de cada tensió
+                    for (int i = 0; i < TENSION_IVLS.length; i++) {
+                        for (int ev : extIvs) if (ev == TENSION_IVLS[i]) { suffix += TENSION_SUFFIX[i]; break; }
+                    }
                 }
                 String r = rootAnglo + suffix;
                 if (bassPc != null) r += "/" + ANGLO_ROOT[bassPc];
@@ -566,15 +575,17 @@ public class ChordSymbols {
 
     /** Strip the Anglo root letter(s) from s; return the suffix or null. */
     private static String stripAngloRoot(String s) {
-        if (s.length() >= 2) {
-            String r2 = Character.toUpperCase(s.charAt(0)) + s.substring(1, 2);
+        if (s.isEmpty()) return null;
+        char c0 = Character.toUpperCase(s.charAt(0));
+        if (c0 < 'A' || c0 > 'G') return null;
+        // Del segon caràcter només compta com a arrel una alteració: a "Faug" i
+        // "Fadd9" la a és del sufix, encara que "Fa" sigui un nom de nota
+        // dodecafònic vàlid i surti a ROOT_TO_PC.
+        if (s.length() >= 2 && (s.charAt(1) == 'b' || s.charAt(1) == '#')) {
+            String r2 = c0 + s.substring(1, 2);
             if (ROOT_TO_PC.containsKey(r2)) return s.substring(2);
         }
-        if (s.length() >= 1) {
-            String r1 = String.valueOf(Character.toUpperCase(s.charAt(0)));
-            if (ROOT_TO_PC.containsKey(r1)) return s.substring(1);
-        }
-        return null;
+        return s.substring(1);
     }
 
     /**

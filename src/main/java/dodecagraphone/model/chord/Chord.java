@@ -116,7 +116,9 @@ public class Chord {
             DoMaj7 ---> Do[0,4,7,11]
             Dom ---> Do[0,3,7]
             Dom7 ---> Do[0,3,7,10]
-            Do7b5 ---> Do[0,3,6,10]
+            Do7b5 ---> Do[0,4,6,10]
+            Dom7b5 ---> Do[0,3,6,10]
+            Do7#5 ---> Do[0,4,8,10]
             Do[0,4,7] ---> Nom Nota + [ + intervals,... + ]
             Do[0,4,7,10,13]/So ---> Idem amb baix com nom de nota
             Do[0,4,7,10,13]/-5 ---> Idem amb baix com interval
@@ -177,8 +179,12 @@ public class Chord {
                     this.shape = new int[]{0, 3, 7, 10};
                 } else if (rootToken.endsWith("m") || rootToken.endsWith("om")) {
                     this.shape = new int[]{0, 3, 7};
-                } else if (rootToken.endsWith("7b5")) {
+                } else if (rootToken.endsWith("m7b5")) {
                     this.shape = new int[]{0, 3, 6, 10};
+                } else if (rootToken.endsWith("7b5")) {
+                    this.shape = new int[]{0, 4, 6, 10};
+                } else if (rootToken.endsWith("7#5")) {
+                    this.shape = new int[]{0, 4, 8, 10};
                 } else if (rootToken.endsWith("7")) {
                     this.shape = new int[]{0, 4, 7, 10};
                 } else {
@@ -186,7 +192,7 @@ public class Chord {
                 }
 
                 // El rootToken pot tenir un sufix, l'hem de treure per calcular bé el root
-                for (String suffix : new String[]{"Maj7", "m7", "7b5", "m", "7", "om7", "om"}) {
+                for (String suffix : new String[]{"Maj7", "m7b5", "7b5", "7#5", "m7", "m", "7", "om7", "om"}) {
                     if (rootToken.endsWith(suffix)) {
                         rootToken = rootToken.substring(0, rootToken.length() - suffix.length());
                         break;
