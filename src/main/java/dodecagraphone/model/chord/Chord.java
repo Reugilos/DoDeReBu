@@ -164,6 +164,17 @@ public class Chord {
                 String[] slashSplit = chordPart.split("/", 2);
                 chordPart = slashSplit[0].trim();
                 bassPart = slashSplit[1].trim();
+                // Ordre antic "Do/-10[0,4,7,10,13]": els claudàtors han quedat al
+                // costat del baix i són de l'acord. basicString() ho escrivia així
+                // i aquest mateix parser no s'ho sabia llegir: Integer.parseInt
+                // petava amb "-10[0,4,7,10,13]" i l'acord sencer queia a
+                // INVALID_CHORD amb shape a null. Els fitxers d'abans del 3-10-26
+                // amb acords amb baix porten aquesta forma.
+                int lb = bassPart.indexOf('[');
+                if (lb >= 0) {
+                    chordPart += bassPart.substring(lb);
+                    bassPart = bassPart.substring(0, lb).trim();
+                }
             }
 
             // Separem intervals (si hi són)
@@ -572,24 +583,41 @@ public class Chord {
     }
 
     /**
-     * [CA] Retorna una representació bàsica de l'acord en format {@code Arrel[intervals]/bass}.
+     * [CA] Retorna una representació bàsica de l'acord en format
+     * {@code Arrel[intervals]/bass}. És la forma amb què els acords es
+     * persisteixen al MIDI, o sigui que ha de ser exactament la que sap llegir
+     * {@link #Chord(String)}: el baix va <b>després</b> dels claudàtors. Un acord
+     * de text lliure o invàlid (sense intervals) en torna el text.
      * <p>
-     * [EN] Returns a basic representation of the chord in {@code Root[intervals]/bass} format.
+     * [EN] Returns a basic representation of the chord in
+     * {@code Root[intervals]/bass} format. This is how chords are persisted to
+     * MIDI, so it must be exactly what {@link #Chord(String)} can read: the bass
+     * goes <b>after</b> the brackets. A free-text or invalid chord (no intervals)
+     * returns its text.
      *
      * @return [CA] cadena bàsica de l'acord / [EN] basic chord string
      */
     public String basicString() {
-        String message = getChordRootName();
-        if (this.bass != NULL_BASS) {
-            message += "/" + (bass);
+        // Un acord de text lliure (root USE_INFO_AS_SIMBOL) o invàlid no té
+        // intervals: no se'n pot muntar cap "Arrel[...]". Se'n torna el text, que
+        // és l'única cosa que el representa, en lloc de petar amb un
+        // NullPointerException a sobre de qui el dibuixi o el desi: isValidChord()
+        // no filtra el text lliure, i el bucle que desa els acords al MIDI hi
+        // passava de llarg.
+        if (shape == null) return (info != null) ? info : "";
+        StringBuilder message = new StringBuilder(getChordRootName());
+        message.append('[');
+        for (int i = 0; i < shape.length; i++) {
+            if (i > 0) message.append(',');
+            message.append(shape[i]);
         }
-        message += "[";
-        for (int pos : shape) {
-            message += pos + ",";
-        }
-        message = message.substring(0, message.length() - 1); // delete last colon
-        message += "]";
-        return message;
+        message.append(']');
+        // El baix va DESPRÉS dels claudàtors. Amb l'ordre invers ("Do/-10[0,4,7]")
+        // ni aquesta classe ni ChordSymbols es tornaven a llegir el que havien
+        // escrit, i com que és la forma amb què es persisteixen els acords al
+        // MIDI, qualsevol acord amb baix es carregava com a acord invàlid.
+        if (this.bass != NULL_BASS) message.append('/').append(bass);
+        return message.toString();
     }
 
     /**

@@ -286,16 +286,25 @@ public class MyMixer {
     }
 
     /**
-     * [CA] Retorna el canal MIDI actiu de la pista seleccionada actualment.
+     * [CA] Retorna el canal MIDI actiu de la pista seleccionada actualment, o
+     * {@code -1} si no n'hi ha cap de seleccionada. Es crida des del dibuix
+     * ({@code MyXiloKey.draw} pregunta {@code isDrumsMode()}), o sigui que no
+     * pot petar mai: amb {@code -1} la tecla es dibuixa com a no percussiva i
+     * la finestra segueix viva. Qui garanteix que sempre hi hagi pista és
+     * {@link #ensureSomeTrackSelected()}.
      * <p>
-     * [EN] Returns the active MIDI channel of the currently selected track.
+     * [EN] Returns the active MIDI channel of the currently selected track, or
+     * {@code -1} when no track is selected. It is called from painting
+     * ({@code MyXiloKey.draw} asks {@code isDrumsMode()}), so it must never
+     * throw: with {@code -1} the key just draws as non-percussive and the
+     * window stays alive. {@link #ensureSomeTrackSelected()} is what
+     * guarantees there is always a track.
      *
-     * @return [CA] índex del canal MIDI actiu / [EN] active MIDI channel index
+     * @return [CA] índex del canal MIDI actiu, o {@code -1} / [EN] active MIDI channel index, or {@code -1}
      */
     public int getCurrentChannelOfCurrentTrack() {
-        int index = currentTrack;
-        MyTrack track = getTrackFromId(index);
-        return track.getCurrentChannel();
+        MyTrack track = getTrackFromId(currentTrack);
+        return (track != null) ? track.getCurrentChannel() : -1;
     }
 
     /**
@@ -915,14 +924,18 @@ public class MyMixer {
         for (int i = 0; i < tracks.size(); i++) {
             tracks.get(i).setSelected(i == currentTrack);
         }
+        ensureSomeTrackSelected();
     }
 
     /**
      * [CA] Elimina de la llista els tracks buits (nNotes==0, no nous) carregats des de fitxer.
-     * Després reassigna IDs i selecciona l'últim track vàlid.
+     * Després reassigna IDs i selecciona l'últim track vàlid. Si no en queda cap
+     * —una partitura només d'acords no té cap track amb notes—, {@link
+     * #ensureSomeTrackSelected()} en posa un de nou.
      * <p>
      * [EN] Removes ghost tracks (nNotes==0, not new) loaded from file, then reassigns
-     * IDs and selects the last valid track.
+     * IDs and selects the last valid track. When none is left —a chords-only score
+     * has no track with notes— {@link #ensureSomeTrackSelected()} adds a fresh one.
      */
     public void removeEmptyTracks() {
         for (MyTrack t : tracks) {
@@ -937,6 +950,38 @@ public class MyMixer {
         for (int i = 0; i < tracks.size(); i++) {
             tracks.get(i).setSelected(i == currentTrack);
         }
+        ensureSomeTrackSelected();
+    }
+
+    /**
+     * [CA] Garanteix que hi hagi una pista seleccionada. Si no en queda cap de
+     * viva, en crea una de nova amb canal i instrument —igual que fa
+     * {@code setDefaultTrack()} en una partitura nova— i la selecciona.
+     * <p>
+     * Hi ha dues maneres de quedar-se sense cap: carregar una partitura
+     * <b>només d'acords</b> (cap track té notes, o sigui que {@link
+     * #removeEmptyTracks()} els esborra tots) i esborrar l'última pista des del
+     * mesclador. En totes dues, {@code currentTrack} quedava a {@code -1} i el
+     * primer repintat petava amb un {@code NullPointerException} a
+     * {@code getCurrentChannelOfCurrentTrack()}; i encara que no petés, no es
+     * podia escriure cap nota perquè no hi havia pista on posar-la.
+     * <p>
+     * [EN] Makes sure some track is selected. When none is left alive, adds a new
+     * one with channel and instrument —just like {@code setDefaultTrack()} does on
+     * a new score— and selects it.
+     * <p>
+     * There are two ways to end up with none: loading a <b>chords-only</b> score
+     * (no track has notes, so {@link #removeEmptyTracks()} deletes them all) and
+     * deleting the last track from the mixer. In both, {@code currentTrack} was
+     * left at {@code -1} and the first repaint threw a
+     * {@code NullPointerException} at {@code getCurrentChannelOfCurrentTrack()};
+     * and even without the throw, no note could be written for lack of a track.
+     */
+    private void ensureSomeTrackSelected() {
+        if (currentTrack >= 0) return;
+        MyTrack nova = new MyTrack(tracks.size(), "Track " + (tracks.size() + 1));
+        nova.setIsNew(true);
+        this.contr.addTrackAndInstrumentToMixer(nova, SoundWithMidi.getLeadInstrument());
     }
 
 }

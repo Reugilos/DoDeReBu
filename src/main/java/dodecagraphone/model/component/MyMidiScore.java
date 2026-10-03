@@ -930,8 +930,13 @@ public class MyMidiScore extends MyExercise {
      *
      * @param filePath           [CA] ruta de sortida del fitxer MIDI /
      *                           [EN] output path for the MIDI file
-     * @param saveChordMidiTrack [CA] true per incloure la pista d'acords MIDI /
-     *                           [EN] true to include the chord MIDI track
+     * @param saveChordMidiTrack [CA] true per escriure també les NOTES de la pista
+     *                           d'acords. Els símbols de la franja d'acords i les
+     *                           dades de la pista (instrument, canal, volum) es
+     *                           desen sempre: són partitura, no una exportació /
+     *                           [EN] true to also write the NOTES of the chord
+     *                           track. The chord symbols and the track's own data
+     *                           (instrument, channel, volume) are always saved
      */
     public void saveMidiScore(String filePath, boolean saveChordMidiTrack) {
         // Pistes que ja tenen el seu PROGRAM_CHANGE escrit. Ha de ser una per pista i
@@ -982,7 +987,11 @@ public class MyMidiScore extends MyExercise {
             }
         }
 
-        if (saveChordMidiTrack) {
+        // La pista d'acords es desa sempre, perquè porta l'instrument, el canal i
+        // el volum de l'acompanyament. El que decideix saveChordMidiTrack és
+        // només si hi van també les NOTES: sense entrada al trackMap, el bucle de
+        // la graella se les salta (hi comprova `track != null`).
+        {
             int tr = this.controller.getMixer().getChordTrackId();
             MyTrack chordTrack = this.controller.getMixer().getTrackFromId(tr);
             if (chordTrack != null) {
@@ -990,7 +999,7 @@ public class MyMidiScore extends MyExercise {
                 MetaMessage ksMsg = new MetaMessage();
                 try { ksMsg.setMessage(0x59, ksDataShared, 2); } catch (InvalidMidiDataException e) { e.printStackTrace(); }
                 str.add(new MidiEvent(ksMsg, 0));
-                trackMap.put(tr, str);
+                if (saveChordMidiTrack) trackMap.put(tr, str);
                 saveTrackData(chordTrack, str);
             }
         }
@@ -1136,9 +1145,12 @@ public class MyMidiScore extends MyExercise {
             }
         }
 
-        // Desar els acords de chordSymbolLine com a missatges de text (MetaMessage 0x7F)
-        // Només si es desa el chord track; d'altra banda els acords no es persisten
-        if (saveChordMidiTrack)
+        // Desar els acords de chordSymbolLine com a missatges de text (MetaMessage 0x7F).
+        // SEMPRE: la franja d'acords és part de la partitura, no pas una exportació.
+        // Això havia estat lligat a saveChordMidiTrack, que és una altra pregunta
+        // ("els vols també com a notes MIDI?"): qui responia que no es trobava que
+        // el fitxer tornava a obrir-se sense cap acord, i una partitura només
+        // d'acords es desava buida del tot.
         for (Map.Entry<Integer, Chord> entry : this.chordSymbolLine.entrySet()) {
             int col = entry.getKey();
             Chord chord = entry.getValue();

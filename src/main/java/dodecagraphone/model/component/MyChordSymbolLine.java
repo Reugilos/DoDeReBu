@@ -61,16 +61,49 @@ public class MyChordSymbolLine extends MyComponent {
     /** Index into ChordSymbols.DISPLAY_FORMATS for the current display format. */
     private int displayFormatIdx = 0;
 
+    /**
+     * [CA] Format amb què es mostren ara els acords.
+     * <p>
+     * [EN] Format the chords are currently displayed in.
+     *
+     * @return [CA] una de les constants {@code ChordSymbols.FORMAT_*} /
+     *         [EN] one of the {@code ChordSymbols.FORMAT_*} constants
+     */
     public String getDisplayFormat() {
         return ChordSymbols.DISPLAY_FORMATS[displayFormatIdx];
     }
 
+    /**
+     * [CA] Passa al format següent de {@code ChordSymbols.DISPLAY_FORMATS} i
+     * marca la franja per redibuixar. És el que fa el botó de format.
+     * <p>
+     * [EN] Moves to the next format in {@code ChordSymbols.DISPLAY_FORMATS} and
+     * flags the strip for redrawing. This is what the format button does.
+     */
     public void cycleDisplayFormat() {
         displayFormatIdx = (displayFormatIdx + 1) % ChordSymbols.DISPLAY_FORMATS.length;
         needsDrawing = true;
     }
 
+    /**
+     * [CA] Indica si l'offscreen de la franja s'ha de refer.
+     * <p>
+     * [EN] Whether the strip's offscreen needs redrawing.
+     *
+     * @return [CA] cert si cal redibuixar / [EN] true if a redraw is needed
+     */
     public boolean isNeedsDrawing() { return needsDrawing; }
+
+    /**
+     * [CA] Marca o desmarca la franja per redibuixar. {@code drawFullChordLineInOffscreen}
+     * no fa res si el flag és fals, o sigui que cal aixecar-lo sempre que en
+     * canviï el contingut.
+     * <p>
+     * [EN] Flags the strip for redrawing. {@code drawFullChordLineInOffscreen}
+     * does nothing when the flag is false.
+     *
+     * @param needsDrawing [CA] cert per forçar el redibuix / [EN] true to force a redraw
+     */
     public void setNeedsDrawing(boolean needsDrawing) { this.needsDrawing = needsDrawing; }
 
     /** Background colour for tempo change markers (white text on blue). */
@@ -95,7 +128,16 @@ public class MyChordSymbolLine extends MyComponent {
      * [EN] Kind of change mark drawn in the strip. Time signature is absent: it
      * has no box of its own and hence is not selectable.
      */
-    public enum MarkKind { TEMPO, KEY, VOLUME, TRANSPOSE }
+    public enum MarkKind {
+        /** Canvi de tempo; blau, global. */
+        TEMPO,
+        /** Canvi de tonalitat; granate, global. */
+        KEY,
+        /** Canvi de volum; verd, per pista. */
+        VOLUME,
+        /** Transposició de la pista; groc, informativa i no editable. */
+        TRANSPOSE
+    }
 
     /**
      * [CA] Marca dibuixada, descrita en termes independents de la
@@ -109,7 +151,9 @@ public class MyChordSymbolLine extends MyComponent {
      * bottom, height {@code h}).
      */
     public static class MarkBox {
+        /** Columna de partitura on comença la caixeta. */
         public final int col;
+        /** Tipus de marca que representa. */
         public final MarkKind kind;
         /** Columnes de partitura que ocupa la caixeta (mínim 1). */
         public final int spanCols;
@@ -140,7 +184,134 @@ public class MyChordSymbolLine extends MyComponent {
     /** Pixels reserved at the very bottom of the chord strip for the attack triangle. */
     private static final int TRIANGLE_SPACE = 10;
 
+    /** Mida mínima a què es pot encongir la font d'un acord. */
+    private static final int MIN_CHORD_FONT = 6;
+
+    /**
+     * [CA] Font comuna de tots els acords de la franja quan la normal no hi
+     * cabria. Null = mida normal. La calcula {@link #computeChordFontOverride}
+     * a cada redibuix complet de l'offscreen.
+     * <p>
+     * [EN] Font shared by every chord in the strip when the normal one would not
+     * fit. Null = normal size.
+     */
+    private Font chordFontOverride = null;
+
+    /**
+     * [CA] Línia de base del text de l'acord: el peu de la franja, menys l'espai
+     * del trianglet d'atac i el descens de la font.
+     * <p>
+     * [EN] Baseline for the chord text: bottom of the strip, minus the attack
+     * triangle space and the font descent.
+     */
+    private int chordBaselineY(boolean offscreen, int chordH, FontMetrics fm) {
+        return (offscreen ? 0 : (int) screenPosY) + chordH - TRIANGLE_SPACE - fm.getDescent() - 2;
+    }
+
+    /**
+     * [CA] Amplada total de les tres columnes d'un acord amb la mètrica donada.
+     * Calca la geometria de {@code drawChordSymbol}: arrel, buit, columna de la
+     * quatríada i, si n'hi ha, buit i columna de les extensions.
+     * <p>
+     * [EN] Total width of a chord's three columns with the given metrics. Mirrors
+     * the geometry of {@code drawChordSymbol}.
+     */
+    private static int chordWidth(FontMetrics fm, List<String> lines,
+            int splitIdx, int col2Count, int gap) {
+        int col2W = 0;
+        for (int i = 1; i <= col2Count; i++) col2W = Math.max(col2W, fm.stringWidth(lines.get(i)));
+        int w = fm.stringWidth(lines.get(0)) + gap + col2W;
+        if (lines.size() > splitIdx) {
+            int col3W = 0;
+            for (int i = splitIdx; i < lines.size(); i++) col3W = Math.max(col3W, fm.stringWidth(lines.get(i)));
+            w += gap + col3W;
+        }
+        return w;
+    }
+
+    /**
+     * [CA] Espai horitzontal de què disposa l'acord de la columna {@code col}:
+     * fins al següent acord de la franja. {@code 0} vol dir que no n'hi ha cap a
+     * prop i que, doncs, no cal limitar-lo.
+     * <p>
+     * Només es miren dos compassos endavant: més enllà l'amplada ja no mana, i
+     * el mapa d'acords és un {@code HashMap} sense ordre, o sigui que no se'n pot
+     * demanar la clau següent.
+     * <p>
+     * [EN] Horizontal room available to the chord at {@code col}: up to the next
+     * chord in the strip. {@code 0} means there is none nearby, so no limit.
+     */
+    private int availWidthFor(int col, int xOffset) {
+        Map<Integer, Chord> chords = score.getChordSimbolLine();
+        if (chords == null) return 0;
+        int maxScan = Settings.getnColsBeat() * Math.max(1, score.getNumBeatsMeasure()) * 2;
+        for (int k = col + 1; k <= col + maxScan; k++) {
+            if (chords.get(k) != null) {
+                return Math.max(1, (int) ((k - col) * Settings.getColWidth()) - xOffset - 2);
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * [CA] Mida de font comuna a tots els acords de la franja: la més petita que
+     * necessita cap d'ells per no envair el del costat. S'ha de cridar abans de
+     * dibuixar-ne cap, perquè canviar de font també mou la línia de base.
+     * <p>
+     * Es tria una sola mida per a tota la franja, no una per acord: una filera de
+     * símbols amb mides diferents es llegeix malament, encara que cada un
+     * aprofités tot l'espai que té.
+     * <p>
+     * [EN] Font size shared by every chord in the strip: the smallest any of them
+     * needs so as not to run into its neighbour. One size for the whole strip
+     * rather than one per chord, which would read badly.
+     */
+    private void computeChordFontOverride(Graphics2D g, Map<Integer, Chord> chords,
+            int numCols, Map<Integer, Integer> markerMaxWidths) {
+        chordFontOverride = null;              // getChordFont torna la mida per alçada
+        Font base = getChordFont(g);
+        Font smallest = base;
+        String fmt = getDisplayFormat();
+        for (int col = 0; col < numCols; col++) {
+            Chord chord = chords.get(col);
+            if (chord == null || !chord.isValidChord() || chord.getShape() == null) continue;
+            List<String> lines = ChordSymbols.chordToFormatLines(chord, fmt);
+            if (lines == null || lines.isEmpty()) continue;
+            int availW = availWidthFor(col, markerMaxWidths.getOrDefault(col, 0));
+            if (availW <= 0) continue;
+            int splitIdx  = ChordSymbols.baseLinesCount(chord);
+            int col2Count = Math.min(splitIdx - 1, 4);
+            Font f = fitChordFont(g, base, lines, splitIdx, col2Count, 3, availW);
+            if (f.getSize() < smallest.getSize()) smallest = f;
+        }
+        if (smallest.getSize() < base.getSize()) chordFontOverride = smallest;
+    }
+
+    /**
+     * [CA] Encongeix la font fins que les tres columnes de l'acord caben en
+     * {@code availW} píxels. {@link #getChordFont} només mira l'alçada —omple la
+     * franja amb quatre línies—, i amb acords de cinc notes o en format Midi això
+     * desbordava horitzontalment i es trepitjava l'acord del costat.
+     * <p>
+     * [EN] Shrinks the font until the chord's three columns fit in {@code availW}
+     * pixels. {@link #getChordFont} only looks at height, which overflowed
+     * horizontally for five-note chords or the Midi format.
+     */
+    private Font fitChordFont(Graphics2D g, Font base, List<String> lines,
+            int splitIdx, int col2Count, int gap, int availW) {
+        Font f = base;
+        FontMetrics fm = g.getFontMetrics(f);
+        int size = f.getSize();
+        while (size > MIN_CHORD_FONT && chordWidth(fm, lines, splitIdx, col2Count, gap) > availW) {
+            size--;
+            f = new Font(base.getName(), base.getStyle(), size);
+            fm = g.getFontMetrics(f);
+        }
+        return f;
+    }
+
     private Font getChordFont(Graphics2D g) {
+        if (chordFontOverride != null) return chordFontOverride;
         double rowH = Settings.getRowHeight();
         if (cachedChordFont != null && rowH == cachedChordRowH) return cachedChordFont;
         cachedChordRowH = rowH;
@@ -148,11 +319,15 @@ public class MyChordSymbolLine extends MyComponent {
         int arrowH = 7;   // 5px triangle + 2px gap
         int botMargin = 2;
         int available = chordH - arrowH - botMargin;
-        // Use tight line step (no font leading) so font can be larger
-        int size = Math.max(6, available / 4);
+        // Una línia de text per fila de la franja, com la font de les marques.
+        // Repartint tota l'alçada entre quatre línies (available / 4) el bloc
+        // omplia la banda sencera, i des que la franja té 8 files —les hi va posar
+        // el PDF— això era una lletra enorme. El límit per alçada es manté com a
+        // sostre per si la franja és baixa.
+        int size = Math.max(MIN_CHORD_FONT, (int) Math.min(available / 4.0, rowH * 0.85));
         Font f = new Font("SansSerif", Font.BOLD, size);
         FontMetrics fm = g.getFontMetrics(f);
-        while (lineStep(fm) * 4 - LINE_GAP > available && size > 6) {
+        while (lineStep(fm) * 4 - LINE_GAP > available && size > MIN_CHORD_FONT) {
             size--;
             f = new Font("SansSerif", Font.BOLD, size);
             fm = g.getFontMetrics(f);
@@ -521,10 +696,22 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * Given a chord, it draws the chord symbol: if the chord root is -1, it
-     * draws the field info of the chord (a text); if the Settings flag
-     * chordSymbolVertical is set, it draws the chord notes in vertical,
-     * otherwise it draws a basic chord symbol (chord.basicString()).
+     * [CA] Dibuixa el símbol d'un acord a la columna donada, més el trianglet
+     * d'atac. Un acord de text lliure, invàlid o sense intervals només en dóna el
+     * text. Els formats que es llegeixen en vertical (tots menys Simbol i Nom
+     * genèric) es reparteixen en <b>tres columnes</b>: arrel i baix, la quatríada
+     * i les extensions; les dues apilades van alineades a la <b>dreta</b>, perquè
+     * els intervals de dues xifres no desquadrin la columna. La mida de la font
+     * surt de {@link #getChordFont}, que mira l'alçada de la franja, i de
+     * {@link #computeChordFontOverride}, que la baixa si els acords no hi
+     * cabrien d'ample.
+     * <p>
+     * [EN] Draws the chord symbol at the given column, plus the attack triangle.
+     * A free-text, invalid or interval-less chord draws its text only. The
+     * vertical formats (all but Simbol and Nom genèric) are laid out in
+     * <b>three columns</b> —root and bass, the four-note body, the tensions—
+     * with the two stacked ones <b>right-aligned</b>. Font size comes from
+     * {@link #getChordFont} and {@link #computeChordFontOverride}.
      *
      * @param chord [CA] acord a dibuixar / [EN] chord to draw
      * @param col [CA] columna de partitura / [EN] score column
@@ -555,10 +742,15 @@ public class MyChordSymbolLine extends MyComponent {
         // Bottom of chord strip — text baseline drawn upward from here.
         // TRIANGLE_SPACE pixels are reserved at the very bottom for the attack triangle.
         int chordH = (int) Math.round(Settings.getnRowsChord() * Settings.getRowHeight());
-        int camY = (offscreen ? 0 : (int) screenPosY) + chordH - TRIANGLE_SPACE - fm.getDescent() - 2;
+        int camY = chordBaselineY(offscreen, chordH, fm);
         int gap   = 3;
 
-        if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL) {
+        // Text lliure, acord invàlid o sense intervals: només se'n pot dibuixar el
+        // text. Sense la comprovació d'isValidChord(), un acord que no s'hagués
+        // pogut parsejar arribava a basicString() amb shape a null i s'enduia la
+        // finestra sencera amb un NullPointerException des del repintat.
+        if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL
+                || !chord.isValidChord() || chord.getShape() == null) {
             g.drawString(chord.getInfo(), camX, camY);
             return;
         }
@@ -567,32 +759,41 @@ public class MyChordSymbolLine extends MyComponent {
         List<String> lines = ChordSymbols.chordToFormatLines(chord, fmt);
 
         if (lines != null && !lines.isEmpty()) {
+            // Split index: base notes end here, tensions start
+            int splitIdx = ChordSymbols.baseLinesCount(chord); // tensions start at this index
+            int col2Count = Math.min(splitIdx - 1, 4); // base notes in col 2, max 4
+
             // Column 1: root (lines[0]) at bottom
             String root  = lines.get(0);
             int    col1W = fm.stringWidth(root);
             g.drawString(root, camX, camY);
 
-            // Split index: base notes end here, tensions start
-            int splitIdx = ChordSymbols.baseLinesCount(chord); // tensions start at this index
-            int col2Count = Math.min(splitIdx - 1, 4); // base notes in col 2, max 4
-
-            // Column 2: base notes from bottom to top
+            // Column 2: base notes from bottom to top, right-aligned. Els intervals
+            // de dues xifres (el 10 d'un [0,4,7,10]) desalineaven la columna; cal
+            // mesurar-la sencera abans de dibuixar-ne cap línia.
             int col2X = camX + col1W + gap;
             int col2W = 0;
+            for (int i = 1; i <= col2Count; i++) {
+                col2W = Math.max(col2W, fm.stringWidth(lines.get(i)));
+            }
             int y = camY;
             for (int i = 1; i <= col2Count; i++) {
                 String n = lines.get(i);
-                col2W = Math.max(col2W, fm.stringWidth(n));
-                g.drawString(n, col2X, y);
+                g.drawString(n, col2X + col2W - fm.stringWidth(n), y);
                 y -= lineStep(fm);
             }
 
-            // Column 3: tensions always here, from bottom to top
+            // Column 3: tensions always here, from bottom to top, right-aligned too
             if (lines.size() > splitIdx) {
                 int col3X = col2X + col2W + gap;
+                int col3W = 0;
+                for (int i = splitIdx; i < lines.size(); i++) {
+                    col3W = Math.max(col3W, fm.stringWidth(lines.get(i)));
+                }
                 y = camY;
                 for (int i = splitIdx; i < lines.size(); i++) {
-                    g.drawString(lines.get(i), col3X, y);
+                    String t = lines.get(i);
+                    g.drawString(t, col3X + col3W - fm.stringWidth(t), y);
                     y -= lineStep(fm);
                 }
             }
@@ -748,9 +949,14 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * Initialises the offscreen BufferedImage for the chord symbol line and
-     * draws the full content into it.  Call this whenever the score layout or
-     * chord data changes (mirrors MyGridScore.initOffscreen()).
+     * [CA] Buffer offscreen de la franja. És el que copia el PDF: el printer no
+     * torna a dibuixar els acords, agafa aquesta imatge.
+     * <p>
+     * [EN] The strip's offscreen buffer. This is what the PDF copies: the printer
+     * does not redraw the chords, it takes this image.
+     *
+     * @return [CA] imatge offscreen, o {@code null} si encara no s'ha creat /
+     *         [EN] offscreen image, or {@code null} if not created yet
      */
     public BufferedImage getOffscreenImage() {
         return offscreenImage;
@@ -768,6 +974,15 @@ public class MyChordSymbolLine extends MyComponent {
         return (t != null) ? t.getVelocity() : Settings.getDefaultVelocity();
     }
 
+    /**
+     * [CA] Crea el BufferedImage offscreen de la franja d'acords i hi dibuixa tot
+     * el contingut. S'ha de cridar sempre que canviï la disposició de la
+     * partitura o les dades dels acords (calca {@code MyGridScore.initOffscreen()}).
+     * <p>
+     * [EN] Creates the chord strip's offscreen BufferedImage and draws the full
+     * content into it. Call it whenever the score layout or the chord data
+     * changes (mirrors {@code MyGridScore.initOffscreen()}).
+     */
     public void initOffscreen() {
         if (offscreenGraphics != null) {
             offscreenGraphics.dispose();
@@ -782,6 +997,15 @@ public class MyChordSymbolLine extends MyComponent {
         drawFullChordLineInOffscreen();
     }
 
+    /**
+     * [CA] Amplia l'offscreen a {@code newNCols} columnes conservant el que ja hi
+     * havia dibuixat. Si encara no existeix, el crea amb {@link #initOffscreen()}.
+     * <p>
+     * [EN] Grows the offscreen to {@code newNCols} columns, keeping what is
+     * already drawn. Creates it with {@link #initOffscreen()} if absent.
+     *
+     * @param newNCols [CA] columnes que ha de tenir el buffer / [EN] columns the buffer must hold
+     */
     public void resizeOffscreen(int newNCols) {
         if (offscreenImage == null) { initOffscreen(); return; }
         int newW = (int) (newNCols * Settings.getColWidth());
@@ -936,6 +1160,7 @@ public class MyChordSymbolLine extends MyComponent {
             }
 
             // Acords (el text comença desplaçat per l'amplada màxima de les marques).
+            computeChordFontOverride(offscreenGraphics, chords, numCols, markerMaxWidths);
             for (int col = 0; col < numCols; col++) {
                 Chord chord = chords.get(col);
                 if (chord != null) {
