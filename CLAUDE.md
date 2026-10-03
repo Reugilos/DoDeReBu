@@ -95,6 +95,30 @@ Els dos `while` de `midiToKeyId` no tenen topall (a diferència de `clampToRange
 
 El nom del fitxer **no es mira mai** en carregar: `.ddcgr` només surt als diàlegs de desar. El que distingeix un MIDI extern és que no porta les metadades 0x7F de l'app.
 
+### El repertori d'acords (`ChordSymbols`)
+
+**Cap CSV es llegeix en temps d'execució.** `AllSymbols.csv` i `ChordSymbols.csv` van quedar a `../Complements_Bu/` com a documentació; les dades són al codi. Els CSV que sí que es llegeixen en arrencar són `GeneralMidiInstruments.csv` i `ButtonLayout.csv`, cap més.
+
+El repertori és l'array `TEMPLATES`. Cada `Template` porta **intervals, sufix, sinònims, posicions diatòniques, preferència bemoll/sostingut per nota i nom genèric**, i d'allà surten els tres mapes d'índex (`BY_INTERVALS`, `BY_SUFFIX`, `SIN_TO_SUF`). **Afegir un acord és afegir una línia**: surt alhora a tots els formats, d'entrada i de sortida.
+
+Els 22 que hi ha: 6 tríades (major, m, dim, aug, sus2, sus4), 4 quatríades diatòniques (maj7, m7, 7, m7b5), 6 més (6, 7sus2, 7sus4, 7b5, 7#5, dim7) i 6 amb novena (maj9, m9, 9, m9b5, add9, madd9).
+
+**Les tensions no es tabulen**: `TENSION_IVLS` (13, 14, 15, 17, 18, 20, 21) i `TENSION_SUFFIX` (`b9 9 #9 11 #11 b13 13`) es componen sobre la plantilla base. `C7b9#11` no és a la taula enlloc.
+
+El model guarda **intervals**, no un identificador de plantilla, o sigui que qualsevol conjunt és vàlid per sonar i dibuixar; la taula només fa falta per **anomenar-lo**. Un acord que no hi és surt bé en Dodeca, Midi, Anglo i Solfeig (només llisten notes) i torna `null` en Simbol, Posicions i Nom genèric.
+
+L'entrada és **text lliure**, no una llista per triar: `MyChordSymbolLine.enterChord` passa el que s'escrigui per `ChordSymbols.detectAndConvert`, que endevina el format i ho normalitza a `Root[intervals]`. Una arrel sola en majúscula és major i en minúscula és menor (`G` → `So[0,4,7]`, `g` → `So[0,3,7]`).
+
+Tres trampes que han costat sang:
+
+- **La plantilla exacta ha de manar sobre la de la base.** `convert()` buscava els intervals de la base (≤11) i només provava amb el joc sencer si aquella fallava — i la base sempre casa. Els sis acords amb novena no consultaven mai la seva plantilla: el sufix es reconstruïa com a base + tensió. `maj9` sortia `Cmaj79`, `add9` sortia `C9` (el símbol del dominant novena) i `madd9` sortia `Cm9` (el del menor novena). També es menjava la novena del format Posicions diatòniques.
+- **`convertToLines()` és el cas contrari i no és cap descuit**: allà cada tensió té línia pròpia, o sigui que la plantilla **base** és la bona; amb la sencera la novena sortiria dues vegades.
+- **`ROOT_TO_PC` porta també els noms dodecafònics.** `stripAngloRoot` provava dos caràcters contra aquell mapa i `"Fa"` hi és: `Faug` i `Fadd9` es quedaven en `ug` i `dd9` i tornaven `null`. Del segon caràcter només hi pot comptar una alteració (`b` o `#`). És l'únic nom dodecafònic que comença amb una lletra A–G seguida d'una altra lletra, o sigui que només Fa en patia.
+
+`Chord(String)` té **un segon parser**, de sufixos sense claudàtors (`Do7`, `Dom7`, `DoMaj7`, `Do7b5`, `Dom7b5`, `Do7#5`), que només entén **arrels dodecafòniques** — `Sol7` no s'hi reconeix. No el toca la interfície (tot el que es desa va en `Root[intervals]` i el diàleg passa abans per `detectAndConvert`), però **ha de dir el mateix** que la taula: hi va estar mapat `7b5` al semidisminuït.
+
+Per comprovar que res no s'ha trencat: round-trip símbol → intervals → símbol de totes les plantilles per les dotze arrels (264 casos), via `allChordsForRoot` + `fromFormat`.
+
 ### Idiomes i diàleg de benvinguda
 
 Els idiomes **es descobreixen sols**: `I18n.getInstalledLanguageTags()` escaneja `i18n/messages_*.properties`, tant des d'un directori de classes (NetBeans) com de dins del JAR (portable). `LANGUAGE_TAGS_IN_ORDER` (`en`, `ca`, `es`) **no és la llista de disponibles**, només diu quins van al davant; la resta s'afegeix al final per ordre alfabètic. Si l'escaneig falla, cau a comprovar aquells tags un per un.
@@ -297,6 +321,7 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **97dd375** Acords `7b5` i `7#5`; la plantilla exacta mana sobre la de la base, o sigui que els sis acords amb novena recuperen el seu símbol (`Cmaj9`, `Cadd9`, `Cmadd9`); `stripAngloRoot` deixa de menjar-se la a de `Faug`.
 - **f027e33** Cançons amb la nomenclatura nova `Titol_To`; `Dodecagrams/` surt del `.gitignore` i els 16 PDFs entren al repositori. En tornar-les a desar, la brossa del `choiceExtended` ha desaparegut de totes.
 - **72eeb59** La lletra del PDF es dibuixa estirada verticalment per compensar la compressió de la fila; el text passa del 52% al 96% de la seva proporció.
 - **06d17f9** `I18n.applySwingDefaults()`: els botons que Swing es dibuixa sol (Yes/No/OK/Cancel del JOptionPane i tot el JFileChooser). S'ha de cridar **després** de `setLookAndFeel`, que esborra els valors del UIManager.

@@ -98,12 +98,24 @@ public class Chord {
 
     /**
      * [CA] Constructor que parseja un acord a partir d'una cadena de text en format DoDeReBu.
-     * Formats acceptats: {@code Do[0,4,7]}, {@code Do7}, {@code Dom}, {@code Do[0,4,7]/Sol}, etc.
+     * Formats acceptats: {@code Do[0,4,7]}, {@code Do7}, {@code Dom}, {@code Do[0,4,7]/So}, etc.
      * Si la cadena no és un nom de nota vàlid, s'usa com a informació textual pura.
      * <p>
+     * Els noms de nota (arrel i baix) són només els dodecafònics
+     * ({@code Do}, {@code So}…): {@code Sol7} i {@code Do[0,4,7]/Sol} no s'hi
+     * reconeixen. Qui entén el solfeig, l'anglosaxó i la resta de formats és
+     * {@code ChordSymbols.detectAndConvert}, que és per on passa el diàleg
+     * d'entrada d'acords abans d'arribar aquí.
+     * <p>
      * [EN] Constructor that parses a chord from a text string in DoDeReBu format.
-     * Accepted formats: {@code Do[0,4,7]}, {@code Do7}, {@code Dom}, {@code Do[0,4,7]/Sol}, etc.
+     * Accepted formats: {@code Do[0,4,7]}, {@code Do7}, {@code Dom}, {@code Do[0,4,7]/So}, etc.
      * If the string is not a valid note name, it is used as pure text information.
+     * <p>
+     * Note names (root and bass) are the dodecaphonic ones only ({@code Do},
+     * {@code So}…): {@code Sol7} and {@code Do[0,4,7]/Sol} are not recognised.
+     * Solfège, Anglo and the other formats are handled by
+     * {@code ChordSymbols.detectAndConvert}, which is what the chord input
+     * dialog goes through before reaching this constructor.
      *
      * @param chordString [CA] cadena de text que representa l'acord / [EN] text string representing the chord
      */

@@ -44,6 +44,16 @@ import java.util.*;
  *
  * Root is always a dodecaphonic name (do/De/re/Ri … case-insensitive) or
  * an Anglo note name (C/Db/D/Eb/E/F/F#/G/Ab/A/Bb/B).
+ * <p>
+ * [CA] El repertori d'acords és {@link #TEMPLATES}: per afegir-ne un de nou
+ * n'hi ha prou amb una {@code Template} més, i surt alhora a tots els formats.
+ * Les tensions (&gt; 11 semitons) no s'hi tabulen: es componen sobre la
+ * plantilla base amb {@link #TENSION_IVLS} i {@link #TENSION_SUFFIX}.
+ * <p>
+ * [EN] The chord repertoire is {@link #TEMPLATES}: adding a chord type is just
+ * one more {@code Template}, and it shows up in every format at once. Tensions
+ * (&gt; 11 semitones) are not tabulated: they are composed on top of the base
+ * template using {@link #TENSION_IVLS} and {@link #TENSION_SUFFIX}.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -247,6 +257,11 @@ public class ChordSymbols {
     /**
      * Convert FROM user's format TO any named format.
      *
+     * FORMAT_MIDI has no single-string form and always returns null here;
+     * use {@link #chordToFormatLines} for it. FORMAT_SIMBOL, FORMAT_POSICIONS
+     * and FORMAT_NOM also return null for chords absent from TEMPLATES, since
+     * an untabulated chord has no name.
+     *
      * @param myChord    e.g. "So[0,4,7]" or "So[0,4,7]/Re"
      * @param targetFmt  one of the FORMAT_* constants (not FORMAT_SINONIMS)
      * @return converted string, or null if not convertible
@@ -387,7 +402,8 @@ public class ChordSymbols {
 
     /**
      * Return all possible chords for a given root in a given format.
-     * Includes all 20 templates. Root in dodecaphonic notation.
+     * Includes every template in {@link #TEMPLATES}, in table order.
+     * Root in dodecaphonic notation.
      *
      * @param root [CA] arrel en notació dodecafònica / [EN] root in dodecaphonic notation
      * @param fmt  [CA] un dels formats {@code FORMAT_*} / [EN] one of the {@code FORMAT_*} formats
@@ -408,6 +424,11 @@ public class ChordSymbols {
     //  CORE CONVERSION
     // ════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Render one chord in one format. The symbol of a tabulated chord is the
+     * suffix its own Template declares; only an untabulated one is rebuilt as
+     * base template + tension suffixes.
+     */
     private static String convert(int rootPc, int[] ivs, Integer bassPc, String fmt) {
         // Split into base (≤11) and extension (>11) intervals
         int[] baseIvs    = filterBase(ivs);
@@ -573,7 +594,12 @@ public class ChordSymbols {
         return ivs;
     }
 
-    /** Strip the Anglo root letter(s) from s; return the suffix or null. */
+    /**
+     * Strip the Anglo root from s; return the chord-type suffix, or null when s
+     * does not start with A-G. Only an accidental (b or #) counts as part of
+     * the root: ROOT_TO_PC also holds the dodecaphonic names, so testing two
+     * letters would eat the a of "Faug" and "Fadd9".
+     */
     private static String stripAngloRoot(String s) {
         if (s.isEmpty()) return null;
         char c0 = Character.toUpperCase(s.charAt(0));
@@ -588,10 +614,6 @@ public class ChordSymbols {
         return s.substring(1);
     }
 
-    /**
-     * Given a chord-type suffix (possibly with tension suffixes appended),
-     * resolve to the full interval array.
-     */
     /** Normalise case-insensitive keywords in a chord suffix. */
     private static String normalizeSuffix(String suffix) {
         if (suffix == null) return null;
@@ -602,6 +624,12 @@ public class ChordSymbols {
             .replaceAll("(?i)sus", "sus");
     }
 
+    /**
+     * Given a chord-type suffix (possibly with tension suffixes appended),
+     * resolve to the full interval array: direct hit on BY_SUFFIX or on a
+     * synonym, else peel the tension suffixes off the end and combine them
+     * with the base template. Returns null if the base is not in TEMPLATES.
+     */
     private static int[] resolveSuffixToIntervals(String suffix) {
         suffix = normalizeSuffix(suffix);
         if (suffix != null) suffix = suffix.trim().replaceAll("\\s+", "");
@@ -822,6 +850,11 @@ public class ChordSymbols {
         return convertToLines(rootPc, ivs, bassPc, fmt);
     }
 
+    /**
+     * Render one chord as display lines, one per note. Unlike {@link #convert},
+     * here the BASE template is the right one: each tension gets a line of its
+     * own, so taking the full template would print the ninth twice.
+     */
     private static List<String> convertToLines(int rootPc, int[] ivs, Integer bassPc, String fmt) {
         int[] baseIvs = filterBase(ivs);
         int[] extIvs  = filterExt(ivs);
