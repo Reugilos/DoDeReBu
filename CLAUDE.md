@@ -119,6 +119,31 @@ Tres trampes que han costat sang:
 
 Per comprovar que res no s'ha trencat: round-trip símbol → intervals → símbol de totes les plantilles per les dotze arrels (264 casos), via `allChordsForRoot` + `fromFormat`.
 
+### La franja d'acords: persistència i dibuix
+
+**Els símbols es desen sempre.** Van al MIDI com a metadades de text 0x7F amb prefix `CHORD:`, **a la pista 0**, i `readMidiScore` les llegeix en una passada pròpia sobre `tracks[0]`, independent del bucle de pistes (que es salta la pista de capçalera). El format de cada entrada és `CHORD:<basicString> <info>::<nCols>`.
+
+La pregunta «vols guardar-los **també com a notes MIDI**?» (`saveChordMidiTrack`) decideix **només les notes**. Fins al 3-10-26 hi penjava també el bucle dels símbols: qui responia que no es trobava el fitxer sense cap acord, i una partitura només d'acords es desava **buida del tot**. Ara la pista d'acords es desa sempre —hi va l'instrument, el canal i el volum de l'acompanyament— i el flag només decideix si entra al `trackMap`; sense entrada, el bucle de la graella se'n salta les notes (`track != null`).
+
+**`basicString()` és el format de persistència**, o sigui que ha de ser exactament el que sap llegir `Chord(String)`: `Arrel[intervals]/baix`, **el baix després dels claudàtors**. Escrivia `Do/-10[0,4,7,10,13]`, i el constructor talla primer pel `/`: el baix hi arribava com a `-10[0,4,7,10,13]`, petava a `Integer.parseInt` i l'acord queia a `INVALID_CHORD` amb `shape` a `null`. El javadoc ja documentava l'ordre bo; l'escriptor era l'únic que anava a la seva. El parser accepta ara les dues formes, pels fitxers ja desats.
+
+**`Chord(String)` només entén arrels dodecafòniques** (`Do`, `So`…): `Sol7` no s'hi reconeix. Qui entén solfeig, anglosaxó i la resta és `ChordSymbols.detectAndConvert`, per on passa el diàleg d'entrada abans d'arribar al constructor.
+
+**`isValidChord()` no filtra el text lliure**: un acord de text té `root = USE_INFO_AS_SIMBOL` i `shape = null`, i `isValidChord()` només compara amb `INVALID_CHORD`. Qualsevol codi que vagi a `shape` darrere d'un `isValidChord()` peta. Per això `basicString()` torna el text quan no hi ha intervals i `drawChordSymbol` comprova també `getShape() == null`: és codi de dibuix, i una excepció allà s'endú la finestra sencera.
+
+**El dibuix són tres columnes** (`drawChordSymbol`): arrel i baix, la quatríada, les extensions. Les dues apilades van **alineades a la dreta**, altrament els intervals de dues xifres desquadren la columna. Dues coses sobre la mida de la font:
+
+- La base és **una fila de la franja per línia de text** (`min(alçada/4, rowH*0.85)`). Repartint tota l'alçada entre quatre línies, que és el que feia, la lletra sortia enorme d'ençà que la franja té 8 files.
+- Si així i tot els acords es trepitgessin, `computeChordFontOverride` busca **una mida comuna a tota la franja**: la més petita que necessiti cap d'ells. Una mida per acord deixaria una filera amb lletres de mides diferents, que es llegeix malament. Es calcula un cop per redibuix complet i **abans** de dibuixar cap acord, perquè canviar de font mou també la línia de base.
+
+**El PDF no dibuixa res d'això**: copia `chordLine.getOffscreenImage()`. Qualsevol canvi al dibuix de la franja hi surt sol.
+
+### El mesclador sempre ha de tenir una pista
+
+`loadScore` crea un mesclador buit (`new MyMixer(this)`, sense el «Track 1» que posa `setDefaultTrack()`) i, en acabar de llegir, `removeEmptyTracks()` esborra les pistes sense notes i selecciona l'última que quedi viva. **Amb una partitura només d'acords no en queda cap**: `currentTrack` es quedava a `-1` i el primer repintat petava a `getCurrentChannelOfCurrentTrack()` (`MyXiloKey.draw` pregunta `isDrumsMode()`). S'hi arriba també esborrant l'última pista des del mesclador, que no ho impedeix.
+
+`ensureSomeTrackSelected()` —cridada des dels dos llocs— crea una pista nova amb canal i instrument quan no en queda cap. No és només per l'excepció: **sense pista tampoc no es pot escriure cap nota** a la partitura que s'acaba d'obrir.
+
 ### Idiomes i diàleg de benvinguda
 
 Els idiomes **es descobreixen sols**: `I18n.getInstalledLanguageTags()` escaneja `i18n/messages_*.properties`, tant des d'un directori de classes (NetBeans) com de dins del JAR (portable). `LANGUAGE_TAGS_IN_ORDER` (`en`, `ca`, `es`) **no és la llista de disponibles**, només diu quins van al davant; la resta s'afegeix al final per ordre alfabètic. Si l'escaneig falla, cau a comprovar aquells tags un per un.
@@ -321,6 +346,7 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **28f5629** Els símbols d'acord es desen sempre (no només amb les notes MIDI); el baix va després dels claudàtors a `basicString()`; `ensureSomeTrackSelected()` perquè una partitura només d'acords no es quedi sense pista; columnes d'intervals a la dreta, font més petita i encabida a l'ample.
 - **97dd375** Acords `7b5` i `7#5`; la plantilla exacta mana sobre la de la base, o sigui que els sis acords amb novena recuperen el seu símbol (`Cmaj9`, `Cadd9`, `Cmadd9`); `stripAngloRoot` deixa de menjar-se la a de `Faug`.
 - **f027e33** Cançons amb la nomenclatura nova `Titol_To`; `Dodecagrams/` surt del `.gitignore` i els 16 PDFs entren al repositori. En tornar-les a desar, la brossa del `choiceExtended` ha desaparegut de totes.
 - **72eeb59** La lletra del PDF es dibuixa estirada verticalment per compensar la compressió de la fila; el text passa del 52% al 96% de la seva proporció.
