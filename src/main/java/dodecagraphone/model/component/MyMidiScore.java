@@ -150,6 +150,30 @@ public class MyMidiScore extends MyExercise {
         return (int) Math.round(exactTicksPerQuarter);
     }
 
+    /**
+     * [CA] Llegeix les metadades de pista (les 0x7F que escriu {@code
+     * saveTrackData}) i les aboca a {@code track}: canal, volum, visibilitat,
+     * canals… El que <b>torna</b> és l'identificador (<code>id=</code>), que no
+     * és una dada més: és el que distingeix les tres menes de pista. Els valors
+     * especials {@code MyMixer.getChordTrackId()} (1003) i {@code
+     * getDrumsTrackId()} (1005) marquen la pista d'acords i la de percussió, i
+     * la primera, a més de recuperar-se com a tal, perd les notes en carregar
+     * (les regeneren els símbols).
+     * <p>
+     * [EN] Reads the track metadata (the 0x7F events written by {@code
+     * saveTrackData}) into {@code track}: channel, volume, visibility,
+     * channels… What it <b>returns</b> is the identifier (<code>id=</code>),
+     * which is not just another field: it is what tells the three kinds of
+     * track apart. The special values {@code MyMixer.getChordTrackId()} (1003)
+     * and {@code getDrumsTrackId()} (1005) mark the chord and drums tracks, and
+     * the former, besides being restored as such, has its notes skipped on load
+     * (the symbols regenerate them).
+     *
+     * @param track  [CA] pista del mesclador a emplenar / [EN] mixer track to fill
+     * @param midiTr [CA] pista MIDI d'origen / [EN] source MIDI track
+     * @return [CA] l'id desat, o -1 si la pista no en porta /
+     *         [EN] the stored id, or -1 when the track carries none
+     */
     private int readTrackData(MyTrack track, Track midiTr) {
         List<MetaMessage> metaMessages = new ArrayList<>();
         for (int j = 0; j < midiTr.size(); j++) {
@@ -394,6 +418,16 @@ public class MyMidiScore extends MyExercise {
      * ({@code applyInitialMetaFromSequence}, before converting any note),
      * processes notes (NOTE_ON/OFF), chords, lyrics and the changeMap, and
      * updates the mixer.
+     * <p>
+     * [CA] De la pista d'acords només n'agafa les dades (instrument, canal,
+     * volum): les notes se li salten, perquè l'acompanyament el tornen a
+     * generar els símbols {@code CHORD:} per {@code placeChordSymbol}. La
+     * reconeix per l'id que en torna {@link #readTrackData}.
+     * <p>
+     * [EN] From the chord track it only takes the data (instrument, channel,
+     * volume): its notes are skipped, because the accompaniment is regenerated
+     * from the {@code CHORD:} symbols by {@code placeChordSymbol}. It is
+     * recognised by the id {@link #readTrackData} returns.
      *
      * @param fitxer [CA] ruta al fitxer MIDI / [EN] path to the MIDI file
      */
@@ -456,7 +490,13 @@ public class MyMidiScore extends MyExercise {
             MyTrack mixerTrack = new MyTrack(tr - first, "");
             int trId = readTrackData(mixerTrack, track);
             MyMixer mixer = this.controller.getMixer();
-            if (trId == mixer.getChordTrackId()){
+            // La pista d'acords ve marcada amb el seu id especial (id=1003) a les
+            // metadades de pista. Serveix per a dues coses: recuperar-la com a
+            // pista d'acords (i no com una de normal més) i, sobretot, saber que
+            // les seves NOTES no s'han de llegir —les torna a generar
+            // placeChordSymbol a partir dels símbols CHORD: de la pista 0.
+            boolean isChordTrack = (trId == mixer.getChordTrackId());
+            if (isChordTrack){
                 mixer.setChordTrack(mixerTrack);
                 specialTracks++;
             } else if (trId == mixer.getDrumsTrackId()){
@@ -534,6 +574,15 @@ public class MyMidiScore extends MyExercise {
                     int pitch = sm.getData1(); // El pitch de la nota o el controlador
                     int velocity = sm.getData2(); // La velocitat de la nota o el valor de control
                     long tick = event.getTick();
+
+                    // Les notes de la pista d'acords no es llegeixen: són una
+                    // còpia de l'acompanyament que ja surt dels símbols, i
+                    // llegir-les hi afegiria una segona tanda amb les durades
+                    // que tenien en desar, que no s'esborra enlloc. La resta
+                    // d'events de la pista (el PROGRAM_CHANGE, que en dona
+                    // l'instrument) sí que es processen.
+                    if (isChordTrack && (command == ShortMessage.NOTE_ON
+                                      || command == ShortMessage.NOTE_OFF)) continue;
 
                     switch (command) {
                         case ShortMessage.NOTE_ON:
@@ -933,10 +982,19 @@ public class MyMidiScore extends MyExercise {
      * @param saveChordMidiTrack [CA] true per escriure també les NOTES de la pista
      *                           d'acords. Els símbols de la franja d'acords i les
      *                           dades de la pista (instrument, canal, volum) es
-     *                           desen sempre: són partitura, no una exportació /
+     *                           desen sempre: són partitura, no una exportació.
+     *                           Les notes són una còpia de l'acompanyament per a
+     *                           qui obri el fitxer amb un altre programa; en
+     *                           tornar-lo a carregar aquí no es llegeixen, perquè
+     *                           la pista va marcada amb el seu id especial i els
+     *                           símbols ja les tornen a generar /
      *                           [EN] true to also write the NOTES of the chord
      *                           track. The chord symbols and the track's own data
-     *                           (instrument, channel, volume) are always saved
+     *                           (instrument, channel, volume) are always saved.
+     *                           The notes are a copy of the accompaniment for
+     *                           other programs; loading the file back here skips
+     *                           them, because the track carries its special id
+     *                           and the symbols regenerate them anyway
      */
     public void saveMidiScore(String filePath, boolean saveChordMidiTrack) {
         // Pistes que ja tenen el seu PROGRAM_CHANGE escrit. Ha de ser una per pista i
@@ -1031,7 +1089,15 @@ public class MyMidiScore extends MyExercise {
                     int channel = sub.getChannel();
                     int trackIndex = sub.getTrack();
                     int velocity = sub.getVelocity();
-                    if (this.controller.getMixer().isTrackVisible(trackIndex)) {
+                    // La porta és el trackMap, no la visibilitat. El bucle de
+                    // dalt només hi posa les pistes que s'escriuen (les visibles,
+                    // la percussió i —si s'ha demanat— la d'acords), o sigui que
+                    // preguntar isTrackVisible era redundant per a les normals i
+                    // mentider per a la d'acords: es crea amb visible=false
+                    // perquè les seves notes no es dibuixin a la graella, i això
+                    // les hi feia saltar també en desar. Dir que sí a «vols
+                    // guardar-los com a notes MIDI?» no desava cap nota.
+                    if (trackMap.containsKey(trackIndex)) {
                         if (!sub.isLinked()) {
                             int lengthCols = 1;
                             for (int k = col + 1; k < this.nCols; k++) {
