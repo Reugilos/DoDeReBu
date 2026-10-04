@@ -71,33 +71,43 @@ public class Settings {
     private static final double DEFAULT_CONTROL_RATIO       = 4.6 / 16;
     private static final double DEFAULT_STATUS_RATIO        = 4.5 / 59;
     /**
-     * [CA] Files de la franja d'acords. Ha de donar per a la pila de quatre
-     * marques inicials (transposició, tempo, tonalitat i volum) MÉS els píxels
-     * reservats a baix per al triangle d'atac. Amb 5 files només hi cabien a
-     * partir de pantalles de 1200 px d'alçada; amb 6 hi caben des de 720.
+     * [CA] Files de la franja d'acords. A dins hi van dues coses de la mateixa
+     * mida: la pila de quatre marques inicials (transposició, tempo, tonalitat
+     * i volum) i les quatre línies del símbol d'acord. Fan el mateix alt perquè
+     * comparteixen la font ({@code MyChordSymbolLine.getBaseChordFont}) i
+     * perquè la caixa d'una marca fa <b>exactament una línia d'acord</b>
+     * ({@code MyChordSymbolLine.markBoxHeight}).
      * <p>
-     * [EN] Rows of the chord strip. It must hold the stack of four initial
-     * marks (transposition, tempo, key and volume) PLUS the pixels reserved at
-     * the bottom for the attack triangle. With 5 rows they only fitted from
-     * 1200 px screen height upwards; with 6 they fit from 720 px.
+     * Quatre línies amb la font a {@code rowH*0.85} fan unes 4,7 files, i el
+     * triangle d'atac se'n menja mitja més: d'aquí les <b>6</b>. Amb 5 el text
+     * s'encongiria a totes les pantalles provades (600, 768, 900, 1080, 1200 i
+     * 1440 px) menys la de 2160.
      * <p>
-     * [CA] Van pujar a 8 pel PDF. El printer dibuixa la fila amb escala no
-     * uniforme (l'amplada a scaleX i l'alcada a scaleY, que es menor quan calen
-     * mes de quatre files per pagina), o sigui que la banda es comprimeix
-     * verticalment. Amb 6 files la pila de quatre marques i el trianglet
-     * omplien la banda del PDF exactament, sense marge, i fitMarkStack havia
-     * d'encongir la font fins al minim. Amb 8 la banda passa del 10% al 13% de
-     * l'alcada de la fila i les marques hi surten prou grosses.
+     * [CA] Van arribar a 8 quan la font de l'acord es repartia tota l'alçada de
+     * la banda entre quatre línies —calia banda alta perquè la lletra no sortís
+     * minúscula. Des que és una fila per línia ({@code getChordFont}), la banda
+     * es pot abaixar sense tocar el text. Al PDF, abaixar-la hi dona aire:
+     * scoreRowH és més petit i scaleY, més gran.
      * <p>
-     * [EN] Raised to 8 for the PDF. The printer draws the row with a
-     * non-uniform scale (width at scaleX, height at scaleY, which is smaller
-     * once more than four rows are needed per page), so the strip is
-     * compressed vertically. With 6 rows the stack of four marks plus the
-     * attack triangle filled the PDF strip exactly, with no margin, and
-     * fitMarkStack had to shrink the font to its minimum. With 8 the strip goes
-     * from 10% to 13% of the row height and the marks come out big enough.
+     * [EN] Rows of the chord strip. Two things of the same size are drawn
+     * inside it: the stack of four initial marks (transposition, tempo, key and
+     * volume) and the four lines of the chord symbol. They are equally tall
+     * because they share the font ({@code MyChordSymbolLine.getBaseChordFont})
+     * and because a mark box is <b>exactly one chord line</b> tall
+     * ({@code MyChordSymbolLine.markBoxHeight}).
+     * <p>
+     * Four lines at {@code rowH*0.85} take about 4.7 rows, and the attack
+     * triangle eats half a row more: hence <b>6</b>. With 5 the text would
+     * shrink at every screen height tested (600, 768, 900, 1080, 1200 and
+     * 1440 px) except 2160.
+     * <p>
+     * [EN] They reached 8 back when the chord font split the whole strip height
+     * into four lines —a tall strip was needed to keep the text readable. Now
+     * that it is one row per line ({@code getChordFont}), the strip can be
+     * lowered without touching the text. In the PDF, lowering it helps:
+     * scoreRowH is smaller and scaleY larger.
      */
-    private static final int    DEFAULT_NROWS_CHORD         = 8;
+    private static final int    DEFAULT_NROWS_CHORD         = 6;
     private static final int    DEFAULT_NROWS_LYRICS        = 3;
     private static final int    DEFAULT_NCOLS_SQUARE        = 1;
     private static final int    DEFAULT_NROWS_BUTTON        = 2;

@@ -117,8 +117,6 @@ public class MyChordSymbolLine extends MyComponent {
     /** Cached chord font and the row height it was computed for. */
     private Font   cachedChordFont   = null;
     private double cachedChordRowH   = 0;
-    private Font   cachedMarkFont    = null;
-    private double cachedMarkRowH    = 0;
     private volatile boolean needsDrawing = true;
 
     /**
@@ -268,7 +266,7 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private void computeChordFontOverride(Graphics2D g, Map<Integer, Chord> chords,
             int numCols, Map<Integer, Integer> markerMaxWidths) {
-        chordFontOverride = null;              // getChordFont torna la mida per alçada
+        chordFontOverride = null;              // perquè getChordFont torni la base
         Font base = getChordFont(g);
         Font smallest = base;
         String fmt = getDisplayFormat();
@@ -289,12 +287,12 @@ public class MyChordSymbolLine extends MyComponent {
 
     /**
      * [CA] Encongeix la font fins que les tres columnes de l'acord caben en
-     * {@code availW} píxels. {@link #getChordFont} només mira l'alçada —omple la
+     * {@code availW} píxels. {@link #getBaseChordFont} només mira l'alçada —omple la
      * franja amb quatre línies—, i amb acords de cinc notes o en format Midi això
      * desbordava horitzontalment i es trepitjava l'acord del costat.
      * <p>
      * [EN] Shrinks the font until the chord's three columns fit in {@code availW}
-     * pixels. {@link #getChordFont} only looks at height, which overflowed
+     * pixels. {@link #getBaseChordFont} only looks at height, which overflowed
      * horizontally for five-note chords or the Midi format.
      */
     private Font fitChordFont(Graphics2D g, Font base, List<String> lines,
@@ -310,8 +308,44 @@ public class MyChordSymbolLine extends MyComponent {
         return f;
     }
 
+    /**
+     * [CA] Font amb què es dibuixa un acord: la base, o la reduïda per
+     * {@link #computeChordFontOverride} si a la franja hi ha acords que no hi
+     * cabrien d'ample.
+     * <p>
+     * [EN] Font a chord is drawn with: the base one, or the one reduced by
+     * {@link #computeChordFontOverride} when some chord in the strip would not
+     * fit widthwise.
+     *
+     * @param g [CA] no s'usa; es mesura amb {@link #metrics} /
+     *          [EN] unused; measuring goes through {@link #metrics}
+     * @return [CA] la font a aplicar / [EN] the font to apply
+     */
     private Font getChordFont(Graphics2D g) {
         if (chordFontOverride != null) return chordFontOverride;
+        return getBaseChordFont();
+    }
+
+    /**
+     * [CA] Font d'una línia de text de l'acord, sense l'ajust horitzontal de
+     * {@link #computeChordFontOverride}. És també la de les marques de canvi,
+     * perquè una marca i una línia d'acord han de fer la mateixa mida: és el
+     * mateix text, a la mateixa franja, a la mateixa alçada.
+     * <p>
+     * La base és <b>una fila de la franja per línia</b> ({@code rowH*0.85}).
+     * Repartint tota l'alçada entre quatre línies ({@code available/4}), que és
+     * el que feia, la lletra sortia enorme d'ençà que la franja va passar a 8
+     * files; aquell límit es queda només com a sostre, per si la franja fos
+     * baixa.
+     * <p>
+     * [EN] Font of one line of chord text, without the horizontal fit of
+     * {@link #computeChordFontOverride}. It is also the change marks' font,
+     * because a mark and a chord line must be the same size: same text, same
+     * strip, same height.
+     *
+     * @return [CA] la font base / [EN] the base font
+     */
+    private Font getBaseChordFont() {
         double rowH = Settings.getRowHeight();
         if (cachedChordFont != null && rowH == cachedChordRowH) return cachedChordFont;
         cachedChordRowH = rowH;
@@ -319,18 +353,13 @@ public class MyChordSymbolLine extends MyComponent {
         int arrowH = 7;   // 5px triangle + 2px gap
         int botMargin = 2;
         int available = chordH - arrowH - botMargin;
-        // Una línia de text per fila de la franja, com la font de les marques.
-        // Repartint tota l'alçada entre quatre línies (available / 4) el bloc
-        // omplia la banda sencera, i des que la franja té 8 files —les hi va posar
-        // el PDF— això era una lletra enorme. El límit per alçada es manté com a
-        // sostre per si la franja és baixa.
         int size = Math.max(MIN_CHORD_FONT, (int) Math.min(available / 4.0, rowH * 0.85));
         Font f = new Font("SansSerif", Font.BOLD, size);
-        FontMetrics fm = g.getFontMetrics(f);
+        FontMetrics fm = metrics().getFontMetrics(f);
         while (lineStep(fm) * 4 - LINE_GAP > available && size > MIN_CHORD_FONT) {
             size--;
             f = new Font("SansSerif", Font.BOLD, size);
-            fm = g.getFontMetrics(f);
+            fm = metrics().getFontMetrics(f);
         }
         cachedChordFont = f;
         return f;
@@ -345,14 +374,80 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private Font markFontOverride = null;
 
+    /**
+     * [CA] Alçada forçada de la caixa d'una marca quan la pila no cabria a la
+     * franja. 0 = l'alçada d'una línia d'acord.
+     * <p>
+     * [EN] Box height forced on a mark when the stack would not fit the strip.
+     * 0 = the height of one chord line.
+     */
+    private int markBoxHOverride = 0;
+
+    /**
+     * [CA] Alçada de la caixa d'una marca: <b>exactament una línia del símbol
+     * d'acord</b> ({@code ascent + descent + LINE_GAP} de la font base). Marca i
+     * acord comparteixen franja i mida de lletra, o sigui que la pila de quatre
+     * marques inicials fa el mateix alt que les quatre línies d'un acord.
+     * <p>
+     * No surt de {@code Settings.getRowHeight()}: una línia d'acord en fa poc
+     * més d'una, de fila (la font és {@code rowH*0.85} i l'interlineat hi
+     * afegeix), i lligar la caixa a la fila deixava les marques més petites que
+     * el text del costat.
+     * <p>
+     * [EN] Height of a mark box: <b>exactly one line of the chord symbol</b>
+     * ({@code ascent + descent + LINE_GAP} of the base font). Marks and chords
+     * share the strip and the font size, so the stack of four initial marks is
+     * as tall as the four lines of a chord.
+     * <p>
+     * It is not {@code Settings.getRowHeight()}: a chord line is slightly more
+     * than one row (the font is {@code rowH*0.85} plus the line gap), and tying
+     * the box to the row left the marks smaller than the text beside them.
+     *
+     * @return [CA] alçada de la caixa en píxels / [EN] box height in pixels
+     */
+    private int markBoxHeight() {
+        if (markBoxHOverride > 0) return markBoxHOverride;
+        return lineStep(metrics().getFontMetrics(getMarkFont()));
+    }
+
+    /**
+     * [CA] Mida de lletra més gran amb {@code ascent + descent + LINE_GAP} dins
+     * de {@code boxH} píxels. Només la fa servir {@link #fitMarkStack}, quan la
+     * pila no hi cap i cal abaixar caixa i lletra alhora.
+     * <p>
+     * [EN] Largest font size whose {@code ascent + descent + LINE_GAP} fits in
+     * {@code boxH} pixels. Only used by {@link #fitMarkStack}, when the stack
+     * does not fit and box and font must come down together.
+     */
+    private static int markFontSizeFor(int boxH) {
+        int size = MIN_CHORD_FONT;
+        while (size < 80) {
+            FontMetrics fm = metrics().getFontMetrics(new Font("SansSerif", Font.BOLD, size + 1));
+            if (lineStep(fm) > boxH) break;
+            size++;
+        }
+        return size;
+    }
+
+    /** Context de mesura: només se li demanen mètriques de font. */
+    private static Graphics2D metricsGraphics = null;
+
+    private static Graphics2D metrics() {
+        if (metricsGraphics == null) {
+            metricsGraphics = new java.awt.image.BufferedImage(1, 1,
+                    java.awt.image.BufferedImage.TYPE_INT_ARGB).createGraphics();
+        }
+        return metricsGraphics;
+    }
+
+    /**
+     * [CA] Font de les marques de canvi: la mateixa que la d'una línia d'acord.
+     * <p>
+     * [EN] Change-mark font: the same as one line of chord text.
+     */
     private Font getMarkFont() {
         if (markFontOverride != null) return markFontOverride;
-        double rowH = Settings.getRowHeight();
-        if (cachedMarkFont != null && rowH == cachedMarkRowH) return cachedMarkFont;
-        cachedMarkRowH = rowH;
-        int size = Math.max(6, (int)(rowH * 0.85));
-        cachedMarkFont = new Font("SansSerif", Font.BOLD, size);
-        return cachedMarkFont;
+        return getBaseChordFont();
     }
 
     /**
@@ -362,47 +457,44 @@ public class MyChordSymbolLine extends MyComponent {
      * (transposició, tempo, tonalitat i volum) la de volum quedava dibuixada per
      * sobre de la vora i es retallava.
      * <p>
-     * El marge del triangle d'atac es respecta sempre: l'alçada de la franja
-     * (Settings.DEFAULT_NROWS_CHORD, ara 8 files) està calculada perquè hi càpiguen les
-     * quatre marques i el triangle a partir de 720 px de pantalla, de manera
-     * que encongir la lletra només hauria de passar en casos extrems.
+     * Cada marca fa una línia d'acord ({@link #markBoxHeight}), o sigui que la
+     * pila de quatre ocupa el mateix que les quatre línies d'un acord; amb la
+     * franja a {@code Settings.DEFAULT_NROWS_CHORD} = 6 files i el triangle
+     * d'atac a sota, hi caben a qualsevol mida de pantalla. Si mai no hi
+     * cabessin, aquí s'abaixa l'alçada de la caixa i la lletra a l'una:
+     * encongir només la lletra no serviria de res, perquè l'alçada ja no en
+     * depèn.
      * <p>
      * [EN] Prepares the strip so that {@code nMarks} stacked marks fit. Marks
      * stack upward from the base, so an over-tall stack loses the topmost one;
      * with four marks (transposition, tempo, key and volume) the volume one was
      * drawn past the edge and clipped.
      * <p>
-     * The attack-triangle margin is always preserved: the strip height
-     * (Settings.DEFAULT_NROWS_CHORD, now 8 rows) is sized so that the four marks and the
-     * triangle fit from 720 px screen height upwards, so shrinking the font
-     * should only happen in extreme cases.
+     * Each mark is one chord line tall ({@link #markBoxHeight}), so a stack of
+     * four takes as much as the four lines of a chord; with the strip at
+     * {@code Settings.DEFAULT_NROWS_CHORD} = 6 rows and the attack triangle
+     * below, they fit at any screen height. If they ever did not, the box
+     * height and the font are lowered together: shrinking only the font would
+     * do nothing, since the height no longer depends on it.
      *
      * @param g      [CA] context on es mesurarà / [EN] context used for measuring
      * @param nMarks [CA] marques que s'apilaran / [EN] marks about to be stacked
      */
     private void fitMarkStack(Graphics2D g, int nMarks) {
         markFontOverride = null;
+        markBoxHOverride = 0;
         if (nMarks <= 0) return;
         int available = (int) Math.round(nRows * Settings.getRowHeight()) - TRIANGLE_SPACE;
-        int pad = 2;
-        int normalSize = getMarkFont().getSize();
-        int size = normalSize;
-        while (size > 6) {
-            Font f = new Font("SansSerif", Font.BOLD, size);
-            FontMetrics fm = g.getFontMetrics(f);
-            int stackH = nMarks * (fm.getAscent() + fm.getDescent() + 2 * pad);
-            if (stackH <= available) {
-                if (size != normalSize) markFontOverride = f;
-                return;
-            }
-            size--;
-        }
-        markFontOverride = new Font("SansSerif", Font.BOLD, 6);
+        int boxH = markBoxHeight();
+        if (nMarks * boxH <= available) return;      // el cas normal: hi caben
+        markBoxHOverride = Math.max(8, available / nMarks);
+        markFontOverride = new Font("SansSerif", Font.BOLD, markFontSizeFor(markBoxHOverride));
     }
 
-    /** Torna la pila de marques a la mida normal. */
+    /** Torna la pila de marques a la mida normal (una línia d'acord per marca). */
     private void clearMarkStackFit() {
         markFontOverride = null;
+        markBoxHOverride = 0;
     }
 
     private static int lineStep(FontMetrics fm) {
@@ -702,7 +794,8 @@ public class MyChordSymbolLine extends MyComponent {
      * genèric) es reparteixen en <b>tres columnes</b>: arrel i baix, la quatríada
      * i les extensions; les dues apilades van alineades a la <b>dreta</b>, perquè
      * els intervals de dues xifres no desquadrin la columna. La mida de la font
-     * surt de {@link #getChordFont}, que mira l'alçada de la franja, i de
+     * surt de {@link #getBaseChordFont} —una fila de la franja per línia, la
+     * mateixa mida que les marques de canvi— i de
      * {@link #computeChordFontOverride}, que la baixa si els acords no hi
      * cabrien d'ample.
      * <p>
@@ -893,11 +986,20 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * Draws a small filled rectangle with contrast-coloured text (white on the
-     * dark backgrounds, black on the yellow one) at the bottom-left of the
-     * chord strip cell at {@code col}, stacked {@code existingYOff} pixels above
-     * the bottom edge (markers stack upward).
-     * Returns the height of the box so the caller can stack further markers.
+     * [CA] Dibuixa la caixeta d'una marca de canvi a baix a l'esquerra de la
+     * cel·la {@code col} de la franja, {@code existingYOff} píxels per sobre de
+     * la base (les marques s'apilen cap amunt). El text va del color que
+     * contrasti amb el fons: blanc sobre els foscos, negre sobre el groc.
+     * L'alçada de la caixa és la d'una línia d'acord ({@link #markBoxHeight}),
+     * no la que demanaria la font, i es torna perquè qui crida hi pugui apilar
+     * la següent.
+     * <p>
+     * [EN] Draws a change mark's box at the bottom left of the strip cell at
+     * {@code col}, {@code existingYOff} pixels above the bottom edge (marks
+     * stack upward). The text takes the colour that contrasts with the
+     * background: white on the dark ones, black on the yellow one. The box
+     * height is one chord line ({@link #markBoxHeight}), not what the font
+     * would ask for, and it is returned so the caller can stack the next one.
      */
     private int drawChangeMark(int col, String text, Color bgColor, MarkKind kind,
                                Graphics2D g, boolean offscreen, int existingYOff) {
@@ -906,7 +1008,9 @@ public class MyChordSymbolLine extends MyComponent {
         FontMetrics fm = g.getFontMetrics();
         int pad  = 2;
         int boxW = fm.stringWidth(text) + 2 * pad;
-        int boxH = fm.getAscent() + fm.getDescent() + 2 * pad;
+        // La caixa fa una línia d'acord d'alt i la lletra s'hi centra, o sigui
+        // que una marca i una línia del símbol del costat fan el mateix.
+        int boxH = markBoxHeight();
 
         int cellX   = offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
@@ -921,7 +1025,8 @@ public class MyChordSymbolLine extends MyComponent {
         // Color per contrast amb el fons: els fons foscos segueixen amb text
         // blanc, i el groc de la transposició el necessita negre.
         g.setColor(ColorSets.getSeparatorColor(bgColor));
-        g.drawString(text, boxX + pad, boxY + pad + fm.getAscent());
+        int textTop = boxY + (boxH - (fm.getAscent() + fm.getDescent())) / 2;
+        g.drawString(text, boxX + pad, textTop + fm.getAscent());
 
         // Només el buffer de pantalla registra rectangles i pinta la selecció:
         // l'exportació a PDF reutilitza aquest mètode amb un altre Graphics2D.
