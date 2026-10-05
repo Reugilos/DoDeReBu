@@ -278,6 +278,7 @@ public class MyHelpDialog {
             { I18n.t("help.selection.select.key"),       I18n.t("help.selection.select.desc") },
             { I18n.t("help.selection.copy.key"),         I18n.t("help.selection.copy.desc") },
             { I18n.t("help.selection.cut.key"),          I18n.t("help.selection.cut.desc") },
+            { I18n.t("help.selection.pastePoint.key"),   I18n.t("help.selection.pastePoint.desc") },
             { I18n.t("help.selection.paste.key"),        I18n.t("help.selection.paste.desc") },
             { I18n.t("help.selection.replicate.key"),    I18n.t("help.selection.replicate.desc") },
             { I18n.t("help.selection.replicateEnd.key"), I18n.t("help.selection.replicateEnd.desc") },
@@ -301,6 +302,7 @@ public class MyHelpDialog {
             { I18n.t("help.lyrics.type.key"),    I18n.t("help.lyrics.type.desc") },
             { I18n.t("help.lyrics.advance.key"), I18n.t("help.lyrics.advance.desc") },
             { I18n.t("help.lyrics.back.key"),    I18n.t("help.lyrics.back.desc") },
+            { I18n.t("help.lyrics.select.key"),  I18n.t("help.lyrics.select.desc") },
             { I18n.t("help.lyrics.exit.key"),    I18n.t("help.lyrics.exit.desc") },
         };
     }

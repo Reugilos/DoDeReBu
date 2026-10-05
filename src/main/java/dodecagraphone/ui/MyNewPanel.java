@@ -455,6 +455,13 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_C) {
+            // La selecció de la franja de lletra mana sobre la de la graella:
+            // comparteixen drecera i qui decideix és on s'ha seleccionat.
+            if (controller.copyLyricsSelection()) {
+                controller.showLyricsClipboardTip();
+                this.repinta(true);
+                return;
+            }
             controller.copySelection();
             controller.getAllPurposeScore().drawCurrentCamInOffscreen();
             controller.showClipboardTip();
@@ -462,6 +469,11 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_X) {
+            if (controller.cutLyricsSelection()) {
+                controller.showLyricsClipboardTip();
+                this.repinta(true);
+                return;
+            }
             controller.cutSelection();
             controller.getAllPurposeScore().drawCurrentCamInOffscreen();
             controller.showClipboardTip();
@@ -469,7 +481,19 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
         if (e.isControlDown() && !e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_V) {
-            controller.startPaste();
+            // L'ordre segueix la regla: mana on hi ha la selecció. Primer la
+            // franja de lletra, després la graella i, si no n'hi ha cap,
+            // el camí antic (Ctrl-V i un clic per col·locar), que no es documenta.
+            if (controller.pasteLyricsSelection()) {
+                this.repinta(true);
+                return;
+            }
+            if (controller.pasteAtSelection()) {
+                controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+                this.repinta(true);
+                return;
+            }
+            controller.pasteWithoutPoint();
             controller.getAllPurposeScore().drawCurrentCamInOffscreen();
             this.repinta(true);
             return;

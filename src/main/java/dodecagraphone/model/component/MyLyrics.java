@@ -30,14 +30,18 @@ import java.util.Map;
  * de buffer offscreen que {@link MyChordSymbolLine}: el contingut complet es
  * pre-renderitza en un {@link java.awt.image.BufferedImage} i la porció visible
  * s'extreu a cada frame amb {@code drawImageClamped()}. Suporta edició inline
- * (mode {@code editMode}) amb cursor de text i navegació per tecles.
+ * (mode {@code editMode}) amb cursor de text i navegació per tecles, i una
+ * selecció pròpia de rangs de paraules (Ctrl + arrossegar) per al
+ * porta-retalls de la lletra.
  * <p>
  * [EN] Horizontal strip below the score that scrolls in sync with the grid,
  * reserved for song lyrics. Uses the same offscreen buffer mechanism as
  * {@link MyChordSymbolLine}: the full content is pre-rendered into a
  * {@link java.awt.image.BufferedImage} and the visible slice is extracted each
  * frame with {@code drawImageClamped()}. Supports inline editing (
- * {@code editMode}) with a text cursor and keyboard navigation.
+ * {@code editMode}) with a text cursor and keyboard navigation, and a
+ * selection of its own over word ranges (Ctrl + drag) for the lyrics
+ * clipboard.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -245,6 +249,75 @@ public class MyLyrics extends MyComponent {
                 drawFullLyricsInOffscreen();
             }
         }
+    }
+
+    /** Pista de la qual s'estan dibuixant les lletres. */
+    public int getDisplayTrackId() { return displayTrackId; }
+
+    // -------------------------------------------------------------------------
+    // Selecció de la franja (Ctrl + arrossegar)
+    // -------------------------------------------------------------------------
+
+    /**
+     * [CA] Selecció viva a la franja: rang de columnes d'una pista. És estat de
+     * la <b>interfície</b>, no de la partitura: no es desa al fitxer i no es
+     * dibuixa al buffer offscreen —que és el que copien el PDF i l'SVG— sinó a
+     * {@link #draw}, en coordenades de pantalla.
+     * <p>
+     * [EN] Live selection in the strip: a column range of one track. It is
+     * <b>interface</b> state, not score state: it is never saved and never
+     * drawn into the offscreen buffer —the one the PDF and SVG copy— but in
+     * {@link #draw}, in screen coordinates.
+     */
+    private boolean selActive = false;
+    private int     selTrack  = -1;
+    private int     selColA   = -1;
+    private int     selColB   = -1;
+
+    /** Marca la selecció entre dues columnes (en qualsevol ordre) d'una pista. */
+    public void setSelection(int track, int colA, int colB) {
+        selActive = true;
+        selTrack  = track;
+        selColA   = colA;
+        selColB   = colB;
+    }
+
+    /** Mou l'extrem mòbil de la selecció (l'arrossegada). */
+    public void extendSelection(int col) {
+        if (selActive) selColB = col;
+    }
+
+    /** Treu la selecció. No toca el text. */
+    public void clearSelection() {
+        selActive = false;
+        selTrack  = -1;
+        selColA   = -1;
+        selColB   = -1;
+    }
+
+    public boolean isSelectionActive() { return selActive; }
+    public int getSelTrack()    { return selTrack; }
+    public int getSelFirstCol() { return Math.min(selColA, selColB); }
+    public int getSelLastCol()  { return Math.max(selColA, selColB); }
+
+    /**
+     * [CA] Segments d'una pista amb la columna dins del rang, ordenats per
+     * columna. La llista és nova; els segments, no: no se'ls ha de tocar el
+     * text.
+     * <p>
+     * [EN] Segments of a track whose column falls in the range, ordered by
+     * column. The list is new; the segments are not, so their text must not be
+     * modified.
+     */
+    public List<LyricSegment> getSegmentsInRange(int track, int c1, int c2) {
+        List<LyricSegment> out = new ArrayList<>();
+        List<LyricSegment> segs = lyricsByTrack.get(track);
+        if (segs == null) return out;
+        for (LyricSegment seg : segs) {
+            if (seg.col >= c1 && seg.col <= c2) out.add(seg);
+        }
+        out.sort((a, b) -> Integer.compare(a.col, b.col));
+        return out;
     }
 
     // -------------------------------------------------------------------------
@@ -1029,6 +1102,23 @@ public class MyLyrics extends MyComponent {
                 g.setStroke(new java.awt.BasicStroke(2));
                 g.drawLine(sx + 4, y1, sx + 4, y1 + h);
                 g.setStroke(saved);
+                g.setClip(oldClip);
+            }
+        }
+
+        // Selecció: franja translúcida per sobre del text ja dibuixat. Va aquí i
+        // no al buffer offscreen perquè el PDF i l'SVG copien aquell buffer i la
+        // selecció no s'ha d'imprimir.
+        if (selActive && selTrack == displayTrackId) {
+            int sx1 = colToScreenX(getSelFirstCol());
+            int sx2 = colToScreenX(getSelLastCol() + 1);
+            if (sx2 > sx1) {
+                Shape oldClip = g.getClip();
+                g.clipRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+                g.setColor(new Color(0, 90, 190, 60));
+                g.fillRect(sx1, (int) screenPosY, sx2 - sx1, (int) height);
+                g.setColor(new Color(0, 90, 190, 160));
+                g.drawRect(sx1, (int) screenPosY, sx2 - sx1 - 1, (int) height - 1);
                 g.setClip(oldClip);
             }
         }

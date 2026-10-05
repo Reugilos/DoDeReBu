@@ -144,7 +144,7 @@ public class MyController {
     private int lastColPressed;
     private int lastButtonPressed;
     private boolean turningOn;
-    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT, MOVE, SELECT, PASTE }
+    private enum DragMode { NONE, ADD, ERASE, EXTEND_PENDING, EXTEND_RIGHT, EXTEND_LEFT, MOVE, SELECT, PASTE, LYRICS_SELECT }
     private DragMode dragMode = DragMode.NONE;
     private int extendStartRow = -1;
     private int extendStartCol = -1;
@@ -427,6 +427,19 @@ public class MyController {
     }
 
     /**
+     * [CA] Tip del porta-retalls de la lletra. És un altre text perquè l'ordre
+     * és l'invers del de les notes: allà primer es fa Ctrl-V i després es tria
+     * el lloc; aquí el lloc es tria abans, amb Ctrl-clic.
+     * <p>
+     * [EN] Lyrics clipboard tip. A different text because the order is the
+     * reverse of the notes one: there Ctrl-V comes first and the place after;
+     * here the place is chosen first, with Ctrl-click.
+     */
+    public void showLyricsClipboardTip() {
+        showCenteredTip(I18n.t("clipboard.lyrics.tip"));
+    }
+
+    /**
      * [CA] Mostra el missatge flotant que demana on s'ha d'enganxar. Es crida
      * des de {@link #startPaste()}, un cop el porta-retalls i el track de
      * destí ja estan resolts, i desapareix al primer clic.
@@ -521,7 +534,9 @@ public class MyController {
      * @param track [CA] pista a configurar / [EN] track to configure
      */
     public void addChordTrackAndInstrumentToMixer(MyTrack track) {
-        track.setVelocity(63);
+        // Mateix volum que les pistes de melodia. Era 63, i l'acompanyament
+        // naixia a mitja veu sense que res ho digués.
+        track.setVelocity(Settings.getDefaultVelocity());
         int canal = 15;
         track.afegirCanal(canal);
         track.setCurrentChannel(canal);
@@ -1077,6 +1092,118 @@ public class MyController {
 
     // ── Selection overlay getters (read by MyGridScore) ──────────────────────────
 
+    /**
+     * [CA] Porta-retalls de la lletra, independent del de les notes. Els
+     * desplaçaments de columna són relatius a la primera columna de la selecció
+     * d'origen, igual que a {@code clipboardLyrics}.
+     * <p>
+     * [EN] Lyrics clipboard, independent from the notes one. Column offsets are
+     * relative to the first column of the source selection, as in
+     * {@code clipboardLyrics}.
+     */
+    private List<ClipLyric> lyricsClipboard = new ArrayList<>();
+
+    /**
+     * [CA] Ctrl+C sobre una selecció de la franja de lletra. Torna <b>fals</b>
+     * si no n'hi ha cap, i aleshores qui crida ha de provar la còpia de notes:
+     * les dues dreceres són les mateixes i qui decideix és on hi ha la selecció.
+     * <p>
+     * [EN] Ctrl+C over a lyrics selection. Returns <b>false</b> when there is
+     * none, so the caller falls back to the note copy: both share the shortcut
+     * and what decides is where the selection is.
+     *
+     * @return [CA] cert si l'ha copiada / [EN] true when it copied
+     */
+    public boolean copyLyricsSelection() {
+        if (!myLyrics.isSelectionActive()) return false;
+        int c1 = myLyrics.getSelFirstCol();
+        int c2 = myLyrics.getSelLastCol();
+        int tr = myLyrics.getSelTrack();
+        lyricsClipboard = new ArrayList<>();
+        for (MyLyrics.LyricSegment seg : myLyrics.getSegmentsInRange(tr, c1, c2)) {
+            lyricsClipboard.add(new ClipLyric(seg.col - c1, tr, seg.text));
+        }
+        return true;
+    }
+
+    /**
+     * [CA] Ctrl+X sobre una selecció de la franja de lletra: copia i esborra, en
+     * un sol pas d'undo ({@code MouseSequence}, que ja sap desfer i refer canvis
+     * de lletra).
+     * <p>
+     * [EN] Ctrl+X over a lyrics selection: copies and deletes, as a single undo
+     * step ({@code MouseSequence}, which already knows how to undo and redo
+     * lyric changes).
+     *
+     * @return [CA] cert si l'ha retallada / [EN] true when it cut
+     */
+    public boolean cutLyricsSelection() {
+        if (!copyLyricsSelection()) return false;
+        int c1 = myLyrics.getSelFirstCol();
+        int tr = myLyrics.getSelTrack();
+        MouseSequence seq = new MouseSequence(this);
+        for (ClipLyric cl : lyricsClipboard) {
+            int col = c1 + cl.colOffset;
+            String existing = myLyrics.getLyric(col, tr);
+            if (existing != null) {
+                seq.addLyricRemove(col, tr, existing);
+                myLyrics.removeLyric(col, tr);
+            }
+        }
+        if (!seq.isEmpty()) {
+            afegirEvent(seq);
+            this.needsSaving = true;
+        }
+        myLyrics.clearSelection();
+        myLyrics.setNeedsDrawing(true);
+        myLyrics.drawFullLyricsInOffscreen();
+        return true;
+    }
+
+    /**
+     * [CA] Ctrl+V de la lletra: enganxa a la columna on s'hagi fet l'últim
+     * Ctrl+clic a la franja, conservant les distàncies entre paraules. La pista
+     * de destinació és la de la selecció, o sigui la que s'està veient: copiar
+     * d'una pista i enganxar a una altra és canviar de pista entremig.
+     * <p>
+     * [EN] Lyrics Ctrl+V: pastes at the column of the last Ctrl+click on the
+     * strip, keeping the distances between words. The target track is the
+     * selection's, that is, the one on display.
+     * <p>
+     * [CA] Sense cap punt marcat torna <b>fals</b>, i qui crida acaba a
+     * {@link #pasteWithoutPoint()}, que demana el Ctrl+clic.
+     * <p>
+     * [EN] With no point marked it returns <b>false</b> and the caller ends at
+     * {@link #pasteWithoutPoint()}, which asks for the Ctrl+click.
+     *
+     * @return [CA] cert si ha enganxat / [EN] true when it pasted
+     */
+    public boolean pasteLyricsSelection() {
+        if (lyricsClipboard.isEmpty() || !myLyrics.isSelectionActive()) return false;
+        int anchorCol = myLyrics.getSelFirstCol();
+        int tr = myLyrics.getSelTrack();
+        List<ClipLyric> newLyrics = new ArrayList<>();
+        List<ClipLyric> oldLyrics = new ArrayList<>();
+        int numCols = this.allPurposeScore.getNumCols();
+        for (ClipLyric cl : lyricsClipboard) {
+            int col = anchorCol + cl.colOffset;
+            if (col < 0 || col >= numCols) continue;
+            String oldText = myLyrics.getLyric(col, tr);
+            if (oldText != null) oldLyrics.add(new ClipLyric(col - anchorCol, tr, oldText));
+            myLyrics.setLyric(col, tr, cl.text);
+            newLyrics.add(new ClipLyric(col - anchorCol, tr, cl.text));
+        }
+        if (!newLyrics.isEmpty() || !oldLyrics.isEmpty()) {
+            afegirEvent(new PasteEvent(this, new ArrayList<>(), 0, anchorCol, -1, -1, false,
+                    new java.util.HashMap<>(), new java.util.HashMap<>(), newLyrics, oldLyrics));
+            this.needsSaving = true;
+        }
+        myLyrics.clearSelection();
+        myLyrics.setNeedsDrawing(true);
+        myLyrics.drawFullLyricsInOffscreen();
+        return true;
+    }
+
     public boolean isSelectionActive() { return selectionActive; }
     public void clearSelection() {
         selectionActive = false;
@@ -1415,7 +1542,22 @@ public class MyController {
         }
     }
 
-    /** Shows track picker then activates PASTE drag mode on next mouse press. */
+    /**
+     * [CA] Camí <b>antic</b> d'enganxar: tria el track de destí i arma el mode
+     * PASTE, que col·loca al clic següent amb un fantasma de previsualització.
+     * Es manté per a qui ja hi estigui acostumat, però <b>no es documenta</b>
+     * enlloc: ni a l'ajuda ni als tips. El camí que s'explica és marcar el punt
+     * abans amb Ctrl+clic i enganxar-hi amb Ctrl+V ({@link #pasteAtSelection()}).
+     * <p>
+     * Hi arriba {@link #pasteWithoutPoint()}, o sigui només quan es prem Ctrl+V
+     * sense cap punt marcat.
+     * <p>
+     * [EN] <b>Old</b> paste path: picks the target track and arms PASTE mode,
+     * which places on the next click with a preview ghost. Kept for whoever is
+     * used to it, but <b>documented nowhere</b>: not in the help, not in the
+     * tips. The path that is explained is marking the point first with
+     * Ctrl+click and pasting with Ctrl+V ({@link #pasteAtSelection()}).
+     */
     public void startPaste() {
         if (clipboard == null || clipboard.isEmpty()) return;
         selectionActive = false;
@@ -1436,6 +1578,74 @@ public class MyController {
             this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
         }
         showPasteTip();
+    }
+
+    /**
+     * [CA] Ctrl+V amb un punt d'enganxada ja marcat: enganxa de dret, sense
+     * demanar cap clic. El punt és la <b>selecció</b> de la graella, que un
+     * Ctrl+clic deixa d'una sola cel·la —el mateix gest que fa una selecció
+     * gran arrossegant—, i l'àncora és el seu angle superior esquerre.
+     * <p>
+     * [CA] Si no n'hi ha cap de marcat torna <b>fals</b> i qui crida cau al
+     * mecanisme antic ({@link #startPaste()}): Ctrl+V, missatge, i un clic per
+     * col·locar. Es manté viu però no es documenta enlloc; el camí que
+     * s'explica a l'ajuda i als tips és aquest.
+     * <p>
+     * [EN] Ctrl+V with a paste point already marked: pastes straight away,
+     * asking for no click. The point is the grid <b>selection</b>, which a
+     * Ctrl+click leaves one cell wide —the same gesture that makes a large
+     * selection by dragging—, and the anchor is its top-left corner.
+     * <p>
+     * [EN] With none marked it returns <b>false</b> and the caller falls back
+     * to the old mechanism ({@link #startPaste()}): Ctrl+V, a message, and a
+     * click to place. It stays alive but is documented nowhere; the path the
+     * help and the tips explain is this one.
+     *
+     * @return [CA] cert si ha enganxat / [EN] true when it pasted
+     */
+    public boolean pasteAtSelection() {
+        if (clipboard == null || clipboard.isEmpty()) return false;
+        if (!selectionActive) return false;
+        int anchorRow = Math.min(selStartRow, selEndRow);
+        int anchorCol = Math.min(selStartCol, selEndCol);
+        if (clipboardMultiTrack) {
+            // Multipista: cada nota va al seu track original, no cal triar destí
+            this.pasteTr     = -1;
+            this.pasteCh     = -1;
+            this.pasteDotted = false;
+        } else {
+            int targetTr = showTrackPickerDialog();
+            if (targetTr == -1) return true;   // cancel·lat, però la tecla ja és nostra
+            this.pasteTr     = targetTr;
+            this.pasteCh     = this.mixer.getCurrentChannelOfTrack(targetTr);
+            this.pasteDotted = this.mixer.getTrackFromId(targetTr).isDotted();
+        }
+        selectionActive = false;
+        finalizeHardPaste(anchorRow, anchorCol);
+        refreshAnacrusis();
+        return true;
+    }
+
+    /**
+     * [CA] Ctrl+V sense cap punt marcat. Amb notes al porta-retalls engega el
+     * mecanisme antic; amb lletra, demana el Ctrl+clic, que és l'únic camí que
+     * hi ha. Separar-ho d'{@link #pasteAtSelection()} manté la regla simple:
+     * qui decideix quin porta-retalls mana és <b>on hi ha la selecció</b>.
+     * <p>
+     * [EN] Ctrl+V with no point marked. With notes in the clipboard it starts
+     * the old mechanism; with lyrics, it asks for the Ctrl+click, which is the
+     * only way there. Keeping it apart from {@link #pasteAtSelection()} keeps
+     * the rule simple: what decides which clipboard wins is <b>where the
+     * selection is</b>.
+     */
+    public void pasteWithoutPoint() {
+        if (clipboard != null && !clipboard.isEmpty()) {
+            startPaste();
+            return;
+        }
+        if (!lyricsClipboard.isEmpty()) {
+            showCenteredTip(I18n.t("paste.lyrics.point.tip"));
+        }
     }
 
     public boolean isPendingPaste() { return pendingPaste; }
@@ -1885,6 +2095,7 @@ public class MyController {
         /* Qualsevol clic sense Ctrl FORA DELS BOTONS deselecciona la selecció activa.
            Guardem si érem en selecció per consumir el clic a la graella
            sense afegir nota. */
+        if (!ctrlDown) this.myLyrics.clearSelection();
         boolean wasDeselecting = !ctrlDown && selectionActive;
         if (wasDeselecting) {
             selectionActive = false;
@@ -1959,9 +2170,20 @@ public class MyController {
             return;
         }
 
-        /* Check lyrics strip: enter inline edit mode */
+        /* Check lyrics strip: Ctrl selecciona, un clic normal entra a editar */
         int lyricsCol = this.myLyrics.whichCol(posX, posY);
         if (lyricsCol != -1) {
+            if (ctrlDown) {
+                // Ctrl+arrossegar marca un rang de paraules. La pista és la que
+                // s'està veient, no la del mesclador: es selecciona el que es veu.
+                if (this.myLyrics.isEditMode()) this.myLyrics.exitEditMode();
+                this.myLyrics.setSelection(this.myLyrics.getDisplayTrackId(), lyricsCol, lyricsCol);
+                dragMode = DragMode.LYRICS_SELECT;
+                this.myLyrics.setNeedsDrawing(true);
+                this.myLyrics.drawFullLyricsInOffscreen();
+                this.drawFull(true);
+                return;
+            }
             if (this.allPurposeScore.getLastColWritten() == 0) {
                 MyDialogs.mostraMissatge(I18n.t("myLyrics.noNotes.warning"), I18n.t("myLyrics.label"));
                 return;
@@ -2164,6 +2386,10 @@ public class MyController {
     }
 
     public void onMouseReleased(double posX, double posY) {
+        if (dragMode == DragMode.LYRICS_SELECT) {
+            dragMode = DragMode.NONE;
+            return;
+        }
         /* XiloKey. */
         if (this.lastXiloKeyPressed != -1) {
             this.keyboard.stop(this.lastXiloKeyPressed);
@@ -2348,6 +2574,15 @@ public class MyController {
 //
     public void onMouseDragged(double posX, double posY) {
         if (dragMode == DragMode.NONE) return;
+
+        if (dragMode == DragMode.LYRICS_SELECT) {
+            int col = this.myLyrics.whichCol(posX, posY);
+            if (col != -1) {
+                this.myLyrics.extendSelection(col);
+                this.drawFull(true);
+            }
+            return;
+        }
 
         if (dragMode == DragMode.SELECT) {
             lastSelectDragY = posY;
