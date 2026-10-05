@@ -142,6 +142,12 @@ La pregunta «vols guardar-los **també com a notes MIDI**?» (`saveChordMidiTra
 
 **El PDF no dibuixa res d'això**: copia `chordLine.getOffscreenImage()`. Qualsevol canvi al dibuix de la franja hi surt sol.
 
+### El comptador `nNotes` es recompta, no s'acumula
+
+`MyTrack.nNotes` decideix quines pistes són fantasma (`removeEmptyTracks`), què ensenya el mesclador i què es desa al fitxer. Es manté per increments (`oneNoteMore`/`oneNoteLess`) des d'una vintena de llocs, i **la pista d'acords el desbocava**: cada `placeChordMidiNotes` incrementa i `removeNoteFromSquare` no decrementa, o sigui que col·locar i moure acords el feia créixer sense fre (`nNotes=155713` en una partitura de tres acords).
+
+`MyPatternScore.refreshTrackNoteCounts()` el recompta de la graella —els caps de nota, un apunt per nota llarga— i el crida `saveMidiScore` abans d'escriure les metadades i `readMidiScore` abans de `removeEmptyTracks`. És O(graella) i es fa un sol cop per desat o per càrrega.
+
 ### El mesclador sempre ha de tenir una pista
 
 `loadScore` crea un mesclador buit (`new MyMixer(this)`, sense el «Track 1» que posa `setDefaultTrack()`) i, en acabar de llegir, `removeEmptyTracks()` esborra les pistes sense notes i selecciona l'última que quedi viva. **Amb una partitura només d'acords no en queda cap**: `currentTrack` es quedava a `-1` i el primer repintat petava a `getCurrentChannelOfCurrentTrack()` (`MyXiloKey.draw` pregunta `isDrumsMode()`). S'hi arriba també esborrant l'última pista des del mesclador, que no ho impedeix.
@@ -202,11 +208,12 @@ Conseqüències:
 
 ## Durada de l'últim acord (`updateStopMarker`)
 
-`MyPatternScore.updateStopMarker()` recalcula la durada de l'últim acord del `chordSymbolLine` perquè arribi fins a `endOfScore` (= final de l'última nota, no del compàs). Distincions clau:
+`MyPatternScore.updateStopMarker()` recalcula `stopCol` i la durada de l'últim acord del `chordSymbolLine`. Distincions clau:
 
 - `endOfScore` = `max(noteEnd, playCol + 1)` — on acaba el contingut musical
-- `stopCol` = final del compàs que conté `endOfScore` — fins on avança la reproducció en silenci
-- L'últim acord s'estén fins a `endOfScore`, **no** fins a `stopCol`
+- `stopCol` = final del compàs que conté `endOfScore` — fins on avança la reproducció en silenci. **No s'arrodoneix a pàgines senceres**: amb el mínim d'una pàgina (`minStopCol`) la barra d'una partitura curta saltava al final de la pàgina, que no és cap final de res. Aquell mínim només val per al cas buit, on `stopCol` no és un final sinó un límit per a qui el llegeix (el buffer del metrònom, `playScoreCol`)
+- `lastColWritten` = `max(noteEnd, final de l'últim acord) − 1`. **Hi han d'entrar les notes de la pista d'acords**, que `computeNoteEndCol` no compta (i no ha de comptar, o l'últim acord s'allargaria a si mateix): en una partitura només d'acords quedava a 0, i el bucle de desat talla a `col == lastColWritten`, o sigui que el fitxer sortia sense cap nota digués el que digués la pregunta de desar-les
+- **L'últim acord** s'estén fins al **final del seu compàs**, o fins a `stopCol` si aquesta cau abans, i mai per sota de `noteEnd`. Els altres acaben on comença el següent (`calcNcols`); l'últim no en té cap i arribava només fins a `playCol + 1` —una sola columna— sempre que no hi hagués notes més enllà. El seu càlcul va **després** del de `stopCol`, que n'és el sostre.
 
 **Important**: `updateStopMarker` es crida **només en reproduir i en desar** (`play()` i `saveScore()`), més la inicialització (constructor, `newScore`, `loadScore`), el canvi de compàs base (`refreshAfterChangeMapEdit` a col 0) i `replicateSelection`, que llegeix `stopCol` i el necessita fresc. **No** s'ha de cridar des de rutes d'edició: la doble barra ha de quedar quieta mentre s'edita.
 
@@ -251,8 +258,24 @@ Els botons documentats han de cobrir `resources/defaults/ButtonLayout.csv`. Hi f
 
 ### Selecció
 - `selectionActive`, `selStartRow/Col`, `selEndRow/Col` a `MyController`.
-- Clicar sense Alt esborra la selecció (`selectionActive = false` a `onMousePressed`).
+- **Ctrl + arrossegar** selecciona (`DragMode.SELECT`); un Ctrl+clic sol deixa una selecció d'una cel·la. Clicar sense Ctrl la treu (`selectionActive = false` a `onMousePressed`).
 - Ctrl+C i Ctrl+X desactiven la selecció i mostren un tip localitzat (`clipboard.full.tip`).
+
+### Enganxar: el punt es marca abans
+El camí documentat és **Ctrl-C/Ctrl-X → Ctrl-clic al punt → Ctrl-V**. El punt d'enganxada **és la selecció**: un Ctrl+clic en deixa una d'una cel·la, es veu marcada, i `pasteAtSelection()` hi deixa el porta-retalls amb l'angle superior esquerre a sobre. Val igual per a les notes (graella) i per a la lletra (franja).
+
+El **mecanisme antic segueix viu i no es documenta**: Ctrl-V sense cap punt marcat cau a `pasteWithoutPoint()` → `startPaste()`, que ensenya `paste.clickToPlace.tip` i espera un clic (`DragMode.PASTE`, amb el fantasma de previsualització). Amb lletra al porta-retalls i cap punt, el missatge demana el Ctrl+clic (`paste.lyrics.point.tip`), perquè allà no hi ha cap altre camí.
+
+L'ordre de `MyNewPanel` a Ctrl-V segueix una sola regla —**mana on hi ha la selecció**—: primer la franja de lletra, després la graella, i si no n'hi ha cap, el camí antic.
+
+### Porta-retalls de la lletra
+Selecció pròpia, dins de `MyLyrics` (`selActive`, `selTrack`, `selColA/B`): un rang de columnes d'**una** pista, marcat amb **Ctrl + arrossegar** per la franja (`DragMode.LYRICS_SELECT`). És estat d'interfície: es dibuixa a `draw()`, en coordenades de pantalla, i **no** al buffer offscreen, que és el que copien el PDF i l'SVG.
+
+- Ctrl-C / Ctrl-X → `copyLyricsSelection()` / `cutLyricsSelection()`. El retall va a `lyricsClipboard` (`ClipLyric`, desplaçaments relatius a la primera columna).
+- Ctrl-V → `pasteLyricsSelection()`, a la columna de l'últim **Ctrl-clic**, conservant les distàncies. La pista de destinació és la de la selecció, o sigui la que s'està veient.
+- Les tres tornen **booleà**: comparteixen drecera amb el porta-retalls de les notes i `MyNewPanel` prova primer la lletra; si no hi ha selecció a la franja, cau a la de la graella.
+- L'undo no és nou: el retall reusa `MouseSequence.addLyricRemove` i l'enganxada un `PasteEvent` amb les llistes de notes i acords buides. Totes dues ja sabien desfer i refer canvis de lletra, perquè la còpia multipista de la graella ja se les enduia.
+- El tip és un altre (`clipboard.lyrics.tip`): a les notes primer es fa Ctrl-V i després es tria el lloc; aquí el lloc es tria abans.
 
 ### Sistema undo/redo
 `PilaEvents` amb subclasses d'`Event` (`refer()`/`desfer()`):
@@ -352,6 +375,8 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **d7d872d** Porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat abans amb Ctrl-clic, també per a les notes. El camí antic de Ctrl-V hi queda, sense documentar. Volum per defecte de la pista d'acords a 127.
+- **2d8befe** L'últim acord arriba al final del seu compàs; la doble barra ja no s'arrodoneix a la pàgina; `lastColWritten` compta les notes dels acords; `nNotes` es recompta de la graella; columnes d'intervals amb terra de dues xifres.
 - **f62059d** Les notes dels acords es desaven només si la pista era visible (o sigui mai): la porta del bucle de desat passa a ser el `trackMap`. En carregar, a la pista marcada amb `id=1003` se li salten els `NOTE_ON`/`NOTE_OFF`: els símbols ja regeneren l'acompanyament.
 - **f7f325b** La franja d'acords, de 8 files a 6: la caixa d'una marca fa exactament una línia d'acord i comparteixen la font (`getBaseChordFont`). Abans l'alçada de la marca sortia de la font i no quadrava amb res.
 - **28f5629** Els símbols d'acord es desen sempre (no només amb les notes MIDI); el baix va després dels claudàtors a `basicString()`; `ensureSomeTrackSelected()` perquè una partitura només d'acords no es quedi sense pista; columnes d'intervals a la dreta, font més petita i encabida a l'ample.

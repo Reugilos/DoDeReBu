@@ -49,7 +49,11 @@ llicència comercial separada. Vegeu [LICENSE.txt](LICENSE.txt) per al text comp
 
 ## Contacte
 
-Per informar d'errors o consultes: doderebuapp@dodecaphenia.org
+Hi ha dues vies, i totes dues van bé:
+
+- **[Issues de GitHub](https://github.com/Reugilos/DoDeReBu/issues)** — per a errors i
+  suggeriments. Són públiques, o sigui que el que s'hi respon serveix a tothom.
+- **doderebuapp@dodecaphenia.org** — per a consultes, o si prefereixes no obrir-hi un compte.
 
 ────────────────────────────────────────────────────────────────────────────────
 ENGLISH
@@ -100,4 +104,9 @@ and an orientative Catalan translation).
 
 ## Contact
 
-To report bugs or ask questions: doderebuapp@dodecaphenia.org
+Either way works:
+
+- **[GitHub Issues](https://github.com/Reugilos/DoDeReBu/issues)** — for bugs and
+  suggestions. They are public, so an answer there helps everyone.
+- **doderebuapp@dodecaphenia.org** — for questions, or if you would rather not open an
+  account there.
