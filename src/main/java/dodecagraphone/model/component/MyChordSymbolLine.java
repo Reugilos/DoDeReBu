@@ -214,15 +214,33 @@ public class MyChordSymbolLine extends MyComponent {
      * [EN] Total width of a chord's three columns with the given metrics. Mirrors
      * the geometry of {@code drawChordSymbol}.
      */
+    /**
+     * [CA] Amplada d'una de les dues columnes apilades: la de l'entrada més
+     * ampla, però mai menys de <b>dues xifres</b>. Sense aquest mínim, un acord
+     * de números d'una sola xifra ({@code Do[0,4,7]}) tenia la columna tan
+     * ampla com una xifra i l'alineació a la dreta no es notava: els seus
+     * dígits queien on els altres acords hi tenen les desenes. Amb el mínim,
+     * totes les unitats de la franja cauen a la mateixa vertical.
+     * <p>
+     * [EN] Width of one of the two stacked columns: that of its widest entry,
+     * but never less than <b>two digits</b>. Without this floor, a chord of
+     * single-digit numbers ({@code Do[0,4,7]}) had a one-digit column and the
+     * right alignment made no visible difference: its digits fell where other
+     * chords have their tens. With the floor, every units digit in the strip
+     * lands on the same vertical.
+     */
+    private static int stackColWidth(FontMetrics fm, List<String> lines, int from, int to) {
+        int w = 2 * fm.charWidth('0');
+        for (int i = from; i <= to; i++) w = Math.max(w, fm.stringWidth(lines.get(i)));
+        return w;
+    }
+
     private static int chordWidth(FontMetrics fm, List<String> lines,
             int splitIdx, int col2Count, int gap) {
-        int col2W = 0;
-        for (int i = 1; i <= col2Count; i++) col2W = Math.max(col2W, fm.stringWidth(lines.get(i)));
+        int col2W = stackColWidth(fm, lines, 1, col2Count);
         int w = fm.stringWidth(lines.get(0)) + gap + col2W;
         if (lines.size() > splitIdx) {
-            int col3W = 0;
-            for (int i = splitIdx; i < lines.size(); i++) col3W = Math.max(col3W, fm.stringWidth(lines.get(i)));
-            w += gap + col3W;
+            w += gap + stackColWidth(fm, lines, splitIdx, lines.size() - 1);
         }
         return w;
     }
@@ -863,12 +881,11 @@ public class MyChordSymbolLine extends MyComponent {
 
             // Column 2: base notes from bottom to top, right-aligned. Els intervals
             // de dues xifres (el 10 d'un [0,4,7,10]) desalineaven la columna; cal
-            // mesurar-la sencera abans de dibuixar-ne cap línia.
+            // mesurar-la sencera abans de dibuixar-ne cap línia. L'amplada té un
+            // terra de dues xifres (stackColWidth), perquè els acords que no en
+            // porten cap de dos dígits alineïn igualment per la dreta.
             int col2X = camX + col1W + gap;
-            int col2W = 0;
-            for (int i = 1; i <= col2Count; i++) {
-                col2W = Math.max(col2W, fm.stringWidth(lines.get(i)));
-            }
+            int col2W = stackColWidth(fm, lines, 1, col2Count);
             int y = camY;
             for (int i = 1; i <= col2Count; i++) {
                 String n = lines.get(i);
@@ -879,10 +896,7 @@ public class MyChordSymbolLine extends MyComponent {
             // Column 3: tensions always here, from bottom to top, right-aligned too
             if (lines.size() > splitIdx) {
                 int col3X = col2X + col2W + gap;
-                int col3W = 0;
-                for (int i = splitIdx; i < lines.size(); i++) {
-                    col3W = Math.max(col3W, fm.stringWidth(lines.get(i)));
-                }
+                int col3W = stackColWidth(fm, lines, splitIdx, lines.size() - 1);
                 y = camY;
                 for (int i = splitIdx; i < lines.size(); i++) {
                     String t = lines.get(i);

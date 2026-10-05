@@ -900,6 +900,11 @@ public class MyMidiScore extends MyExercise {
             }
             MyTempo.setTempo(sc0.tempo);
         }
+        // El comptador de notes es recompta de la graella abans de decidir res:
+        // removeEmptyTracks esborra per nNotes==0, i el que han anat deixant els
+        // increments durant la càrrega no és de fiar (la pista d'acords, sobretot,
+        // que es replaça a cada símbol).
+        this.refreshTrackNoteCounts();
         // Elimina tracks fantasma: buits (nNotes==0) i sense contingut útil.
         this.controller.getMixer().removeEmptyTracks();
         // Neteja entrades de lyrics per tracks que ja no existeixen o estan eliminats.
@@ -1002,6 +1007,9 @@ public class MyMidiScore extends MyExercise {
         // hi surten barrejades, i en carregar el PROGRAM_CHANGE és l'única font del
         // displayOffset de cada pista.
         Set<Integer> pcEscrit = new HashSet<>();
+        // nNotes es desa a cada pista: que digui el que hi ha de debò a la graella
+        // i no el que hagin deixat els increments.
+        this.refreshTrackNoteCounts();
         this.ticksPerQuarter = SoundWithMidi.DEFAULT_TICKS_PER_QUARTER;
         // Crear la seqüència amb format 1 i la resolució de la partitura
         Sequence sequence = null;

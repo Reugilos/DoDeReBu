@@ -233,25 +233,45 @@ public class MyPatternScore extends MyGridScore {
 
     /**
      * [CA] Recalcula {@code endOfScore} (final de l'última nota o posició de
-     * l'últim acord), actualitza la durada de l'últim acord del
-     * {@code chordSymbolLine} perquè arribi fins a {@code endOfScore}, i
-     * estableix {@code stopCol} al final del compàs que conté
-     * {@code endOfScore}. S'ha de cridar tant en afegir com en esborrar notes.
+     * l'últim acord), estableix {@code stopCol} al final del compàs que conté
+     * {@code endOfScore} i actualitza la durada de l'últim acord del
+     * {@code chordSymbolLine}. S'ha de cridar tant en afegir com en esborrar
+     * notes.
+     * <p>
+     * [CA] <b>L'últim acord és un cas a part.</b> Els altres acaben on comença
+     * el següent ({@code calcNcols}); l'últim no en té cap, i arribava només
+     * fins a {@code playCol + 1} —una sola columna— sempre que no hi hagués
+     * notes més enllà. Ara arriba fins al <b>final del seu compàs</b>, o fins a
+     * la doble barra si aquesta cau abans, i mai no s'escurça per sota d'on
+     * arriben les notes. Per això el seu càlcul va després del de
+     * {@code stopCol}, que n'és el sostre.
      * <p>
      * [EN] Recomputes {@code endOfScore} (end of the last note or last chord
-     * position), updates the duration of the last chord in
-     * {@code chordSymbolLine} to reach {@code endOfScore}, and sets
-     * {@code stopCol} to the end of the measure containing {@code endOfScore}.
-     * Must be called both when adding and when deleting notes.
+     * position), sets {@code stopCol} to the end of the measure containing
+     * {@code endOfScore}, and updates the duration of the last chord in
+     * {@code chordSymbolLine}. Must be called both when adding and when
+     * deleting notes.
      * <p>
-     * [CA] Si la partitura no té contingut ({@code endOfScore <= 0}),
-     * {@code stopCol} es queda amb el mínim d'una pàgina però
+     * [EN] <b>The last chord is a special case.</b> Every other chord ends
+     * where the next one starts ({@code calcNcols}); the last one has no next,
+     * and only reached {@code playCol + 1} —a single column— whenever no note
+     * went further. It now reaches the <b>end of its measure</b>, or the double
+     * bar if that falls earlier, and is never shortened below where the notes
+     * reach. Hence it is computed after {@code stopCol}, which is its ceiling.
+     * <p>
+     * [CA] {@code stopCol} cau just després de l'últim compàs amb contingut,
+     * sense arrodonir a pàgines senceres. Si la partitura no en té
+     * ({@code endOfScore <= 0}), es queda amb el mínim d'una pàgina però
      * {@code stopMarkerValid} val <b>fals</b>: sense notes ni acords no hi ha
-     * cap final que dibuixar.
+     * cap final que dibuixar, i aquell valor només serveix als qui llegeixen
+     * {@code stopCol} com a límit (el buffer del metrònom, la reproducció).
      * <p>
-     * [EN] If the score has no content ({@code endOfScore <= 0}),
-     * {@code stopCol} keeps the one-page minimum but {@code stopMarkerValid} is
-     * <b>false</b>: with no notes and no chords there is no end to draw.
+     * [EN] {@code stopCol} falls right after the last measure with content, with
+     * no rounding up to whole pages. If the score has none
+     * ({@code endOfScore <= 0}), it keeps the one-page minimum but
+     * {@code stopMarkerValid} is <b>false</b>: with no notes and no chords there
+     * is no end to draw, and that value only serves those who read
+     * {@code stopCol} as a limit (the metronome buffer, playback).
      */
     public void updateStopMarker() {
         int noteEnd = computeNoteEndCol();
@@ -266,27 +286,12 @@ public class MyPatternScore extends MyGridScore {
             }
         }
 
+        int playCol = -1;
         int endOfScore;
         if (lastBeatCol != null) {
             Chord lastChord = chordSymbolLine.get(lastBeatCol);
-            int playCol = lastBeatCol + lastChord.getBeatColOffset();
+            playCol = lastBeatCol + lastChord.getBeatColOffset();
             endOfScore = Math.max(noteEnd, playCol + 1);
-            int newNcols = Math.max(1, endOfScore - playCol);
-            if (newNcols != lastChord.getNCols()) {
-                removeChordMidiNotes(lastBeatCol);
-                lastChord.setNCols(newNcols);
-                MyTrack track = controller.getMixer().getChordTrack();
-                if (track != null) {
-                    int channel = controller.getMixer().getCurrentChannelOfTrack(track.getId());
-                    int velocity = track.getVelocity();
-                    int savedCol = currentWriteCol;
-                    for (int midiNote : lastChord.getMidiNotes()) {
-                        currentWriteCol = playCol;
-                        placeNote(midiNote, newNcols, false, false, channel, track.getId(), velocity);
-                    }
-                    currentWriteCol = savedCol;
-                }
-            }
         } else {
             endOfScore = noteEnd;
         }
@@ -309,10 +314,103 @@ public class MyPatternScore extends MyGridScore {
             stopMarkerValid = false;
             return;
         }
+        // La doble barra va just després de l'últim compàs amb contingut. NO
+        // s'arrodoneix a una pàgina sencera: amb minStopCol la barra d'una
+        // partitura curta saltava al final de la pàgina, que no és cap final de
+        // res. El mínim d'una pàgina només val per al cas buit de sota, on
+        // stopCol no és un final sinó un límit per a qui el llegeix.
         stopCol = ((endOfScore + colsPerMeasure - 1) / colsPerMeasure) * colsPerMeasure;
-        stopCol = Math.max(stopCol, minStopCol);
         stopCol = Math.min(stopCol, getNumCols());
         stopMarkerValid = true;
+
+        // L'últim acord s'estén fins al final del seu compàs —o fins a la doble
+        // barra, si aquesta cau abans—, i mai no s'escurça per sota d'on arriben
+        // les notes. Ha d'anar DESPRÉS del càlcul de stopCol, que és el seu
+        // sostre. Abans l'últim acord acabava a playCol + 1, o sigui que durava
+        // una sola columna sempre que no hi hagués notes més enllà.
+        int chordEnd = 0;
+        if (lastBeatCol != null) {
+            Chord lastChord = chordSymbolLine.get(lastBeatCol);
+            int measureEnd = (playCol / colsPerMeasure + 1) * colsPerMeasure;
+            chordEnd = Math.min(Math.max(noteEnd, measureEnd), stopCol);
+            int newNcols = Math.max(1, chordEnd - playCol);
+            if (newNcols != lastChord.getNCols()) {
+                removeChordMidiNotes(lastBeatCol);
+                lastChord.setNCols(newNcols);
+                MyTrack track = controller.getMixer().getChordTrack();
+                if (track != null) {
+                    int channel = controller.getMixer().getCurrentChannelOfTrack(track.getId());
+                    int velocity = track.getVelocity();
+                    int savedCol = currentWriteCol;
+                    for (int midiNote : lastChord.getMidiNotes()) {
+                        currentWriteCol = playCol;
+                        placeNote(midiNote, newNcols, false, false, channel, track.getId(), velocity);
+                    }
+                    currentWriteCol = savedCol;
+                }
+            }
+        }
+
+        // lastColWritten ha de cobrir TOT el que hi ha escrit a la graella, i les
+        // notes de la pista d'acords també hi són. computeNoteEndCol no les compta
+        // —i no les ha de comptar, o l'últim acord s'allargaria a si mateix—, o
+        // sigui que en una partitura NOMÉS d'acords noteEnd valia 0 i això deixava
+        // lastColWritten a 0: el bucle de desat talla a `col == lastColWritten` i
+        // el fitxer sortia sense cap nota, diguessis el que diguessis a la
+        // pregunta de desar-les.
+        int contentEnd = Math.max(noteEnd, chordEnd);
+        setLastColWritten(contentEnd > 0 ? contentEnd - 1 : 0);
+    }
+
+    /**
+     * [CA] Recompta les notes de cada pista a partir de la graella i hi posa el
+     * comptador {@code nNotes}. És el comptador que decideix quines pistes són
+     * fantasma ({@code MyMixer.removeEmptyTracks}), què ensenya el mesclador i
+     * què es desa al fitxer.
+     * <p>
+     * [CA] Es manté per increments ({@code oneNoteMore}/{@code oneNoteLess}) des
+     * d'una vintena de llocs, i la pista d'acords el desbocava: cada
+     * {@code placeChordMidiNotes} incrementa, i les treu
+     * {@code removeNoteFromSquare}, que no decrementa. Col·locar i moure acords
+     * el feia créixer sense fre —s'han vist fitxers amb {@code nNotes=155713} en
+     * una partitura de tres acords. Recomptar és O(graella) i es fa un sol cop,
+     * en desar i en acabar de carregar.
+     * <p>
+     * [EN] Recounts each track's notes from the grid and sets its {@code nNotes}
+     * counter, the one that decides which tracks are ghosts
+     * ({@code MyMixer.removeEmptyTracks}), what the mixer shows and what is
+     * written to the file. It is kept by increments
+     * ({@code oneNoteMore}/{@code oneNoteLess}) from a score of places, and the
+     * chord track ran away with it: every {@code placeChordMidiNotes}
+     * increments, while {@code removeNoteFromSquare} does not decrement.
+     * Recounting is O(grid) and happens once, on save and at the end of a load.
+     */
+    public void refreshTrackNoteCounts() {
+        java.util.Map<Integer, Long> counts = new java.util.HashMap<>();
+        int upper = Math.min(getLastColWritten(), getNumCols() - 1);
+        for (int row = 0; row < nKeys; row++) {
+            for (int col = 0; col <= upper; col++) {
+                MyGridSquare sq = getGridSquare(row, col);
+                if (sq == null) continue;
+                for (MyGridSquare.SubSquare note : sq.getPoliNotes()) {
+                    // Només els caps: una nota llarga és un sol apunt del comptador.
+                    if (note.isLinked()) continue;
+                    counts.merge(note.getTrack(), 1L, Long::sum);
+                }
+            }
+        }
+        MyMixer mixer = controller.getMixer();
+        for (int i = 0; i < mixer.getnTracks(); i++) applyNoteCount(mixer.getTrackFromId(i), counts);
+        applyNoteCount(mixer.getChordTrack(), counts);
+        applyNoteCount(mixer.getDrumsTrack(), counts);
+    }
+
+    /** Posa a {@code track} el recompte que li toca de {@code counts}. */
+    private void applyNoteCount(MyTrack track, java.util.Map<Integer, Long> counts) {
+        if (track == null) return;
+        long n = counts.getOrDefault(track.getId(), 0L);
+        track.setnNotes(n);
+        if (n > 0) track.setIsNew(false);
     }
 
     /**
