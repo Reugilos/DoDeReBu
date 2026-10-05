@@ -353,6 +353,7 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `castella-29-8-26` — tot l'anterior, més la interfície en castellà (`ca`/`en`/`es`), el `config.properties` en UTF-8 i `ConfigManager` esborrat.
 - `5-9-26` — tot l'anterior, més la columna de l'acord numerada d'1 a 12, el tip de Ctrl-V i el nom del PDF igual que el del MIDI.
 - `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada. Inclou també el diàleg de benvinguda amb tria d'idioma, el fix del `choiceExtended`, el del `PROGRAM_CHANGE` de la pista de direcció, els de la banda d'acords i la lletra al PDF, i els botons de Swing traduïts. Inclou també la nomenclatura nova de les cançons i els dodecagrames al repositori.
+- `5-10-26` — porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat amb Ctrl-clic abans del Ctrl-V, també per a les notes. Inclou la franja d'acords a 6 files amb la marca de la mida d'una línia d'acord, les notes dels acords que es desen de debò i no es tornen a llegir, l'últim acord que arriba al final del seu compàs, la doble barra sense arrodonir a la pàgina, el recompte de `nNotes` i les vies de contacte al README i a la benvinguda.
 
 Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
 
