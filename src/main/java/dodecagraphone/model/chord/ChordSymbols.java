@@ -478,10 +478,19 @@ public class ChordSymbols {
             }
 
             case FORMAT_POSICIONS: {
-                if (t == null) return null;
-                if (bassPc == null) return t.posicions;
+                // Un acord que no es a la taula es calcula dels intervals. Abans
+                // tornava nul i no hi havia manera de veure'l en aquest format,
+                // tot i que en Dodeca, Midi, Anglo i Solfeig si que sortia.
+                // Nomes val la plantilla EXACTA. Amb la de la base, un acord amb
+                // tensio es quedava amb les posicions de la base i perdia la
+                // tensio pel cami: Do[0,4,7,14,16] sortia [1,3,5]. La forma
+                // vertical si que les ensenyava, perque alla cada tensio te
+                // linia propia.
+                String pos = (exact != null) ? exact.posicions : posicionsDe(ivs);
+                if (pos == null) return null;
+                if (bassPc == null) return pos;
                 int bassDeg = semToDeg(((bassPc - rootPc) + 12) % 12);
-                return "[" + bassDeg + ";" + t.posicions.substring(1);
+                return "[" + bassDeg + ";" + pos.substring(1);
             }
 
             case FORMAT_NOTES: {
@@ -771,6 +780,51 @@ public class ChordSymbols {
         return b;
     }
 
+    /**
+     * [CA] La posicio diatonica d'un interval en semitons, amb alteracio.
+     * <p>
+     * Les preferencies son les que ja fan servir les plantilles: <b>b2, b3, b5,
+     * #5, b7</b>. Es per aixo que el disminuit hi surt <code>[1,b3,b5]</code> i
+     * l'augmentat <code>[1,3,#5]</code>, i no al reves.
+     * <p>
+     * Per sobre de l'octava mana la taula de tensions, que ja te els seus noms
+     * (13 es <code>b9</code> i no <code>b2</code>); el que no hi sigui es
+     * tradueix pel seu interval dins de l'octava amb set sumats al grau, o
+     * sigui que el 16 es la <code>10</code>.
+     */
+    private static String semToPos(int iv) {
+        for (int i = 0; i < TENSION_IVLS.length; i++) {
+            if (TENSION_IVLS[i] == iv) return TENSION_SUFFIX[i];
+        }
+        String[] dins = {"1","b2","2","b3","3","4","b5","5","#5","6","b7","7"};
+        int classe = Math.floorMod(iv, 12);
+        String base = dins[classe];
+        int octaves = Math.floorDiv(iv, 12);
+        if (octaves == 0) return base;
+        // Set graus per octava: el 2 passa a 9, el 4 a 11, el 3 a 10.
+        int tall = (base.startsWith("b") || base.startsWith("#")) ? 1 : 0;
+        int grau = Integer.parseInt(base.substring(tall)) + 7 * octaves;
+        return base.substring(0, tall) + grau;
+    }
+
+    /**
+     * [CA] Les posicions diatoniques d'un joc d'intervals, com a
+     * <code>[1,4,b5]</code>.
+     * <p>
+     * Es el que permet ensenyar en format de posicions un acord que <b>no es a
+     * la taula</b>: fins ara aquell format tornava nul, perque nomes sabia
+     * copiar la cadena escrita a la plantilla.
+     */
+    private static String posicionsDe(int[] ivs) {
+        if (ivs == null || ivs.length == 0) return null;
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < ivs.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append(semToPos(ivs[i]));
+        }
+        return sb.append(']').toString();
+    }
+
     private static int semToDeg(int s) {
         // Approximate semitone → diatonic degree
         int[] map = {1,1,2,3,3,4,5,5,6,6,7,7};
@@ -813,6 +867,32 @@ public class ChordSymbols {
             int classe = Math.floorMod(iv, 12);
             if (classe == 4) return true;
             if (classe == 3) return false;
+        }
+        return true;
+    }
+
+    /**
+     * [CA] Si el que hi ha dins d'uns claudators son graus i no semitons.
+     * <p>
+     * Ho son quan <b>tots</b> els valors cauen entre 1 i 7, amb alteracio
+     * davant o sense. No hi ha ambiguitat amb els semitons: un acord en
+     * semitons porta sempre el <b>0</b>, que es la seva propia arrel, o sigui
+     * que una llista sense cap 0 i amb tot per sota del 8 no pot ser-ho. Els
+     * graus amb alteracio (<code>b3</code>, <code>#4</code>) no son ni tan sols
+     * nombres i mai no haurien passat pel cami dels semitons.
+     */
+    private static boolean semblenPosicions(String payload) {
+        if (payload == null || payload.trim().isEmpty()) return false;
+        for (String tok : payload.split(",")) {
+            String t = tok.trim();
+            if (t.isEmpty()) return false;
+            if (t.startsWith("b") || t.startsWith("#")) t = t.substring(1);
+            try {
+                int v = Integer.parseInt(t);
+                if (v < 1 || v > 7) return false;
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
         return true;
     }
@@ -911,15 +991,24 @@ public class ChordSymbols {
                 return lines;
             }
             case FORMAT_POSICIONS: {
-                if (t == null) return null;
                 String bassStr = (bassPc != null)
                         ? "/" + semToDeg(((bassPc - rootPc) + 12) % 12) : "";
                 lines.add(cap(SOLFEGE_FLAT[rootPc]) + bassStr);
+                if (t == null) {
+                    // Fora de taula: una linia per interval, calculada. Aqui no
+                    // hi ha plantilla base ni tensions a part, o sigui que els
+                    // intervals hi van tots per igual.
+                    if (ivs == null) return lines;
+                    for (int iv : ivs) lines.add(semToPos(iv));
+                    return lines;
+                }
                 String inner = t.posicions.substring(1, t.posicions.length() - 1);
                 for (String p : inner.split(",")) lines.add(p.trim());
-                for (int ev : extIvs)
-                    for (int i = 0; i < TENSION_IVLS.length; i++)
-                        if (TENSION_IVLS[i] == ev) { lines.add(TENSION_SUFFIX[i]); break; }
+                // Per semToPos i no pel bucle sobre TENSION_IVLS: aquell es
+                // SALTAVA en silenci tota extensio que no hi fos, i la desena
+                // (16) de Do[0,4,7,14,16] desapareixia. semToPos mira la taula
+                // primer, o sigui que les tensions de sempre no canvien.
+                for (int ev : extIvs) lines.add(semToPos(ev));
                 return lines;
             }
             case FORMAT_SOLFEIG: {
@@ -1034,6 +1123,17 @@ public class ChordSymbols {
                 int rb = s.lastIndexOf(']');
                 if (rb > lb) {
                     String inside = s.substring(lb + 1, rb);
+                    // Posicions diatoniques amb l'arrel al davant: Do[1,3,5],
+                    // Do[1,b3,5], Do[1,4,#4]. Va ABANS del cas dels semitons
+                    // perque sense arrel ja es prova aixi, i "[1,3,5]" i
+                    // "Do[1,3,5]" han de voler dir el mateix.
+                    String posPayload = inside;
+                    int scPos = inside.indexOf(';');
+                    if (scPos >= 0) posPayload = inside.substring(scPos + 1).trim();
+                    if (semblenPosicions(posPayload)) {
+                        String resPos = fromFormat("[" + inside + "]", DODECA[cPc], FORMAT_POSICIONS);
+                        if (resPos != null) return resPos;
+                    }
                     if (inside.matches("[-0-9, ;]+")) {
                         int sc0 = inside.indexOf(';');
                         // Normalize root to canonical dodeca form (e.g. "c" → "Do")

@@ -109,7 +109,14 @@ Els 22 que hi ha: 6 tríades (major, m, dim, aug, sus2, sus4), 4 quatríades dia
 
 **Les tensions no es tabulen**: `TENSION_IVLS` (13, 14, 15, 17, 18, 20, 21) i `TENSION_SUFFIX` (`b9 9 #9 11 #11 b13 13`) es componen sobre la plantilla base. `C7b9#11` no és a la taula enlloc.
 
-El model guarda **intervals**, no un identificador de plantilla, o sigui que qualsevol conjunt és vàlid per sonar i dibuixar; la taula només fa falta per **anomenar-lo**. Un acord que no hi és surt bé en Dodeca, Midi, Anglo i Solfeig (només llisten notes) i torna `null` en Simbol, Posicions i Nom genèric.
+El model guarda **intervals**, no un identificador de plantilla, o sigui que qualsevol conjunt és vàlid per sonar i dibuixar; la taula només fa falta per **anomenar-lo**. Un acord que no hi és surt bé en Dodeca, Midi, Anglo i Solfeig (només llisten notes) i torna `null` en Simbol i Nom genèric.
+
+**Les Posicions diatòniques ja no demanen plantilla**: es calculen dels intervals (`posicionsDe` i `semToPos`), o sigui que un acord fora de taula també es pot veure en aquell format —`Do[0,5,6]` surt `[1,4,b5]`. Les preferències d'alteració són les que ja feien servir les plantilles (**b2, b3, b5, #5, b7**), i per això el disminuït hi surt `[1,b3,b5]` i l'augmentat `[1,3,#5]`. Per sobre de l'octava mana la taula de tensions —el 13 és `b9` i no `b2`—; el que no hi sigui es tradueix pel seu interval dins de l'octava amb set sumats al grau, i així el 16 és la `10`.
+
+Dos forats silenciosos que hi havia, tots dos de perdre una nota sense dir-ho:
+
+- La forma **en cadena** agafava les posicions de la plantilla de la **base** quan l'exacta no hi era, i per tant **es menjava la tensió**: `Do[0,4,7,14,16]` sortia `[1,3,5]`. Ara només val la plantilla exacta; si no hi és, es calcula.
+- La forma **vertical** recorria `TENSION_IVLS` i **es saltava en silenci** tota extensió que no hi fos: la desena (16) desapareixia. Ara passa per `semToPos`, que mira la taula primer i per tant no canvia cap tensió de les de sempre.
 
 L'entrada és **text lliure**, no una llista per triar: `MyChordSymbolLine.enterChord` passa el que s'escrigui per `ChordSymbols.detectAndConvert`, que endevina el format i ho normalitza a `Root[intervals]`. Una arrel sola en majúscula és major i en minúscula és menor (`G` → `So[0,4,7]`, `g` → `So[0,3,7]`).
 
