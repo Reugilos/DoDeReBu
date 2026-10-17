@@ -134,6 +134,8 @@ public class Chord {
             Do[0,4,7] ---> Nom Nota + [ + intervals,... + ]
             Do[0,4,7,10,13]/So ---> Idem amb baix com nom de nota
             Do[0,4,7,10,13]/-5 ---> Idem amb baix com interval
+            Do[6;0,4,7] ---> Baix dins dels claudators: interval 6, per sota
+            Do[5;0,4,7;2,4] ---> Idem amb extensions, que sonen una octava amunt
         L'acord pot ser buit
         Després del format d'un acord hi ha una Info opcional
          */
@@ -180,19 +182,44 @@ public class Chord {
             // Separem intervals (si hi són)
             String rootToken = chordPart;
             String[] intervalParts = null;
+            String bassFromBrackets = null;
+            String[] extensionParts = null;
             if (chordPart.contains("[")) {
                 int openIdx = chordPart.indexOf("[");
                 int closeIdx = chordPart.indexOf("]");
                 rootToken = chordPart.substring(0, openIdx).trim();
                 String intervalText = chordPart.substring(openIdx + 1, closeIdx);
-                intervalParts = intervalText.split(",");
+                // Forma amb punt i coma: [baix;intervals] i
+                // [baix;intervals;extensions]. Tots els nombres son semitons.
+                // Sense cap punt i coma, el claudator es la llista d'intervals
+                // de sempre i aqui no canvia res.
+                String[] grups = intervalText.split(";", -1);
+                if (grups.length == 1) {
+                    intervalParts = intervalText.split(",");
+                } else {
+                    bassFromBrackets = grups[0].trim();
+                    intervalParts = grups[1].trim().isEmpty()
+                            ? new String[0] : grups[1].split(",");
+                    if (grups.length > 2 && !grups[2].trim().isEmpty()) {
+                        extensionParts = grups[2].split(",");
+                    }
+                }
             }
 
             // Assignem intervals si hi ha
             if (intervalParts != null) {
-                this.shape = new int[intervalParts.length];
+                int nExt = (extensionParts == null) ? 0 : extensionParts.length;
+                this.shape = new int[intervalParts.length + nExt];
                 for (int i = 0; i < intervalParts.length; i++) {
                     this.shape[i] = Integer.parseInt(intervalParts[i].trim());
+                }
+                // Les extensions sonen una octava per sobre: el 2 i el 4 de
+                // [0,4,7;2,4] son la novena i la decima, 14 i 16. Escrites tal
+                // qual no serien cap extensio -el 4 ja es la tercera de
+                // l'acord- i no afegirien res.
+                for (int i = 0; i < nExt; i++) {
+                    this.shape[intervalParts.length + i] =
+                            Integer.parseInt(extensionParts[i].trim()) + 12;
                 }
             } else {
                 // Si no hi ha intervals, els deduïm del sufix
@@ -228,6 +255,16 @@ public class Chord {
             int rootMidi = ToneRange.getMidi(aux);
             this.root = rootMidi - midiKey;
 
+
+            // El baix escrit dins dels claudators. Es un interval en semitons
+            // des de l'arrel i es col.loca PER SOTA si hi cap, amb la mateixa
+            // regla que el baix escrit com a nom de nota, just aqui sota: es
+            // resta una octava i es torna a pujar nomes si baixava de -11.
+            if (bassFromBrackets != null && !bassFromBrackets.isEmpty()) {
+                int b = Math.floorMod(Integer.parseInt(bassFromBrackets), 12) - 12;
+                if (b < -11) b += 12;
+                this.bass = b;
+            }
 
             // Calculem el baix si hi és
             if (bassPart != null && !bassPart.isEmpty()) {

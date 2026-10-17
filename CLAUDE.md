@@ -118,6 +118,10 @@ Quatre trampes que han costat sang:
 - **Dues plantilles poden declarar el mateix sinònim, i no ho diu ningú.** `SIN_TO_SUF` és un mapa pla de sinònim a sufix, omplert recorrent `TEMPLATES` amb un `put` que **sobreescriu**: no hi ha cap error ni cap avís, i guanya la que vagi més avall a la taula. `"°"` i `"o"` estaven llistats com a sinònim de la **tríada** disminuïda i també del **setè**, i com que `dim7` va després de `dim`, **`Co` donava la quatríada** `[0,3,6,9]` en lloc de `[0,3,6]`. Ara el cercle sol és la tríada i el setè només porta `°7`, `o7` i `mb5bb7`. Ho vigila `ChordSymbolsTest`.
 - **`ROOT_TO_PC` porta també els noms dodecafònics.** `stripAngloRoot` provava dos caràcters contra aquell mapa i `"Fa"` hi és: `Faug` i `Fadd9` es quedaven en `ug` i `dd9` i tornaven `null`. Del segon caràcter només hi pot comptar una alteració (`b` o `#`). És l'únic nom dodecafònic que comença amb una lletra A–G seguida d'una altra lletra, o sigui que només Fa en patia.
 
+**El format amb punt i coma** `Arrel[baix;intervals]` i `Arrel[baix;intervals;extensions]` és d'**entrada**: `Do[6;0,4,7]` i `Do[5;0,4,7;2,4]`. Tots els nombres són **semitons**. El baix es col·loca **per sota si hi cap** —se li resta una octava i només es torna a pujar si baixava de −11—, que és exactament la regla que ja feia servir el baix escrit com a nom de nota. Les **extensions sonen una octava amunt**: el 2 i el 4 són la novena i la desena, 14 i 16; escrites tal qual no serien cap extensió, perquè el 4 ja és la tercera de l'acord.
+
+No cal tocar `basicString()`: el format nou es normalitza cap al model de sempre i es desa com `Do[0,4,7,14,16]/-7`, que el parser ja sap llegir. És una comoditat per escriure, no un format de persistència.
+
 `Chord(String)` té **un segon parser**, de sufixos sense claudàtors (`Do7`, `Dom7`, `DoMaj7`, `Do7b5`, `Dom7b5`, `Do7#5`), que només entén **arrels dodecafòniques** — `Sol7` no s'hi reconeix. No el toca la interfície (tot el que es desa va en `Root[intervals]` i el diàleg passa abans per `detectAndConvert`), però **ha de dir el mateix** que la taula: hi va estar mapat `7b5` al semidisminuït.
 
 Per comprovar que res no s'ha trencat: round-trip símbol → intervals → símbol de totes les plantilles per les dotze arrels (264 casos), via `allChordsForRoot` + `fromFormat`.
@@ -144,6 +148,23 @@ La pregunta «vols guardar-los **també com a notes MIDI**?» (`saveChordMidiTra
 - Si així i tot els acords es trepitgessin, `computeChordFontOverride` busca **una mida comuna a tota la franja**: la més petita que necessiti cap d'ells. Una mida per acord deixaria una filera amb lletres de mides diferents, que es llegeix malament. Es calcula un cop per redibuix complet i **abans** de dibuixar cap acord, perquè canviar de font mou també la línia de base.
 
 **El PDF no dibuixa res d'això**: copia `chordLine.getOffscreenImage()`. Qualsevol canvi al dibuix de la franja hi surt sol.
+
+### El patró de notes (`MyChoice`) i el Fit to chord
+El `choice` és una llista plana de MIDI absoluts que decideix quines files de la graella s'il·luminen (`ColorSets.getChoiceColor`). El botó de patró n'ofereix dues formes d'ajust automàtic:
+
+- **Fit to tonality**: l'escala del to, la mateixa per a tota la partitura.
+- **Fit to chord**: la plantilla d'una columna la mana **l'acord vigent allà**, amb les seves notes a totes les octaves. El patró deixa de ser únic i depèn de la posició.
+
+Es podia fer sense remenar res perquè els **dos** llocs que acoloreixen la graella —`updateStripsNKeyboard` i el `draw` d'una casella— ja tenien la columna a mà, i el `chordSymbolLine` ja va per columna: només han hagut de passar de `getChoiceList()` a `getChoiceListAt(col)`.
+
+Allà on encara no hi ha cap acord —abans del primer, o si el que hi ha és text lliure i no té intervals— es manté la plantilla de base, que és l'escala del to. El teclat de pantalla és d'una posició sola i ensenya l'acord d'on s'està editant.
+
+Dues coses que calia mirar i no suposar:
+
+- **`getRoot()` torna l'arrel relativa a la tonalitat**, no una classe de to. Sumar-hi els intervals hauria donat una classe desplaçada tants semitons com valgués la tonalitat; el bo és `getMidiRoot()`.
+- **`isValidChord()` no filtra el text lliure** (ja surt a la secció dels acords): la forma s'ha de comprovar a part o peta.
+
+El mapa d'acords és un `HashMap`, no un `TreeMap`, o sigui que no hi ha cap `floorEntry` i cal recórrer les claus per saber quin acord regeix. Són poques; el que costa —muntar la llista de notes— només es fa quan l'acord canvia, i per això hi ha una cau d'una entrada per identitat de l'acord.
 
 ### El comptador `nNotes` es recompta, no s'acumula
 

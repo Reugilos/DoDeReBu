@@ -41,6 +41,23 @@ public class ChordSymbolsTest {
                 entrada, te, ok ? "ok" : "FALLA, s'esperava " + vol);
     }
 
+    /**
+     * [CA] Comprova la forma i el baix que surten d'una cadena d'acord.
+     * <p>
+     * Va per {@code new Chord(String)} i no per {@code detectAndConvert},
+     * perque el format amb punt i coma es del constructor.
+     */
+    private static void formaBaix(String entrada, String formaVol, int baixVol) {
+        dodecagraphone.model.chord.Chord c = new dodecagraphone.model.chord.Chord(entrada);
+        String forma = (c.getShape() == null) ? "null" : java.util.Arrays.toString(c.getShape());
+        boolean ok = forma.equals(formaVol) && c.getBass() == baixVol;
+        if (!ok) {
+            fallades++;
+        }
+        System.out.printf("  %-18s %-22s baix=%-4d %s%n", entrada, forma, c.getBass(),
+                ok ? "ok" : "FALLA, s'esperava " + formaVol + " baix=" + baixVol);
+    }
+
     public static void main(String[] args) {
         System.out.println("== disminuit: la triada i la quatriada no s'han de barrejar ==");
         esperat("Cdim",  "Do[0,3,6]");
@@ -78,6 +95,16 @@ public class ChordSymbolsTest {
         // tallador d'arrels anglosaxones.
         esperat("Faug",  "Fa[0,4,8]");
         esperat("Fadd9", "Fa[0,4,7,14]");
+
+        System.out.println("== el format amb baix i extensions dins dels claudators ==");
+        // Tots els nombres son semitons. El baix es col.loca PER SOTA si hi
+        // cap, i les extensions sonen una octava amunt.
+        formaBaix("Do[6;0,4,7]",     "[0, 4, 7]",          -6);
+        formaBaix("Do[5;0,4,7;2,4]", "[0, 4, 7, 14, 16]",  -7);
+        // El 0 no te cap octava per sota on anar i es queda a l'arrel.
+        formaBaix("Do[0;0,4,7]",     "[0, 4, 7]",           0);
+        // El grup d'extensions buit no afegeix res.
+        formaBaix("Do[7;0,4,7;]",    "[0, 4, 7]",          -5);
 
         System.out.println("== round-trip de totes les plantilles, dotze arrels ==");
         String[] arrels = {"Do","De","Re","Ri","Mi","Fa","Fo","So","Sa","La","Li","Ti"};
