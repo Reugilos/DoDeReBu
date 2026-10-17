@@ -60,17 +60,17 @@ public class ChordSymbolsTest {
 
     public static void main(String[] args) {
         System.out.println("== disminuit: la triada i la quatriada no s'han de barrejar ==");
-        esperat("Cdim",  "Do[0,3,6]");
-        esperat("Co",    "Do[0,3,6]");
-        esperat("C°", "Do[0,3,6]");
-        esperat("Cdim7", "Do[0,3,6,9]");
-        esperat("Co7",   "Do[0,3,6,9]");
-        esperat("C°7", "Do[0,3,6,9]");
+        esperat("Cdim",  "do[0,3,6]");
+        esperat("Co",    "do[0,3,6]");
+        esperat("C°", "do[0,3,6]");
+        esperat("Cdim7", "do[0,3,6,9]");
+        esperat("Co7",   "do[0,3,6,9]");
+        esperat("C°7", "do[0,3,6,9]");
 
         System.out.println("== semidisminuit, totes les escriptures ==");
-        esperat("Cm7b5",  "Do[0,3,6,10]");
-        esperat("Cmi7b5", "Do[0,3,6,10]");
-        esperat("Cø", "Do[0,3,6,10]");
+        esperat("Cm7b5",  "do[0,3,6,10]");
+        esperat("Cmi7b5", "do[0,3,6,10]");
+        esperat("Cø", "do[0,3,6,10]");
 
         System.out.println("== dominant amb quinta augmentada ==");
         esperat("C7#5",  "Do[0,4,8,10]");
@@ -78,18 +78,18 @@ public class ChordSymbolsTest {
         esperat("Caug7", "Do[0,4,8,10]");
 
         System.out.println("== la familia mi, sinonim de menor ==");
-        esperat("Cmi",     "Do[0,3,7]");
-        esperat("Cmi7",    "Do[0,3,7,10]");
-        esperat("Cmi9",    "Do[0,3,7,10,14]");
-        esperat("Cmiadd9", "Do[0,3,7,14]");
+        esperat("Cmi",     "do[0,3,7]");
+        esperat("Cmi7",    "do[0,3,7,10]");
+        esperat("Cmi9",    "do[0,3,7,10,14]");
+        esperat("Cmiadd9", "do[0,3,7,14]");
 
         // El perill d'acceptar "mi" com a menor es que "mi" tambe es un nom de
         // nota. No hi ha xoc perque l'arrel es talla abans de mirar el sufix,
         // pero val mes tenir-ho fixat que suposar-ho.
         System.out.println("== les arrels dodecafoniques no s'han de ressentir ==");
         esperat("Mi7",   "Mi[0,4,7,10]");
-        esperat("Mim7",  "Mi[0,3,7,10]");
-        esperat("Domi7", "Do[0,3,7,10]");
+        esperat("Mim7",  "mi[0,3,7,10]");
+        esperat("Domi7", "do[0,3,7,10]");
         // Fa es l'unic nom dodecafonic que comenca amb una lletra A-G seguida
         // d'una altra lletra, o sigui que es l'unic que pot confondre el
         // tallador d'arrels anglosaxones.
@@ -105,6 +105,15 @@ public class ChordSymbolsTest {
         formaBaix("Do[0;0,4,7]",     "[0, 4, 7]",           0);
         // El grup d'extensions buit no afegeix res.
         formaBaix("Do[7;0,4,7;]",    "[0, 4, 7]",          -5);
+
+        System.out.println("== la caixa de l'arrel la mana la tercera ==");
+        // Entrada: qualsevol caixa val. Sortida: majuscula si la tercera es
+        // major, minuscula si es menor, i majuscula si no n'hi ha cap.
+        esperat("do[0,4,7]", "Do[0,4,7]");
+        esperat("DO[0,3,7]", "do[0,3,7]");
+        esperat("Csus4",     "Do[0,5,7]");
+        esperat("Csus2",     "Do[0,2,7]");
+        esperat("Caug",      "Do[0,4,8]");
 
         System.out.println("== round-trip de totes les plantilles, dotze arrels ==");
         String[] arrels = {"Do","De","Re","Ri","Mi","Fa","Fo","So","Sa","La","Li","Ti"};

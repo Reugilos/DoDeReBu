@@ -578,7 +578,12 @@ public class Chord {
         int midiRoot = root + midiKey;
         String message = ToneRange.getNoteName(midiRoot, midiKey);
         message = message.substring(0, 2);
-        if (shape[1] - shape[0] == 4) {
+        // La caixa la mana la tercera: majuscula si es major, minuscula si
+        // es menor. Abans es mirava shape[1] - shape[0], o sigui l'interval
+        // entre els dos primers: amb un sus no hi ha cap tercera i sortia
+        // minuscula igualment, i amb un acord d'una sola nota shape[1]
+        // petava amb un AIOOBE.
+        if (ChordSymbols.arrelEnMajuscula(shape)) {
             message = Utilities.capitalize(message);
         }
         return message;

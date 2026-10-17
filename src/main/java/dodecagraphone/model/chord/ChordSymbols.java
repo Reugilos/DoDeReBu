@@ -450,7 +450,10 @@ public class ChordSymbols {
         switch (fmt) {
 
             case FORMAT_MY: {
-                String r = rootCap + "[" + joinInts(ivs) + "]";
+                // La caixa de l'arrel la mana la tercera: majuscula si es
+                // major, minuscula si es menor.
+                String rMy = arrelEnMajuscula(ivs) ? rootCap : DODECA[rootPc];
+                String r = rMy + "[" + joinInts(ivs) + "]";
                 if (bassPc != null) r += "/" + cap(DODECA[bassPc]);
                 return r;
             }
@@ -787,6 +790,33 @@ public class ChordSymbols {
         return sb.toString();
     }
 
+    /**
+     * [CA] Si el nom de l'arrel s'ha d'escriure en majuscula, segons la tercera.
+     * <p>
+     * Tercera major (4 semitons) vol majuscula; tercera menor (3), minuscula.
+     * Mana la tercera <b>mes propera a l'arrel</b>: els intervals es recorren
+     * de baix a dalt i decideix el primer que sigui una tercera, comptant
+     * tambe les que son a una octava de distancia (una desena). Un acord sense
+     * cap tercera -els sus, o un de nomes dues notes- va en majuscula.
+     * <p>
+     * Aixo nomes val per a la SORTIDA. A l'entrada, una arrel amb intervals
+     * explicits s'accepta en qualsevol caixa; la caixa d'una arrel sola, en
+     * canvi, segueix volent dir major o menor.
+     *
+     * @param intervals [CA] els intervals de l'acord, de baix a dalt
+     */
+    public static boolean arrelEnMajuscula(int[] intervals) {
+        if (intervals == null) return true;
+        int[] ordenats = intervals.clone();
+        java.util.Arrays.sort(ordenats);
+        for (int iv : ordenats) {
+            int classe = Math.floorMod(iv, 12);
+            if (classe == 4) return true;
+            if (classe == 3) return false;
+        }
+        return true;
+    }
+
     private static String cap(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
@@ -922,6 +952,42 @@ public class ChordSymbols {
      * @return chord in user's format (e.g. "So[0,4,7]"), or null if unrecognised
      */
     public static String detectAndConvert(String input, Chord oldChord) {
+        return ajustaCaixaArrel(detectAndConvertRaw(input, oldChord));
+    }
+
+    /**
+     * [CA] Posa a l'arrel la caixa que li toca segons la tercera.
+     * <p>
+     * Va al final i no a cada lloc que munta la cadena perque n'hi ha cinc, i
+     * cadascun amb els seus {@code return}: pegant-los un a un era facil
+     * deixar-ne algun enrere i que un menor sortis en majuscula nomes per
+     * segons quina escriptura d'entrada.
+     * <p>
+     * Nomes toca les cadenes amb la forma {@code Arrel[intervals]}, amb baix o
+     * sense. Un acord de text lliure passa de llarg sense que se'l toqui.
+     */
+    private static String ajustaCaixaArrel(String myFormat) {
+        if (myFormat == null) return null;
+        int lb = myFormat.indexOf('[');
+        int rb = myFormat.indexOf(']', lb + 1);
+        if (lb <= 0 || rb < lb) return myFormat;
+        String arrel = myFormat.substring(0, lb);
+        for (int i = 0; i < arrel.length(); i++) {
+            if (!Character.isLetter(arrel.charAt(i))) return myFormat;
+        }
+        int[] ivs;
+        try {
+            ivs = parseIntArr(myFormat.substring(lb + 1, rb));
+        } catch (Exception e) {
+            return myFormat;
+        }
+        arrel = arrel.toLowerCase();
+        if (arrelEnMajuscula(ivs)) arrel = cap(arrel);
+        return arrel + myFormat.substring(lb);
+    }
+
+    /** [CA] El cos de {@link #detectAndConvert}, abans d'ajustar la caixa. */
+    private static String detectAndConvertRaw(String input, Chord oldChord) {
         if (input == null || input.isBlank()) return null;
         String s = input.trim();
 
