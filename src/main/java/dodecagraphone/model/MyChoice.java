@@ -11,6 +11,8 @@ package dodecagraphone.model;
  */
 import dodecagraphone.MyController;
 import dodecagraphone.model.component.MyXiloKey;
+import dodecagraphone.model.ToneRange;
+import dodecagraphone.model.chord.Chord;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
@@ -40,6 +42,20 @@ public class MyChoice {
 
     private List<Integer> choice;
     private boolean selecting = false;
+
+    /**
+     * [CA] Si la plantilla segueix l'acord de cada columna en lloc de ser la
+     * mateixa per a tota la partitura.
+     * <p>
+     * [EN] Whether the template follows each column's chord instead of being
+     * the same for the whole score.
+     */
+    private boolean fitToChord = false;
+
+    /** [CA] L'acord del qual s'ha calculat {@link #cachedChordList}. */
+    private Chord cachedChord = null;
+    /** [CA] Les notes d'aquell acord, en MIDI absolut i a totes les octaves. */
+    private List<Integer> cachedChordList = null;
     private boolean extendedToFullRange = false;
     private MyController controller;
 
@@ -113,18 +129,39 @@ public class MyChoice {
      */
     public boolean showChoiceDialog() {
         String kFit      = I18n.t("choice.scale.fitToTonality");
+        String kFitChord = I18n.t("choice.scale.fitToChord");
         String kScale    = I18n.t("choice.type.scale");
         String kChord    = I18n.t("choice.type.chord");
         String kInterval = I18n.t("choice.type.interval");
         String kNone     = I18n.t("choice.type.none");
         String kList     = I18n.t("choice.type.list");
 
-        String[] tipusOpcions = { kFit, kScale, kChord, kInterval, kNone, kList };
+        String[] tipusOpcions = { kFit, kFitChord, kScale, kChord, kInterval, kNone, kList };
         String tipusSeleccio = MyDialogs.seleccionaOpcio(
                 I18n.t("choice.dialog.prompt"),
                 I18n.t("choice.dialog.title"),
                 tipusOpcions, 0);
         if (tipusSeleccio == null) return true;
+
+        // Qualsevol patró que es triï deixa de seguir els acords; només
+        // l'opció nova el torna a encendre, just a sota.
+        setFitToChord(false);
+
+        if (tipusSeleccio.equals(kFitChord)) {
+            // La base segueix sent l'escala del to: és el que es veu allà on
+            // encara no hi ha cap acord. A sobre, getChoiceListAt() fa manar
+            // l'acord vigent a cada columna.
+            char modeC = this.controller.getAllPurposeScore().getScaleMode();
+            if (modeC == 'm') setMinorScaleChoice();
+            else              setMajorScaleChoice();
+            extendChoiceToFullRange();
+            int pcC = this.controller.getAllPurposeScore().getMidiKey() % 12;
+            int lowestC = ToneRange.getLowestMidi();
+            addUpRoot(lowestC + ((pcC - lowestC % 12 + 12) % 12));
+            setFitToChord(true);
+            this.controller.getAllPurposeScore().updateStripsNKeyboard();
+            return true;
+        }
 
         if (tipusSeleccio.equals(kFit)) {
             char mode = this.controller.getAllPurposeScore().getScaleMode();
@@ -631,6 +668,94 @@ public class MyChoice {
      *
      * @return [CA] llista de valors MIDI de l'elecció actual / [EN] list of MIDI values of the current choice
      */
+    /**
+     * [CA] La plantilla que toca a una columna de la partitura.
+     * <p>
+     * Amb el patró normal és la mateixa per a tothom i retorna
+     * {@link #getChoiceList()}. Amb <b>Fit to chord</b> la plantilla la mana
+     * l'acord vigent a aquella columna: s'encenen les notes de l'acord a
+     * <b>totes les octaves</b>. Allà on encara no hi ha cap acord —abans del
+     * primer, o si el que hi ha és text lliure i no té intervals— es manté la
+     * plantilla de base, que és l'escala del to: val més això que deixar el
+     * principi de la partitura apagat.
+     * <p>
+     * [EN] The template for a given score column. With <b>Fit to chord</b> the
+     * chord in effect at that column decides, falling back to the base
+     * template where there is no chord yet.
+     *
+     * @param col [CA] columna de partitura / [EN] score column
+     */
+    public List<Integer> getChoiceListAt(int col) {
+        if (!fitToChord) return choice;
+        Chord acord = chordAt(col);
+        if (acord == null) return choice;
+        if (acord != cachedChord) {
+            cachedChord = acord;
+            cachedChordList = notesDeLAcord(acord);
+        }
+        return (cachedChordList == null || cachedChordList.isEmpty()) ? choice : cachedChordList;
+    }
+
+    /**
+     * [CA] L'acord vigent a una columna: el darrer col·locat en aquella
+     * columna o abans.
+     * <p>
+     * El mapa d'acords és un {@code HashMap}, no un {@code TreeMap}, o sigui
+     * que no hi ha cap {@code floorEntry} i cal recórrer les claus. Són poques
+     * —els acords d'una partitura— i es torna a mirar a cada columna, però
+     * construir la llista de notes, que és la part caraparts, només es fa quan
+     * l'acord canvia.
+     */
+    private Chord chordAt(int col) {
+        java.util.Map<Integer, Chord> acords =
+                this.controller.getAllPurposeScore().getChordSimbolLine();
+        if (acords == null || acords.isEmpty()) return null;
+        int millor = -1;
+        for (Integer c : acords.keySet()) {
+            if (c != null && c <= col && c > millor) millor = c;
+        }
+        return (millor < 0) ? null : acords.get(millor);
+    }
+
+    /**
+     * [CA] Les notes d'un acord en MIDI absolut, a totes les octaves del rang.
+     * <p>
+     * Torna buit per a un acord que no té intervals: un de text lliure té
+     * l'arrel a {@code USE_INFO_AS_SIMBOL} i la forma a {@code null}, i
+     * {@code isValidChord()} no ho filtra —només compara amb
+     * {@code INVALID_CHORD}—, o sigui que la forma s'ha de comprovar a part.
+     */
+    private List<Integer> notesDeLAcord(Chord acord) {
+        if (acord == null || !acord.isValidChord() || acord.getShape() == null) {
+            return null;
+        }
+        // getMidiRoot() i no getRoot(): el segon torna l'arrel RELATIVA a la
+        // tonalitat, i sumar-hi els intervals donaria una classe de to
+        // desplaçada tants semitons com valgui la tonalitat.
+        Set<Integer> classes = new HashSet<>();
+        for (int iv : acord.getShape()) {
+            classes.add(((acord.getMidiRoot() + iv) % 12 + 12) % 12);
+        }
+        List<Integer> notes = new ArrayList<>();
+        for (int midi = ToneRange.getLowestMidi(); midi <= ToneRange.getHighestMidi(); midi++) {
+            if (classes.contains(((midi % 12) + 12) % 12)) notes.add(midi);
+        }
+        Collections.sort(notes);
+        return notes;
+    }
+
+    /** [CA] Si la plantilla segueix l'acord de cada columna. */
+    public boolean isFitToChord() {
+        return fitToChord;
+    }
+
+    /** [CA] Activa o desactiva el mode que segueix l'acord de cada columna. */
+    public void setFitToChord(boolean fitToChord) {
+        this.fitToChord = fitToChord;
+        this.cachedChord = null;
+        this.cachedChordList = null;
+    }
+
     public List<Integer> getChoiceList() {
         return choice;
     }

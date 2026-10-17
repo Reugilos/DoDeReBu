@@ -293,7 +293,11 @@ public class MyXiloKeyboard extends MyComponent {
      * @return [CA] true si la nota és seleccionada / [EN] true if the note is selected
      */
     public boolean findIfSelected(int midi){
-        List<Integer> selected = this.controller.getAllPurposeScore().getChoice().getChoiceList();
+        // El teclat de pantalla és d'una posició sola, o sigui que amb Fit to
+        // chord ha d'ensenyar l'acord d'on s'està editant. Sense aquell mode,
+        // getChoiceListAt() torna la plantilla de sempre i això no canvia res.
+        List<Integer> selected = this.controller.getAllPurposeScore().getChoice()
+                .getChoiceListAt(this.controller.getEditingColPublic());
         return (selected.contains(midi));
     }
 

@@ -544,7 +544,7 @@ public class MyGridScore extends MyComponent {
                     if (pentagram) {
                         grid[row + BUFFER][col].updateStrip(ColorSets.getPentagramaColor(midi));
                     } else {
-                        grid[row + BUFFER][col].updateStrip(ColorSets.getChoiceColor(midi, choice.getChoiceList()));
+                        grid[row + BUFFER][col].updateStrip(ColorSets.getChoiceColor(midi, choice.getChoiceListAt(col)));
                     }
                 }
             }
@@ -1655,7 +1655,7 @@ public class MyGridScore extends MyComponent {
             if (this.usePentagramaStrips) {
                 color = ColorSets.getPentagramaColor(midi);
             } else {
-                color = ColorSets.getChoiceColor(midi, choice.getChoiceList());
+                color = ColorSets.getChoiceColor(midi, choice.getChoiceListAt(col));
             }
         }
 
