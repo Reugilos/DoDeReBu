@@ -105,6 +105,8 @@ Els 22 que hi ha: 6 tríades (major, m, dim, aug, sus2, sus4), 4 quatríades dia
 
 **El menor s'escriu també `mi`** (`Cmi`, `Cmi7`, `Cmi7b5`, `Cmi9`, `Cmi9b5`, `Cmiadd9`), que és la convenció del jazz. No xoca amb el nom de nota `Mi` perquè **l'arrel es talla abans de mirar el sufix**: `Mi7` és un dominant de mi i `Domi7` és un do menor sèptima. Això és d'entrada; la sortida segueix sent `m`.
 
+**Les 22 plantilles tenen totes nom genèric** (`Template.nomGeneric`), i `FORMAT_NOM` el serveix com a «Do Augmentat», «Do Semidisminuït novena». Nou el tenien **buit** —el `6`, els dos `7sus`, els quatre amb novena i els dos `add9`—, o sigui que `FORMAT_NOM` els tornava l'arrel i un espai. Encara no el fa servir cap vista; qui el vulgui comprovar, `ChordSymbolsTest` els llista tots.
+
 **Les tensions no es tabulen**: `TENSION_IVLS` (13, 14, 15, 17, 18, 20, 21) i `TENSION_SUFFIX` (`b9 9 #9 11 #11 b13 13`) es componen sobre la plantilla base. `C7b9#11` no és a la taula enlloc.
 
 El model guarda **intervals**, no un identificador de plantilla, o sigui que qualsevol conjunt és vàlid per sonar i dibuixar; la taula només fa falta per **anomenar-lo**. Un acord que no hi és surt bé en Dodeca, Midi, Anglo i Solfeig (només llisten notes) i torna `null` en Simbol, Posicions i Nom genèric.

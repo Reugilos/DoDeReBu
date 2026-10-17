@@ -115,6 +115,21 @@ public class ChordSymbolsTest {
         esperat("Csus2",     "Do[0,2,7]");
         esperat("Caug",      "Do[0,4,8]");
 
+        System.out.println("== el nom en paraules de cada acord ==");
+        // Surt de Template.nomGeneric, que ja hi era pero el tenien buit nou
+        // de les vint-i-dues plantilles. No el fa servir ningu encara: aqui es
+        // llista perque es vegi que cap no en queda sense.
+        for (String simbol : ChordSymbols.allChordsForRoot("Do", ChordSymbols.FORMAT_SIMBOL)) {
+            String ivs = ChordSymbols.detectAndConvert(simbol, null);
+            String nom = (ivs == null) ? null
+                    : ChordSymbols.toFormat(ivs, ChordSymbols.FORMAT_NOM);
+            boolean ok = nom != null && !nom.trim().isEmpty() && !nom.trim().equals("Do");
+            if (!ok) {
+                fallades++;
+            }
+            System.out.printf("  %-12s %-28s %s%n", simbol, nom, ok ? "ok" : "FALLA: sense nom");
+        }
+
         System.out.println("== round-trip de totes les plantilles, dotze arrels ==");
         String[] arrels = {"Do","De","Re","Ri","Mi","Fa","Fo","So","Sa","La","Li","Ti"};
         int casos = 0;
