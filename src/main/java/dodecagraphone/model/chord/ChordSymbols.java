@@ -185,7 +185,7 @@ public class ChordSymbols {
         // ── Tríades ──────────────────────────────────────────────────────────
         new Template(new int[]{0,4,7},      "",      new String[]{},
             "[1,3,5]",    new boolean[]{false,false,false},        "Major"),
-        new Template(new int[]{0,3,7},      "m",     new String[]{"-"},
+        new Template(new int[]{0,3,7},      "m",     new String[]{"-","mi"},
             "[1,b3,5]",   new boolean[]{false,true,false},          "Menor"),
         new Template(new int[]{0,3,6},      "dim",   new String[]{"mb5","°","o"},
             "[1,b3,b5]",  new boolean[]{false,true,true},            "Disminuït"),
@@ -198,11 +198,11 @@ public class ChordSymbols {
         // ── Quatrèades diatòniques ────────────────────────────────────────────
         new Template(new int[]{0,4,7,11},   "maj7",  new String[]{"△","Δ"},
             "[1,3,5,7]",   new boolean[]{false,false,false,false},   "Major sèptima"),
-        new Template(new int[]{0,3,7,10},   "m7",    new String[]{"-7"},
+        new Template(new int[]{0,3,7,10},   "m7",    new String[]{"-7","mi7"},
             "[1,b3,5,b7]", new boolean[]{false,true,false,true},     "Menor sèptima"),
         new Template(new int[]{0,4,7,10},   "7",     new String[]{},
             "[1,3,5,b7]",  new boolean[]{false,false,false,true},    "Dominant"),
-        new Template(new int[]{0,3,6,10},   "m7b5",  new String[]{"ø"},
+        new Template(new int[]{0,3,6,10},   "m7b5",  new String[]{"ø","mi7b5"},
             "[1,b3,b5,b7]",new boolean[]{false,true,true,true},      "Semidisminuït"),
         // ── Altres quatrèades ─────────────────────────────────────────────────
         new Template(new int[]{0,4,7,9},    "6",     new String[]{},
@@ -216,21 +216,24 @@ public class ChordSymbols {
         new Template(new int[]{0,4,8,10},   "7#5",   new String[]{"7+5","aug7","dom7#5"},
             "[1,3,#5,b7]", new boolean[]{false,false,false,true},    "Dominant amb quinta augmentada"),
         new Template(new int[]{0,3,6,9},    "dim7",
-            new String[]{"°","o","°7","o7","mb5bb7"},
+            // Sense "°" ni "o" solts: aquells son la triada. Els portava
+            // tots dos, i com que SIN_TO_SUF.put sobreescriu i dim7 va
+            // despres de dim a la taula, "Co" donava la quatriada.
+            new String[]{"°7","o7","mb5bb7"},
             "[1,b3,b5,bb7]",new boolean[]{false,true,true,true},     "Completament disminuït"),
         // ── Acord + tensió ────────────────────────────────────────────────────
         new Template(new int[]{0,4,7,11,14},"maj9",  new String[]{},
             "[1,3,5,7,9]",  new boolean[]{false,false,false,false,false}, ""),
-        new Template(new int[]{0,3,7,10,14},"m9",    new String[]{},
+        new Template(new int[]{0,3,7,10,14},"m9",    new String[]{"mi9"},
             "[1,b3,5,b7,9]",new boolean[]{false,true,false,true,false},   ""),
         new Template(new int[]{0,4,7,10,14},"9",     new String[]{"79"},
             "[1,3,5,b7,9]", new boolean[]{false,false,false,true,false},  ""),
-        new Template(new int[]{0,3,6,10,14},"m9b5",  new String[]{},
+        new Template(new int[]{0,3,6,10,14},"m9b5",  new String[]{"mi9b5"},
             "[1,b3,b5,b7,9]",new boolean[]{false,true,true,true,false},   ""),
         new Template(new int[]{0,4,7,14},   "add9",  new String[]{},
             "[1,3,5,9]",    new boolean[]{false,false,false,false},        ""),
         new Template(new int[]{0,3,7,14},   "madd9",
-            new String[]{"m add9","madd9"},
+            new String[]{"m add9","madd9","miadd9"},
             "[1,b3,5,9]",   new boolean[]{false,true,false,false},         ""),
     };
 

@@ -103,16 +103,19 @@ El repertori és l'array `TEMPLATES`. Cada `Template` porta **intervals, sufix, 
 
 Els 22 que hi ha: 6 tríades (major, m, dim, aug, sus2, sus4), 4 quatríades diatòniques (maj7, m7, 7, m7b5), 6 més (6, 7sus2, 7sus4, 7b5, 7#5, dim7) i 6 amb novena (maj9, m9, 9, m9b5, add9, madd9).
 
+**El menor s'escriu també `mi`** (`Cmi`, `Cmi7`, `Cmi7b5`, `Cmi9`, `Cmi9b5`, `Cmiadd9`), que és la convenció del jazz. No xoca amb el nom de nota `Mi` perquè **l'arrel es talla abans de mirar el sufix**: `Mi7` és un dominant de mi i `Domi7` és un do menor sèptima. Això és d'entrada; la sortida segueix sent `m`.
+
 **Les tensions no es tabulen**: `TENSION_IVLS` (13, 14, 15, 17, 18, 20, 21) i `TENSION_SUFFIX` (`b9 9 #9 11 #11 b13 13`) es componen sobre la plantilla base. `C7b9#11` no és a la taula enlloc.
 
 El model guarda **intervals**, no un identificador de plantilla, o sigui que qualsevol conjunt és vàlid per sonar i dibuixar; la taula només fa falta per **anomenar-lo**. Un acord que no hi és surt bé en Dodeca, Midi, Anglo i Solfeig (només llisten notes) i torna `null` en Simbol, Posicions i Nom genèric.
 
 L'entrada és **text lliure**, no una llista per triar: `MyChordSymbolLine.enterChord` passa el que s'escrigui per `ChordSymbols.detectAndConvert`, que endevina el format i ho normalitza a `Root[intervals]`. Una arrel sola en majúscula és major i en minúscula és menor (`G` → `So[0,4,7]`, `g` → `So[0,3,7]`).
 
-Tres trampes que han costat sang:
+Quatre trampes que han costat sang:
 
 - **La plantilla exacta ha de manar sobre la de la base.** `convert()` buscava els intervals de la base (≤11) i només provava amb el joc sencer si aquella fallava — i la base sempre casa. Els sis acords amb novena no consultaven mai la seva plantilla: el sufix es reconstruïa com a base + tensió. `maj9` sortia `Cmaj79`, `add9` sortia `C9` (el símbol del dominant novena) i `madd9` sortia `Cm9` (el del menor novena). També es menjava la novena del format Posicions diatòniques.
 - **`convertToLines()` és el cas contrari i no és cap descuit**: allà cada tensió té línia pròpia, o sigui que la plantilla **base** és la bona; amb la sencera la novena sortiria dues vegades.
+- **Dues plantilles poden declarar el mateix sinònim, i no ho diu ningú.** `SIN_TO_SUF` és un mapa pla de sinònim a sufix, omplert recorrent `TEMPLATES` amb un `put` que **sobreescriu**: no hi ha cap error ni cap avís, i guanya la que vagi més avall a la taula. `"°"` i `"o"` estaven llistats com a sinònim de la **tríada** disminuïda i també del **setè**, i com que `dim7` va després de `dim`, **`Co` donava la quatríada** `[0,3,6,9]` en lloc de `[0,3,6]`. Ara el cercle sol és la tríada i el setè només porta `°7`, `o7` i `mb5bb7`. Ho vigila `ChordSymbolsTest`.
 - **`ROOT_TO_PC` porta també els noms dodecafònics.** `stripAngloRoot` provava dos caràcters contra aquell mapa i `"Fa"` hi és: `Faug` i `Fadd9` es quedaven en `ug` i `dd9` i tornaven `null`. Del segon caràcter només hi pot comptar una alteració (`b` o `#`). És l'únic nom dodecafònic que comença amb una lletra A–G seguida d'una altra lletra, o sigui que només Fa en patia.
 
 `Chord(String)` té **un segon parser**, de sufixos sense claudàtors (`Do7`, `Dom7`, `DoMaj7`, `Do7b5`, `Dom7b5`, `Do7#5`), que només entén **arrels dodecafòniques** — `Sol7` no s'hi reconeix. No el toca la interfície (tot el que es desa va en `Root[intervals]` i el diàleg passa abans per `detectAndConvert`), però **ha de dir el mateix** que la taula: hi va estar mapat `7b5` al semidisminuït.
