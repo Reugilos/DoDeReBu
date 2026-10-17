@@ -105,7 +105,7 @@ Els 22 que hi ha: 6 tríades (major, m, dim, aug, sus2, sus4), 4 quatríades dia
 
 **El menor s'escriu també `mi`** (`Cmi`, `Cmi7`, `Cmi7b5`, `Cmi9`, `Cmi9b5`, `Cmiadd9`), que és la convenció del jazz. No xoca amb el nom de nota `Mi` perquè **l'arrel es talla abans de mirar el sufix**: `Mi7` és un dominant de mi i `Domi7` és un do menor sèptima. Això és d'entrada; la sortida segueix sent `m`.
 
-**Les 22 plantilles tenen totes nom genèric** (`Template.nomGeneric`), i `FORMAT_NOM` el serveix com a «Do Augmentat», «Do Semidisminuït novena». Nou el tenien **buit** —el `6`, els dos `7sus`, els quatre amb novena i els dos `add9`—, o sigui que `FORMAT_NOM` els tornava l'arrel i un espai. Encara no el fa servir cap vista; qui el vulgui comprovar, `ChordSymbolsTest` els llista tots.
+**Les 22 plantilles tenen totes nom genèric** (`Template.nomGeneric`), i `FORMAT_NOM` el serveix com a «Do augmentat», «Do semidisminuït novena»: l'arrel en la caixa que li toca i **la qualitat sempre en minúscula**, que en català és el normal per a l'adjectiu. Nou el tenien **buit** —el `6`, els dos `7sus`, els quatre amb novena i els dos `add9`—, o sigui que `FORMAT_NOM` els tornava l'arrel i un espai. Encara no el fa servir cap vista; qui el vulgui comprovar, `ChordSymbolsTest` els llista tots.
 
 **Les tensions no es tabulen**: `TENSION_IVLS` (13, 14, 15, 17, 18, 20, 21) i `TENSION_SUFFIX` (`b9 9 #9 11 #11 b13 13`) es componen sobre la plantilla base. `C7b9#11` no és a la taula enlloc.
 
@@ -163,7 +163,7 @@ El `choice` és una llista plana de MIDI absoluts que decideix quines files de l
 
 Es podia fer sense remenar res perquè els **dos** llocs que acoloreixen la graella —`updateStripsNKeyboard` i el `draw` d'una casella— ja tenien la columna a mà, i el `chordSymbolLine` ja va per columna: només han hagut de passar de `getChoiceList()` a `getChoiceListAt(col)`.
 
-Allà on encara no hi ha cap acord —abans del primer, o si el que hi ha és text lliure i no té intervals— es manté la plantilla de base, que és l'escala del to. El teclat de pantalla és d'una posició sola i ensenya l'acord d'on s'està editant.
+Allà on encara no hi ha cap acord —abans del primer, o si el que hi ha és text lliure i no té intervals— **no s'encén res**: amb el patró lligat als acords, una franja sense acord no té cap plantilla a ensenyar, i deixar-hi la del to faria creure que allà hi mana alguna cosa. Una llista buida no peta a `getChoiceColor`: `Utilities.max` i `min` tornen 0 amb una llista buida, i cap nota de la graella no cau dins de `[0,0]`, o sigui que totes surten amb el color de no triada. El teclat de pantalla és d'una posició sola i ensenya l'acord d'on s'està editant.
 
 Dues coses que calia mirar i no suposar:
 

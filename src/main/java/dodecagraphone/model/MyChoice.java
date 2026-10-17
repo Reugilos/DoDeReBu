@@ -675,9 +675,14 @@ public class MyChoice {
      * {@link #getChoiceList()}. Amb <b>Fit to chord</b> la plantilla la mana
      * l'acord vigent a aquella columna: s'encenen les notes de l'acord a
      * <b>totes les octaves</b>. Allà on encara no hi ha cap acord —abans del
-     * primer, o si el que hi ha és text lliure i no té intervals— es manté la
-     * plantilla de base, que és l'escala del to: val més això que deixar el
-     * principi de la partitura apagat.
+     * primer, o si el que hi ha és text lliure i no té intervals— <b>no
+     * s'encén res</b>: amb el patró lligat als acords, una franja sense acord
+     * no té cap plantilla a ensenyar, i deixar-hi la del to faria creure que
+     * allà hi mana alguna cosa.
+     * <p>
+     * Una llista buida no peta a {@code getChoiceColor}: {@code Utilities.max}
+     * i {@code min} tornen 0 amb una llista buida, i cap nota de la graella no
+     * cau dins de [0,0], o sigui que totes surten amb el color de no triada.
      * <p>
      * [EN] The template for a given score column. With <b>Fit to chord</b> the
      * chord in effect at that column decides, falling back to the base
@@ -688,12 +693,13 @@ public class MyChoice {
     public List<Integer> getChoiceListAt(int col) {
         if (!fitToChord) return choice;
         Chord acord = chordAt(col);
-        if (acord == null) return choice;
+        if (acord == null) return java.util.Collections.emptyList();
         if (acord != cachedChord) {
             cachedChord = acord;
             cachedChordList = notesDeLAcord(acord);
         }
-        return (cachedChordList == null || cachedChordList.isEmpty()) ? choice : cachedChordList;
+        return (cachedChordList == null) ? java.util.Collections.<Integer>emptyList()
+                                         : cachedChordList;
     }
 
     /**
