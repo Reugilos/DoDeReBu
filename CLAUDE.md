@@ -118,6 +118,8 @@ Dos forats silenciosos que hi havia, tots dos de perdre una nota sense dir-ho:
 - La forma **en cadena** agafava les posicions de la plantilla de la **base** quan l'exacta no hi era, i per tant **es menjava la tensió**: `Do[0,4,7,14,16]` sortia `[1,3,5]`. Ara només val la plantilla exacta; si no hi és, es calcula.
 - La forma **vertical** recorria `TENSION_IVLS` i **es saltava en silenci** tota extensió que no hi fos: la desena (16) desapareixia. Ara passa per `semToPos`, que mira la taula primer i per tant no canvia cap tensió de les de sempre.
 
+Ho vigila `ChordSymbolsTest`, que compara **les dues formes entre elles**: si tornen a divergir, falla. És la comprovació que importa, perquè cap de les dues no petava —totes dues donaven una resposta, només que diferent.
+
 L'entrada és **text lliure**, no una llista per triar: `MyChordSymbolLine.enterChord` passa el que s'escrigui per `ChordSymbols.detectAndConvert`, que endevina el format i ho normalitza a `Root[intervals]`. Una arrel sola en majúscula és major i en minúscula és menor (`G` → `So[0,4,7]`, `g` → `So[0,3,7]`).
 
 Quatre trampes que han costat sang:

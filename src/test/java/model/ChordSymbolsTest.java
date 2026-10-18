@@ -47,6 +47,37 @@ public class ChordSymbolsTest {
      * Va per {@code new Chord(String)} i no per {@code detectAndConvert},
      * perque el format amb punt i coma es del constructor.
      */
+    /**
+     * [CA] Comprova les Posicions diatoniques d'un acord, en les DUES formes.
+     * <p>
+     * Les dues han de dir el mateix, i aixo no passava: la forma en cadena
+     * agafava les posicions de la plantilla de la base quan l'exacta no hi
+     * era -i es menjava la tensio-, i la vertical es saltava en silenci tota
+     * extensio que no fos a TENSION_IVLS.
+     *
+     * @param entrada  l'acord, en qualsevol escriptura
+     * @param cadenaVol les posicions esperades, com a "[1,4,b5]"
+     */
+    private static void posicions(String entrada, String cadenaVol) {
+        String my = ChordSymbols.detectAndConvert(entrada, null);
+        String cadena = (my == null) ? null
+                : ChordSymbols.toFormat(my, ChordSymbols.FORMAT_POSICIONS);
+        List<String> linies = ChordSymbols.chordToFormatLines(
+                new dodecagraphone.model.chord.Chord(my), ChordSymbols.FORMAT_POSICIONS);
+        // La vertical porta l'arrel a la primera linia; la resta ha de ser
+        // exactament el que diu la cadena.
+        String desDeLaVertical = (linies == null || linies.size() < 2) ? null
+                : "[" + String.join(",", linies.subList(1, linies.size())) + "]";
+        boolean ok = cadenaVol.equals(String.valueOf(cadena))
+                && cadenaVol.equals(String.valueOf(desDeLaVertical));
+        if (!ok) {
+            fallades++;
+        }
+        System.out.printf("  %-18s cadena=%-22s vertical=%-22s %s%n",
+                entrada, cadena, desDeLaVertical,
+                ok ? "ok" : "FALLA, s'esperava " + cadenaVol);
+    }
+
     private static void formaBaix(String entrada, String formaVol, int baixVol) {
         dodecagraphone.model.chord.Chord c = new dodecagraphone.model.chord.Chord(entrada);
         String forma = (c.getShape() == null) ? "null" : java.util.Arrays.toString(c.getShape());
@@ -129,6 +160,25 @@ public class ChordSymbolsTest {
             }
             System.out.printf("  %-12s %-28s %s%n", simbol, nom, ok ? "ok" : "FALLA: sense nom");
         }
+
+        System.out.println("== posicions diatoniques: les dues formes han de dir el mateix ==");
+        // Fora de taula: abans tornava nul i no hi havia manera de veure-ho.
+        posicions("Do[0,5,6]",       "[1,4,b5]");
+        posicions("Do[0,1,2]",       "[1,b2,2]");
+        posicions("Do[0,7]",         "[1,5]");
+        // Amb tensio: la cadena se la menjava i la vertical no.
+        posicions("C7b9",            "[1,3,5,b7,b9]");
+        posicions("C7b9#11",         "[1,3,5,b7,b9,#11]");
+        // La desena (16) no es a TENSION_IVLS: la vertical la perdia.
+        posicions("Do[0,4,7,14,16]", "[1,3,5,9,10]");
+        // I els tabulats no s'han de moure gens.
+        posicions("C",               "[1,3,5]");
+        posicions("Cm",              "[1,b3,5]");
+        posicions("Cdim",            "[1,b3,b5]");
+        posicions("Caug",            "[1,3,#5]");
+        posicions("Cm7b5",           "[1,b3,b5,b7]");
+        posicions("Cmaj9",           "[1,3,5,7,9]");
+        posicions("Cadd9",           "[1,3,5,9]");
 
         System.out.println("== round-trip de totes les plantilles, dotze arrels ==");
         String[] arrels = {"Do","De","Re","Ri","Mi","Fa","Fo","So","Sa","La","Li","Ti"};
