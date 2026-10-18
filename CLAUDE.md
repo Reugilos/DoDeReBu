@@ -137,6 +137,10 @@ L'ajust es fa **un sol cop, a la sortida de `detectAndConvert`** (`ajustaCaixaAr
 
 No cal tocar `basicString()`: el format nou es normalitza cap al model de sempre i es desa com `Do[0,4,7,14,16]/-7`, que el parser ja sap llegir. És una comoditat per escriure, no un format de persistència.
 
+**El grup d'extensions no arribava mai des de la interfície.** Qui l'entenia era el constructor `Chord(String)` —i això és el que comprovava el test—, però el diàleg d'acords passa **abans** per `detectAndConvert`, i allà el punt i coma de més arribava sencer a `parseIntArr`: tota la forma queia a `null` i el diàleg la rebutjava. O sigui que `Do[5;0,4,7;2,4]` només funcionava cridant el constructor a mà. El mateix error era a la còpia de l'Espiral, que és d'on va sortir.
+
+**Els parèntesis valen pels claudàtors**, però **només a l'entrada**: `detectAndConvert` els converteix abans de res, i el que es mostra i el que es desa segueix anant amb claudàtors. És una comoditat per a qui escriu —al teclat d'un mòbil els claudàtors queden una pantalla endins— i es pot fer a cegues perquè **cap sufix ni cap sinònim del repertori no porta parèntesis**. Si algun dia n'hi entra cap, un `C7(b9)` posem, aquesta substitució se'l menjaria i caldria filar més prim.
+
 `Chord(String)` té **un segon parser**, de sufixos sense claudàtors (`Do7`, `Dom7`, `DoMaj7`, `Do7b5`, `Dom7b5`, `Do7#5`), que només entén **arrels dodecafòniques** — `Sol7` no s'hi reconeix. No el toca la interfície (tot el que es desa va en `Root[intervals]` i el diàleg passa abans per `detectAndConvert`), però **ha de dir el mateix** que la taula: hi va estar mapat `7b5` al semidisminuït.
 
 Per comprovar que res no s'ha trencat: round-trip símbol → intervals → símbol de totes les plantilles per les dotze arrels (264 casos), via `allChordsForRoot` + `fromFormat`.

@@ -1041,7 +1041,39 @@ public class ChordSymbols {
      * @return chord in user's format (e.g. "So[0,4,7]"), or null if unrecognised
      */
     public static String detectAndConvert(String input, Chord oldChord) {
-        return ajustaCaixaArrel(detectAndConvertRaw(input, oldChord));
+        return ajustaCaixaArrel(detectAndConvertRaw(ambClaudators(input), oldChord));
+    }
+
+    /**
+     * [CA] Els parentesis d'entrada, tornats claudators.
+     * <p>
+     * Nomes a l'<b>entrada</b>: el que es mostra i el que es desa segueixen
+     * anant amb claudators. Es una comoditat per a qui escriu, no un format.
+     * <p>
+     * Es pot fer a cegues perque <b>cap sufix ni cap sinonim del repertori no
+     * porta parentesis</b>: si algun dia n'hi entra cap -un {@code C7(b9)},
+     * posem-, aquesta substitucio se'l menjaria i caldria filar mes prim.
+     */
+    /**
+     * [CA] Els intervals d'un acord amb les seves extensions enganxades.
+     * <p>
+     * Les extensions s'escriuen com l'interval que farien dins de l'octava i
+     * <b>sonen una octava amunt</b>: el 2 i el 4 de {@code Do[5;0,4,7;2,4]}
+     * son la novena i la desena, 14 i 16. Escrites tal qual no serien cap
+     * extensio, perque el 4 ja es la tercera de l'acord.
+     */
+    private static int[] ambExtensions(int[] ivs, int[] exts) {
+        int[] r = new int[ivs.length + exts.length];
+        System.arraycopy(ivs, 0, r, 0, ivs.length);
+        for (int i = 0; i < exts.length; i++) {
+            r[ivs.length + i] = exts[i] + 12;
+        }
+        return r;
+    }
+
+    private static String ambClaudators(String input) {
+        if (input == null) return null;
+        return input.replace('(', '[').replace(')', ']');
     }
 
     /**
@@ -1156,11 +1188,25 @@ public class ChordSymbols {
                                 return rootNorm + s.substring(lb);
                             }
                         }
-                        // Normalize Do[-5;0,4,7] or Do[2;0,4,7] → Do[0,4,7]/Bass
+                        // Normalize Do[-5;0,4,7] or Do[2;0,4,7] → Do[0,4,7]/Bass,
+                        // i amb un tercer grup, Do[5;0,4,7;2,4] →
+                        // Do[0,4,7,14,16]/Fa. Les extensions sonen una octava
+                        // amunt; sense aquest tall, el punt i coma de mes
+                        // arribava a parseIntArr i tota la forma queia a null.
                         try {
                             String bassStr0 = inside.substring(0, sc0).trim();
-                            String ivsOnly  = inside.substring(sc0 + 1).trim();
+                            String resta    = inside.substring(sc0 + 1).trim();
+                            String ivsOnly  = resta;
+                            String extsOnly = null;
+                            int sc1 = resta.indexOf(';');
+                            if (sc1 >= 0) {
+                                ivsOnly  = resta.substring(0, sc1).trim();
+                                extsOnly = resta.substring(sc1 + 1).trim();
+                            }
                             int[] ivs0 = parseIntArr(ivsOnly);
+                            if (extsOnly != null && !extsOnly.isEmpty()) {
+                                ivs0 = ambExtensions(ivs0, parseIntArr(extsOnly));
+                            }
                             String bName0 = bassTokenToDodeca(bassStr0, cPc);
                             if (bName0 == null) return null;
                             return rootNorm + "[" + joinInts(canonicalizeIntervals(ivs0)) + "]/" + bName0;

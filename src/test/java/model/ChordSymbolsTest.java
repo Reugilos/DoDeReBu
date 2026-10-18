@@ -137,6 +137,21 @@ public class ChordSymbolsTest {
         // El grup d'extensions buit no afegeix res.
         formaBaix("Do[7;0,4,7;]",    "[0, 4, 7]",          -5);
 
+        System.out.println("== els parentesis valen pels claudators (nomes a l'entrada) ==");
+        // Comoditat per a qui escriu: al teclat d'un mobil els claudators
+        // queden una pantalla endins. La sortida no canvia.
+        esperat("Do(0,4,7)",       "Do[0,4,7]");
+        esperat("Do(6;0,4,7)",     "Do[0,4,7]/Fo");
+
+        System.out.println("== detectAndConvert tambe ha d'entendre les extensions ==");
+        // Ho entenia el constructor Chord(String) -i aixo ho comprova
+        // formaBaix()-, pero no el parser per on passa el dialeg abans
+        // d'arribar-hi: el punt i coma de mes queia a parseIntArr i tota la
+        // forma tornava null, o sigui que des de la interficie no s'hi podia
+        // escriure mai.
+        esperat("Do[5;0,4,7;2,4]", "Do[0,4,7,14,16]/Fa");
+        esperat("Do(5;0,4,7;2,4)", "Do[0,4,7,14,16]/Fa");
+
         System.out.println("== la caixa de l'arrel la mana la tercera ==");
         // Entrada: qualsevol caixa val. Sortida: majuscula si la tercera es
         // major, minuscula si es menor, i majuscula si no n'hi ha cap.
