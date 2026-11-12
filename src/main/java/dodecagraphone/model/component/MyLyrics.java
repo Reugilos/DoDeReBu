@@ -432,11 +432,26 @@ public class MyLyrics extends MyComponent {
      * If a committed segment already exists at that position its text is loaded
      * into the edit buffer and the segment is temporarily removed from the
      * committed store (it will be re-added on commit).
+     * <p>
+     * [CA] Una síl·laba <b>òrfena</b> (sense cap de nota sota seu, per exemple
+     * d'un fitxer anterior a la vinculació lletra-nota) es troba directament pel
+     * clic i no pel snap a la nota: així es pot editar o esborrar.
+     * <p>
+     * [EN] An <b>orphaned</b> syllable (with no note head under it, for
+     * instance from a file older than the lyric-note link) is found directly by
+     * the click and not by snapping to a note, so it can be edited or deleted.
      */
     public void startEdit(int col, int track, double clickScreenX) {
         // Snap to the nearest note start at or before the clicked column.
         // Si no n'hi ha cap cap enrere (anacrusis buida), prova cap endavant.
         int noteCol = findNoteAtOrBefore(col, track);
+        // Una síl·laba òrfena (sense cap de nota a sota, p. ex. d'un fitxer
+        // antic) no es trobaria mai buscant la nota: es va a buscar directament,
+        // perquè es pugui editar o esborrar.
+        LyricSegment orphan = findSegmentAt(col, track);
+        if (orphan != null && !hasNoteHeadAt(orphan.col, track)) {
+            noteCol = orphan.col;
+        }
         if (noteCol < 0) {
             noteCol = findNextCol(col - 1);  // col-1 perquè findNextCol comença a fromCol+1
             if (noteCol >= score.getNumCols()) noteCol = -1;
@@ -681,6 +696,33 @@ public class MyLyrics extends MyComponent {
      * Returns the score column of the nearest note start (visible, not linked)
      * belonging to {@code track} at or before {@code col}, or -1 if none exists.
      */
+    /**
+     * [CA] Cert si la pista té el cap d'alguna nota visible a la columna (a
+     * qualsevol altura). És el que dóna sentit a una síl·laba: la lletra
+     * penja del cap de la nota, i si ja no n'hi ha cap queda òrfena.
+     * <p>
+     * [EN] True if the track has the head of some visible note at the column
+     * (at any pitch). That is what gives a syllable its meaning: the lyric
+     * hangs from the note head, and with none left it is orphaned.
+     *
+     * @param col   [CA] columna / [EN] column
+     * @param track [CA] id de la pista / [EN] track id
+     * @return [CA] cert si hi ha cap de nota / [EN] true if a note head exists
+     */
+    public boolean hasNoteHeadAt(int col, int track) {
+        int nKeys = score.getnKeys();
+        for (int key = 0; key < nKeys; key++) {
+            MyGridSquare sq = score.getGridSquare(key, col);
+            if (sq == null) continue;
+            for (MyGridSquare.SubSquare note : sq.getPoliNotes()) {
+                if (note.getTrack() == track && note.isVisible() && !note.isLinked()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private int findNoteAtOrBefore(int col, int track) {
         int nKeys = score.getnKeys();
         for (int c = col; c >= 0; c--) {

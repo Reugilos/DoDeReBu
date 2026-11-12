@@ -50,10 +50,15 @@ public class MyMain {
      * {@link javax.swing.Timer} calls {@code update()} every
      * {@link Settings#REFRESH_PERIOD} ms to refresh the UI.
      *
-     * @param args [CA] arguments de línia de comandes (no s'utilitzen) /
-     *             [EN] command-line arguments (unused)
+     * @param args [CA] arguments de línia de comandes: si el primer és un fitxer
+     *             {@code .mid}/{@code .midi} existent (el que passa el sistema amb
+     *             «Obre amb»), s'obre en arrencar /
+     *             [EN] command-line arguments: if the first one is an existing
+     *             {@code .mid}/{@code .midi} file (what the system passes on
+     *             "Open with"), it is opened at startup
      */
     public static void main(String[] args) {
+        final String fitxerInicial = fitxerMidiDeArguments(args);
         AppConfig.get().init();
         String langTag = AppConfig.get().get("ui.language", "ca");
         I18n.initFromLanguageTag(langTag);
@@ -102,6 +107,34 @@ public class MyMain {
             }
 
             new javax.swing.Timer(Settings.REFRESH_PERIOD, e -> iu.update()).start();
+
+            // Fitxer passat pel sistema («Obre amb»): s'obre un cop la finestra
+            // és a punt, després del diàleg de benvinguda si n'hi ha.
+            if (fitxerInicial != null) {
+                iu.getController().loadScore(fitxerInicial);
+            }
         });
+    }
+
+    /**
+     * [CA] Busca entre els arguments el primer que sigui un fitxer MIDI existent.
+     * <p>
+     * [EN] Looks among the arguments for the first one that is an existing MIDI file.
+     *
+     * @param args [CA] arguments de la línia de comandes / [EN] command-line arguments
+     * @return [CA] ruta del fitxer, o {@code null} si no n'hi ha cap /
+     *         [EN] file path, or {@code null} if there is none
+     */
+    private static String fitxerMidiDeArguments(String[] args) {
+        if (args == null) return null;
+        for (String a : args) {
+            if (a == null) continue;
+            String lower = a.toLowerCase(Locale.ROOT);
+            java.io.File f = new java.io.File(a);
+            if ((lower.endsWith(".mid") || lower.endsWith(".midi")) && f.isFile()) {
+                return f.getAbsolutePath();
+            }
+        }
+        return null;
     }
 }

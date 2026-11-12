@@ -653,6 +653,18 @@ public class MyButtonPanel extends MyComponent {
 
     public int getId_MetronomeButton() { return id_MetronomeButton; }
 
+    /**
+     * [CA] Posa el botó de percussió en l'estat indicat sense disparar-ne l'acció.
+     * <p>
+     * [EN] Sets the drums button to the given state without firing its action.
+     *
+     * @param active [CA] cert si ha de quedar premut / [EN] true to leave it pressed
+     */
+    public void setDrumsButton(boolean active) {
+        MyToggle tog = (MyToggle) this.buttons.get(this.id_DrumsButton);
+        if (tog != null) tog.setPressed(active);
+    }
+
     public void setTremoloButton(boolean active) {
         this.setModified(true);
         MyToggle tog = (MyToggle) this.buttons.get(this.id_TremoloButton);

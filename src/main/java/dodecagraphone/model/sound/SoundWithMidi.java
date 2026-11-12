@@ -299,7 +299,10 @@ public class SoundWithMidi {
         if (ToneRange.isMetallophone()){
             leadInstrument = Integer.parseInt(AppConfig.get().get("leadInstrument", "" + GLOCKENSPIEL));
         } else {
-            leadInstrument = Integer.parseInt(AppConfig.get().get("leadInstrument", "" + DEFAULT_LEAD_INSTRUMENT));
+            // Sense metal·lòfon, l'instrument per defecte és el piano (0), com a
+            // resetChannels(); DEFAULT_LEAD_INSTRUMENT és el glockenspiel i només
+            // val per al mode metal·lòfon.
+            leadInstrument = Integer.parseInt(AppConfig.get().get("leadInstrument", "0"));
         }
         chordInstrument = Integer.parseInt(AppConfig.get().get("chordInstrument", "" + DEFAULT_CHORD_INSTRUMENT));
 

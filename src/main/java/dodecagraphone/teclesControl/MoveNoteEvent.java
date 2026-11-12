@@ -41,6 +41,10 @@ public class MoveNoteEvent extends Event {
     private final boolean[] muteds;
     private final boolean[] linkeds;
     private final boolean dotted;
+    // Síl·laba que se'n va amb la nota (lyricFromCol = -1: cap).
+    private int lyricFromCol = -1;
+    private int lyricToCol = -1;
+    private String lyricText;
 
     /**
      * [CA] Crea un nou event de moviment de nota.
@@ -94,6 +98,28 @@ public class MoveNoteEvent extends Event {
         removeRange(origRow, origHeadCol);
         placeRange(finalRow, finalHeadCol);
         controller.getAllPurposeScore().updateStopMarker();
+        if (lyricFromCol >= 0) {
+            controller.getMyLyrics().removeLyric(lyricFromCol, tr);
+            if (lyricToCol >= 0) controller.getMyLyrics().setLyric(lyricToCol, tr, lyricText);
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
+        }
+    }
+
+    /**
+     * [CA] Registra que la síl·laba del cap de la nota se n'ha anat amb ella.
+     * <p>
+     * [EN] Records that the syllable of the note head went along with it.
+     *
+     * @param fromCol [CA] columna d'origen de la síl·laba / [EN] origin column of the syllable
+     * @param toCol   [CA] columna de destinació, o -1 si s'ha esborrat perquè la
+     *                destinació ja en tenia / [EN] destination column, or -1 if it was
+     *                deleted because the destination already had one
+     * @param text    [CA] text de la síl·laba / [EN] syllable text
+     */
+    public void setLyricMove(int fromCol, int toCol, String text) {
+        this.lyricFromCol = fromCol;
+        this.lyricToCol = toCol;
+        this.lyricText = text;
     }
 
     /**
@@ -108,6 +134,11 @@ public class MoveNoteEvent extends Event {
         removeRange(finalRow, finalHeadCol);
         placeRange(origRow, origHeadCol);
         controller.getAllPurposeScore().updateStopMarker();
+        if (lyricFromCol >= 0) {
+            if (lyricToCol >= 0) controller.getMyLyrics().removeLyric(lyricToCol, tr);
+            controller.getMyLyrics().setLyric(lyricFromCol, tr, lyricText);
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
+        }
     }
 
     private void removeRange(int row, int headCol) {

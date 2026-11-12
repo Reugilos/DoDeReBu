@@ -437,6 +437,18 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
                 this.repinta(true);
                 return;
             }
+            // Supr sobre una zona seleccionada: esborra el que hi ha dins. La
+            // franja de lletra mana sobre la graella, com a Ctrl+C/X/V.
+            if (controller.deleteLyricsSelection()) {
+                this.repinta(true);
+                return;
+            }
+            if (controller.deleteSelection()) {
+                controller.getAllPurposeScore().drawCurrentCamInOffscreen();
+                controller.redrawChordLine();
+                this.repinta(true);
+                return;
+            }
         }
         if (e.isControlDown() && e.getKeyCode() == KeyEvent.VK_Z) {
             controller.clearSelection();

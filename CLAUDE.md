@@ -149,7 +149,7 @@ Per comprovar que res no s'ha trencat: round-trip símbol → intervals → sím
 
 **Els símbols es desen sempre.** Van al MIDI com a metadades de text 0x7F amb prefix `CHORD:`, **a la pista 0**, i `readMidiScore` les llegeix en una passada pròpia sobre `tracks[0]`, independent del bucle de pistes (que es salta la pista de capçalera). El format de cada entrada és `CHORD:<basicString> <info>::<nCols>`.
 
-La pregunta «vols guardar-los **també com a notes MIDI**?» (`saveChordMidiTrack`) decideix **només les notes**. Fins al 3-10-26 hi penjava també el bucle dels símbols: qui responia que no es trobava el fitxer sense cap acord, i una partitura només d'acords es desava **buida del tot**. Ara la pista d'acords es desa sempre —hi va l'instrument, el canal i el volum de l'acompanyament— i el flag només decideix si entra al `trackMap`; sense entrada, el bucle de la graella se'n salta les notes (`track != null`).
+El flag `saveChordMidiTrack` decideix **només les notes**, i ja no surt d'una pregunta pròpia («vols guardar-los també com a notes MIDI?», que es recordava tota la sessió): surt de la consulta de pistes amagades (vegeu «Desar: pistes visibles i amagades»), on la pista d'acords segueix la regla de qualsevol altra. Fins al 3-10-26 hi penjava també el bucle dels símbols: qui responia que no es trobava el fitxer sense cap acord, i una partitura només d'acords es desava **buida del tot**. Ara la pista d'acords es desa sempre —hi va l'instrument, el canal i el volum de l'acompanyament— i el flag només decideix si entra al `trackMap`; sense entrada, el bucle de la graella se'n salta les notes (`track != null`).
 
 **Les notes de la pista d'acords són una exportació, no partitura.** L'acompanyament es torna a generar sol en carregar: cada símbol `CHORD:` passa per `placeChordSymbol`, que escriu les notes a la graella. Per això la pista d'acords desada va **marcada amb el seu id especial** (`id=1003`, la metadada de pista que escriu `saveTrackData`) i en carregar se li salten els `NOTE_ON`/`NOTE_OFF`: llegir-les hi afegiria una segona tanda amb les durades velles, que no les esborra ningú (`removeChordMidiNotes` busca el símbol que hi havia abans a aquella columna, i en una càrrega nova no n'hi ha cap). El mateix id evita que la pista entri al mesclador com una de normal: va a `setChordTrack`, no a `addTrack`.
 
@@ -196,6 +196,30 @@ El mapa d'acords és un `HashMap`, no un `TreeMap`, o sigui que no hi ha cap `fl
 `loadScore` crea un mesclador buit (`new MyMixer(this)`, sense el «Track 1» que posa `setDefaultTrack()`) i, en acabar de llegir, `removeEmptyTracks()` esborra les pistes sense notes i selecciona l'última que quedi viva. **Amb una partitura només d'acords no en queda cap**: `currentTrack` es quedava a `-1` i el primer repintat petava a `getCurrentChannelOfCurrentTrack()` (`MyXiloKey.draw` pregunta `isDrumsMode()`). S'hi arriba també esborrant l'última pista des del mesclador, que no ho impedeix.
 
 `ensureSomeTrackSelected()` —cridada des dels dos llocs— crea una pista nova amb canal i instrument quan no en queda cap. No és només per l'excepció: **sense pista tampoc no es pot escriure cap nota** a la partitura que s'acaba d'obrir.
+
+### Nova torna el mesclador al valor inicial
+
+`newScore` deixa la partitura en blanc i crida `setDefaultTrack()` (mesclador nou amb la pista d'acords, «Track 1» amb l'instrument per defecte i la bateria). **Allò sol no bastava**: el que ja estava dibuixat no s'hi enterava. Per això, tot seguit, `newScore` desmarca el botó de percussió (`MyButtonPanel.setDrumsButton(false)`: si estava premut es quedava així), fa `mixer.refreshMixer()` i `updateTextOfButtons()` (instrument i volum) i `resetDrumsMode()` torna també `lastMelodyTrackId` a 0.
+
+**L'instrument per defecte depèn de `isMetallophone`**: el glockenspiel amb metal·lòfon i el **piano (0) sense**. `SoundWithMidi.initMidi` agafava `DEFAULT_LEAD_INSTRUMENT` (que és el glock, 9) també en el cas sense metal·lòfon, i `resetChannels()` ja feia l'altra cosa. Un `leadInstrument=9` que una execució anterior hagi deixat al `config.properties` (`setConfigProperties` el desa quan `isMetallophone=false`) guanya sobre el per defecte: s'ha d'esborrar a mà.
+
+### Desar: pistes visibles i amagades
+
+**Només es desen les notes de les pistes visibles**, tret que l'usuari triï el contrari. `MyController.saveScore` ho pregunta **abans de demanar el nom del fitxer** —cancel·lar no ha de deixar l'usuari havent triat un nom per res— amb `MyDialogs.demanaPistesAmagades`: **Cancel·lar** (no es desa res), **Continuar** (només les visibles), **Salvar-les totes** o **Tria** (una casella per pista; cancel·lar-ho torna a la pregunta). I18n a `save.hidden.*` (`ca`, `en`, `es`).
+
+Hi surten les pistes normals amagades, no esborrades i amb notes, i **també la d'acords i la de bateria**, que segueixen la mateixa regla: visible → es desa sense preguntar; amagada → es pregunta. La d'acords només hi surt si hi ha símbols (`hasAnyChords`), i la resposta decideix `saveChordMidiTrack`. **Res no es recorda d'un desat a l'altre**: la pregunta es refà a cada desat, que és on es perdrien dades en silenci. Els **símbols** de la franja d'acords es desen sempre, a la pista 0.
+
+**Tots els tracks s'escriuen sempre; només les notes depenen de la visibilitat.** En carregar, l'id d'una pista normal és la seva **posició** (`tr - first - specialTracks`), i saltar-ne una fa que les notes de les següents apuntin a un altre id. Una pista amagada que no s'ha triat s'escriu **buida**, amb les seves metadades (la d'acords i la de bateria, amb `id=1003` i `id=1005`), i en carregar-la `removeEmptyTracks` la neteja. Va passar al revés (només es desaven les visibles, sense preguntar res) i un fitxer va perdre la pista normal sense avís; el fitxer d'*El Bolero de Tania* en va ser l'exemple: tenia acords i bateria i cap pista normal.
+
+**El nom de la pista pertany a la pista que es llegeix.** L'esdeveniment 0x03 s'aplicava a `getCurrentTrack()`: amb una pista especial el nom «DrumsTrack» o el del track d'acords sobreescrivia el de l'última pista normal, i si encara no hi havia pista actual petava amb `null`. Ara va a `mixerTrack`, i en UTF-8 en les dues bandes (en desar, la longitud és la dels bytes i no la dels caràcters).
+
+### La lletra penja del cap de la nota
+
+Una síl·laba es desa per **pista i columna** (`MyLyrics.lyricsByTrack`), sense cap vincle amb la graella, i durant temps això deixava síl·labes **òrfenes** en esborrar o moure una nota: no es podien ni editar ni esborrar, perquè `startEdit` busca la nota anterior de la pista i d'allà la síl·laba, i mai arribava a una columna sense nota. Ara la lletra segueix el **cap** de la nota (`MyLyrics.hasNoteHeadAt`: nota visible de la pista, sense enllaç, a qualsevol altura):
+
+- **Esborrar** (`MyController.removeNoteAtCell`, que cobreix Shift-esborrar i el tall; i `toggle`): si la pista es queda sense cap de nota en aquella columna, la síl·laba s'esborra (`removeOrphanLyric`). Amb polifonia, si en queda un altre cap, la lletra es queda. Es registra al `MouseSequence`, o sigui que Ctrl-Z recupera nota i lletra.
+- **Moure en columna** (Ctrl+Maj+arrossegar, `MoveNoteEvent`): la síl·laba se'n va amb la nota (`setLyricMove`), també a l'undo/redo. Si la destinació ja en té una, **s'esborra la que arriba** i no se'n trepitja cap; l'undo la recupera. Moure només d'altura no toca la lletra.
+- **Les òrfenes que ja existien** (fitxers antics) es poden editar o esborrar clicant-hi a sobre: `startEdit` hi va directament. **No es netegen en carregar**, perquè no es poden distingir d'una lletra d'una pista amb les notes amagades.
 
 ### Idiomes i diàleg de benvinguda
 
@@ -303,6 +327,7 @@ Els botons documentats han de cobrir `resources/defaults/ButtonLayout.csv`. Hi f
 - `selectionActive`, `selStartRow/Col`, `selEndRow/Col` a `MyController`.
 - **Ctrl + arrossegar** selecciona (`DragMode.SELECT`); un Ctrl+clic sol deixa una selecció d'una cel·la. Clicar sense Ctrl la treu (`selectionActive = false` a `onMousePressed`).
 - Ctrl+C i Ctrl+X desactiven la selecció i mostren un tip localitzat (`clipboard.full.tip`).
+- **Supr / Del esborra el que hi ha dins de la selecció**, en un sol pas d'undo i **sense tocar el porta-retalls** (`deleteSelection`, que reusa `cutSelection` i en restaura el porta-retalls; `deleteLyricsSelection` per a la franja de lletra, que mana sobre la graella com a Ctrl-C/X/V). Una marca de canvi seleccionada té prioritat (`deleteSelectedMark`). Una selecció **només d'acords o de lletra**, sense cap nota, també s'esborra: `cutSelection` sortia abans si el porta-retalls de notes era buit.
 
 ### Enganxar: el punt es marca abans
 El camí documentat és **Ctrl-C/Ctrl-X → Ctrl-clic al punt → Ctrl-V**. El punt d'enganxada **és la selecció**: un Ctrl+clic en deixa una d'una cel·la, es veu marcada, i `pasteAtSelection()` hi deixa el porta-retalls amb l'angle superior esquerre a sobre. Val igual per a les notes (graella) i per a la lletra (franja).
@@ -398,6 +423,8 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada. Inclou també el diàleg de benvinguda amb tria d'idioma, el fix del `choiceExtended`, el del `PROGRAM_CHANGE` de la pista de direcció, els de la banda d'acords i la lletra al PDF, i els botons de Swing traduïts. Inclou també la nomenclatura nova de les cançons i els dodecagrames al repositori.
 - `5-10-26` — porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat amb Ctrl-clic abans del Ctrl-V, també per a les notes. Inclou la franja d'acords a 6 files amb la marca de la mida d'una línia d'acord, les notes dels acords que es desen de debò i no es tornen a llegir, l'últim acord que arriba al final del seu compàs, la doble barra sense arrodonir a la pàgina, el recompte de `nNotes` i les vies de contacte al README i a la benvinguda.
 
+- `publicat-12-11-26` — la versió penjada al web el 12-11-26: pistes amagades que es pregunten en desar (acords i bateria inclosos), la lletra que segueix la nota, Supr sobre la selecció, Nova que reinicia mesclador i instruments, el piano per defecte sense metal·lòfon i «Obre amb» des del sistema.
+
 Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
 
 ## Migració de la biblioteca (7-9-26)
@@ -467,6 +494,10 @@ Els tres passos, en ordre:
 **Què hi ha al paquet**: el zip conté el contingut de `portable/DoDeReBu_v4.1/` (sense la carpeta arrel, per evitar el doble directori en extreure), més `SongsInBooklet/` i `Dodecagrams/`, que el script hi copia abans de comprimir i en treu després. Si `Dodecagrams/` no hi és, avisa i continua.
 
 **Dependències a `target/libs/`**: el JAR de `target/` és prim (només les classes del projecte). Perquè la portable funcioni, `maven-dependency-plugin` copia jMusic, PDFBox i Batik a `target/libs/` i `maven-jar-plugin` escriu al manifest un `Class-Path` amb prefix `libs/`. El `jpackage` copia tot l'arbre de `target/` dins d'`app/`, o sigui que `app/libs/` hi arriba i el manifest la hi troba. **No** treure cap dels dos plugins del `pom.xml`: sense ells la portable arrenca i peta amb `NoClassDefFoundError`. El script busca l'únic `.jar` de l'arrel de `target/` per decidir el `--main-jar`, per això les dependències han d'anar a `libs/` i no a l'arrel.
+
+**«Obre amb» des del sistema.** `MyMain.main` mira els arguments i, si el primer és un `.mid`/`.midi` existent, l'obre amb `loadScore` un cop la finestra és visible (després del diàleg de benvinguda, si n'hi ha). El llançador del `jpackage` ja hi passa els arguments, o sigui que no cal cap canvi als scripts. Cada «Obre amb» arrenca una instància nova: no carrega el fitxer a una aplicació ja oberta.
+
+**Perquè l'aplicació surti a la llista d'«Obre amb»**, `jpackage --file-associations` no serveix: només escriu al registre als instal·ladors, i aquí es fa un `app-image`. El portable porta dos `.bat` (`registra_obre_amb.bat` i `desregistra_obre_amb.bat`) que escriuen o esborren les claus de `HKCU\Software\Classes\Applications\<exe>` —sense administrador— i que el `02_Build…bat` copia al portable des de `../Complements_Bu/portable_extras/`. Cal tornar a executar el de registre si es canvia la carpeta de lloc.
 
 **Ubicació dels scripts de build**: `01_baixa_jre21_FET_A_HP.bat`, `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` i `03_BuildZip.bat` ja no són a l'arrel del projecte: ara viuen a `../Complements_Bu/` (germana de `DoDeReBu_v4.1/`), fora del control de versions. **Important**: aquests scripts assumeixen que s'executen des de la carpeta del projecte (`pushd "%~dp0"`, `APP_NAME` = nom de la carpeta on és el `.bat`, rutes relatives com `target/`, `vendor/jre21/`) — si s'executen directament des de `Complements_Bu/` fallaran (`target/`, `vendor/` no hi són). Cal copiar-los (o crear un enllaç/còpia) a l'arrel de `DoDeReBu_v4.1/` abans d'executar-los, o adaptar-los per acceptar la ruta del projecte com a paràmetre.
 

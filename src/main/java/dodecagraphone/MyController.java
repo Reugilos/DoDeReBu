@@ -212,7 +212,6 @@ public class MyController {
     public void setNeedsSaving(boolean v) {
         this.needsSaving = v;
     }
-    private Boolean saveChordMidiChoice = null; // null = no preguntat; true/false = resposta de la sessió
     private boolean drumsMode = false;
     private boolean tremoloActive = false;
     private int lastMelodyTrackId = 0;
@@ -945,6 +944,7 @@ public class MyController {
                 nextSq.unlinkNote(this.mixer.getCurrentChannelOfCurrentTrack(), this.mixer.getCurrentTrackId(), SoundWithMidi.getCurrentKeyboardVelocity(),
                         false, false, false, this.mixer.getCurrentTrack().isDotted());
             }
+            removeOrphanLyric(col, wasTrack, null);   // aquest camí no té undo
         } else {
             MyTrack tr = this.getMixer().getCurrentTrack();
             if (tr == null) {
@@ -1311,6 +1311,50 @@ public class MyController {
         selectionActive = false;
     }
 
+    /**
+     * [CA] Tecla Supr sobre la selecció de la graella: esborra el que hi ha
+     * (notes, i acords i lletres si toca) en un sol pas d'undo, igual que
+     * Ctrl+X però <b>sense tocar el porta-retalls</b>. Reusa {@link #cutSelection()}
+     * —que és qui sap què s'esborra— i en restaura el porta-retalls.
+     * <p>
+     * [EN] Delete key over the grid selection: erases what is there (notes, and
+     * chords and lyrics when applicable) as one undo step, like Ctrl+X but
+     * <b>leaving the clipboard alone</b>. Reuses {@link #cutSelection()} —which
+     * knows what gets erased— and restores the clipboard afterwards.
+     *
+     * @return [CA] cert si hi havia selecció / [EN] true if there was a selection
+     */
+    public boolean deleteSelection() {
+        if (!selectionActive) return false;
+        var bkNotes = clipboard;
+        var bkChords = clipboardChords;
+        var bkLyrics = clipboardLyrics;
+        boolean bkMulti = clipboardMultiTrack;
+        cutSelection();
+        clipboard = bkNotes;
+        clipboardChords = bkChords;
+        clipboardLyrics = bkLyrics;
+        clipboardMultiTrack = bkMulti;
+        return true;
+    }
+
+    /**
+     * [CA] Tecla Supr sobre la selecció de la franja de lletra: esborra les
+     * síl·labes marcades (un sol pas d'undo) sense tocar el porta-retalls.
+     * <p>
+     * [EN] Delete key over the lyrics-strip selection: erases the marked
+     * syllables (one undo step) leaving the clipboard alone.
+     *
+     * @return [CA] cert si hi havia selecció / [EN] true if there was a selection
+     */
+    public boolean deleteLyricsSelection() {
+        if (!myLyrics.isSelectionActive()) return false;
+        var bk = lyricsClipboard;
+        cutLyricsSelection();
+        lyricsClipboard = bk;
+        return true;
+    }
+
     /** Copies selection to clipboard, then erases it (undoable). */
     public void cutSelection() {
         if (!selectionActive) return;
@@ -1319,7 +1363,9 @@ public class MyController {
         int c1 = Math.min(selStartCol, selEndCol);
         int c2 = Math.max(selStartCol, selEndCol);
         copySelection(); // sets clipboardMultiTrack and fills clipboard; clears selectionActive
-        if (clipboard == null || clipboard.isEmpty()) return;
+        // Una selecció només d'acords o de lletra (cap nota) també s'ha d'esborrar.
+        if ((clipboard == null || clipboard.isEmpty())
+                && clipboardChords.isEmpty() && clipboardLyrics.isEmpty()) return;
         mouseSequence = new MouseSequence(this);
         if (clipboardMultiTrack) {
             // Esborra notes de tots els tracks a la zona seleccionada
@@ -1859,6 +1905,28 @@ public class MyController {
                     SoundWithMidi.getCurrentKeyboardVelocity(), true, false,
                     this.mixer.getCurrentTrack().isDotted(), true, false);
         }
+        removeOrphanLyric(col, this.mixer.getCurrentTrackId(), mouseSequence);
+    }
+
+    /**
+     * [CA] La lletra penja del cap de la nota: si en esborrar una nota la pista
+     * es queda sense cap de nota en aquella columna, se n'esborra la síl·laba.
+     * Es registra a la seqüència (si n'hi ha) perquè l'undo la recuperi.
+     * <p>
+     * [EN] A lyric hangs from the note head: when deleting a note leaves the
+     * track with no note head at that column, its syllable is deleted too. It
+     * is recorded in the sequence (if any) so undo brings it back.
+     *
+     * @param col [CA] columna de la nota esborrada / [EN] column of the deleted note
+     * @param tr  [CA] id de la pista / [EN] track id
+     * @param seq [CA] seqüència d'undo, o {@code null} / [EN] undo sequence, or {@code null}
+     */
+    private void removeOrphanLyric(int col, int tr, MouseSequence seq) {
+        String text = myLyrics.getLyric(col, tr);
+        if (text == null || myLyrics.hasNoteHeadAt(col, tr)) return;
+        if (seq != null) seq.addLyricRemove(col, tr, text);
+        myLyrics.removeLyric(col, tr);
+        myLyrics.drawFullLyricsInOffscreen();
     }
 
     /**
@@ -2429,6 +2497,20 @@ public class MyController {
                     MoveNoteEvent event = new MoveNoteEvent(
                             this, moveNoteOrigRow, finalRow, moveNoteOrigHeadCol, finalHeadCol, moveNoteLength,
                             moveCh, moveTr, moveVelocities, moveVisibles, moveMuteds, moveLinkeds, moveDotted);
+                    // La lletra va amb la nota: si el cap ha canviat de columna i a
+                    // l'origen no n'ha quedat cap altre de la pista (polifonia), la
+                    // síl·laba es desplaça. Si la destinació ja en té una, la que
+                    // arriba s'esborra (no se'n pisa cap) i l'undo la recupera.
+                    if (finalHeadCol != moveNoteOrigHeadCol) {
+                        String lyr = myLyrics.getLyric(moveNoteOrigHeadCol, moveTr);
+                        if (lyr != null && !myLyrics.hasNoteHeadAt(moveNoteOrigHeadCol, moveTr)) {
+                            boolean destFree = myLyrics.getLyric(finalHeadCol, moveTr) == null;
+                            event.setLyricMove(moveNoteOrigHeadCol, destFree ? finalHeadCol : -1, lyr);
+                            myLyrics.removeLyric(moveNoteOrigHeadCol, moveTr);
+                            if (destFree) myLyrics.setLyric(finalHeadCol, moveTr, lyr);
+                            myLyrics.drawFullLyricsInOffscreen();
+                        }
+                    }
                     afegirEvent(event);
                     this.needsSaving = true;
                 }
@@ -3104,6 +3186,7 @@ public class MyController {
 
     private void resetDrumsMode() {
         drumsMode = false;
+        lastMelodyTrackId = 0;
     }
 
     public void setStrips(boolean penta) {
@@ -5106,7 +5189,54 @@ public class MyController {
                 .replaceAll("[^\\p{L}\\p{N}\\-._ ]", "_") + extension;
     }
 
+    /**
+     * [CA] Desa la partitura en un fitxer MIDI. <b>Abans</b> de demanar el nom
+     * del fitxer, si hi ha pistes amagades amb contingut —tracks normals, i també
+     * la d'acords (si hi ha símbols) i la de bateria— mostra la consulta de
+     * {@link MyDialogs#demanaPistesAmagades}: Cancel·lar (no es desa res),
+     * Continuar (només les visibles), Salvar-les totes o Tria. Una pista visible
+     * es desa sense preguntar; res no es recorda d'un desat a l'altre. La
+     * resposta arriba a {@code MyAllPurposeScore.saveMidiScore} com a conjunt
+     * d'ids d'amagades a desar; el de la pista d'acords decideix també si se'n
+     * desen les notes MIDI.
+     * <p>
+     * [EN] Saves the score to a MIDI file. <b>Before</b> asking for the file
+     * name, if there are hidden tracks with content —normal tracks, plus the
+     * chord track (if there are symbols) and the drums track— it shows the
+     * {@link MyDialogs#demanaPistesAmagades} query: Cancel (save nothing),
+     * Continue (visible ones only), Save them all or Choose. A visible track is
+     * saved without asking; nothing is remembered between saves. The answer
+     * reaches {@code MyAllPurposeScore.saveMidiScore} as the set of hidden
+     * track ids to save; the chord track id also decides whether its MIDI notes
+     * are written.
+     *
+     * @param fitxer [CA] ruta de sortida, o {@code ""} per demanar-la /
+     *               [EN] output path, or {@code ""} to ask for it
+     */
     public void saveScore(String fitxer) {
+        // La consulta de pistes amagades va ABANS de demanar el nom del fitxer:
+        // cancel·lar-la no ha de deixar l'usuari havent triat un nom per res.
+        // Cada pista (acords i bateria també) segueix la mateixa regla: si és
+        // visible es desa; si és amagada i té contingut, es pregunta a cada
+        // desat, que és on es perdrien dades en silenci. Res no es recorda.
+        this.allPurposeScore.refreshTrackNoteCounts();
+        java.util.List<MyTrack> amagades = new java.util.ArrayList<>();
+        for (MyTrack t : this.mixer.getTracks()) {
+            if (!t.isVisible() && !t.isDeleted() && t.getnNotes() > 0) amagades.add(t);
+        }
+        MyTrack chordTr = this.mixer.getChordTrack();
+        boolean chordsExist = this.allPurposeScore.hasAnyChords() && chordTr != null;
+        boolean saveChordMidi = chordsExist && chordTr.isVisible();
+        if (chordsExist && !chordTr.isVisible()) amagades.add(chordTr);
+        MyTrack drumsTr = this.mixer.getDrumsTrack();
+        if (drumsTr != null && !drumsTr.isVisible() && drumsTr.getnNotes() > 0) amagades.add(drumsTr);
+        java.util.Set<Integer> extra = java.util.Collections.emptySet();
+        if (!amagades.isEmpty()) {
+            extra = MyDialogs.demanaPistesAmagades(amagades,
+                    this.mixer.getChordTrackId(), this.mixer.getDrumsTrackId());
+            if (extra == null) return;   // Cancel·lat: no es desa res
+            saveChordMidi |= extra.contains(this.mixer.getChordTrackId());
+        }
         if ("".equals(fitxer)) {
             String defMidi = defaultFileName(".ddcgr.mid");
             fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defMidi, "mid");
@@ -5131,23 +5261,10 @@ public class MyController {
                 return;
             }
         }
-        String extensio = obtenirExtensio(fitxer);
         this.currentMidiFile = fitxer;
-        if (extensio.equals("mid")) {
-            this.stop();
-            this.buttons.stopPlayButton();
-            if (this.allPurposeScore.hasAnyChords() && saveChordMidiChoice == null) {
-                int resp = JOptionPane.showConfirmDialog(
-                        this.getUi(),
-                        I18n.t("save.chordMidi.confirm"),
-                        I18n.t("save.chordMidi.title"),
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE);
-                saveChordMidiChoice = (resp == JOptionPane.YES_OPTION);
-            }
-            boolean saveChordMidi = Boolean.TRUE.equals(saveChordMidiChoice);
-            this.allPurposeScore.saveMidiScore(fitxer, saveChordMidi);
-        }
+        this.stop();
+        this.buttons.stopPlayButton();
+        this.allPurposeScore.saveMidiScore(fitxer, saveChordMidi, extra);
         this.needsSaving = false;
     }
 
@@ -5226,7 +5343,6 @@ public class MyController {
         String extensio = obtenirExtensio(fitxer);
         this.currentMidiFile = fitxer;
         if (extensio.equals("mid")||extensio.equals("midi")) {
-            saveChordMidiChoice = null;
             this.stop();
             this.buttons.stopPlayButton();
             this.buttons.resetFitAnacrusisButton();
@@ -5333,8 +5449,20 @@ public class MyController {
         }
     }
 
+    /**
+     * [CA] Botó Nova: deixa la partitura en blanc i torna el mesclador al valor
+     * inicial ({@link #setDefaultTrack()}: pista d'acords, «Track 1» amb
+     * l'instrument per defecte i bateria). Com que això canvia coses que ja
+     * s'havien dibuixat, després refà el que en depèn: el botó de percussió, el
+     * mesclador i el text d'instrument i volum.
+     * <p>
+     * [EN] New button: leaves the score blank and returns the mixer to its
+     * initial state ({@link #setDefaultTrack()}: chord track, "Track 1" with the
+     * default instrument, and drums). Since that changes things that had already
+     * been drawn, it then refreshes what depends on it: the drums button, the
+     * mixer and the instrument and volume text.
+     */
     private void newScore() {
-        saveChordMidiChoice = null;
         allPurposeScore.resetAllPurposeScore(); //new MyAllPurposeScore(this);
         this.allPurposeScore.clearScore();  // buida notes, acords i missatges
         Settings.setHasAnacrusis(false);
@@ -5372,6 +5500,12 @@ public class MyController {
         resetDrumsMode();
         resetTremolo();
         this.setDefaultTrack();
+        // L'estat visible depèn del mesclador nou: el botó de percussió, el
+        // text d'instrument i volum, i la finestra del mesclador. Sense això
+        // es veien els del fitxer anterior fins que passava alguna altra cosa.
+        this.buttons.setDrumsButton(false);
+        this.mixer.refreshMixer();
+        this.updateTextOfButtons();
         this.allPurposeScore.initOffscreen();
         this.myChordSymbolLine.initOffscreen();
         this.myLyrics.initOffscreen();

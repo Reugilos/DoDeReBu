@@ -32,6 +32,79 @@ import javax.swing.*;
 public class MyDialogs {
 
     /**
+     * [CA] Avisa que hi ha pistes amagades que no es desaran i ofereix quatre
+     * respostes: Cancel·la (no es desa res), Continua (només les visibles),
+     * Desa-les totes i Tria (un segon diàleg amb una casella per pista).
+     * Cancel·lar el diàleg de selecció torna a la pregunta principal.
+     * <p>
+     * [EN] Warns that hidden tracks will not be saved and offers four answers:
+     * Cancel (save nothing), Continue (visible ones only), Save all and Choose
+     * (a second dialog with a checkbox per track). Cancelling the selection
+     * dialog goes back to the main question.
+     *
+     * @param amagades [CA] pistes amagades amb contingut (pot incloure la d'acords) /
+     *                 [EN] hidden tracks with content (may include the chord track)
+     * @param chordTrackId [CA] id de la pista d'acords, per posar-li nom traduït /
+     *                     [EN] chord track id, to give it a translated name
+     * @param drumsTrackId [CA] id de la pista de bateria, idem /
+     *                     [EN] drums track id, same
+     * @return [CA] ids de les amagades a desar (buit = cap), o {@code null} si es cancel·la /
+     *         [EN] ids of the hidden tracks to save (empty = none), or {@code null} on cancel
+     */
+    public static java.util.Set<Integer> demanaPistesAmagades(
+            List<dodecagraphone.model.mixer.MyTrack> amagades, int chordTrackId, int drumsTrackId) {
+        Object[] opcions = {
+            I18n.t("save.hidden.cancel"),
+            I18n.t("save.hidden.continue"),
+            I18n.t("save.hidden.all"),
+            I18n.t("save.hidden.choose")
+        };
+        StringBuilder llista = new StringBuilder();
+        for (dodecagraphone.model.mixer.MyTrack t : amagades) {
+            llista.append("\n  • ").append(nomPista(t, chordTrackId, drumsTrackId));
+        }
+        while (true) {
+            int r = JOptionPane.showOptionDialog(
+                    null, I18n.t("save.hidden.message") + "\n\n"
+                            + I18n.t("save.hidden.list") + llista,
+                    I18n.t("save.hidden.title"),
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                    null, opcions, opcions[1]);
+            java.util.Set<Integer> ids = new java.util.LinkedHashSet<>();
+            if (r == 1) return ids;
+            if (r == 2) {
+                for (dodecagraphone.model.mixer.MyTrack t : amagades) ids.add(t.getId());
+                return ids;
+            }
+            if (r != 3) return null;   // Cancel·la o diàleg tancat
+            JPanel panel = new JPanel();
+            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+            panel.add(new JLabel(I18n.t("save.hidden.choose.message")));
+            java.util.List<JCheckBox> caselles = new java.util.ArrayList<>();
+            for (dodecagraphone.model.mixer.MyTrack t : amagades) {
+                JCheckBox cb = new JCheckBox(nomPista(t, chordTrackId, drumsTrackId), true);
+                caselles.add(cb);
+                panel.add(cb);
+            }
+            int ok = JOptionPane.showConfirmDialog(null, panel,
+                    I18n.t("save.hidden.title"),
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (ok != JOptionPane.OK_OPTION) continue;   // torna a la pregunta
+            for (int i = 0; i < caselles.size(); i++) {
+                if (caselles.get(i).isSelected()) ids.add(amagades.get(i).getId());
+            }
+            return ids;
+        }
+    }
+
+    private static String nomPista(dodecagraphone.model.mixer.MyTrack t, int chordTrackId, int drumsTrackId) {
+        if (t.getId() == chordTrackId) return I18n.t("mixer.chordTrack");
+        if (t.getId() == drumsTrackId) return I18n.t("mixer.drumsTrack");
+        String n = t.getName();
+        return (n == null || n.isBlank()) ? "Track " + (t.getId() + 1) : n;
+    }
+
+    /**
      * [CA] Pregunta si cal transportar la partitura, amb tres respostes: no,
      * amunt o avall. Amunt i avall porten a la mateixa tonalitat i es
      * diferencien només en el registre (una octava).

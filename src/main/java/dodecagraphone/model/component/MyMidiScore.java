@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -705,8 +706,13 @@ public class MyMidiScore extends MyExercise {
                         case 0x03:
                             // Track name
                             byte[] data = metaMessage.getData();
-                            String trackName = new String(data);
-                            this.controller.getMixer().getCurrentTrack().setName(trackName);
+                            String trackName;
+                            try { trackName = new String(data, "UTF-8"); }
+                            catch (Exception ex) { trackName = new String(data); }
+                            // El nom és de la pista que s'està llegint (mixerTrack), no
+                            // de la pista actual: amb les pistes especials (acords,
+                            // percussió) la actual és una altra, o encara és null.
+                            mixerTrack.setName(trackName);
                             break; // IMPORTANT: evita que caigui al default
 
                         case 0x7F:
@@ -907,6 +913,9 @@ public class MyMidiScore extends MyExercise {
         this.refreshTrackNoteCounts();
         // Elimina tracks fantasma: buits (nNotes==0) i sense contingut útil.
         this.controller.getMixer().removeEmptyTracks();
+        // Les pistes especials poden haver llegit selected=true del fitxer; la
+        // seleccionada és només la que ha deixat removeEmptyTracks.
+        this.controller.getMixer().setCurrentTrack(this.controller.getMixer().getCurrentTrackId());
         // Neteja entrades de lyrics per tracks que ja no existeixen o estan eliminats.
         if (this.controller.getMyLyrics() != null) {
             this.controller.getMyLyrics().getLyricsByTrack().entrySet()
@@ -934,7 +943,8 @@ public class MyMidiScore extends MyExercise {
         try {
             if (track.getName() != null && !track.getName().isEmpty()) {
                 MetaMessage nameMsg = new MetaMessage();
-                nameMsg.setMessage(0x03, track.getName().getBytes(), track.getName().length());
+                byte[] nameBytes = track.getName().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                nameMsg.setMessage(0x03, nameBytes, nameBytes.length);
                 midiTrack.add(new MidiEvent(nameMsg, 0));
             }
 
@@ -1002,6 +1012,43 @@ public class MyMidiScore extends MyExercise {
      *                           and the symbols regenerate them anyway
      */
     public void saveMidiScore(String filePath, boolean saveChordMidiTrack) {
+        saveMidiScore(filePath, saveChordMidiTrack, Collections.emptySet());
+    }
+
+    /**
+     * [CA] Com {@link #saveMidiScore(String, boolean)}, però a més de les pistes
+     * visibles desa les notes de les pistes amagades que s'indiquen.
+     * <p>
+     * [EN] Like {@link #saveMidiScore(String, boolean)}, but besides the visible
+     * tracks it also saves the notes of the given hidden tracks.
+     *
+     * <p>
+     * [CA] <b>Totes</b> les pistes s'escriuen sempre, perquè en carregar l'id
+     * d'una pista normal és la seva posició i saltar-ne una desfasaria les
+     * següents. Les <b>notes</b>, en canvi, només hi van si la pista és visible o
+     * és a {@code extraTrackIds}: una pista amagada que no s'ha triat s'escriu
+     * <b>buida</b>, amb les seves metadades (i, la d'acords i la de bateria, amb
+     * el seu id especial), i en carregar-la {@code removeEmptyTracks} la neteja.
+     * La pista de bateria segueix la mateixa regla; la d'acords, a més, depèn de
+     * {@code saveChordMidiTrack}. Qui pregunta a l'usuari és
+     * {@code MyController.saveScore}, abans de demanar el nom del fitxer.
+     * <p>
+     * [EN] <b>Every</b> track is always written, because on load a normal
+     * track's id is its position and skipping one would shift the following
+     * ones. The <b>notes</b>, however, are only written if the track is visible
+     * or is in {@code extraTrackIds}: a hidden track that was not chosen is
+     * written <b>empty</b>, with its metadata (and, for the chord and drums
+     * tracks, their special id), and on load {@code removeEmptyTracks} cleans it
+     * up. The drums track follows the same rule; the chord track also depends on
+     * {@code saveChordMidiTrack}. The user is asked by
+     * {@code MyController.saveScore}, before the file name is requested.
+     *
+     * @param extraTrackIds [CA] ids de pistes amagades a desar igualment (també
+     *                      el de la d'acords o el de la bateria) /
+     *                      [EN] ids of hidden tracks to save anyway (including
+     *                      the chord or drums track id)
+     */
+    public void saveMidiScore(String filePath, boolean saveChordMidiTrack, Set<Integer> extraTrackIds) {
         // Pistes que ja tenen el seu PROGRAM_CHANGE escrit. Ha de ser una per pista i
         // no un sol booleà: el bucle de desat va per columnes, o sigui que les pistes
         // hi surten barrejades, i en carregar el PROGRAM_CHANGE és l'única font del
@@ -1037,7 +1084,21 @@ public class MyMidiScore extends MyExercise {
         Map<Integer, Track> trackMap = new HashMap<>();
         for (int tr = 0; tr < this.controller.getMixer().getnTracks(); tr++) {
             Track str=null;
-            if (this.controller.getMixer().isTrackVisible(tr)) {
+            MyTrack mt = this.controller.getMixer().getTrackFromId(tr);
+            if (mt == null) continue;
+            // Només es desen les NOTES de les pistes visibles i de les ocultes que
+            // l'usuari hagi triat (extraTrackIds). Les altres s'escriuen igualment
+            // com a pista buida amb les seves metadades: en carregar l'id és la
+            // posició de la pista, i saltar-ne una desplaçaria els ids de les
+            // següents respecte a les notes. En carregar, sense notes, la
+            // pista buida la neteja removeEmptyTracks.
+            boolean saveNotes = mt.isVisible() || extraTrackIds.contains(tr);
+            if (!saveNotes) {
+                Track empty = sequence.createTrack();
+                saveTrackData(mt, empty);
+                continue;
+            }
+            {
                 str = sequence.createTrack();
                 // Afegim el key signature com a primer event de cada pista de melodia,
                 // abans de qualsevol altra dada, perquè MuseScore el llegeixi correctament.
@@ -1077,7 +1138,12 @@ public class MyMidiScore extends MyExercise {
             MetaMessage ksMsg = new MetaMessage();
             try { ksMsg.setMessage(0x59, ksDataShared, 2); } catch (InvalidMidiDataException e) { e.printStackTrace(); }
             str.add(new MidiEvent(ksMsg, 0));
-            trackMap.put(drumsTrId, str);
+            // Com les altres pistes: les notes només si és visible o s'ha triat.
+            // Amagada i no triada, es desa buida (només metadades, amb id=1005)
+            // perquè en carregar continuï sent la pista de percussió.
+            if (drumsTrack.isVisible() || extraTrackIds.contains(drumsTrId)) {
+                trackMap.put(drumsTrId, str);
+            }
             saveTrackData(drumsTrack, str);
         }
 
