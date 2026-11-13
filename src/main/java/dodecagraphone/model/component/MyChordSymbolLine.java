@@ -12,6 +12,7 @@ import dodecagraphone.model.chord.ChordSymbols;
 import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.BasicStroke;
@@ -768,17 +769,12 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private void drawMeasureLine(int col, Graphics2D g, boolean offscreen) {
         //if (Settings.IS_BU) return;
-        Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke(1.5f));
         int camX1 = offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
-        int camX2 = camX1;
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
-        g.setColor(java.awt.Color.BLACK);
-        g.drawLine(camX1, camY1, camX2, camY2);
-        g.setStroke(stroke);
+        DrawKit.barraDeCompas(g, camX1, camY1, camY2);
     }
 
     /**
@@ -791,18 +787,12 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private void drawBeatLine(int col, Graphics2D g, boolean offscreen) {
         //if (Settings.IS_BU) return;
-        Stroke stroke = g.getStroke();
-        Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
-        g.setStroke(dashed);
         int camX1 = offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
-        int camX2 = camX1;
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
-        g.setColor(java.awt.Color.BLACK);
-        g.drawLine(camX1, camY1, camX2, camY2);
-        g.setStroke(stroke);
+        DrawKit.barraDeTemps(g, camX1, camY1, camY2);
     }
 
     /**
@@ -841,9 +831,8 @@ public class MyChordSymbolLine extends MyComponent {
      * pixels (used to avoid overlap with change markers at the same column).
      */
     private void drawChordSymbol(Chord chord, int col, Graphics2D g, boolean offscreen, int xOffset) {
-        g.setColor(java.awt.Color.BLACK);
         Font prevFont = g.getFont();
-        g.setFont(getChordFont(g));
+        DrawKit.comencaAcord(g, getChordFont(g));
         FontMetrics fm = g.getFontMetrics();
 
         int camX = 3 + xOffset + (offscreen
@@ -862,7 +851,7 @@ public class MyChordSymbolLine extends MyComponent {
         // finestra sencera amb un NullPointerException des del repintat.
         if (chord.getRoot() == Settings.USE_INFO_AS_SIMBOL
                 || !chord.isValidChord() || chord.getShape() == null) {
-            g.drawString(chord.getInfo(), camX, camY);
+            DrawKit.textAcord(g, chord.getInfo(), camX, camY);
             return;
         }
 
@@ -877,7 +866,7 @@ public class MyChordSymbolLine extends MyComponent {
             // Column 1: root (lines[0]) at bottom
             String root  = lines.get(0);
             int    col1W = fm.stringWidth(root);
-            g.drawString(root, camX, camY);
+            DrawKit.textAcord(g, root, camX, camY);
 
             // Column 2: base notes from bottom to top, right-aligned. Els intervals
             // de dues xifres (el 10 d'un [0,4,7,10]) desalineaven la columna; cal
@@ -889,7 +878,7 @@ public class MyChordSymbolLine extends MyComponent {
             int y = camY;
             for (int i = 1; i <= col2Count; i++) {
                 String n = lines.get(i);
-                g.drawString(n, col2X + col2W - fm.stringWidth(n), y);
+                DrawKit.textAcord(g, n, col2X + col2W - fm.stringWidth(n), y);
                 y -= lineStep(fm);
             }
 
@@ -900,14 +889,14 @@ public class MyChordSymbolLine extends MyComponent {
                 y = camY;
                 for (int i = splitIdx; i < lines.size(); i++) {
                     String t = lines.get(i);
-                    g.drawString(t, col3X + col3W - fm.stringWidth(t), y);
+                    DrawKit.textAcord(g, t, col3X + col3W - fm.stringWidth(t), y);
                     y -= lineStep(fm);
                 }
             }
         } else {
             // Inline: FORMAT_SIMBOL, FORMAT_NOM
             String displayStr = ChordSymbols.chordToFormat(chord, fmt);
-            g.drawString(displayStr != null ? displayStr : chord.basicString(), camX, camY);
+            DrawKit.textAcord(g, displayStr != null ? displayStr : chord.basicString(), camX, camY);
         }
 
         // Triangle at bottom pointing down, tip aligned with the left edge of the
@@ -921,17 +910,10 @@ public class MyChordSymbolLine extends MyComponent {
                     : (int) Math.floor(score.getScreenX(col + offset)))
                     + cw / 2;
             int ayTip = (offscreen ? 0 : (int) screenPosY) + chordH - 1;
-            int aw = 4;
-            int ah = 6;
-            int[] xs = { ax - aw, ax + aw, ax };
-            int[] ys = { ayTip - ah, ayTip - ah, ayTip };
-            Color prevColor = g.getColor();
-            g.setColor(Color.BLACK);
-            g.fillPolygon(xs, ys, 3);
-            g.setColor(prevColor);
+            DrawKit.triangletDAtac(g, ax, ayTip);
         }
 
-        g.setFont(prevFont);
+        DrawKit.font(g, prevFont);
     }
 
     // -----------------------------------------------------------------------
@@ -1018,7 +1000,7 @@ public class MyChordSymbolLine extends MyComponent {
     private int drawChangeMark(int col, String text, Color bgColor, MarkKind kind,
                                Graphics2D g, boolean offscreen, int existingYOff) {
         Font prevFont = g.getFont();
-        g.setFont(getMarkFont());
+        DrawKit.font(g, getMarkFont());
         FontMetrics fm = g.getFontMetrics();
         int pad  = 2;
         int boxW = fm.stringWidth(text) + 2 * pad;
@@ -1034,13 +1016,11 @@ public class MyChordSymbolLine extends MyComponent {
         int boxX    = cellX;
         int boxY    = cellTop + stripH - TRIANGLE_SPACE - boxH - existingYOff;
 
-        g.setColor(bgColor);
-        g.fillRect(boxX, boxY, boxW, boxH);
         // Color per contrast amb el fons: els fons foscos segueixen amb text
         // blanc, i el groc de la transposició el necessita negre.
-        g.setColor(ColorSets.getSeparatorColor(bgColor));
         int textTop = boxY + (boxH - (fm.getAscent() + fm.getDescent())) / 2;
-        g.drawString(text, boxX + pad, textTop + fm.getAscent());
+        DrawKit.marca(g, boxX, boxY, boxW, boxH, bgColor, ColorSets.getSeparatorColor(bgColor),
+                text, boxX + pad, textTop + fm.getAscent());
 
         // Només el buffer de pantalla registra rectangles i pinta la selecció:
         // l'exportació a PDF reutilitza aquest mètode amb un altre Graphics2D.
@@ -1053,17 +1033,10 @@ public class MyChordSymbolLine extends MyComponent {
         // filet negre exterior. Dibuixat a dins i de 2 px amb prou feines es
         // distingia del fons de la marca.
         if (toOwnBuffer && col == contr.getSelectedMarkCol() && kind == contr.getSelectedMarkKind()) {
-            Stroke savedStroke = g.getStroke();
-            g.setStroke(new BasicStroke(1f));
-            g.setColor(Color.BLACK);
-            g.drawRect(boxX - 4, boxY - 4, boxW + 7, boxH + 7);
-            g.setStroke(new BasicStroke(3f));
-            g.setColor(Color.YELLOW);
-            g.drawRect(boxX - 2, boxY - 2, boxW + 3, boxH + 3);
-            g.setStroke(savedStroke);
+            DrawKit.marcaSeleccionada(g, boxX, boxY, boxW, boxH);
         }
 
-        g.setFont(prevFont);
+        DrawKit.font(g, prevFont);
         return boxH;
     }
 
@@ -1110,7 +1083,7 @@ public class MyChordSymbolLine extends MyComponent {
         int h = (int) (nRows * Settings.getRowHeight());
         offscreenImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         offscreenGraphics = offscreenImage.createGraphics();
-        offscreenGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        DrawKit.preparaOffscreen(offscreenGraphics);
         Utilities.printOutWithPriority(false, "MyChordSymbolLine::initOffscreen: w=" + w + ", h=" + h);
         needsDrawing = true;
         drawFullChordLineInOffscreen();
@@ -1133,10 +1106,7 @@ public class MyChordSymbolLine extends MyComponent {
         int h = offscreenImage.getHeight();
         BufferedImage newImg = new BufferedImage(newW, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D newG = newImg.createGraphics();
-        newG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        newG.drawImage(offscreenImage, 0, 0, null);
-        newG.setColor(Color.WHITE);
-        newG.fillRect(oldW, 0, newW - oldW, h);
+        DrawKit.ampliaOffscreen(newG, offscreenImage, oldW, newW, h);
         offscreenGraphics.dispose();
         offscreenImage = newImg;
         offscreenGraphics = newG;
@@ -1183,8 +1153,7 @@ public class MyChordSymbolLine extends MyComponent {
             if (!needsDrawing) return;
             markBoxes.clear();
             // Clear background
-            offscreenGraphics.setColor(Color.WHITE);
-            offscreenGraphics.fillRect(0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
+            DrawKit.esborra(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
 
             Map<Integer, Chord> chords = score.getChordSimbolLine();
             int numCols = score.getNumCols();
@@ -1224,7 +1193,7 @@ public class MyChordSymbolLine extends MyComponent {
                 int vel0Shown = (vel0 != null) ? vel0 : currentTrackVelocity();
                 yOff += drawVolumeMark(0, vel0Shown, offscreenGraphics, true, yOff);
                 if (yOff > 0) {
-                    offscreenGraphics.setFont(getMarkFont());
+                    DrawKit.font(offscreenGraphics, getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
                     int pad = 2;
                     int maxW = fm.stringWidth("" + tempo0) + 2 * pad;
@@ -1258,7 +1227,7 @@ public class MyChordSymbolLine extends MyComponent {
                     yOff += drawVolumeMark(col, velCur, offscreenGraphics, true, yOff);
                 }
                 if (yOff > 0) {
-                    offscreenGraphics.setFont(getMarkFont());
+                    DrawKit.font(offscreenGraphics, getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
                     int pad = 2;
                     if (sc.tempo != null) {
@@ -1292,42 +1261,6 @@ public class MyChordSymbolLine extends MyComponent {
         }
     }
 
-    /**
-     * Copies a region of a BufferedImage to screen, clamping source
-     * coordinates to the image bounds (mirrors MyGridScore.drawImageClamped).
-     */
-    private static void drawImageClamped(Graphics2D g, BufferedImage img,
-            int dx1, int dy1, int dx2, int dy2,
-            int sx1, int sy1, int sx2, int sy2) {
-        int iw = img.getWidth();
-        int ih = img.getHeight();
-        if (iw <= 0 || ih <= 0) return;
-        if (sx2 <= 0 || sy2 <= 0 || sx1 >= iw || sy1 >= ih) return;
-
-        int osx1 = sx1, osy1 = sy1, osx2 = sx2, osy2 = sy2;
-        sx1 = Math.max(0, Math.min(sx1, iw));
-        sx2 = Math.max(0, Math.min(sx2, iw));
-        sy1 = Math.max(0, Math.min(sy1, ih));
-        sy2 = Math.max(0, Math.min(sy2, ih));
-        if (sx2 <= sx1 || sy2 <= sy1) return;
-
-        double sw = (osx2 - osx1), sh = (osy2 - osy1);
-        if (sw == 0 || sh == 0) return;
-        double dw = (dx2 - dx1), dh = (dy2 - dy1);
-
-        double leftCut   = (sx1 - osx1) / sw;
-        double rightCut  = (osx2 - sx2) / sw;
-        double topCut    = (sy1 - osy1) / sh;
-        double bottomCut = (osy2 - sy2) / sh;
-
-        int ndx1 = (int) Math.round(dx1 + dw * leftCut);
-        int ndx2 = (int) Math.round(dx2 - dw * rightCut);
-        int ndy1 = (int) Math.round(dy1 + dh * topCut);
-        int ndy2 = (int) Math.round(dy2 - dh * bottomCut);
-        if (ndx2 <= ndx1 || ndy2 <= ndy1) return;
-
-        g.drawImage(img, ndx1, ndy1, ndx2, ndy2, sx1, sy1, sx2, sy2, null);
-    }
 
     /**
      * For each column, draws the chord symbol (if not null) and the beat and
@@ -1343,8 +1276,7 @@ public class MyChordSymbolLine extends MyComponent {
             Utilities.printOutWithPriority(5, "MyChordSymbolLine::draw: drawing " + this.getClass());
         }
         // Draw border
-        g.setColor(Color.BLACK);
-        g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+        DrawKit.voraDeComponent(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
 
         if (offscreenImage != null) {
             if (needsDrawing) drawFullChordLineInOffscreen();
