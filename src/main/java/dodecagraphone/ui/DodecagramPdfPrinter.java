@@ -650,8 +650,8 @@ public class DodecagramPdfPrinter {
 
         int w = 4 * colWidthPx;
         BufferedImage img = new BufferedImage(w, gridH, BufferedImage.TYPE_INT_RGB);
-        DrawKit dk = new DrawKit(img.createGraphics());
-        dk.clearBackground(0, 0, w, gridH);
+        Graphics2D gk = img.createGraphics();
+        DrawKit.esborra(gk, 0, 0, w, gridH);
 
         double rowH      = (double) gridH / nKeys;
         boolean showChoice = keyboard != null && keyboard.isShowChoice();
@@ -673,14 +673,14 @@ public class DodecagramPdfPrinter {
                 int slideW = (int) Math.round(slideFrac * w);
                 int keyW2  = w - slideW;
                 if (selected) {
-                    dk.fillCell(0, y, slideW, h, slideColor);
-                    dk.fillCell(slideW, y, keyW2, h, keyColor);
+                    DrawKit.cella(gk, 0, y, slideW, h, slideColor);
+                    DrawKit.cella(gk, slideW, y, keyW2, h, keyColor);
                 } else {
-                    dk.fillCell(0, y, keyW2, h, keyColor);
-                    dk.fillCell(keyW2, y, slideW, h, slideColor);
+                    DrawKit.cella(gk, 0, y, keyW2, h, keyColor);
+                    DrawKit.cella(gk, keyW2, y, slideW, h, slideColor);
                 }
             } else {
-                dk.fillCell(0, y, w, h, keyColor);
+                DrawKit.cella(gk, 0, y, w, h, keyColor);
             }
         }
 
@@ -695,13 +695,13 @@ public class DodecagramPdfPrinter {
                 int h     = Math.max(1, nextY - y - 1);
                 int triH  = Math.max(5, (int)(h * 0.55));
                 int cy    = y + h / 2;
-                dk.drawRightArrow(w - 2, cy, triH, triH, ColorSets.getGridSquareFontColor(midi));
+                DrawKit.triangleDeTonica(gk, w - 2, cy, triH, ColorSets.getGridSquareFontColor(midi));
             }
         }
 
         // Right-edge separator between keyboard and score
-        dk.drawVerticalLine(w - 1, 0, gridH - 1, 1.0f, Color.BLACK);
-        dk.getGraphics().dispose();
+        DrawKit.filetVertical(gk, w - 1, 0, gridH - 1);
+        gk.dispose();
         return img;
     }
 

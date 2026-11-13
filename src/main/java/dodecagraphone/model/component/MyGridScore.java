@@ -16,6 +16,7 @@ import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.ui.I18n;
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.AlphaComposite;
@@ -1101,7 +1102,7 @@ public class MyGridScore extends MyComponent {
         int h = (int) (this.getnKeys() * Settings.getRowHeight() * Settings.getnRowsSquare());
         offscreenImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         offscreenGraphics = offscreenImage.createGraphics();
-        offscreenGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        DrawKit.preparaOffscreen(offscreenGraphics);
 //        offscreenGraphics.setColor(Color.RED);
 //        offscreenGraphics.setStroke(new BasicStroke(7));
 //        offscreenGraphics.drawRect(0, 0, this.offscreenImage.getWidth() - 1, this.offscreenImage.getHeight() - 1);
@@ -1344,16 +1345,7 @@ public class MyGridScore extends MyComponent {
         int sy = (int)(r1 * Settings.getRowHeight() * Settings.getnRowsSquare());
         int sw = (int)((c2 - c1 + 1) * Settings.getColWidth());
         int sh = (int)((r2 - r1 + 1) * Settings.getRowHeight() * Settings.getnRowsSquare());
-        Composite oldComposite = g.getComposite();
-        Color oldColor = g.getColor();
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
-        g.setColor(new Color(0, 100, 255));
-        g.fillRect(sx, sy, sw, sh);
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
-        g.setColor(new Color(0, 50, 200));
-        g.drawRect(sx, sy, sw - 1, sh - 1);
-        g.setComposite(oldComposite);
-        g.setColor(oldColor);
+        DrawKit.seleccio(g, sx, sy, sw, sh);
     }
 
     /**
@@ -1375,8 +1367,7 @@ public class MyGridScore extends MyComponent {
         synchronized (offscreenGraphics) {
             // Esborrem el buffer sencer per eliminar línies divisòries antigues
             // (les línies de compàs poden deixar píxels residuals si el compàs ha canviat).
-            offscreenGraphics.setColor(java.awt.Color.WHITE);
-            offscreenGraphics.fillRect(0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
+            DrawKit.esborra(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
 
             int firstDrawCol = 0;
             int lastDrawCol  = this.getNColsBuffer();
@@ -1663,8 +1654,7 @@ public class MyGridScore extends MyComponent {
 //        g.setColor(color.GREEN);
 //        g.fillRect((int) screenX, (int) screenY, (int) wdth, (int) hght);
 //        if (true) return;
-        g.setColor(color);
-        g.fillRect((int) screenX, (int) screenY, (int) (wdth), (int) hght);
+        DrawKit.cella(g, screenX, screenY, wdth, hght, color);
 
         if (sq != null) {
             sq.updateState();
@@ -1700,102 +1690,35 @@ public class MyGridScore extends MyComponent {
                         name = null;
                     }
 
-                    g.setColor(sq.getColor());
-                    g.fillRect((int) screenX, (int) screenY, (int) wdth, (int) hght);
+                    DrawKit.cella(g, screenX, screenY, wdth, hght, sq.getColor());
 
                     if (name != null) {
-                        g.setColor(ColorSets.getGridSquareFontColor(midi));
-                        g.drawString(name, (int) (2 + screenX + wdth / 3), (int) (screenY + hght * 0.8));
+                        DrawKit.nomDeNota(g, name, screenX, screenY, wdth, hght,
+                                ColorSets.getGridSquareFontColor(midi));
                     }
                     // Vora esquerra: separa notes contigües. Mateix color que el
                     // nom de la nota, perquè la barra i el nom es llegeixin com
                     // una sola marca. Gruix de 2 px perquè sigui prou visible.
-                    Stroke sepStroke = g.getStroke();
-                    g.setColor(ColorSets.getGridSquareFontColor(midi));
-                    g.setStroke(new BasicStroke(2f));
-                    g.drawLine(screenX + 1, screenY, screenX + 1, screenY + hght-1);
-                    g.setStroke(sepStroke);
+                    DrawKit.voraDeNota(g, screenX, screenY, hght, ColorSets.getGridSquareFontColor(midi));
 
                 }
                 if (sq.isSqDotted() && !sq.isSq_is_linked()) {
                     boolean hasDrumsNoteDot = sq.getPoliNotes().stream()
                             .anyMatch(n -> n.isVisible() && n.getChannel() == 9);
-                    g.setColor(Color.BLACK);
-                    g.fillRect((int) screenX, (int) screenY, (int) hght, (int) hght);
-                    g.setColor(Color.WHITE);
                     String dotName;
                     if (this.noteDisplayMode != NOTE_DISPLAY_HIDE && !hasDrumsNoteDot) {
                         dotName = this.getNoteLabel(midi);
                     } else {
                         dotName = "✔";
                     }
-                    g.drawString(dotName, (int) (screenX + width / 3), (int) (screenY + hght));
+                    DrawKit.notaPuntejada(g, screenX, screenY, hght, dotName,
+                            (int) (screenX + width / 3), (int) (screenY + hght));
                 }
             }
         }
-        Stroke stroke = g.getStroke();
-        Stroke dashed = new BasicStroke((float) 0.5, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{5, 3}, 0);//15,3
-        g.setStroke(dashed);
-        g.setStroke(new BasicStroke((float) 0.2));
-        g.setColor(java.awt.Color.GRAY);
-        g.drawLine((int) screenX, (int) screenY, (int) (screenX + wdth), (int) screenY);
-        g.setStroke(stroke);
+        DrawKit.separadorDeFila(g, screenX, screenX + wdth, screenY);
     }
 
-    private static void drawImageClamped(Graphics2D g, BufferedImage img,
-            int dx1, int dy1, int dx2, int dy2,
-            int sx1, int sy1, int sx2, int sy2) {
-
-        int iw = img.getWidth();
-        int ih = img.getHeight();
-
-        if (iw <= 0 || ih <= 0) {
-            return;
-        }
-
-        // Si el source està completament fora, no dibuixis res
-        if (sx2 <= 0 || sy2 <= 0 || sx1 >= iw || sy1 >= ih) {
-            return;
-        }
-
-        int osx1 = sx1, osy1 = sy1, osx2 = sx2, osy2 = sy2;
-
-        // Clamp source
-        sx1 = Math.max(0, Math.min(sx1, iw));
-        sx2 = Math.max(0, Math.min(sx2, iw));
-        sy1 = Math.max(0, Math.min(sy1, ih));
-        sy2 = Math.max(0, Math.min(sy2, ih));
-
-        if (sx2 <= sx1 || sy2 <= sy1) {
-            return;
-        }
-
-        // Ajusta el destí proporcionalment al clamp del source
-        double sw = (osx2 - osx1);
-        double sh = (osy2 - osy1);
-        if (sw == 0 || sh == 0) {
-            return;
-        }
-
-        double dw = (dx2 - dx1);
-        double dh = (dy2 - dy1);
-
-        double leftCut = (sx1 - osx1) / sw;
-        double rightCut = (osx2 - sx2) / sw;
-        double topCut = (sy1 - osy1) / sh;
-        double bottomCut = (osy2 - sy2) / sh;
-
-        int ndx1 = (int) Math.round(dx1 + dw * leftCut);
-        int ndx2 = (int) Math.round(dx2 - dw * rightCut);
-        int ndy1 = (int) Math.round(dy1 + dh * topCut);
-        int ndy2 = (int) Math.round(dy2 - dh * bottomCut);
-
-        if (ndx2 <= ndx1 || ndy2 <= ndy1) {
-            return;
-        }
-
-        g.drawImage(img, ndx1, ndy1, ndx2, ndy2, sx1, sy1, sx2, sy2, null);
-    }
     
     /**
      * [CA] NO redibuixa cap element individual: només copia (blit) la porció
@@ -2030,8 +1953,6 @@ public class MyGridScore extends MyComponent {
      * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     private void drawMeasureLine(int col, Graphics2D g) {
-        Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke(1.5f));
         int camX1;
         int camY1;
         if (this.controller.isPrinting()){
@@ -2041,11 +1962,8 @@ public class MyGridScore extends MyComponent {
             camX1 = (int) Math.floor(getOffScreenScreenX(col));
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
-        int camX2 = camX1;
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
-        g.setColor(java.awt.Color.BLACK);
-        g.drawLine(camX1, camY1+1, camX2, camY2-2);
-        g.setStroke(stroke);
+        DrawKit.barraDeCompas(g, camX1, camY1 + 1, camY2 - 2);
     }
 
     /**
@@ -2055,10 +1973,6 @@ public class MyGridScore extends MyComponent {
      * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     private void drawBeatLine(int col, Graphics2D g) {
-        Stroke stroke = g.getStroke();
-        Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
-        g.setStroke(dashed);
-        // g.setStroke(new BasicStroke(3));
         int camX1;
         int camY1;
         if (this.controller.isPrinting()){
@@ -2068,11 +1982,8 @@ public class MyGridScore extends MyComponent {
             camX1 = (int) Math.floor(getOffScreenScreenX(col));
             camY1 = (int) Math.round(getOffScreenScreenY(0));
         }
-        int camX2 = camX1;
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
-        g.setColor(java.awt.Color.BLACK);
-        g.drawLine(camX1, camY1+1, camX2, camY2-2);
-        g.setStroke(stroke);
+        DrawKit.barraDeTemps(g, camX1, camY1 + 1, camY2 - 2);
     }
 
     /**
@@ -2308,10 +2219,7 @@ public class MyGridScore extends MyComponent {
             int h    = offscreenImage.getHeight();
             java.awt.image.BufferedImage newImg = new java.awt.image.BufferedImage(newW, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
             java.awt.Graphics2D newG = newImg.createGraphics();
-            newG.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            newG.drawImage(offscreenImage, 0, 0, null);
-            newG.setColor(java.awt.Color.WHITE);
-            newG.fillRect(oldW, 0, newW - oldW, h);
+            DrawKit.ampliaOffscreen(newG, offscreenImage, oldW, newW, h);
             int oldNCols = getNColsBuffer();
             nColsBuffer = newNColsBuffer;
             offscreenGraphics.dispose();
