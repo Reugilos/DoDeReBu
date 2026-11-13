@@ -51,6 +51,31 @@ import java.util.List;
  * <p>
  * Els mètodes són estàtics i no creen cap objecte per crida.
  * <p>
+ * <b>Com es prova un disseny nou.</b> Les proves de disseny es fan a la
+ * branca {@code disseny-grafic}, que surt de l'etiqueta
+ * {@code drawkit-13-11-26}: aquella etiqueta és l'aspecte de sempre, idèntic
+ * píxel a píxel al de {@code master}, i és la referència per comparar. El que
+ * es toca per canviar l'aspecte és, per ordre:
+ * <ol>
+ *   <li>el <b>tema</b> (la secció de dalt): colors, traços, fonts i mides;</li>
+ *   <li>la <b>paleta</b> ({@code aparencaDe…}): quin color té cada estat;</li>
+ *   <li>el <b>cos</b> d'un mètode, quan el canvi no és de valor sinó de forma
+ *       (arrodonir una cel·la, posar el nom en un altre lloc).</li>
+ * </ol>
+ * Tres coses s'han de respectar perquè el programa segueixi funcionant igual:
+ * <ul>
+ *   <li><b>la signatura</b> dels mètodes públics (els components no han de saber
+ *       que el disseny ha canviat);</li>
+ *   <li><b>les caixes</b>: un mètode dibuixa dins del rectangle que rep i no en
+ *       surt, o el ratolí i el dibuix deixarien de coincidir;</li>
+ *   <li><b>la velocitat</b>: res que es dibuixi a cada fotograma del play
+ *       (barres, barra de reproducció, còpia dels buffers) no pot afegir
+ *       transparències ni degradats sobre zones grans. Cada canvi de tema s'ha
+ *       de tornar a mirar a 300 bpm.</li>
+ * </ul>
+ * Els criteris estètics que es vagin decidint s'apunten al {@code CLAUDE.md},
+ * secció «Criteris de disseny gràfic», perquè no es perdin entre proves.
+ * <p>
  * [EN] The application's drawing layer: <b>the whole look lives here</b>. No
  * other class paints with {@code Graphics2D} or picks a colour, a stroke, a font
  * or where a text goes inside its box. Components decide <i>where</i> things go

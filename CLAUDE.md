@@ -67,7 +67,14 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - **Cada mètode reprodueix exactament les crides que substituïa**, també els que deixen el color o el traç posats: el codi de després pot comptar-hi (`tancaTeclat` existeix per això).
 - **Dues barres de compàs**: la del buffer fa 1,5 px (`barraDeCompas`) i la que es redibuixa damunt de la pantalla, 2 px (`barraDeCompasEnPantalla`). Ja era així abans de DrawKit.
 - **El PDF vectorial té la seva pròpia capa**, `PdfDrawKit` (PDFBox, no `Graphics2D`), amb els seus colors. Les classes de `model/proves/` i les fonts dels quadres de diàleg de Swing queden fora.
+- **Branques**: `drawkit` (congelada a l'etiqueta `drawkit-13-11-26`) és la migració, sense cap canvi visual. Les proves de disseny es fan a **`disseny-grafic`**, que en surt. El javadoc de la classe explica què es pot tocar (tema, paleta, cos dels mètodes) i què s'ha de respectar (signatures, caixes, velocitat).
 - **La migració (13-11-26) es va comprovar píxel a píxel** en dues passades: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`, i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
+
+### Criteris de disseny gràfic
+
+Les proves es fan a la branca `disseny-grafic` (vegeu la secció de DrawKit). Aquí s'apunten **els criteris que es decideixen**, amb el perquè, a mesura que es van provant: el que es prova i no agrada també s'hi apunta, perquè no es torni a provar. Fins que no s'hi decideixi res, l'aspecte és el de l'etiqueta `drawkit-13-11-26`, idèntic al de `master`.
+
+*Encara no n'hi ha cap de decidit.*
 
 ### Altura dibuixada vs altura que sona (`displayOffset`)
 
@@ -437,6 +444,7 @@ en lloc del càlcul estàndard `relX / colWidth`.
 - `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada. Inclou també el diàleg de benvinguda amb tria d'idioma, el fix del `choiceExtended`, el del `PROGRAM_CHANGE` de la pista de direcció, els de la banda d'acords i la lletra al PDF, i els botons de Swing traduïts. Inclou també la nomenclatura nova de les cançons i els dodecagrames al repositori.
 - `5-10-26` — porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat amb Ctrl-clic abans del Ctrl-V, també per a les notes. Inclou la franja d'acords a 6 files amb la marca de la mida d'una línia d'acord, les notes dels acords que es desen de debò i no es tornen a llegir, l'últim acord que arriba al final del seu compàs, la doble barra sense arrodonir a la pàgina, el recompte de `nNotes` i les vies de contacte al README i a la benvinguda.
 
+- `drawkit-13-11-26` — a la branca `drawkit`: tot el dibuix passant per `DrawKit`, amb l'aspecte idèntic píxel a píxel al de `master`. És la referència de les proves de disseny (`disseny-grafic`).
 - `publicat-12-11-26` — la versió penjada al web el 12-11-26: pistes amagades que es pregunten en desar (acords i bateria inclosos), la lletra que segueix la nota, Supr sobre la selecció, Nova que reinicia mesclador i instruments, el piano per defecte sense metal·lòfon i «Obre amb» des del sistema.
 
 Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
