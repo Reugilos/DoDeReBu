@@ -26,6 +26,7 @@ El codi font és a `src/main/java/dodecagraphone/`.
 | `model/component/MyCamera.java` | Viewport (càmera) |
 | `ui/AppConfig.java` / `AppPaths.java` | Càrrega/desat de config.properties |
 | `ui/I18n.java` | Internacionalització (`I18n.t("clau")`, `I18n.f("clau", arg)`) |
+| `ui/DrawKit.java` | La capa de dibuix: totes les crides de pintar i el tema (colors, traços, fonts) |
 | `resources/i18n/messages_ca.properties` | Textos en català |
 | `resources/i18n/messages_en.properties` | Textos en anglès |
 | `resources/i18n/messages_es.properties` | Textos en castellà |
@@ -54,6 +55,16 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - `drawFullGridinOffscreen()` — redibuixa tota la graella (esborra el buffer primer amb blanc).
 - `drawCurrentCamInOffscreen()` — redibuixa la vista de la càmera actual (més ràpid).
 - `drawFullChordLineInOffscreen()` — redibuixa tota la franja d'acords.
+
+### La capa de dibuix (`DrawKit`)
+
+**Res no pinta directament amb `Graphics2D`**: totes les crides de dibuix (pantalla, buffers offscreen, files del PDF, SVG) passen per `ui/DrawKit`, que són mètodes estàtics que reben el `Graphics2D` i diuen *què* es dibuixa (`cella`, `nomDeNota`, `barraDeCompas`, `marca`, `boto`…). Els colors, els traços i les famílies de font viuen a dalt de tot de la classe: **canviar l'aspecte gràfic és canviar DrawKit**, no els components. Les consultes que no pinten (`getFontMetrics`, `getFont`) es queden on són, perquè formen part del càlcul de la composició.
+
+- **No es crea cap objecte per crida**: els traços del tema es creen un sol cop. `drawSquare` es crida milers de vegades per redibuix.
+- **Cada mètode reprodueix exactament les crides que substituïa**, també els que deixen el color o el traç posats sense restaurar-los: el codi de després pot comptar-hi.
+- **Dues barres de compàs**: la del buffer fa 1,5 px (`barraDeCompas`) i la que es redibuixa damunt de la pantalla, 2 px (`barraDeCompasEnPantalla`). Ja era així abans de DrawKit.
+- **La migració (13-11-26) es va comprovar píxel a píxel**: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`; i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
+- Les classes de `model/proves/` no hi passen: són proves soltes.
 
 ### Altura dibuixada vs altura que sona (`displayOffset`)
 
