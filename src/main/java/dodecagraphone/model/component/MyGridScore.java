@@ -1641,6 +1641,12 @@ public class MyGridScore extends MyComponent {
         Color color;
         if (sq != null) {
             sq.updateState();
+        }
+        // Una cel·la sense nota visible pren el fons de la vista d'ara (pentagrama
+        // o plantilla), no el que tenia la cel·la quan es va crear: les que es
+        // creen després d'un canvi de vista no passen per updateStripsNKeyboard i
+        // es quedaven amb el fons de l'altra vista.
+        if (sq != null && sq.isSqVisible()) {
             color = sq.getColor();
         } else {
             if (this.usePentagramaStrips) {

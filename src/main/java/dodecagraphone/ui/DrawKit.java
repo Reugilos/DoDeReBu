@@ -97,9 +97,41 @@ public final class DrawKit {
 
     // ── Colors ───────────────────────────────────────────────────────────────
 
+    // Estil del manual del DoDeRe-Bú (Guia_Mara, nov. 2026): fons blanc, files
+    // del pentagrama en gris càlid, el do central en rosa, la plantilla en groc
+    // pàl·lid, separadors gris clar d'un píxel, text blanc sobre els colors de
+    // les notes, i plafons en blau clar amb una capçalera gris. Els colors de les
+    // dotze notes són els de ColorSets, que no es toca.
+
     private static final Color FONS = Color.WHITE;
     private static final Color TINTA = Color.BLACK;
-    private static final Color SEPARADOR_DE_FILA = Color.GRAY;
+    /** [CA] Separadors entre files: gris clar d'un píxel, com al manual. */
+    private static final Color SEPARADOR_DE_FILA = new Color(217, 217, 217);
+    /** [CA] Fila d'espai del pentagrama (entre línies). */
+    private static final Color PAUTA_ESPAI = Color.WHITE;
+    /** [CA] Fila d'una línia del pentagrama: gris càlid molt suau. */
+    private static final Color PAUTA_LINIA = new Color(238, 236, 236);
+    /** [CA] Fila del do central: rosa pàl·lid. */
+    private static final Color PAUTA_DO_CENTRAL = new Color(255, 214, 214);
+    /** [CA] Fila d'una nota de la plantilla: groc pàl·lid. */
+    private static final Color PATRO_TRIAT = new Color(245, 255, 171);
+    /** [CA] Fila fora de la plantilla. */
+    private static final Color PATRO_FORA = Color.WHITE;
+    /** [CA] Text i marques damunt dels colors de les notes i de les tecles. */
+    private static final Color TEXT_SOBRE_NOTA = Color.WHITE;
+    /** [CA] Separació blanca entre dues notes seguides. */
+    private static final Color VORA_DE_NOTA = Color.WHITE;
+    /** [CA] Blau clar dels plafons del manual (panell de botons, botó de format). */
+    private static final Color PLAFO = new Color(219, 231, 249);
+    /** [CA] Gris de la capçalera del manual (línia d'estat). */
+    private static final Color CAPCALERA = new Color(242, 242, 242);
+    /** [CA] Botó en repòs: blanc sobre el plafó blau, com les bafarades del manual. */
+    private static final Color BOTO_NORMAL = Color.WHITE;
+    /** [CA] Botó premut: el blau de la marca de tempo. */
+    private static final Color BOTO_PREMUT = new Color(32, 89, 164);
+    /** [CA] Text fosc dels botons i de la capçalera. */
+    private static final Color TEXT_FOSC = new Color(35, 35, 45);
+    private static final int BOTO_ARC = 12;
     private static final Color FONS_NOTA_PUNTEJADA = Color.BLACK;
     private static final Color TEXT_NOTA_PUNTEJADA = Color.WHITE;
     private static final Color SELECCIO_FARCIMENT = new Color(0, 100, 255);
@@ -113,10 +145,9 @@ public final class DrawKit {
     private static final Color LLETRA = Color.BLACK;
     private static final Color LLETRA_EN_EDICIO = Color.DARK_GRAY;
     private static final Color CURSOR_DE_TEXT = Color.BLUE;
-    private static final Color BOTO_DE_FORMAT = new Color(220, 230, 255);
-    private static final Color FONS_LINIA_DESTAT = Color.GRAY;
-    private static final Color TEXT_LINIA_DESTAT = Color.WHITE;
-    private static final Color TEXT_DE_BOTO = Color.WHITE;
+    private static final Color BOTO_DE_FORMAT = PLAFO;
+    private static final Color FONS_LINIA_DESTAT = CAPCALERA;
+    private static final Color TEXT_LINIA_DESTAT = TEXT_FOSC;
     private static final Color TEXT_TECLA_QUE_SONA = Color.BLACK;
     /** [CA] Tecla del PDF sense color a la paleta. / [EN] PDF key fallback. */
     private static final Color TECLA_SENSE_COLOR = Color.LIGHT_GRAY;
@@ -127,10 +158,12 @@ public final class DrawKit {
      * [EN] The four change-mark kinds, each with its background.
      */
     public enum Marca {
-        TEMPO(new Color(0, 90, 190)),
-        TONALITAT(new Color(140, 0, 30)),
-        VOLUM(new Color(0, 130, 55)),
-        TRANSPOSICIO(new Color(235, 200, 0));
+        /** [CA] El blau del «60» del manual. */
+        TEMPO(new Color(32, 89, 164)),
+        /** [CA] El morat del «Do» del manual. */
+        TONALITAT(new Color(85, 84, 160)),
+        VOLUM(new Color(22, 132, 96)),
+        TRANSPOSICIO(new Color(240, 205, 0));
 
         private final Color fons;
 
@@ -144,10 +177,11 @@ public final class DrawKit {
     private static final Stroke TRAC_COMPAS = new BasicStroke(1.5f);
     /** [CA] La barra de compàs damunt de la pantalla és més gruixuda que la del buffer. */
     private static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(2f);
+    /** [CA] Temps: guions curts, com al dodecagrama del manual. */
     private static final Stroke TRAC_TEMPS = new BasicStroke(1, BasicStroke.CAP_BUTT,
-            BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
-    private static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(0.2f);
-    private static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(2f);
+            BasicStroke.JOIN_BEVEL, 0, new float[]{5, 4}, 0);
+    private static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(1f);
+    private static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(1f);
     private static final Stroke TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(3);
     private static final Stroke TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(2);
     private static final int DOBLE_BARRA_SEPARACIO = 4;
@@ -158,12 +192,28 @@ public final class DrawKit {
 
     // ── Fonts ────────────────────────────────────────────────────────────────
 
-    private static final String FAMILIA_ACORDS = "SansSerif";
+    /**
+     * [CA] La lletra del manual és una geomètrica rodona; la més propera que porta
+     * Windows és la Century Gothic. Si no hi és, la SansSerif de Java.
+     */
+    private static final String FAMILIA_GEOMETRICA = familiaDisponible("Century Gothic", "SansSerif");
+    private static final String FAMILIA_ACORDS = FAMILIA_GEOMETRICA;
     private static final int ESTIL_ACORDS = Font.BOLD;
-    private static final String FAMILIA_LLETRA = "SansSerif";
+    private static final String FAMILIA_LLETRA = FAMILIA_GEOMETRICA;
     private static final int ESTIL_LLETRA = Font.PLAIN;
-    private static final String FAMILIA_INTERFICIE = "Dialog";
+    private static final String FAMILIA_INTERFICIE = FAMILIA_GEOMETRICA;
     private static final int ESTIL_INTERFICIE = Font.BOLD;
+
+    private static String familiaDisponible(String preferida, String alternativa) {
+        try {
+            for (String f : java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+                    .getAvailableFontFamilyNames()) {
+                if (f.equalsIgnoreCase(preferida)) return f;
+            }
+        } catch (Exception ignored) {
+        }
+        return alternativa;
+    }
     /** [CA] La lletra d'una tecla és una fracció de la seva alçada. */
     private static final double FONT_DE_TECLA_PER_ALCADA = 0.65;
     private static final int FONT_DE_TECLA_MINIMA = 8;
@@ -206,7 +256,11 @@ public final class DrawKit {
 
     /** [CA] Una fila buida, a la vista de pentagrama. / [EN] An empty row, staff view. */
     public static Color aparencaDePauta(int midi) {
-        return ColorSets.getPentagramaColor(midi);
+        // ColorSets diu de quin tipus és la fila; el color el posa el tema.
+        Color c = ColorSets.getPentagramaColor(midi);
+        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.LINIA_PENTA))) return PAUTA_LINIA;
+        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.DO_PENTA))) return PAUTA_DO_CENTRAL;
+        return PAUTA_ESPAI;
     }
 
     /**
@@ -215,7 +269,9 @@ public final class DrawKit {
      * [EN] An empty row, template view.
      */
     public static Color aparencaDelPatro(int midi, List<Integer> patro) {
-        return ColorSets.getChoiceColor(midi, patro);
+        // ColorSets diu si la nota és del patró (MARFIL); el color el posa el tema.
+        Color c = ColorSets.getChoiceColor(midi, patro);
+        return (c != null && c.equals(ColorSets.getEncesColor(ColorSets.MARFIL))) ? PATRO_TRIAT : PATRO_FORA;
     }
 
     /** [CA] Una tecla en silenci. / [EN] A silent key. */
@@ -230,13 +286,15 @@ public final class DrawKit {
 
     /** [CA] Un botó, premut o no. / [EN] A button, pressed or not. */
     public static Color aparencaDeBoto(boolean premut) {
-        return premut ? ColorSets.getIluminatColor(ColorSets.BUTO)
-                      : ColorSets.getEncesColor(ColorSets.BUTO);
+        return premut ? BOTO_PREMUT : BOTO_NORMAL;
     }
 
     /** [CA] La tinta del text sobre una nota (i de la seva vora). */
     private static Color tintaDeNota(int midi) {
-        return ColorSets.getGridSquareFontColor(midi);
+        // El manual escriu en blanc damunt de totes les notes, també del groc.
+        // L'alternativa de sempre (negre sobre re, ri i mi):
+        // ColorSets.getGridSquareFontColor(midi).
+        return TEXT_SOBRE_NOTA;
     }
 
     /** [CA] Negre o blanc, el que contrasti amb el fons. */
@@ -256,7 +314,9 @@ public final class DrawKit {
      * [EN] Keyboard slide colour; former alternatives kept above.
      */
     private static Color colorDelSlide() {
-        return ColorSets.getEncesColor(ColorSets.LINIA_PENTA);
+        // Al manual, la columna dels slides és blanca. El gris de sempre:
+        // ColorSets.getEncesColor(ColorSets.LINIA_PENTA).
+        return FONS;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -281,10 +341,11 @@ public final class DrawKit {
      * [EN] A note's left edge. Leaves the colour set.
      */
     public static void voraDeNota(Graphics2D g, int x, int y, int h, int midi) {
+        // Al manual, dues notes seguides se separen amb un filet blanc.
         Stroke abans = g.getStroke();
-        g.setColor(tintaDeNota(midi));
+        g.setColor(VORA_DE_NOTA);
         g.setStroke(TRAC_VORA_DE_NOTA);
-        g.drawLine(x + 1, y, x + 1, y + h - 1);
+        g.drawLine(x, y, x, y + h - 1);
         g.setStroke(abans);
     }
 
@@ -485,6 +546,7 @@ public final class DrawKit {
 
     /** [CA] El fons de la pantalla sencera, amb la font de la interfície. / [EN] Screen background. */
     public static void fonsDePantalla(Graphics2D g, int w, int h, int midaDeLletra) {
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g.setFont(new Font(FAMILIA_INTERFICIE, ESTIL_INTERFICIE, midaDeLletra));
         g.setColor(FONS);
         g.fillRect(0, 0, w, h);
@@ -533,7 +595,7 @@ public final class DrawKit {
 
     /** [CA] El fons del panell de botons. / [EN] Button panel background. */
     public static void fonsDelPanellDeBotons(Graphics2D g, int x, int y, int w, int h) {
-        g.setColor(ColorSets.getColorFons());
+        g.setColor(PLAFO);
         g.fillRect(x, y, w, h);
     }
 
@@ -545,9 +607,12 @@ public final class DrawKit {
         FontMetrics fm = g.getFontMetrics();
         float tx = (float) (x + (w - fm.stringWidth(rotul)) / 2.0);
         float ty = (float) (y + (h + fm.getAscent() - fm.getDescent()) / 2.0);
+        Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setColor(aparenca);
-        g.fillRect((int) x, (int) y, (int) w, (int) h);
-        g.setColor(TEXT_DE_BOTO);
+        g.fillRoundRect((int) x + 2, (int) y + 2, (int) w - 4, (int) h - 4, BOTO_ARC, BOTO_ARC);
+        if (aa != null) g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+        g.setColor(BOTO_PREMUT.equals(aparenca) ? Color.WHITE : TEXT_FOSC);
         g.drawString(rotul, tx, ty);
     }
 
@@ -615,6 +680,7 @@ public final class DrawKit {
     /** [CA] Prepara el context d'un buffer offscreen. / [EN] Prepares an offscreen buffer. */
     public static void preparaOffscreen(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
     }
 
     /** [CA] Prepara el context de l'exportació SVG. / [EN] Prepares the SVG export. */

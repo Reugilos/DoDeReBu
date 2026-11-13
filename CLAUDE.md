@@ -74,7 +74,18 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 
 Les proves es fan a la branca `disseny-grafic` (vegeu la secció de DrawKit). Aquí s'apunten **els criteris que es decideixen**, amb el perquè, a mesura que es van provant: el que es prova i no agrada també s'hi apunta, perquè no es torni a provar. Fins que no s'hi decideixi res, l'aspecte és el de l'etiqueta `drawkit-13-11-26`, idèntic al de `master`.
 
-*Encara no n'hi ha cap de decidit.*
+**Primera prova (13-11-26): l'estil del manual del DoDeRe-Bú** (`Metallochrome/ManualDus/Guia_Mara/Downloaded Nov 26/DoDeRe-BÚ libro ENG.pdf`, fet per un dissenyador). Tot és a DrawKit; `ColorSets` no es toca, i els colors de les dotze notes són els de sempre. Colors mesurats sobre el PDF:
+
+- **Pentagrama**: files blanques; les línies del pentagrama en gris càlid (238,236,236) i el do central en rosa (255,214,214). `aparencaDePauta` pregunta a `ColorSets` de quin tipus és la fila i hi posa el color del tema.
+- **Plantilla**: les notes del patró en groc pàl·lid (245,255,171) i la resta en blanc (`aparencaDelPatro`).
+- **Graella**: separadors de fila gris clar d'un píxel (217,217,217); temps amb guions curts {5,4}; compàs negre.
+- **Notes i tecles**: text blanc a totes, també sobre el groc del mi (el manual ho fa així; l'alternativa de sempre, `ColorSets.getGridSquareFontColor`, queda anotada a `tintaDeNota`). Dues notes seguides se separen amb un filet blanc d'un píxel. El triangle de la tònica, blanc. Els slides del teclat, blancs.
+- **Marques**: tonalitat en morat (85,84,160) i tempo en blau (32,89,164), els del «Do / 60» del manual.
+- **Interfície**: panell de botons en blau clar (219,231,249) amb botons blancs arrodonits i text fosc; premut, blau (32,89,164) amb text blanc. Línia d'estat en el gris de la capçalera del manual (242,242,242) amb text fosc. Lletra Century Gothic (geomètrica, la més propera a la del manual que porta Windows; si no hi és, SansSerif). Text amb antialiàsing.
+- **Correcció que ha fet visible**: les cel·les sense nota visible prenien el fons de la vista que hi havia quan es van crear; amb els colors d'abans no es notava. Ara `drawSquare` les pinta amb el fons de la vista d'ara.
+- **Cost**: la zona de la càmera pinta igual (≈3,5–3,9 ms); el panell sencer, uns 0,5 ms més (botons arrodonits i text suavitzat). A 300 bpm el so va igual de just, i l'espera mitjana del fil de Swing puja de ~4,5 a ~8 ms (màxim 26).
+
+Pendent de decidir: si agrada, si el text blanc sobre el groc es llegeix prou, i si la lletra Century Gothic s'ha de mantenir.
 
 ### Altura dibuixada vs altura que sona (`displayOffset`)
 
