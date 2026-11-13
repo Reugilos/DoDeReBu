@@ -321,13 +321,21 @@ public class MyCamera extends MyComponent {
     public double getViewPos() {
         int cc = score.getCurrentCol();
         Step s = lastStep;
-        if (!playing || s == null || s.col != cc || s.durNanos <= 0) {
+        if (!playing || s == null) {
             return cc;
         }
-        double frac = (System.nanoTime() - s.startNanos) / s.durNanos;
+        double frac = s.durNanos <= 0 ? 1.0
+                : (System.nanoTime() - s.startNanos) / s.durNanos;
         if (frac < 0) frac = 0;
         if (frac > 1) frac = 1;
-        return cc - 1 + frac;
+        // Entre que el fil avança la columna i en marca el pas, l'últim pas
+        // encara és l'anterior (s.col == cc - 1, ja acabat): la vista es queda
+        // a cc - 1 en lloc de saltar a cc i tornar enrere. L'acotació també
+        // impedeix que un pas caducat l'allunyi més d'una columna.
+        double v = s.col - 1 + frac;
+        if (v < cc - 1) v = cc - 1;
+        if (v > cc) v = cc;
+        return v;
     }
 
     /**
@@ -528,6 +536,32 @@ public class MyCamera extends MyComponent {
     }
 
     /**
+     * [CA] El rectangle de pantalla que canvia mentre la vista llisca: la
+     * càmera, la franja d'acords i la de la lletra, amb un petit marge per a
+     * la barra de reproducció i la doble barra. És el que repinta el
+     * temporitzador de fotogrames del play, i res més.
+     * <p>
+     * [EN] The screen rectangle that changes while the view slides: camera,
+     * chord strip and lyrics strip, plus a small margin for the play bar and
+     * the double bar. It is what the playback frame timer repaints.
+     *
+     * @return [CA] rectangle en píxels / [EN] rectangle in pixels
+     */
+    public java.awt.Rectangle getDrawBounds() {
+        java.awt.Rectangle r = new java.awt.Rectangle(
+                (int) Math.floor(screenPosX), (int) Math.floor(screenPosY),
+                (int) Math.ceil(width) + 1, (int) Math.ceil(height) + 1);
+        for (MyComponent c : new MyComponent[]{chordSymbolLine, lyrics}) {
+            if (c == null) continue;
+            r = r.union(new java.awt.Rectangle(
+                    (int) Math.floor(c.getScreenPosX()), (int) Math.floor(c.getScreenPosY()),
+                    (int) Math.ceil(c.getWidth()) + 1, (int) Math.ceil(c.getHeight()) + 1));
+        }
+        r.grow(4, 2);
+        return r;
+    }
+
+    /**
      * [CA] Atura la reproducció posant el flag {@code playing} a false.
      * <p>
      * [EN] Sets playing to false, stopping playback.
@@ -544,6 +578,11 @@ public class MyCamera extends MyComponent {
      * @param playing [CA] true si la càmera ha de reproduir / [EN] true if the camera should play
      */
     public void setPlaying(boolean playing) {
+        if (playing) {
+            // Pas inicial ja acabat a la columna d'ara: fins al primer pas de
+            // debò la vista no es mou, i just després d'avançar no salta.
+            lastStep = new Step(score.getCurrentCol(), System.nanoTime(), 0);
+        }
         this.playing = playing;
     }
 

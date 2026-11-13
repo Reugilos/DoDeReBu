@@ -3063,6 +3063,21 @@ public class MyController {
             lastPlayEndNanos = System.nanoTime();
         });
         playbackThread.start();
+
+        // Fotogrames: mentre dura el play, la càmera es repinta uns 60 cops per
+        // segon amb la posició fraccionària (MyCamera.getViewPos), i la
+        // partitura llisca a velocitat constant en lloc de saltar una columna a
+        // cada pas. Només es repinta el rectangle de la càmera; el fil de
+        // reproducció segueix repintant-ho tot un cop per pas, com abans.
+        Timer frameTimer = new Timer(Settings.PLAY_FRAME_PERIOD_MS, null);
+        frameTimer.addActionListener(e -> {
+            if (!cam.isPlaying()) {
+                frameTimer.stop();
+                return;
+            }
+            getUi().getPanel().repintaRegio(cam.getDrawBounds());
+        });
+        frameTimer.start();
     }
 //  ── old_play (codi comentat) ──────────────────────────────────────────────────
 

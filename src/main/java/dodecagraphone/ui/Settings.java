@@ -37,6 +37,9 @@ public class Settings {
     public static final boolean COLORS_BU  = true;
     // IS_BU = true;  // Eliminat: usos substituïts per ToneRange.isMetallophone() o codi directe
     public static final int  REFRESH_PERIOD               = 30;  // ms → ~33 fps
+    /** [CA] Període dels fotogrames mentre la partitura llisca en el play.
+     *  [EN] Frame period while the score slides during playback. */
+    public static final int  PLAY_FRAME_PERIOD_MS         = 15;  // ms → ~60 fps
     public static final int  BUTTON_REPEAT_INITIAL_DELAY_MS = 600;
     public static final int  BUTTON_REPEAT_INTERVAL_MS      = 100;
 

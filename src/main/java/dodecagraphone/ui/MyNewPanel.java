@@ -377,6 +377,24 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
     }
 
     /**
+     * [CA] Repinta només un rectangle, de seguida. S'ha de cridar des del fil
+     * de Swing. És el que fa servir el temporitzador de fotogrames del play
+     * perquè la partitura llisqui sense repintar els botons ni el teclat a
+     * cada fotograma. Aixeca {@code repintaWasCalled}, altrament
+     * {@code paintComponent} no dibuixa res mentre es reprodueix.
+     * <p>
+     * [EN] Repaints just one rectangle, immediately. Must be called on the
+     * Swing thread. Used by the playback frame timer so the score slides
+     * without repainting buttons or keyboard every frame.
+     *
+     * @param r [CA] rectangle a repintar / [EN] rectangle to repaint
+     */
+    public void repintaRegio(java.awt.Rectangle r) {
+        setRepintaWasCalled(true);
+        this.paintImmediately(r);
+    }
+
+    /**
      * [CA] Gestiona les tecles premudes. Processa dreceres de teclat globals:
      * Enter (col·loca el canvi pendent a la columna 0 de la partitura),
      * Ctrl+Enter (el col·loca al playbar), Supr (esborra la marca
