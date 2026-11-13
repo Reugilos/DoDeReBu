@@ -5,6 +5,7 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.*;
 import dodecagraphone.model.mixer.MyTrack;
@@ -188,9 +189,8 @@ public class MyXiloKey extends MyComponent {
         once = false;
         aux++;
         int posY = (int) (screenPosY + height * 0.8);
-        g.setColor(this.color);
         int h = (int) Math.ceil(height);
-        g.fillRect((int) screenPosX,(int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height));
+        DrawKit.rectangle(g, (int) screenPosX, (int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height), this.color);
         String text;
         if (this.controller.isDrumsMode()) {
             int drumMidi = ToneRange.getDrumMidi(this.keyId);
@@ -220,14 +220,14 @@ public class MyXiloKey extends MyComponent {
         // Font local proporcional a l'alçada de la tecla (pot ser > rowHeight en metallòfon)
         Font prevFont = g.getFont();
         int keyFontSize = Math.max(8, (int)(height * 0.65));
-        if (keyFontSize != prevFont.getSize()) g.setFont(prevFont.deriveFont((float) keyFontSize));
+        if (keyFontSize != prevFont.getSize()) DrawKit.font(g, prevFont.deriveFont((float) keyFontSize));
         // Keyboard esquerre (doNotHighlight=false): quan la tecla sona → text negre sobre fons blanc.
         // Keyboard dret (doNotHighlight=true): la tecla NO es posa blanca, i el text
         // ha de mantenir el color normal (no canviar a negre quan sona).
         boolean litAndShouldChangeText = !activeChannels.isEmpty() && !this.doNotHighlight;
-        g.setColor(litAndShouldChangeText ? java.awt.Color.BLACK : ColorSets.getGridSquareFontColor(this.midi));
-        g.drawString(text, (float) (screenPosX), posY);
-        g.setFont(prevFont);
+        DrawKit.tinta(g, litAndShouldChangeText ? DrawKit.TEXT_TECLA_ENCESA : ColorSets.getGridSquareFontColor(this.midi));
+        DrawKit.text(g, text, (float) (screenPosX), (float) posY);
+        DrawKit.font(g, prevFont);
         this.slide.draw(g);
         if (!this.controller.isDrumsMode()) {
             int midiKey = this.controller.getAllPurposeScore().getMidiKey();
@@ -235,10 +235,7 @@ public class MyXiloKey extends MyComponent {
                 int triH = Math.max(5, (int)(height * 0.55));
                 int tip = (int)(screenPosX + width) - 2;
                 int cy = (int)(screenPosY + height / 2);
-                int[] xp = { tip - triH, tip - triH, tip };
-                int[] yp = { cy - triH / 2, cy + triH / 2, cy };
-                g.setColor(ColorSets.getGridSquareFontColor(this.midi));
-                g.fillPolygon(xp, yp, 3);
+                DrawKit.triangleDeTonica(g, tip, cy, triH, ColorSets.getGridSquareFontColor(this.midi));
             }
         }
     }

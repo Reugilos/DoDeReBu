@@ -5,6 +5,7 @@
  */
 package dodecagraphone;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.model.MyChoice;
 import dodecagraphone.model.MyKeyCircles;
 import dodecagraphone.model.component.MyExercise;
@@ -755,25 +756,22 @@ public class MyController {
         int sepX    = right ? (int) Math.ceil(camW) : kw; // línia separadora càmera/keyboard
 
         // White fill for the keyboard-column part of each strip
-        g.setColor(Color.WHITE);
-        g.fillRect(kx, chordY,  kw, chordH);
-        g.fillRect(kx, lyricsY, kw, lyricsH);
+        DrawKit.esborra(g, kx, chordY,  kw, chordH);
+        DrawKit.esborra(g, kx, lyricsY, kw, lyricsH);
 
         // Vertical separator line between keyboard column and camera area
-        g.setColor(Color.BLACK);
-        g.drawLine(sepX, chordY,  sepX, chordY  + chordH);
-        g.drawLine(sepX, lyricsY, sepX, lyricsY + lyricsH);
+        DrawKit.filetVertical(g, sepX, chordY,  chordY  + chordH);
+        DrawKit.filetVertical(g, sepX, lyricsY, lyricsY + lyricsH);
 
         // Labels: vertically centered, aligned with keyboard zone
         java.awt.FontMetrics fm = g.getFontMetrics();
         int lineH  = fm.getAscent() + fm.getDescent();
         int margin = (int) Math.max(4, Settings.getColWidth());
         int labelX = kx + margin;
-        g.setColor(Color.BLACK);
 
         // "Acords" label at top of chord strip
         int acordsY = chordY + margin + fm.getAscent();
-        g.drawString(I18n.t("myChordSymbolLine.label"), labelX, acordsY);
+        DrawKit.text(g, I18n.t("myChordSymbolLine.label"), labelX, acordsY, DrawKit.TINTA);
 
         // Format button 2 rows below the "Acords" label
         String fmtLabel = dodecagraphone.model.chord.ChordSymbols.formatLabel(
@@ -783,14 +781,11 @@ public class MyController {
         int btnH = lineH + 2 * btnPad;
         int btnX = labelX;
         int btnY = (int) Math.round(chordY + 2 * rowH);
-        g.setColor(new Color(220, 230, 255));
-        g.fillRoundRect(btnX, btnY, btnW, btnH, 4, 4);
-        g.setColor(Color.BLACK);
-        g.drawRoundRect(btnX, btnY, btnW, btnH, 4, 4);
-        g.drawString(fmtLabel, btnX + btnPad, btnY + btnPad + fm.getAscent());
+        DrawKit.botoDeFormat(g, fmtLabel, btnX, btnY, btnW, btnH,
+                btnX + btnPad, btnY + btnPad + fm.getAscent());
 
         // Lyrics label
-        g.drawString(I18n.t("myLyrics.label"),
+        DrawKit.text(g, I18n.t("myLyrics.label"),
                 labelX,
                 lyricsY + (lyricsH + lineH) / 2);
     }
@@ -818,15 +813,13 @@ public class MyController {
 
         // rowHeight (no squareHeight) perquè botons i franges no s'adapten a nRowsSquare
         int fontSize = Math.max(8, (int)(Settings.getRowHeight() * 0.85));
-        Font font = new Font("Dialog", Font.BOLD, fontSize);
-        g.setFont(font);
+        DrawKit.font(g, DrawKit.fontInterficie(fontSize));
         // Sempre blit·ejem el buffer offscreen (ja actualitzat) a la pantalla.
         // needsDrawing controlava si es dibuixava, però això deixava la pantalla
         // en blanc en restaurar la finestra o obrir diàlegs (OS repaint sense
         // que needsDrawing fos true). El buffer offscreen és barat de copiar.
         Utilities.printOutWithPriority(5, "MyController::redraw: count = " + count3++);
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, pw, ph);
+        DrawKit.esborra(g, 0, 0, pw, ph);
         drawStripsBackground(g);
         this.screen.draw(g);
         this.setNeedsDrawing(false);

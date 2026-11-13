@@ -5,6 +5,7 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.sound.SoundWithMidi;
 import dodecagraphone.ui.Settings;
@@ -79,7 +80,7 @@ public class MyXiloKeyboard extends MyComponent {
     public void draw(Graphics2D g){
         MyXiloKey.once = true;
         super.draw(g);
-        g.setColor(Color.BLACK);
+        DrawKit.tinta(g, DrawKit.TINTA);
     }
 
     /**

@@ -581,14 +581,13 @@ public class DodecagramPdfPrinter {
         int rowImgW = keyW + fullSliceW;
         BufferedImage row = new BufferedImage(rowImgW, totalH, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = row.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, rowImgW, totalH);
+        DrawKit.esborra(g, 0, 0, rowImgW, totalH);
 
         // Narrow keyboard (covers only the grid rows)
         if (keyImg != null && keyW > 0) {
             int keyH = Math.min(keyImg.getHeight(), gridH);
-            g.drawImage(keyImg, 0, chordH, keyW, chordH + keyH,
-                        0, 0, keyImg.getWidth(), keyH, null);
+            DrawKit.copiaImatge(g, keyImg, 0, chordH, keyW, chordH + keyH,
+                        0, 0, keyImg.getWidth(), keyH);
         }
 
         if (sliceW > 0) {
@@ -596,15 +595,15 @@ public class DodecagramPdfPrinter {
             int cSrcW = Math.min(sliceW, Math.max(0, chordImg.getWidth() - startPx));
             int cSrcH = Math.min(chordH, chordImg.getHeight());
             if (cSrcW > 0 && cSrcH > 0)
-                g.drawImage(chordImg, keyW, 0, keyW + cSrcW, cSrcH,
-                        startPx, 0, startPx + cSrcW, cSrcH, null);
+                DrawKit.copiaImatge(g, chordImg, keyW, 0, keyW + cSrcW, cSrcH,
+                        startPx, 0, startPx + cSrcW, cSrcH);
 
             // Grid band
             int gSrcW = Math.min(sliceW, Math.max(0, gridImg.getWidth() - startPx));
             int gSrcH = Math.min(gridH, gridImg.getHeight());
             if (gSrcW > 0 && gSrcH > 0)
-                g.drawImage(gridImg, keyW, chordH, keyW + gSrcW, chordH + gSrcH,
-                        startPx, 0, startPx + gSrcW, gSrcH, null);
+                DrawKit.copiaImatge(g, gridImg, keyW, chordH, keyW + gSrcW, chordH + gSrcH,
+                        startPx, 0, startPx + gSrcW, gSrcH);
 
             // Lyrics band: l'origen es l'alcada natural de la franja i la
             // destinacio la estirada, per compensar la compressio vertical de la
@@ -613,11 +612,9 @@ public class DodecagramPdfPrinter {
                 int lSrcW = Math.min(sliceW, Math.max(0, lyricsImg.getWidth() - startPx));
                 int lSrcH = Math.min(lyricsSrcH, lyricsImg.getHeight());
                 if (lSrcW > 0 && lSrcH > 0) {
-                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                            RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    g.drawImage(lyricsImg, keyW, chordH + gridH,
+                    DrawKit.copiaImatgeEstirada(g, lyricsImg, keyW, chordH + gridH,
                             keyW + lSrcW, chordH + gridH + lyricsH,
-                            startPx, 0, startPx + lSrcW, lSrcH, null);
+                            startPx, 0, startPx + lSrcW, lSrcH);
                 }
             }
         }

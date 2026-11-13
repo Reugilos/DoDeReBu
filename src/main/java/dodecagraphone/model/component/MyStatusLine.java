@@ -5,6 +5,7 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
@@ -126,9 +127,7 @@ public class MyStatusLine extends MyComponent{
                 Utilities.printOutWithPriority(5, "MyStatusLine::draw: drawing " + this.getClass());
             }
 
-            g.setColor(Color.GRAY);
-            g.fillRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
-            g.setColor(java.awt.Color.WHITE);
+            DrawKit.fonsDeLiniaDEstat(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
 
             String full = getFullText();
             int maxWidth = (int) width - 20;
@@ -137,7 +136,7 @@ public class MyStatusLine extends MyComponent{
             int baseY = (int)(screenPosY + 4 + lineH);
 
             if (fm.stringWidth(full) <= maxWidth) {
-                g.drawString(full, (int)(screenPosX + 10), baseY);
+                DrawKit.text(g, full, (int)(screenPosX + 10), baseY);
             } else {
                 // Cerca el tall de paraula més proper al centre
                 String[] words = full.split(" ");
@@ -154,8 +153,8 @@ public class MyStatusLine extends MyComponent{
                     if (line2.length() > 0) line2.append(" ");
                     line2.append(words[i]);
                 }
-                g.drawString(line1.toString(), (int)(screenPosX + 10), baseY);
-                g.drawString(line2.toString(), (int)(screenPosX + 10), baseY + lineH);
+                DrawKit.text(g, line1.toString(), (int)(screenPosX + 10), baseY);
+                DrawKit.text(g, line2.toString(), (int)(screenPosX + 10), baseY + lineH);
             }
     }
 }

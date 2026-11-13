@@ -108,21 +108,20 @@ public class SVGandPDF {
 		SVGGraphics2D svgG = new SVGGraphics2D(document);
 		svgG.setSVGCanvasSize(new Dimension(widthPx, heightPx));
 
-		svgG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		svgG.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		DrawKit.preparaSvg(svgG);
 
 		boolean useCSS = true;
 		Shape oldClip = svgG.getClip();
 		controller.setPrinting(true);
 		try {
-			svgG.setClip(0, 0, widthPx, heightPx);
+			DrawKit.posaRetall(svgG, 0, 0, widthPx, heightPx);
 			controller.setNeedsDrawing(true);
 			controller.redraw(svgG);
 			try (Writer out = new OutputStreamWriter(new FileOutputStream(outSvg), StandardCharsets.UTF_8)) {
 				svgG.stream(out, useCSS);
 			}
 		} finally {
-			svgG.setClip(oldClip);
+			DrawKit.restauraRetall(svgG, oldClip);
 			controller.setPrinting(false);
 		}
 	}

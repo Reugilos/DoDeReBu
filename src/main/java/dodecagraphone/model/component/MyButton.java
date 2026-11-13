@@ -5,6 +5,7 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.color.ColorSets;
 import static dodecagraphone.model.color.ColorSets.BUTO;
@@ -105,13 +106,10 @@ public class MyButton extends MyComponent {
             }
         }
         once = false;
-        g.setColor(this.color);
-        g.fillRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
-        g.setColor(java.awt.Color.WHITE);
         FontMetrics fm = g.getFontMetrics();
         float tx = (float)(screenPosX + (width  - fm.stringWidth(text)) / 2.0);
         float ty = (float)(screenPosY + (height + fm.getAscent() - fm.getDescent()) / 2.0);
-        g.drawString(text, tx, ty);
+        DrawKit.boto(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height, this.color, text, tx, ty);
     }
 
     /**

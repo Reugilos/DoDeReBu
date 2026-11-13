@@ -5,6 +5,7 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.color.ColorSets;
@@ -187,8 +188,7 @@ public class MySlide extends MyComponent {
         once = false;
         aux++;
         if (width>0){
-            g.setColor(color_fill);
-            g.fillRect((int) screenPosX,(int) screenPosY, (int)Math.ceil(width), (int) Math.ceil(height));
+            DrawKit.rectangle(g, (int) screenPosX, (int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height), color_fill);
         }
     }
 }

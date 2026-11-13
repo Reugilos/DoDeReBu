@@ -5,6 +5,7 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.color.ColorSets;
@@ -553,13 +554,11 @@ public class MyButtonPanel extends MyComponent {
         }
 //        System.out.println("MyButtonPanel::draw black: (pX,pY,w,h) = (" +
 //                (int) screenPosX + "," + (int) screenPosY + "," + (int) width + "," + (int) height + ")");
-        g.setColor(ColorSets.getColorFons());
-        g.fillRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+        DrawKit.rectangle(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height, ColorSets.getColorFons());
         for (MyButton button : this.buttons.values()) {
             button.draw(g);
         }
-        g.setColor(java.awt.Color.BLACK);
-        g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height); // fillRect si vull donar fons de color
+        DrawKit.voraDeComponent(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
     }
 
     /**
