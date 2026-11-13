@@ -8,6 +8,7 @@ package dodecagraphone.model.component;
 import dodecagraphone.MyController;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.BasicStroke;
@@ -29,7 +30,7 @@ import java.util.Map;
  * el grid, reservada per a la lletra de la cançó. Utilitza el mateix mecanisme
  * de buffer offscreen que {@link MyChordSymbolLine}: el contingut complet es
  * pre-renderitza en un {@link java.awt.image.BufferedImage} i la porció visible
- * s'extreu a cada frame amb {@code drawImageClamped()}. Suporta edició inline
+ * s'extreu a cada frame amb {@link MyCamera.ViewWindow}. Suporta edició inline
  * (mode {@code editMode}) amb cursor de text i navegació per tecles, i una
  * selecció pròpia de rangs de paraules (Ctrl + arrossegar) per al
  * porta-retalls de la lletra.
@@ -38,7 +39,7 @@ import java.util.Map;
  * reserved for song lyrics. Uses the same offscreen buffer mechanism as
  * {@link MyChordSymbolLine}: the full content is pre-rendered into a
  * {@link java.awt.image.BufferedImage} and the visible slice is extracted each
- * frame with {@code drawImageClamped()}. Supports inline editing (
+ * frame with {@link MyCamera.ViewWindow}. Supports inline editing (
  * {@code editMode}) with a text cursor and keyboard navigation, and a
  * selection of its own over word ranges (Ctrl + drag) for the lyrics
  * clipboard.
@@ -406,7 +407,7 @@ public class MyLyrics extends MyComponent {
         double rowH = Settings.getRowHeight();
         int x     = (int) Math.round(seg.col * Settings.getColWidth()) + 2;
         int textY = (int) (seg.row * rowH + (rowH + fm.getAscent() - fm.getDescent()) / 2.0);
-        g.drawString(seg.text, x, textY);
+        DrawKit.sillaba(g, seg.text, x, textY);
     }
 
     // -------------------------------------------------------------------------
@@ -831,11 +832,10 @@ public class MyLyrics extends MyComponent {
         int h = (int) (nRows * Settings.getRowHeight());
         offscreenImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         offscreenGraphics = offscreenImage.createGraphics();
-        offscreenGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON);
+        DrawKit.preparaOffscreen(offscreenGraphics);
         // Font explícita proporcional a l'alçada de fila per garantir llegibilitat.
         int fontSize = Math.max(12, (int) Math.round(Settings.getRowHeight() * 0.85));
-        offscreenGraphics.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, fontSize));
+        DrawKit.font(offscreenGraphics, DrawKit.fontLletra(fontSize));
         Utilities.printOutWithPriority(false,
                 "MyLyrics::initOffscreen: w=" + w + ", h=" + h + ", fontSize=" + fontSize);
         needsDrawing = true;
@@ -850,10 +850,7 @@ public class MyLyrics extends MyComponent {
         int h = offscreenImage.getHeight();
         BufferedImage newImg = new BufferedImage(newW, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D newG = newImg.createGraphics();
-        newG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        newG.drawImage(offscreenImage, 0, 0, null);
-        newG.setColor(Color.WHITE);
-        newG.fillRect(oldW, 0, newW - oldW, h);
+        DrawKit.ampliaOffscreen(newG, offscreenImage, oldW, newW, h);
         offscreenGraphics.dispose();
         offscreenImage = newImg;
         offscreenGraphics = newG;
@@ -868,8 +865,7 @@ public class MyLyrics extends MyComponent {
         synchronized (offscreenGraphics) {
             if (!needsDrawing) return;
             // Clear background
-            offscreenGraphics.setColor(Color.WHITE);
-            offscreenGraphics.fillRect(0, 0,
+            DrawKit.esborra(offscreenGraphics, 0, 0,
                     offscreenImage.getWidth(), offscreenImage.getHeight());
 
             int numCols = score.getNumCols();
@@ -882,7 +878,7 @@ public class MyLyrics extends MyComponent {
             // vegi borrós, i evita blitejar aquest buffer per no duplicar-lo.
             List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
             if (segs != null && !segs.isEmpty()) {
-                offscreenGraphics.setColor(Color.BLACK);
+                DrawKit.tinta(offscreenGraphics, DrawKit.LLETRA);
                 for (LyricSegment seg : segs) {
                     drawSegment(seg, offscreenGraphics);
                 }
@@ -890,7 +886,7 @@ public class MyLyrics extends MyComponent {
 
             // Preview: text currently being typed (shown in dark-grey).
             if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {
-                offscreenGraphics.setColor(Color.DARK_GRAY);
+                DrawKit.tinta(offscreenGraphics, DrawKit.LLETRA_EN_EDICIO);
                 LyricSegment preview = new LyricSegment(
                         editCursorCol, editTrack,
                         editBuffer.toString(), previewRow, 0);
@@ -900,68 +896,7 @@ public class MyLyrics extends MyComponent {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Line drawing helpers (offscreen coords: x = col * colWidth, y = 0..h)
-    // -------------------------------------------------------------------------
 
-    private void drawMeasureLine(int col, Graphics2D g) {
-        Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke(1.5f));
-        int x = (int) Math.floor(col * Settings.getColWidth());
-        int h = (int) (nRows * Settings.getRowHeight());
-        g.setColor(Color.BLACK);
-        g.drawLine(x, 0, x, h);
-        g.setStroke(stroke);
-    }
-
-    private void drawBeatLine(int col, Graphics2D g) {
-        Stroke stroke = g.getStroke();
-        Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
-                BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
-        g.setStroke(dashed);
-        int x = (int) Math.floor(col * Settings.getColWidth());
-        int h = (int) (nRows * Settings.getRowHeight());
-        g.setColor(Color.BLACK);
-        g.drawLine(x, 0, x, h);
-        g.setStroke(stroke);
-    }
-
-    // -------------------------------------------------------------------------
-    // drawImageClamped (mirrors MyGridScore / MyChordSymbolLine)
-    // -------------------------------------------------------------------------
-
-    private static void drawImageClamped(Graphics2D g, BufferedImage img,
-            int dx1, int dy1, int dx2, int dy2,
-            int sx1, int sy1, int sx2, int sy2) {
-        int iw = img.getWidth();
-        int ih = img.getHeight();
-        if (iw <= 0 || ih <= 0) return;
-        if (sx2 <= 0 || sy2 <= 0 || sx1 >= iw || sy1 >= ih) return;
-
-        int osx1 = sx1, osy1 = sy1, osx2 = sx2, osy2 = sy2;
-        sx1 = Math.max(0, Math.min(sx1, iw));
-        sx2 = Math.max(0, Math.min(sx2, iw));
-        sy1 = Math.max(0, Math.min(sy1, ih));
-        sy2 = Math.max(0, Math.min(sy2, ih));
-        if (sx2 <= sx1 || sy2 <= sy1) return;
-
-        double sw = (osx2 - osx1), sh = (osy2 - osy1);
-        if (sw == 0 || sh == 0) return;
-        double dw = (dx2 - dx1), dh = (dy2 - dy1);
-
-        double leftCut   = (sx1 - osx1) / sw;
-        double rightCut  = (osx2 - sx2) / sw;
-        double topCut    = (sy1 - osy1) / sh;
-        double bottomCut = (osy2 - sy2) / sh;
-
-        int ndx1 = (int) Math.round(dx1 + dw * leftCut);
-        int ndx2 = (int) Math.round(dx2 - dw * rightCut);
-        int ndy1 = (int) Math.round(dy1 + dh * topCut);
-        int ndy2 = (int) Math.round(dy2 - dh * bottomCut);
-        if (ndx2 <= ndx1 || ndy2 <= ndy1) return;
-
-        g.drawImage(img, ndx1, ndy1, ndx2, ndy2, sx1, sy1, sx2, sy2, null);
-    }
 
     // -------------------------------------------------------------------------
     // draw
@@ -1000,45 +935,35 @@ public class MyLyrics extends MyComponent {
 
             // Text en screen-space quan fit actiu: evita text borrós per la compressió offscreen.
             if (fitScaleXScreen < 1.0) {
-                Shape prevClip = g.getClip();
                 java.awt.Font prevFont = g.getFont();
                 Color prevColor = g.getColor();
-                g.clipRect(x1, y1, w, h);
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                        RenderingHints.VALUE_ANTIALIAS_ON);
-                g.setFont(offscreenGraphics.getFont());
+                Shape prevClip = DrawKit.retalla(g, x1, y1, w, h);
+                DrawKit.antialiasing(g);
+                DrawKit.font(g, offscreenGraphics.getFont());
                 FontMetrics fmScreen = g.getFontMetrics();
                 double rowH = Settings.getRowHeight();
                 // Segments confirmats
                 List<LyricSegment> segsScreen = lyricsByTrack.get(displayTrackId);
                 if (segsScreen != null) {
-                    g.setColor(Color.BLACK);
+                    DrawKit.tinta(g, DrawKit.LLETRA);
                     for (LyricSegment seg : segsScreen) {
                         int segX = colToScreenX(seg.col) + 2;
                         int segY = (int) Math.round(screenPosY + seg.row * rowH
                                 + (rowH + fmScreen.getAscent() - fmScreen.getDescent()) / 2.0);
-                        java.awt.geom.AffineTransform oldAt = g.getTransform();
-                        g.translate(segX, segY);
-                        g.scale(fitScaleXScreen, 1.0);
-                        g.drawString(seg.text, 0, 0);
-                        g.setTransform(oldAt);
+                        DrawKit.sillabaEscalada(g, seg.text, segX, segY, fitScaleXScreen);
                     }
                 }
                 // Preview (text en curs d'edició)
                 if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {
-                    g.setColor(Color.DARK_GRAY);
+                    DrawKit.tinta(g, DrawKit.LLETRA_EN_EDICIO);
                     int previewX = colToScreenX(editCursorCol) + 2;
                     int textY = (int) Math.round(screenPosY + previewRow * rowH
                             + (rowH + fmScreen.getAscent() - fmScreen.getDescent()) / 2.0);
-                    java.awt.geom.AffineTransform oldAt = g.getTransform();
-                    g.translate(previewX, textY);
-                    g.scale(fitScaleXScreen, 1.0);
-                    g.drawString(editBuffer.toString(), 0, 0);
-                    g.setTransform(oldAt);
+                    DrawKit.sillabaEscalada(g, editBuffer.toString(), previewX, textY, fitScaleXScreen);
                 }
-                g.setFont(prevFont);
-                g.setColor(prevColor);
-                g.setClip(prevClip);
+                DrawKit.font(g, prevFont);
+                DrawKit.tinta(g, prevColor);
+                DrawKit.restauraRetall(g, prevClip);
             }
 
             // Línies de beat i compàs en screen-space per evitar que desapareguin
@@ -1065,21 +990,16 @@ public class MyLyrics extends MyComponent {
             int sx1 = colToScreenX(getSelFirstCol());
             int sx2 = colToScreenX(getSelLastCol() + 1);
             if (sx2 > sx1) {
-                Shape oldClip = g.getClip();
-                g.clipRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
-                g.setColor(new Color(0, 90, 190, 60));
-                g.fillRect(sx1, (int) screenPosY, sx2 - sx1, (int) height);
-                g.setColor(new Color(0, 90, 190, 160));
-                g.drawRect(sx1, (int) screenPosY, sx2 - sx1 - 1, (int) height - 1);
-                g.setClip(oldClip);
+                Shape oldClip = DrawKit.retalla(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
+                DrawKit.seleccioLletra(g, sx1, (int) screenPosY, sx2 - sx1, (int) height);
+                DrawKit.restauraRetall(g, oldClip);
             }
         }
 
         // Border drawn after the image blit so the top separator line
         // (between the score and the lyrics) is not overwritten by the
         // white offscreen background.
-        g.setColor(Color.BLACK);
-        g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+        DrawKit.voraDeComponent(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
 
         // Cursor: vertical bar after the last typed character (screen coords)
         if (editMode) {
@@ -1101,11 +1021,7 @@ public class MyLyrics extends MyComponent {
             int cursorX  = colToScreenX(editCursorCol) + 2 + typedPx;
             int cursorY1 = (int) Math.round(screenPosY + previewRow * rowH) + 2;
             int cursorY2 = (int) Math.round(screenPosY + (previewRow + 1) * rowH) - 2;
-            Stroke oldStroke = g.getStroke();
-            g.setStroke(new BasicStroke(2f));
-            g.setColor(Color.BLUE);
-            g.drawLine(cursorX, cursorY1, cursorX, cursorY2);
-            g.setStroke(oldStroke);
+            DrawKit.cursorDeText(g, cursorX, cursorY1, cursorY2);
         }
     }
 

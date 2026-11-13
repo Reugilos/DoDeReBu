@@ -101,8 +101,14 @@ public final class DrawKit {
     // ── Traços ───────────────────────────────────────────────────────────────
 
     private static final float[] GUIONS_DE_TEMPS = {15, 3};
-    /** [CA] Barra de compàs. / [EN] Measure line. */
+    /** [CA] Barra de compàs, al buffer. / [EN] Measure line, in the buffer. */
     public static final Stroke TRAC_COMPAS = new BasicStroke(1.5f);
+    /**
+     * [CA] Barra de compàs dibuixada damunt de la pantalla, sobre la del buffer
+     * (que així no es perd quan el fit anacrusis comprimeix la imatge).
+     * [EN] Measure line drawn on screen, over the buffer's one.
+     */
+    public static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(2f);
     /** [CA] Línia de temps, discontínua. / [EN] Dashed beat line. */
     public static final Stroke TRAC_TEMPS = new BasicStroke(1, BasicStroke.CAP_BUTT,
             BasicStroke.JOIN_BEVEL, 0, GUIONS_DE_TEMPS, 0);
@@ -354,6 +360,15 @@ public final class DrawKit {
     public static void barraDeCompas(Graphics2D g, int x, int y1, int y2) {
         Stroke abans = g.getStroke();
         g.setStroke(TRAC_COMPAS);
+        g.setColor(TINTA);
+        g.drawLine(x, y1, x, y2);
+        g.setStroke(abans);
+    }
+
+    /** [CA] Barra de compàs damunt de la pantalla. Deixa la tinta posada. / [EN] On-screen measure line. */
+    public static void barraDeCompasEnPantalla(Graphics2D g, int x, int y1, int y2) {
+        Stroke abans = g.getStroke();
+        g.setStroke(TRAC_COMPAS_PANTALLA);
         g.setColor(TINTA);
         g.drawLine(x, y1, x, y2);
         g.setStroke(abans);

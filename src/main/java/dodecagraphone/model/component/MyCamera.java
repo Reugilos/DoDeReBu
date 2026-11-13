@@ -7,6 +7,7 @@ package dodecagraphone.model.component;
 
 import dodecagraphone.MyController;
 import dodecagraphone.model.*;
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.BasicStroke;
@@ -427,26 +428,17 @@ public class MyCamera extends MyComponent {
                 int sx2 = Math.min(iw, shiftPx + camW);
                 if (sx2 <= sx1) return;
                 int dx1 = camX + (sx1 - shiftPx);
-                g.drawImage(img, dx1, y, dx1 + (sx2 - sx1), y + sh,
-                        sx1, 0, sx2, sh, null);
+                DrawKit.copiaImatge(g, img, dx1, y, dx1 + (sx2 - sx1), y + sh,
+                        sx1, 0, sx2, sh);
             } else {
                 double offL = startCol * colW;
                 int sx1 = Math.max(0, (int) Math.floor(offL));
                 int sx2 = Math.min(iw, (int) Math.ceil(offL + spanCols * colW) + 1);
                 if (sx2 <= sx1) return;
                 BufferedImage sub = img.getSubimage(sx1, 0, sx2 - sx1, sh);
-                Shape oldClip = g.getClip();
-                Object oldInterp = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
-                g.clipRect(camX, y, camW, h);
-                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
                 AffineTransform at = new AffineTransform(scale, 0, 0, 1,
                         screenX(sx1), y);
-                g.drawImage(sub, at, null);
-                if (oldInterp != null) {
-                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, oldInterp);
-                }
-                g.setClip(oldClip);
+                DrawKit.imatgeTransformada(g, sub, at, camX, y, camW, h);
             }
         }
 
@@ -461,22 +453,18 @@ public class MyCamera extends MyComponent {
                 int y1, int y2, int clipY, int clipH) {
             int from = Math.max(0, (int) Math.floor(startCol) - 1);
             int to = Math.min(isBeat.length - 1, (int) Math.ceil(startCol + spanCols) + 1);
-            Shape oldClip = g.getClip();
-            g.clipRect(camX, clipY, camW, clipH);
-            Stroke saved = g.getStroke();
-            g.setColor(java.awt.Color.BLACK);
-            Stroke thick = new BasicStroke(2f);
-            Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
-                    BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
+            Shape oldClip = DrawKit.retalla(g, camX, clipY, camW, clipH);
             for (int col = from; col <= to; col++) {
                 if (!isBeat[col] && !isMeasure[col]) continue;
                 int offX = (int) Math.floor(col * colW);
                 int sx = (int) Math.round(screenX(offX));
-                g.setStroke(isMeasure[col] ? thick : dashed);
-                g.drawLine(sx, y1, sx, y2);
+                if (isMeasure[col]) {
+                    DrawKit.barraDeCompasEnPantalla(g, sx, y1, y2);
+                } else {
+                    DrawKit.barraDeTemps(g, sx, y1, y2);
+                }
             }
-            g.setStroke(saved);
-            g.setClip(oldClip);
+            DrawKit.restauraRetall(g, oldClip);
         }
 
         /**
@@ -485,16 +473,9 @@ public class MyCamera extends MyComponent {
          */
         public void drawStopBar(Graphics2D g, int stopCol, int y1, int y2, int clipY, int clipH) {
             int sx = (int) Math.floor(colToScreenX(stopCol)) - 1;
-            Shape oldClip = g.getClip();
-            g.clipRect(camX, clipY, camW, clipH);
-            Stroke saved = g.getStroke();
-            g.setColor(java.awt.Color.BLACK);
-            g.setStroke(new BasicStroke(3));
-            g.drawLine(sx, y1, sx, y2);
-            g.setStroke(new BasicStroke(2));
-            g.drawLine(sx + 4, y1, sx + 4, y2);
-            g.setStroke(saved);
-            g.setClip(oldClip);
+            Shape oldClip = DrawKit.retalla(g, camX, clipY, camW, clipH);
+            DrawKit.dobleBarra(g, sx, y1, y2);
+            DrawKit.restauraRetall(g, oldClip);
         }
     }
 
@@ -617,14 +598,10 @@ public class MyCamera extends MyComponent {
      */
     public void drawPlayBar(Graphics2D g){
         double rh = Settings.getRowHeight();
-        Stroke stroke = g.getStroke();
-        g.setStroke(new BasicStroke((float) 3));
-        g.setColor(java.awt.Color.BLACK);
         int x = (int) getScreenX(playBarCol);
         int y = (int) getScreenY(0) + 1;
         int h = (int) (Settings.getnRowsCam() * rh) - 2;
-        g.drawLine(x, y, x, y + h);
-        g.setStroke(stroke);
+        DrawKit.barraDeReproduccio(g, x, y, y + h);
     }
 
     /**
@@ -645,7 +622,6 @@ public class MyCamera extends MyComponent {
             this.lyrics.draw(g);
         }
         this.drawPlayBar(g);
-        g.setColor(java.awt.Color.BLACK);
-        g.drawRect((int) screenPosX, (int) screenPosY, (int) width, (int) height);
+        DrawKit.voraDeComponent(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
     }
 }
