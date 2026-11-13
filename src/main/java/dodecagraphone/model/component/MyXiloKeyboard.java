@@ -80,7 +80,7 @@ public class MyXiloKeyboard extends MyComponent {
     public void draw(Graphics2D g){
         MyXiloKey.once = true;
         super.draw(g);
-        DrawKit.tinta(g, DrawKit.TINTA);
+        DrawKit.tancaTeclat(g);
     }
 
     /**

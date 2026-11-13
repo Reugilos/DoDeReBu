@@ -8,7 +8,6 @@ package dodecagraphone.model.component;
 import dodecagraphone.MyController;
 import dodecagraphone.model.MyChoice;
 import dodecagraphone.model.ToneRange;
-import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.model.sound.BackgroundChordPlayer;
 import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.component.MyGridSquare.SubSquare;
@@ -543,9 +542,9 @@ public class MyGridScore extends MyComponent {
                 MyGridSquare sq = grid[row + BUFFER][col];
                 if (sq != null) {
                     if (pentagram) {
-                        grid[row + BUFFER][col].updateStrip(ColorSets.getPentagramaColor(midi));
+                        grid[row + BUFFER][col].updateStrip(DrawKit.aparencaDePauta(midi));
                     } else {
-                        grid[row + BUFFER][col].updateStrip(ColorSets.getChoiceColor(midi, choice.getChoiceListAt(col)));
+                        grid[row + BUFFER][col].updateStrip(DrawKit.aparencaDelPatro(midi, choice.getChoiceListAt(col)));
                     }
                 }
             }
@@ -1367,7 +1366,7 @@ public class MyGridScore extends MyComponent {
         synchronized (offscreenGraphics) {
             // Esborrem el buffer sencer per eliminar línies divisòries antigues
             // (les línies de compàs poden deixar píxels residuals si el compàs ha canviat).
-            DrawKit.esborra(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
+            DrawKit.fons(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
 
             int firstDrawCol = 0;
             int lastDrawCol  = this.getNColsBuffer();
@@ -1645,16 +1644,16 @@ public class MyGridScore extends MyComponent {
             color = sq.getColor();
         } else {
             if (this.usePentagramaStrips) {
-                color = ColorSets.getPentagramaColor(midi);
+                color = DrawKit.aparencaDePauta(midi);
             } else {
-                color = ColorSets.getChoiceColor(midi, choice.getChoiceListAt(col));
+                color = DrawKit.aparencaDelPatro(midi, choice.getChoiceListAt(col));
             }
         }
 
 //        g.setColor(color.GREEN);
 //        g.fillRect((int) screenX, (int) screenY, (int) wdth, (int) hght);
 //        if (true) return;
-        DrawKit.cella(g, screenX, screenY, wdth, hght, color);
+        DrawKit.casella(g, screenX, screenY, wdth, hght, color);
 
         if (sq != null) {
             sq.updateState();
@@ -1690,16 +1689,15 @@ public class MyGridScore extends MyComponent {
                         name = null;
                     }
 
-                    DrawKit.cella(g, screenX, screenY, wdth, hght, sq.getColor());
+                    DrawKit.casella(g, screenX, screenY, wdth, hght, sq.getColor());
 
                     if (name != null) {
-                        DrawKit.nomDeNota(g, name, screenX, screenY, wdth, hght,
-                                ColorSets.getGridSquareFontColor(midi));
+                        DrawKit.nomDeNota(g, name, screenX, screenY, wdth, hght, midi);
                     }
                     // Vora esquerra: separa notes contigües. Mateix color que el
                     // nom de la nota, perquè la barra i el nom es llegeixin com
                     // una sola marca. Gruix de 2 px perquè sigui prou visible.
-                    DrawKit.voraDeNota(g, screenX, screenY, hght, ColorSets.getGridSquareFontColor(midi));
+                    DrawKit.voraDeNota(g, screenX, screenY, hght, midi);
 
                 }
                 if (sq.isSqDotted() && !sq.isSq_is_linked()) {
@@ -1712,7 +1710,7 @@ public class MyGridScore extends MyComponent {
                         dotName = "✔";
                     }
                     DrawKit.notaPuntejada(g, screenX, screenY, hght, dotName,
-                            (int) (screenX + width / 3), (int) (screenY + hght));
+                            (int) (screenX + width / 3));
                 }
             }
         }

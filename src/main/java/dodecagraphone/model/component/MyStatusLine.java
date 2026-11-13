@@ -136,7 +136,7 @@ public class MyStatusLine extends MyComponent{
             int baseY = (int)(screenPosY + 4 + lineH);
 
             if (fm.stringWidth(full) <= maxWidth) {
-                DrawKit.text(g, full, (int)(screenPosX + 10), baseY);
+                DrawKit.textDeLiniaDEstat(g, full, (int)(screenPosX + 10), baseY);
             } else {
                 // Cerca el tall de paraula més proper al centre
                 String[] words = full.split(" ");
@@ -153,8 +153,8 @@ public class MyStatusLine extends MyComponent{
                     if (line2.length() > 0) line2.append(" ");
                     line2.append(words[i]);
                 }
-                DrawKit.text(g, line1.toString(), (int)(screenPosX + 10), baseY);
-                DrawKit.text(g, line2.toString(), (int)(screenPosX + 10), baseY + lineH);
+                DrawKit.textDeLiniaDEstat(g, line1.toString(), (int)(screenPosX + 10), baseY);
+                DrawKit.textDeLiniaDEstat(g, line2.toString(), (int)(screenPosX + 10), baseY + lineH);
             }
     }
 }

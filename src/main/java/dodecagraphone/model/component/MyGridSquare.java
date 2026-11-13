@@ -5,9 +5,9 @@
  */
 package dodecagraphone.model.component;
 
+import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
-import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.ui.Settings;
 import java.awt.Color;
@@ -192,9 +192,9 @@ public class MyGridSquare extends MyComponent {
         this.sq_is_empty = true;
         this.are_playing = 0;
         this.midi = ToneRange.getHighestMidi() - firstRow;
-        this.color_on = ColorSets.getEncesColor(this.midi % 12);
-        this.color_off = ColorSets.getPentagramaColor(this.midi);
-        this.color_playing = ColorSets.getColorFons();
+        this.color_on = DrawKit.aparencaDeNota(this.midi);
+        this.color_off = DrawKit.aparencaDePauta(this.midi);
+        this.color_playing = DrawKit.aparencaDeNotaQueSona();
         this.color = color_off;
         this.width = Settings.getColWidth()*nCols;
         this.height = Settings.getRowHeight()*nRows;
@@ -218,9 +218,9 @@ public class MyGridSquare extends MyComponent {
         this.sq_is_empty = sq.sq_is_empty;
         this.are_playing = sq.are_playing;
         this.midi = ToneRange.getHighestMidi() - row;
-        this.color_on = ColorSets.getEncesColor(this.midi % 12);
-        this.color_off = ColorSets.getPentagramaColor(this.midi);
-        this.color_playing = ColorSets.getColorFons();
+        this.color_on = DrawKit.aparencaDeNota(this.midi);
+        this.color_off = DrawKit.aparencaDePauta(this.midi);
+        this.color_playing = DrawKit.aparencaDeNotaQueSona();
         this.color = this.isSqVisible() ? this.color_on : this.color_off;
         this.width = sq.width;
         this.height = sq.height;

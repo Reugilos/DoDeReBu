@@ -756,12 +756,12 @@ public class MyController {
         int sepX    = right ? (int) Math.ceil(camW) : kw; // línia separadora càmera/keyboard
 
         // White fill for the keyboard-column part of each strip
-        DrawKit.esborra(g, kx, chordY,  kw, chordH);
-        DrawKit.esborra(g, kx, lyricsY, kw, lyricsH);
+        DrawKit.fons(g, kx, chordY,  kw, chordH);
+        DrawKit.fons(g, kx, lyricsY, kw, lyricsH);
 
         // Vertical separator line between keyboard column and camera area
-        DrawKit.filetVertical(g, sepX, chordY,  chordY  + chordH);
-        DrawKit.filetVertical(g, sepX, lyricsY, lyricsY + lyricsH);
+        DrawKit.separadorDeTeclat(g, sepX, chordY,  chordY  + chordH);
+        DrawKit.separadorDeTeclat(g, sepX, lyricsY, lyricsY + lyricsH);
 
         // Labels: vertically centered, aligned with keyboard zone
         java.awt.FontMetrics fm = g.getFontMetrics();
@@ -771,7 +771,7 @@ public class MyController {
 
         // "Acords" label at top of chord strip
         int acordsY = chordY + margin + fm.getAscent();
-        DrawKit.text(g, I18n.t("myChordSymbolLine.label"), labelX, acordsY, DrawKit.TINTA);
+        DrawKit.rotulDeFranja(g, I18n.t("myChordSymbolLine.label"), labelX, acordsY);
 
         // Format button 2 rows below the "Acords" label
         String fmtLabel = dodecagraphone.model.chord.ChordSymbols.formatLabel(
@@ -785,7 +785,7 @@ public class MyController {
                 btnX + btnPad, btnY + btnPad + fm.getAscent());
 
         // Lyrics label
-        DrawKit.text(g, I18n.t("myLyrics.label"),
+        DrawKit.rotulDeFranja(g, I18n.t("myLyrics.label"),
                 labelX,
                 lyricsY + (lyricsH + lineH) / 2);
     }
@@ -813,13 +813,13 @@ public class MyController {
 
         // rowHeight (no squareHeight) perquè botons i franges no s'adapten a nRowsSquare
         int fontSize = Math.max(8, (int)(Settings.getRowHeight() * 0.85));
-        DrawKit.font(g, DrawKit.fontInterficie(fontSize));
+
         // Sempre blit·ejem el buffer offscreen (ja actualitzat) a la pantalla.
         // needsDrawing controlava si es dibuixava, però això deixava la pantalla
         // en blanc en restaurar la finestra o obrir diàlegs (OS repaint sense
         // que needsDrawing fos true). El buffer offscreen és barat de copiar.
         Utilities.printOutWithPriority(5, "MyController::redraw: count = " + count3++);
-        DrawKit.esborra(g, 0, 0, pw, ph);
+        DrawKit.fonsDePantalla(g, pw, ph, fontSize);
         drawStripsBackground(g);
         this.screen.draw(g);
         this.setNeedsDrawing(false);

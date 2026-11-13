@@ -9,7 +9,6 @@ import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
 import dodecagraphone.model.chord.ChordSymbols;
-import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.DrawKit;
@@ -107,14 +106,6 @@ public class MyChordSymbolLine extends MyComponent {
      */
     public void setNeedsDrawing(boolean needsDrawing) { this.needsDrawing = needsDrawing; }
 
-    /** Background colour for tempo change markers (white text on blue). */
-    private static final Color COLOR_TEMPO_BG  = new Color(0, 90, 190);
-    /** Background colour for key change markers (white text on granate). */
-    private static final Color COLOR_KEY_BG    = new Color(140, 0, 30);
-    /** Background colour for volume change markers (white text on green). */
-    private static final Color COLOR_VOLUME_BG = new Color(0, 130, 55);
-    /** Fons de la marca de transposició (displayOffset). Groc: el text hi va en negre. */
-    private static final Color COLOR_TRANSPOSE_BG = new Color(235, 200, 0);
     /** Cached chord font and the row height it was computed for. */
     private Font   cachedChordFont   = null;
     private double cachedChordRowH   = 0;
@@ -135,7 +126,17 @@ public class MyChordSymbolLine extends MyComponent {
         /** Canvi de volum; verd, per pista. */
         VOLUME,
         /** Transposició de la pista; groc, informativa i no editable. */
-        TRANSPOSE
+        TRANSPOSE;
+
+        /** [CA] Com es dibuixa (el color el tria DrawKit). / [EN] How it is drawn. */
+        DrawKit.Marca dibuix() {
+            switch (this) {
+                case TEMPO:  return DrawKit.Marca.TEMPO;
+                case KEY:    return DrawKit.Marca.TONALITAT;
+                case VOLUME: return DrawKit.Marca.VOLUM;
+                default:     return DrawKit.Marca.TRANSPOSICIO;
+            }
+        }
     }
 
     /**
@@ -321,7 +322,7 @@ public class MyChordSymbolLine extends MyComponent {
         int size = f.getSize();
         while (size > MIN_CHORD_FONT && chordWidth(fm, lines, splitIdx, col2Count, gap) > availW) {
             size--;
-            f = new Font(base.getName(), base.getStyle(), size);
+            f = DrawKit.fontAcords(size);
             fm = g.getFontMetrics(f);
         }
         return f;
@@ -373,11 +374,11 @@ public class MyChordSymbolLine extends MyComponent {
         int botMargin = 2;
         int available = chordH - arrowH - botMargin;
         int size = Math.max(MIN_CHORD_FONT, (int) Math.min(available / 4.0, rowH * 0.85));
-        Font f = new Font("SansSerif", Font.BOLD, size);
+        Font f = DrawKit.fontAcords(size);
         FontMetrics fm = metrics().getFontMetrics(f);
         while (lineStep(fm) * 4 - LINE_GAP > available && size > MIN_CHORD_FONT) {
             size--;
-            f = new Font("SansSerif", Font.BOLD, size);
+            f = DrawKit.fontAcords(size);
             fm = metrics().getFontMetrics(f);
         }
         cachedChordFont = f;
@@ -441,7 +442,7 @@ public class MyChordSymbolLine extends MyComponent {
     private static int markFontSizeFor(int boxH) {
         int size = MIN_CHORD_FONT;
         while (size < 80) {
-            FontMetrics fm = metrics().getFontMetrics(new Font("SansSerif", Font.BOLD, size + 1));
+            FontMetrics fm = metrics().getFontMetrics(DrawKit.fontAcords(size + 1));
             if (lineStep(fm) > boxH) break;
             size++;
         }
@@ -507,7 +508,7 @@ public class MyChordSymbolLine extends MyComponent {
         int boxH = markBoxHeight();
         if (nMarks * boxH <= available) return;      // el cas normal: hi caben
         markBoxHOverride = Math.max(8, available / nMarks);
-        markFontOverride = new Font("SansSerif", Font.BOLD, markFontSizeFor(markBoxHOverride));
+        markFontOverride = DrawKit.fontAcords(markFontSizeFor(markBoxHOverride));
     }
 
     /** Torna la pila de marques a la mida normal (una línia d'acord per marca). */
@@ -913,7 +914,7 @@ public class MyChordSymbolLine extends MyComponent {
             DrawKit.triangletDAtac(g, ax, ayTip);
         }
 
-        DrawKit.font(g, prevFont);
+        DrawKit.restauraFont(g, prevFont);
     }
 
     // -----------------------------------------------------------------------
@@ -930,7 +931,7 @@ public class MyChordSymbolLine extends MyComponent {
      * bottom of the chord strip.  Returns the height of the drawn box.
      */
     private int drawTempoMark(int col, int bpm, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "" + bpm, COLOR_TEMPO_BG, MarkKind.TEMPO, g, offscreen, existingYOff);
+        return drawChangeMark(col, "" + bpm, MarkKind.TEMPO, g, offscreen, existingYOff);
     }
 
     /**
@@ -944,7 +945,7 @@ public class MyChordSymbolLine extends MyComponent {
         } catch (Exception ex) {
             text = "?";
         }
-        return drawChangeMark(col, text, COLOR_KEY_BG, MarkKind.KEY, g, offscreen, existingYOff);
+        return drawChangeMark(col, text, MarkKind.KEY, g, offscreen, existingYOff);
     }
 
     /**
@@ -964,7 +965,7 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private int drawTransposeMark(int col, int semitones, Graphics2D g, boolean offscreen, int existingYOff) {
         String txt = "t" + (semitones > 0 ? "+" : "") + semitones;
-        return drawChangeMark(col, txt, COLOR_TRANSPOSE_BG, MarkKind.TRANSPOSE, g, offscreen, existingYOff);
+        return drawChangeMark(col, txt, MarkKind.TRANSPOSE, g, offscreen, existingYOff);
     }
 
     /**
@@ -978,7 +979,7 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     private int drawVolumeMark(int col, int velocity, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "v" + velocity, COLOR_VOLUME_BG, MarkKind.VOLUME, g, offscreen, existingYOff);
+        return drawChangeMark(col, "v" + velocity, MarkKind.VOLUME, g, offscreen, existingYOff);
     }
 
     /**
@@ -997,13 +998,12 @@ public class MyChordSymbolLine extends MyComponent {
      * height is one chord line ({@link #markBoxHeight}), not what the font
      * would ask for, and it is returned so the caller can stack the next one.
      */
-    private int drawChangeMark(int col, String text, Color bgColor, MarkKind kind,
+    private int drawChangeMark(int col, String text, MarkKind kind,
                                Graphics2D g, boolean offscreen, int existingYOff) {
         Font prevFont = g.getFont();
-        DrawKit.font(g, getMarkFont());
+        DrawKit.comencaMarques(g, getMarkFont());
         FontMetrics fm = g.getFontMetrics();
-        int pad  = 2;
-        int boxW = fm.stringWidth(text) + 2 * pad;
+        int boxW = fm.stringWidth(text) + 2 * DrawKit.MARGE_DE_MARCA;
         // La caixa fa una línia d'acord d'alt i la lletra s'hi centra, o sigui
         // que una marca i una línia del símbol del costat fan el mateix.
         int boxH = markBoxHeight();
@@ -1016,11 +1016,7 @@ public class MyChordSymbolLine extends MyComponent {
         int boxX    = cellX;
         int boxY    = cellTop + stripH - TRIANGLE_SPACE - boxH - existingYOff;
 
-        // Color per contrast amb el fons: els fons foscos segueixen amb text
-        // blanc, i el groc de la transposició el necessita negre.
-        int textTop = boxY + (boxH - (fm.getAscent() + fm.getDescent())) / 2;
-        DrawKit.marca(g, boxX, boxY, boxW, boxH, bgColor, ColorSets.getSeparatorColor(bgColor),
-                text, boxX + pad, textTop + fm.getAscent());
+        DrawKit.marca(g, boxX, boxY, boxW, boxH, kind.dibuix(), text);
 
         // Només el buffer de pantalla registra rectangles i pinta la selecció:
         // l'exportació a PDF reutilitza aquest mètode amb un altre Graphics2D.
@@ -1036,7 +1032,7 @@ public class MyChordSymbolLine extends MyComponent {
             DrawKit.marcaSeleccionada(g, boxX, boxY, boxW, boxH);
         }
 
-        DrawKit.font(g, prevFont);
+        DrawKit.restauraFont(g, prevFont);
         return boxH;
     }
 
@@ -1153,7 +1149,7 @@ public class MyChordSymbolLine extends MyComponent {
             if (!needsDrawing) return;
             markBoxes.clear();
             // Clear background
-            DrawKit.esborra(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
+            DrawKit.fons(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
 
             Map<Integer, Chord> chords = score.getChordSimbolLine();
             int numCols = score.getNumCols();
@@ -1193,7 +1189,7 @@ public class MyChordSymbolLine extends MyComponent {
                 int vel0Shown = (vel0 != null) ? vel0 : currentTrackVelocity();
                 yOff += drawVolumeMark(0, vel0Shown, offscreenGraphics, true, yOff);
                 if (yOff > 0) {
-                    DrawKit.font(offscreenGraphics, getMarkFont());
+                    DrawKit.comencaMarques(offscreenGraphics, getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
                     int pad = 2;
                     int maxW = fm.stringWidth("" + tempo0) + 2 * pad;
@@ -1227,7 +1223,7 @@ public class MyChordSymbolLine extends MyComponent {
                     yOff += drawVolumeMark(col, velCur, offscreenGraphics, true, yOff);
                 }
                 if (yOff > 0) {
-                    DrawKit.font(offscreenGraphics, getMarkFont());
+                    DrawKit.comencaMarques(offscreenGraphics, getMarkFont());
                     FontMetrics fm = offscreenGraphics.getFontMetrics();
                     int pad = 2;
                     if (sc.tempo != null) {

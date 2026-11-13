@@ -8,7 +8,6 @@ package dodecagraphone.model.component;
 import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
-import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
@@ -554,7 +553,7 @@ public class MyButtonPanel extends MyComponent {
         }
 //        System.out.println("MyButtonPanel::draw black: (pX,pY,w,h) = (" +
 //                (int) screenPosX + "," + (int) screenPosY + "," + (int) width + "," + (int) height + ")");
-        DrawKit.rectangle(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height, ColorSets.getColorFons());
+        DrawKit.fonsDelPanellDeBotons(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height);
         for (MyButton button : this.buttons.values()) {
             button.draw(g);
         }

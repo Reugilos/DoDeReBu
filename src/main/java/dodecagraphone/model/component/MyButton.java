@@ -7,8 +7,6 @@ package dodecagraphone.model.component;
 
 import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
-import dodecagraphone.model.color.ColorSets;
-import static dodecagraphone.model.color.ColorSets.BUTO;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.Color;
@@ -43,9 +41,9 @@ public class MyButton extends MyComponent {
     /** Current color of the button. */
     protected Color color;
     /** Color while the button is being pressed. */
-    protected Color colorPressed = ColorSets.getIluminatColor(BUTO);
+    protected Color colorPressed = DrawKit.aparencaDeBoto(true);
     /** Color of the button when it is not pressed. */
-    protected Color colorUnpressed = ColorSets.getEncesColor(BUTO);
+    protected Color colorUnpressed = DrawKit.aparencaDeBoto(false);
     /**
      * [CA] True mentre el botó està premut. És {@code volatile} perquè
      * l'escriuen els events de ratolí (EDT) i el llegeixen els fils de
@@ -106,10 +104,7 @@ public class MyButton extends MyComponent {
             }
         }
         once = false;
-        FontMetrics fm = g.getFontMetrics();
-        float tx = (float)(screenPosX + (width  - fm.stringWidth(text)) / 2.0);
-        float ty = (float)(screenPosY + (height + fm.getAscent() - fm.getDescent()) / 2.0);
-        DrawKit.boto(g, (int) screenPosX, (int) screenPosY, (int) width, (int) height, this.color, text, tx, ty);
+        DrawKit.boto(g, screenPosX, screenPosY, width, height, this.color, text);
     }
 
     /**

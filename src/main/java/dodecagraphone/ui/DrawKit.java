@@ -5,11 +5,13 @@
  */
 package dodecagraphone.ui;
 
+import dodecagraphone.model.color.ColorSets;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
@@ -17,36 +19,44 @@ import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.util.List;
 
 /**
- * [CA] La capa de dibuix de l'aplicació: <b>totes</b> les crides que pinten
- * (a la pantalla, als buffers offscreen i a les imatges del PDF i l'SVG) passen
- * per aquí, i cap altra classe no toca directament els mètodes de pintar de
- * {@link Graphics2D}. Canviar l'aspecte gràfic és canviar aquesta classe: el
- * tema (colors, gruixos, guions i fonts) és a dalt de tot, i cada mètode diu
- * <i>què</i> es dibuixa (una cel·la, una barra de compàs, la caixa d'una marca),
- * no amb quina primitiva.
+ * [CA] La capa de dibuix de l'aplicació: <b>tot l'aspecte gràfic viu aquí</b>.
+ * Cap altra classe no pinta amb {@link Graphics2D} ni tria un color, un gruix,
+ * una font o on va un text dins de la seva caixa. Canviar el disseny és canviar
+ * aquesta classe.
  * <p>
- * Els mètodes són estàtics i reben el {@code Graphics2D}: no es crea cap objecte
- * per crida, i el {@code drawSquare} de la graella en fa milers per redibuix.
- * Els traços i els colors del tema es creen una sola vegada.
+ * <b>El repartiment.</b> Els components decideixen <i>on</i> va cada cosa (el
+ * rectangle d'una cel·la, d'una tecla, d'una marca), perquè la mateixa geometria
+ * serveix per saber què hi ha sota el ratolí. DrawKit decideix <i>com es veu</i>:
+ * els colors, els traços, les fonts i la posició del text dins de la caixa. Per
+ * això els mètodes reben l'<b>estat</b> del que dibuixen (la nota, si sona, si
+ * el botó és premut, de quin tipus és la marca) i no un color.
  * <p>
- * <b>La regla d'aquesta capa és no canviar res del que es veu</b> mentre no es
- * toqui el tema: cada mètode reprodueix exactament les crides que hi havia al
- * lloc d'on ve, en el mateix ordre i deixant el context amb el mateix estat. Els
- * que deixaven un color o un traç posats sense restaurar-los segueixen fent el
- * mateix, perquè el codi de després pot comptar-hi.
+ * <b>Les aparences.</b> Alguns components guarden l'estat visual com un valor
+ * calculat d'avançada (una cel·la, una tecla o un botó en saben l'aparença i la
+ * canvien quan sona o es prem). Aquests valors només poden sortir de la
+ * <b>paleta</b> d'aquesta classe ({@code aparencaDe…}): són opacs per als
+ * components, que els guarden i els tornen a passar sense mirar-los.
  * <p>
- * Les consultes que no pinten (la font actual, les {@code FontMetrics}) es
- * queden on són: formen part del càlcul de la composició i no canvien l'aspecte.
+ * <b>La fontaneria</b> (copiar buffers, retallar, preparar un context) també
+ * passa per aquí, perquè cap crida a {@code Graphics2D} quedi fora; no és
+ * disseny. Les consultes que no pinten ({@code getFontMetrics}, {@code getFont})
+ * es queden als components: formen part del càlcul de la composició.
  * <p>
- * [EN] The application's drawing layer: <b>every</b> painting call (screen,
- * offscreen buffers, PDF and SVG images) goes through here. Changing the look
- * means changing this class: the theme (colours, widths, dashes, fonts) is at
- * the top, and each method says <i>what</i> is drawn, not with which primitive.
- * Methods are static and take the {@code Graphics2D}; nothing is allocated per
- * call. Until the theme is changed, every method reproduces exactly the calls it
- * replaced, in the same order and leaving the same context state.
+ * <b>Mentre no es toqui el tema, no canvia res del que es veu</b>: cada mètode
+ * reprodueix les crides que substituïa, en el mateix ordre i deixant el context
+ * amb el mateix estat (també els que deixaven un color posat).
+ * <p>
+ * Els mètodes són estàtics i no creen cap objecte per crida.
+ * <p>
+ * [EN] The application's drawing layer: <b>the whole look lives here</b>. No
+ * other class paints with {@code Graphics2D} or picks a colour, a stroke, a font
+ * or where a text goes inside its box. Components decide <i>where</i> things go
+ * (that geometry also serves hit-testing); DrawKit decides <i>how they look</i>,
+ * so methods take the <b>state</b> of what they draw, not a colour. Stored visual
+ * states ("appearances") can only come from this class's palette.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -62,91 +72,88 @@ public final class DrawKit {
 
     // ── Colors ───────────────────────────────────────────────────────────────
 
-    /** [CA] Fons dels buffers i de les franges. / [EN] Buffer and strip background. */
-    public static final Color FONS = Color.WHITE;
-    /** [CA] Tinta per defecte: línies, vores, text. / [EN] Default ink. */
-    public static final Color TINTA = Color.BLACK;
-    /** [CA] Separador entre files de la graella. / [EN] Grid row divider. */
-    public static final Color SEPARADOR_DE_FILA = Color.GRAY;
-    /** [CA] Fons de la nota amb puntet. / [EN] Dotted note background. */
-    public static final Color FONS_NOTA_PUNTEJADA = Color.BLACK;
-    /** [CA] Text de la nota amb puntet. / [EN] Dotted note text. */
-    public static final Color TEXT_NOTA_PUNTEJADA = Color.WHITE;
-    /** [CA] Selecció de la graella: farciment i vora. / [EN] Grid selection fill and border. */
-    public static final Color SELECCIO_FARCIMENT = new Color(0, 100, 255);
-    public static final float SELECCIO_FARCIMENT_ALFA = 0.3f;
-    public static final Color SELECCIO_VORA = new Color(0, 50, 200);
-    public static final float SELECCIO_VORA_ALFA = 0.8f;
-    /** [CA] Selecció de la lletra (amb alfa al color). / [EN] Lyrics selection (alpha in the colour). */
-    public static final Color SELECCIO_LLETRA_FARCIMENT = new Color(0, 90, 190, 60);
-    public static final Color SELECCIO_LLETRA_VORA = new Color(0, 90, 190, 160);
-    /** [CA] Marca seleccionada: filet exterior i marc. / [EN] Selected mark: outer rule and frame. */
-    public static final Color MARCA_SELECCIONADA_FILET = Color.BLACK;
-    public static final Color MARCA_SELECCIONADA_MARC = Color.YELLOW;
-    /** [CA] Lletra confirmada i lletra en edició. / [EN] Committed and in-edit lyrics. */
-    public static final Color LLETRA = Color.BLACK;
-    public static final Color LLETRA_EN_EDICIO = Color.DARK_GRAY;
-    /** [CA] Cursor d'edició de la lletra. / [EN] Lyrics edit cursor. */
-    public static final Color CURSOR_DE_TEXT = Color.BLUE;
-    /** [CA] Botó del format d'acords. / [EN] Chord format button. */
-    public static final Color BOTO_DE_FORMAT = new Color(220, 230, 255);
-    /** [CA] Línia d'estat: fons i text. / [EN] Status line background and text. */
-    public static final Color FONS_LINIA_DESTAT = Color.GRAY;
-    public static final Color TEXT_LINIA_DESTAT = Color.WHITE;
-    /** [CA] Text dels botons. / [EN] Button text. */
-    public static final Color TEXT_DE_BOTO = Color.WHITE;
-    /** [CA] Text d'una tecla mentre sona. / [EN] Text of a sounding key. */
-    public static final Color TEXT_TECLA_ENCESA = Color.BLACK;
+    private static final Color FONS = Color.WHITE;
+    private static final Color TINTA = Color.BLACK;
+    private static final Color SEPARADOR_DE_FILA = Color.GRAY;
+    private static final Color FONS_NOTA_PUNTEJADA = Color.BLACK;
+    private static final Color TEXT_NOTA_PUNTEJADA = Color.WHITE;
+    private static final Color SELECCIO_FARCIMENT = new Color(0, 100, 255);
+    private static final float SELECCIO_FARCIMENT_ALFA = 0.3f;
+    private static final Color SELECCIO_VORA = new Color(0, 50, 200);
+    private static final float SELECCIO_VORA_ALFA = 0.8f;
+    private static final Color SELECCIO_LLETRA_FARCIMENT = new Color(0, 90, 190, 60);
+    private static final Color SELECCIO_LLETRA_VORA = new Color(0, 90, 190, 160);
+    private static final Color MARCA_SELECCIONADA_FILET = Color.BLACK;
+    private static final Color MARCA_SELECCIONADA_MARC = Color.YELLOW;
+    private static final Color LLETRA = Color.BLACK;
+    private static final Color LLETRA_EN_EDICIO = Color.DARK_GRAY;
+    private static final Color CURSOR_DE_TEXT = Color.BLUE;
+    private static final Color BOTO_DE_FORMAT = new Color(220, 230, 255);
+    private static final Color FONS_LINIA_DESTAT = Color.GRAY;
+    private static final Color TEXT_LINIA_DESTAT = Color.WHITE;
+    private static final Color TEXT_DE_BOTO = Color.WHITE;
+    private static final Color TEXT_TECLA_QUE_SONA = Color.BLACK;
+    /** [CA] Tecla del PDF sense color a la paleta. / [EN] PDF key fallback. */
+    private static final Color TECLA_SENSE_COLOR = Color.LIGHT_GRAY;
+
+    /**
+     * [CA] Els quatre tipus de marca de canvi de la franja d'acords, cadascun
+     * amb el seu fons. El text pren el color que hi contrasti.
+     * [EN] The four change-mark kinds, each with its background.
+     */
+    public enum Marca {
+        TEMPO(new Color(0, 90, 190)),
+        TONALITAT(new Color(140, 0, 30)),
+        VOLUM(new Color(0, 130, 55)),
+        TRANSPOSICIO(new Color(235, 200, 0));
+
+        private final Color fons;
+
+        Marca(Color fons) {
+            this.fons = fons;
+        }
+    }
 
     // ── Traços ───────────────────────────────────────────────────────────────
 
-    private static final float[] GUIONS_DE_TEMPS = {15, 3};
-    /** [CA] Barra de compàs, al buffer. / [EN] Measure line, in the buffer. */
-    public static final Stroke TRAC_COMPAS = new BasicStroke(1.5f);
-    /**
-     * [CA] Barra de compàs dibuixada damunt de la pantalla, sobre la del buffer
-     * (que així no es perd quan el fit anacrusis comprimeix la imatge).
-     * [EN] Measure line drawn on screen, over the buffer's one.
-     */
-    public static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(2f);
-    /** [CA] Línia de temps, discontínua. / [EN] Dashed beat line. */
-    public static final Stroke TRAC_TEMPS = new BasicStroke(1, BasicStroke.CAP_BUTT,
-            BasicStroke.JOIN_BEVEL, 0, GUIONS_DE_TEMPS, 0);
-    /** [CA] Separador de files. / [EN] Row divider. */
-    public static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(0.2f);
-    /** [CA] Vora esquerra d'una nota. / [EN] Note left edge. */
-    public static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(2f);
-    /** [CA] Doble barra final: la gruixuda i la prima. / [EN] Final double bar. */
-    public static final Stroke TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(3);
-    public static final Stroke TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(2);
-    public static final int DOBLE_BARRA_SEPARACIO = 4;
-    /** [CA] Barra de reproducció. / [EN] Play bar. */
-    public static final Stroke TRAC_BARRA_DE_REPRODUCCIO = new BasicStroke(3f);
-    /** [CA] Marca seleccionada: filet i marc. / [EN] Selected mark rule and frame. */
-    public static final Stroke TRAC_MARCA_FILET = new BasicStroke(1f);
-    public static final Stroke TRAC_MARCA_MARC = new BasicStroke(3f);
-    /** [CA] Cursor de la lletra. / [EN] Lyrics cursor. */
-    public static final Stroke TRAC_CURSOR = new BasicStroke(2f);
+    private static final Stroke TRAC_COMPAS = new BasicStroke(1.5f);
+    /** [CA] La barra de compàs damunt de la pantalla és més gruixuda que la del buffer. */
+    private static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(2f);
+    private static final Stroke TRAC_TEMPS = new BasicStroke(1, BasicStroke.CAP_BUTT,
+            BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
+    private static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(0.2f);
+    private static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(2f);
+    private static final Stroke TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(3);
+    private static final Stroke TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(2);
+    private static final int DOBLE_BARRA_SEPARACIO = 4;
+    private static final Stroke TRAC_BARRA_DE_REPRODUCCIO = new BasicStroke(3f);
+    private static final Stroke TRAC_MARCA_FILET = new BasicStroke(1f);
+    private static final Stroke TRAC_MARCA_MARC = new BasicStroke(3f);
+    private static final Stroke TRAC_CURSOR = new BasicStroke(2f);
 
     // ── Fonts ────────────────────────────────────────────────────────────────
 
-    /** [CA] Família dels acords i de les marques. / [EN] Chord and mark family. */
-    public static final String FAMILIA_ACORDS = "SansSerif";
-    public static final int ESTIL_ACORDS = Font.BOLD;
-    /** [CA] Família de la lletra. / [EN] Lyrics family. */
-    public static final String FAMILIA_LLETRA = "SansSerif";
-    public static final int ESTIL_LLETRA = Font.PLAIN;
-    /** [CA] Família de la interfície (botons, teclat, rètols). / [EN] UI family. */
-    public static final String FAMILIA_INTERFICIE = "Dialog";
-    public static final int ESTIL_INTERFICIE = Font.BOLD;
+    private static final String FAMILIA_ACORDS = "SansSerif";
+    private static final int ESTIL_ACORDS = Font.BOLD;
+    private static final String FAMILIA_LLETRA = "SansSerif";
+    private static final int ESTIL_LLETRA = Font.PLAIN;
+    private static final String FAMILIA_INTERFICIE = "Dialog";
+    private static final int ESTIL_INTERFICIE = Font.BOLD;
+    /** [CA] La lletra d'una tecla és una fracció de la seva alçada. */
+    private static final double FONT_DE_TECLA_PER_ALCADA = 0.65;
+    private static final int FONT_DE_TECLA_MINIMA = 8;
 
     // ── Mides ────────────────────────────────────────────────────────────────
 
-    /** [CA] Trianglet d'atac d'un acord: mitja amplada i alçada. / [EN] Chord attack triangle. */
-    public static final int TRIANGLET_MITJA_AMPLADA = 4;
-    public static final int TRIANGLET_ALCADA = 6;
-    /** [CA] Arrodoniment del botó de format. / [EN] Format button corner arc. */
-    public static final int BOTO_DE_FORMAT_ARC = 4;
+    private static final int TRIANGLET_MITJA_AMPLADA = 4;
+    private static final int TRIANGLET_ALCADA = 6;
+    private static final int BOTO_DE_FORMAT_ARC = 4;
+    /**
+     * [CA] Marge del text dins de la caixa d'una marca. És públic perquè la
+     * franja d'acords el necessita per saber quant ocupa una marca.
+     * [EN] Text padding inside a mark box (the chord strip needs it for layout).
+     */
+    public static final int MARGE_DE_MARCA = 2;
 
     /** [CA] Font dels acords i de les marques, a la mida donada. / [EN] Chord/mark font. */
     public static Font fontAcords(int mida) {
@@ -158,178 +165,117 @@ public final class DrawKit {
         return new Font(FAMILIA_LLETRA, ESTIL_LLETRA, mida);
     }
 
-    /** [CA] Font de la interfície, a la mida donada. / [EN] UI font. */
-    public static Font fontInterficie(int mida) {
-        return new Font(FAMILIA_INTERFICIE, ESTIL_INTERFICIE, mida);
-    }
-
     // ═════════════════════════════════════════════════════════════════════════
-    //  CONTEXT
+    //  PALETA: les aparences que guarden els components
     // ═════════════════════════════════════════════════════════════════════════
 
-    /**
-     * [CA] Prepara el {@code Graphics2D} d'un buffer offscreen (graella, acords,
-     * lletra): antialiàsing de formes.
-     * [EN] Prepares an offscreen buffer's graphics: shape antialiasing.
-     */
-    public static void preparaOffscreen(Graphics2D g) {
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    /** [CA] Una cel·la amb nota. / [EN] A cell holding a note. */
+    public static Color aparencaDeNota(int midi) {
+        return ColorSets.getEncesColor(midi % 12);
+    }
+
+    /** [CA] Una cel·la amb una nota que sona. / [EN] A cell whose note is sounding. */
+    public static Color aparencaDeNotaQueSona() {
+        return ColorSets.getColorFons();
+    }
+
+    /** [CA] Una fila buida, a la vista de pentagrama. / [EN] An empty row, staff view. */
+    public static Color aparencaDePauta(int midi) {
+        return ColorSets.getPentagramaColor(midi);
     }
 
     /**
-     * [CA] Prepara el {@code Graphics2D} de l'exportació SVG: antialiàsing de
-     * formes i de text.
-     * [EN] Prepares the SVG export graphics.
+     * [CA] Una fila buida, a la vista de plantilla: s'il·lumina si la nota és
+     * del patró.
+     * [EN] An empty row, template view.
      */
-    public static void preparaSvg(Graphics2D g) {
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    public static Color aparencaDelPatro(int midi, List<Integer> patro) {
+        return ColorSets.getChoiceColor(midi, patro);
     }
 
-    /** [CA] Posa la font. / [EN] Sets the font. */
-    public static void font(Graphics2D g, Font f) {
-        g.setFont(f);
+    /** [CA] Una tecla en silenci. / [EN] A silent key. */
+    public static Color aparencaDeTecla(int midi) {
+        return ColorSets.getEncesColor(midi % 12);
     }
 
-    /** [CA] Posa el color de la tinta. / [EN] Sets the ink colour. */
-    public static void tinta(Graphics2D g, Color c) {
-        g.setColor(c);
+    /** [CA] Una tecla que sona. / [EN] A sounding key. */
+    public static Color aparencaDeTeclaQueSona() {
+        return ColorSets.getColorFons();
     }
 
-    /** [CA] Retalla a un rectangle i torna el retall d'abans. / [EN] Clips; returns the old clip. */
-    public static Shape retalla(Graphics2D g, int x, int y, int w, int h) {
-        Shape abans = g.getClip();
-        g.clipRect(x, y, w, h);
-        return abans;
+    /** [CA] Un botó, premut o no. / [EN] A button, pressed or not. */
+    public static Color aparencaDeBoto(boolean premut) {
+        return premut ? ColorSets.getIluminatColor(ColorSets.BUTO)
+                      : ColorSets.getEncesColor(ColorSets.BUTO);
     }
 
-    /** [CA] Torna el retall desat. / [EN] Restores a saved clip. */
-    public static void restauraRetall(Graphics2D g, Shape retall) {
-        g.setClip(retall);
+    /** [CA] La tinta del text sobre una nota (i de la seva vora). */
+    private static Color tintaDeNota(int midi) {
+        return ColorSets.getGridSquareFontColor(midi);
     }
 
-    /** [CA] Fixa el retall a un rectangle (no l'intersecta). / [EN] Sets the clip. */
-    public static void posaRetall(Graphics2D g, int x, int y, int w, int h) {
-        g.setClip(x, y, w, h);
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════
-    //  FONS I IMATGES
-    // ═════════════════════════════════════════════════════════════════════════
-
-    /** [CA] Esborra un rectangle amb el color de fons. / [EN] Clears a rectangle. */
-    public static void esborra(Graphics2D g, int x, int y, int w, int h) {
-        g.setColor(FONS);
-        g.fillRect(x, y, w, h);
+    /** [CA] Negre o blanc, el que contrasti amb el fons. */
+    private static Color tintaQueContrasta(Color fons) {
+        return ColorSets.getSeparatorColor(fons);
     }
 
     /**
-     * [CA] Omple un buffer nou més ample amb el contingut del vell i esborra la
-     * resta. És el que fan els tres buffers en créixer.
-     * [EN] Fills a wider new buffer with the old one and clears the rest.
+     * [CA] El color dels slides del teclat. Ara és sempre el de la línia del
+     * pentagrama. Abans de DrawKit, {@code MySlide} en calculava dues
+     * alternatives que després sobreescrivia; es deixen aquí per si es volen
+     * recuperar:
+     * <ul>
+     *   <li>vista de pentagrama: {@code ColorSets.getPentagramaColor(midi)};</li>
+     *   <li>vista de plantilla: {@code ColorSets.getChoiceColor(midi, patro)}.</li>
+     * </ul>
+     * [EN] Keyboard slide colour; former alternatives kept above.
      */
-    public static void ampliaOffscreen(Graphics2D nou, Image vell, int ampladaVella, int ampladaNova, int alcada) {
-        preparaOffscreen(nou);
-        nou.drawImage(vell, 0, 0, null);
-        nou.setColor(FONS);
-        nou.fillRect(ampladaVella, 0, ampladaNova - ampladaVella, alcada);
-    }
-
-    /** [CA] Copia una porció d'una imatge (origen → destí). / [EN] Blits an image region. */
-    public static void copiaImatge(Graphics2D g, Image img,
-            int dx1, int dy1, int dx2, int dy2, int sx1, int sy1, int sx2, int sy2) {
-        g.drawImage(img, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2, null);
-    }
-
-    /**
-     * [CA] Copia una porció d'una imatge estirant-la amb interpolació bilineal
-     * (la franja de lletra del PDF, que es compensa en vertical).
-     * [EN] Blits an image region with bilinear stretching.
-     */
-    public static void copiaImatgeEstirada(Graphics2D g, Image img,
-            int dx1, int dy1, int dx2, int dy2, int sx1, int sy1, int sx2, int sy2) {
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.drawImage(img, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2, null);
-    }
-
-    /**
-     * [CA] Dibuixa una imatge amb una transformació (escala horitzontal del fit
-     * anacrusis), amb interpolació bilineal, dins d'un retall, i torna el
-     * context com estava.
-     * [EN] Draws an image with a transform, bilinear, inside a clip.
-     */
-    public static void imatgeTransformada(Graphics2D g, BufferedImage img, AffineTransform at,
-            int clipX, int clipY, int clipW, int clipH) {
-        Shape oldClip = g.getClip();
-        Object oldInterp = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
-        g.clipRect(clipX, clipY, clipW, clipH);
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.drawImage(img, at, null);
-        if (oldInterp != null) {
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, oldInterp);
-        }
-        g.setClip(oldClip);
-    }
-
-    /** [CA] Omple un rectangle d'un color. / [EN] Fills a rectangle. */
-    public static void rectangle(Graphics2D g, int x, int y, int w, int h, Color c) {
-        g.setColor(c);
-        g.fillRect(x, y, w, h);
-    }
-
-    /** [CA] Vora d'un component (càmera, franges, panell de botons). / [EN] Component border. */
-    public static void voraDeComponent(Graphics2D g, int x, int y, int w, int h) {
-        g.setColor(TINTA);
-        g.drawRect(x, y, w, h);
+    private static Color colorDelSlide() {
+        return ColorSets.getEncesColor(ColorSets.LINIA_PENTA);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
     //  GRAELLA
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** [CA] El fons d'una cel·la (pauta, patró o nota). / [EN] A cell's fill. */
-    public static void cella(Graphics2D g, int x, int y, int w, int h, Color c) {
-        g.setColor(c);
+    /** [CA] Una cel·la de la graella, amb l'aparença que tingui. / [EN] A grid cell. */
+    public static void casella(Graphics2D g, int x, int y, int w, int h, Color aparenca) {
+        g.setColor(aparenca);
         g.fillRect(x, y, w, h);
     }
 
-    /**
-     * [CA] El nom d'una nota dins de la seva cel·la, en la font actual.
-     * [EN] A note name inside its cell, in the current font.
-     */
-    public static void nomDeNota(Graphics2D g, String nom, int x, int y, int w, int h, Color c) {
-        g.setColor(c);
+    /** [CA] El nom d'una nota dins de la seva cel·la, en la font actual. / [EN] A note name. */
+    public static void nomDeNota(Graphics2D g, String nom, int x, int y, int w, int h, int midi) {
+        g.setColor(tintaDeNota(midi));
         g.drawString(nom, (int) (2 + x + w / 3), (int) (y + h * 0.8));
     }
 
     /**
-     * [CA] La vora esquerra d'una nota, que separa notes contigües. Deixa el
-     * color posat.
+     * [CA] La vora esquerra d'una nota, que separa notes contigües; del color
+     * del nom, perquè es llegeixin com una sola marca. Deixa el color posat.
      * [EN] A note's left edge. Leaves the colour set.
      */
-    public static void voraDeNota(Graphics2D g, int x, int y, int h, Color c) {
+    public static void voraDeNota(Graphics2D g, int x, int y, int h, int midi) {
         Stroke abans = g.getStroke();
-        g.setColor(c);
+        g.setColor(tintaDeNota(midi));
         g.setStroke(TRAC_VORA_DE_NOTA);
         g.drawLine(x + 1, y, x + 1, y + h - 1);
         g.setStroke(abans);
     }
 
     /**
-     * [CA] La nota amb puntet: un quadrat negre de costat {@code h} i el nom a
-     * sobre. Deixa el color del text posat.
-     * [EN] The dotted note: a black square and the name on top.
+     * [CA] La nota amb puntet: un quadrat de costat {@code h} i el nom a sobre,
+     * a {@code (textX, y + h)}. Deixa el color del text posat.
+     * [EN] The dotted note: a square and the name on top.
      */
-    public static void notaPuntejada(Graphics2D g, int x, int y, int h, String nom, int textX, int textY) {
+    public static void notaPuntejada(Graphics2D g, int x, int y, int h, String nom, int textX) {
         g.setColor(FONS_NOTA_PUNTEJADA);
         g.fillRect(x, y, h, h);
         g.setColor(TEXT_NOTA_PUNTEJADA);
-        g.drawString(nom, textX, textY);
+        g.drawString(nom, textX, y + h);
     }
 
-    /** [CA] El separador horitzontal de dalt d'una cel·la. Deixa el color posat. / [EN] Row divider. */
+    /** [CA] El separador de dalt d'una cel·la. Deixa el color posat. / [EN] Row divider. */
     public static void separadorDeFila(Graphics2D g, int x1, int x2, int y) {
         Stroke abans = g.getStroke();
         g.setStroke(TRAC_SEPARADOR_DE_FILA);
@@ -356,28 +302,33 @@ public final class DrawKit {
     //  LÍNIES DE TEMPS, COMPÀS I FINAL
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** [CA] Barra de compàs vertical. Deixa la tinta posada. / [EN] Measure line. */
+    /** [CA] Barra de compàs, al buffer. Deixa la tinta posada. / [EN] Measure line. */
     public static void barraDeCompas(Graphics2D g, int x, int y1, int y2) {
-        Stroke abans = g.getStroke();
-        g.setStroke(TRAC_COMPAS);
-        g.setColor(TINTA);
-        g.drawLine(x, y1, x, y2);
-        g.setStroke(abans);
+        linia(g, TRAC_COMPAS, x, y1, y2);
     }
 
-    /** [CA] Barra de compàs damunt de la pantalla. Deixa la tinta posada. / [EN] On-screen measure line. */
+    /**
+     * [CA] Barra de compàs dibuixada damunt de la pantalla, sobre la del buffer
+     * (que així no es perd quan el fit anacrusis comprimeix la imatge).
+     * [EN] On-screen measure line.
+     */
     public static void barraDeCompasEnPantalla(Graphics2D g, int x, int y1, int y2) {
-        Stroke abans = g.getStroke();
-        g.setStroke(TRAC_COMPAS_PANTALLA);
-        g.setColor(TINTA);
-        g.drawLine(x, y1, x, y2);
-        g.setStroke(abans);
+        linia(g, TRAC_COMPAS_PANTALLA, x, y1, y2);
     }
 
-    /** [CA] Línia de temps vertical, discontínua. Deixa la tinta posada. / [EN] Beat line. */
+    /** [CA] Línia de temps, discontínua. Deixa la tinta posada. / [EN] Beat line. */
     public static void barraDeTemps(Graphics2D g, int x, int y1, int y2) {
+        linia(g, TRAC_TEMPS, x, y1, y2);
+    }
+
+    /** [CA] Barra de reproducció. Deixa la tinta posada. / [EN] Play bar. */
+    public static void barraDeReproduccio(Graphics2D g, int x, int y1, int y2) {
+        linia(g, TRAC_BARRA_DE_REPRODUCCIO, x, y1, y2);
+    }
+
+    private static void linia(Graphics2D g, Stroke trac, int x, int y1, int y2) {
         Stroke abans = g.getStroke();
-        g.setStroke(TRAC_TEMPS);
+        g.setStroke(trac);
         g.setColor(TINTA);
         g.drawLine(x, y1, x, y2);
         g.setStroke(abans);
@@ -394,26 +345,17 @@ public final class DrawKit {
         g.setStroke(abans);
     }
 
-    /** [CA] Barra de reproducció. Deixa la tinta posada. / [EN] Play bar. */
-    public static void barraDeReproduccio(Graphics2D g, int x, int y1, int y2) {
-        Stroke abans = g.getStroke();
-        g.setStroke(TRAC_BARRA_DE_REPRODUCCIO);
-        g.setColor(TINTA);
-        g.drawLine(x, y1, x, y2);
-        g.setStroke(abans);
-    }
-
     // ═════════════════════════════════════════════════════════════════════════
     //  FRANJA D'ACORDS
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** [CA] Comença un símbol d'acord: tinta i font. / [EN] Starts a chord symbol. */
-    public static void comencaAcord(Graphics2D g, Font f) {
+    /** [CA] Comença un símbol d'acord en la font donada. / [EN] Starts a chord symbol. */
+    public static void comencaAcord(Graphics2D g, Font font) {
         g.setColor(TINTA);
-        g.setFont(f);
+        g.setFont(font);
     }
 
-    /** [CA] Un tros de text d'un acord, en la tinta i la font actuals. / [EN] A chord text piece. */
+    /** [CA] Un tros del símbol d'acord començat. / [EN] A chord text piece. */
     public static void textAcord(Graphics2D g, String text, int x, int y) {
         g.drawString(text, x, y);
     }
@@ -421,7 +363,7 @@ public final class DrawKit {
     /**
      * [CA] El trianglet d'atac d'un acord, amb la punta a {@code (x, yPunta)}.
      * Torna el color d'abans.
-     * [EN] A chord's attack triangle; restores the previous colour.
+     * [EN] A chord's attack triangle; restores the colour.
      */
     public static void triangletDAtac(Graphics2D g, int x, int yPunta) {
         int[] xs = {x - TRIANGLET_MITJA_AMPLADA, x + TRIANGLET_MITJA_AMPLADA, x};
@@ -432,17 +374,24 @@ public final class DrawKit {
         g.setColor(abans);
     }
 
+    /** [CA] Comença les marques de canvi en la font donada. / [EN] Starts the change marks. */
+    public static void comencaMarques(Graphics2D g, Font font) {
+        g.setFont(font);
+    }
+
     /**
-     * [CA] La caixa d'una marca de canvi i el seu text, del color que contrasti
-     * amb el fons.
-     * [EN] A change mark's box and its contrasting text.
+     * [CA] Una marca de canvi: la caixa amb el fons del seu tipus i el rètol
+     * centrat en vertical, del color que hi contrasti. Fa servir la font de
+     * {@link #comencaMarques}.
+     * [EN] A change mark: the box in its kind's colour and the contrasting label.
      */
-    public static void marca(Graphics2D g, int x, int y, int w, int h, Color fons, Color text,
-            String rotul, int textX, int textY) {
-        g.setColor(fons);
+    public static void marca(Graphics2D g, int x, int y, int w, int h, Marca tipus, String rotul) {
+        FontMetrics fm = g.getFontMetrics();
+        g.setColor(tipus.fons);
         g.fillRect(x, y, w, h);
-        g.setColor(text);
-        g.drawString(rotul, textX, textY);
+        g.setColor(tintaQueContrasta(tipus.fons));
+        int dalt = y + (h - (fm.getAscent() + fm.getDescent())) / 2;
+        g.drawString(rotul, x + MARGE_DE_MARCA, dalt + fm.getAscent());
     }
 
     /** [CA] El marc d'una marca seleccionada, per fora de la caixa. / [EN] Selected mark frame. */
@@ -461,27 +410,31 @@ public final class DrawKit {
     //  LLETRA
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** [CA] Una síl·laba, en la tinta i la font actuals. / [EN] A syllable. */
+    /** [CA] Prepara el buffer de la lletra amb la seva font. / [EN] Sets the lyrics font. */
+    public static void fontDeLletra(Graphics2D g, int mida) {
+        g.setFont(fontLletra(mida));
+    }
+
+    /**
+     * [CA] Comença a escriure lletra: la confirmada o la que s'està editant.
+     * [EN] Starts writing lyrics: committed or being edited.
+     */
+    public static void comencaLletra(Graphics2D g, boolean enEdicio) {
+        g.setColor(enEdicio ? LLETRA_EN_EDICIO : LLETRA);
+    }
+
+    /** [CA] Una síl·laba. / [EN] A syllable. */
     public static void sillaba(Graphics2D g, String text, int x, int y) {
         g.drawString(text, x, y);
     }
 
-    /**
-     * [CA] Una síl·laba comprimida en horitzontal (fit anacrusis), en la tinta i
-     * la font actuals.
-     * [EN] A horizontally scaled syllable.
-     */
+    /** [CA] Una síl·laba comprimida en horitzontal (fit anacrusis). / [EN] A scaled syllable. */
     public static void sillabaEscalada(Graphics2D g, String text, int x, int y, double escalaX) {
         AffineTransform oldAt = g.getTransform();
         g.translate(x, y);
         g.scale(escalaX, 1.0);
         g.drawString(text, 0, 0);
         g.setTransform(oldAt);
-    }
-
-    /** [CA] Activa l'antialiàsing de formes a la pantalla. / [EN] Shape antialiasing on screen. */
-    public static void antialiasing(Graphics2D g) {
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     }
 
     /** [CA] La franja translúcida de la selecció de la lletra. / [EN] Lyrics selection band. */
@@ -502,29 +455,36 @@ public final class DrawKit {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  INTERFÍCIE: rètols, botons, teclat i línia d'estat
+    //  PANTALLA I FRANGES
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** [CA] Un text en la tinta indicada i la font actual. / [EN] Text in the given ink. */
-    public static void text(Graphics2D g, String text, int x, int y, Color c) {
-        g.setColor(c);
-        g.drawString(text, x, y);
+    /** [CA] El fons de la pantalla sencera, amb la font de la interfície. / [EN] Screen background. */
+    public static void fonsDePantalla(Graphics2D g, int w, int h, int midaDeLletra) {
+        g.setFont(new Font(FAMILIA_INTERFICIE, ESTIL_INTERFICIE, midaDeLletra));
+        g.setColor(FONS);
+        g.fillRect(0, 0, w, h);
     }
 
-    /** [CA] Un text en la tinta i la font actuals. / [EN] Text in the current ink. */
-    public static void text(Graphics2D g, String text, int x, int y) {
-        g.drawString(text, x, y);
+    /**
+     * [CA] El fons d'un rectangle: un buffer que es torna a dibuixar, la part de
+     * les franges que queda al costat del teclat, una imatge de l'exportació.
+     * [EN] A background rectangle.
+     */
+    public static void fons(Graphics2D g, int x, int y, int w, int h) {
+        g.setColor(FONS);
+        g.fillRect(x, y, w, h);
     }
 
-    /** [CA] Un text en coordenades decimals, en la tinta i la font actuals. / [EN] Float text. */
-    public static void text(Graphics2D g, String text, float x, float y) {
-        g.drawString(text, x, y);
-    }
-
-    /** [CA] Línia vertical d'un píxel en la tinta. / [EN] One-pixel vertical rule. */
-    public static void filetVertical(Graphics2D g, int x, int y1, int y2) {
+    /** [CA] La línia que separa el teclat de la partitura. / [EN] Keyboard/score separator. */
+    public static void separadorDeTeclat(Graphics2D g, int x, int y1, int y2) {
         g.setColor(TINTA);
         g.drawLine(x, y1, x, y2);
+    }
+
+    /** [CA] El rètol d'una franja («Acords», «Lletra»), en la font actual. / [EN] Strip label. */
+    public static void rotulDeFranja(Graphics2D g, String text, int x, int y) {
+        g.setColor(TINTA);
+        g.drawString(text, x, y);
     }
 
     /** [CA] El botó del format d'acords, amb el seu rètol. / [EN] Chord format button. */
@@ -536,26 +496,182 @@ public final class DrawKit {
         g.drawString(rotul, textX, textY);
     }
 
-    /** [CA] Un botó: el fons del seu color i el text centrat. / [EN] A button. */
-    public static void boto(Graphics2D g, int x, int y, int w, int h, Color c, String text, float textX, float textY) {
-        g.setColor(c);
-        g.fillRect(x, y, w, h);
-        g.setColor(TEXT_DE_BOTO);
-        g.drawString(text, textX, textY);
+    /** [CA] La vora d'un component (càmera, franges, panell de botons). / [EN] Component border. */
+    public static void voraDeComponent(Graphics2D g, int x, int y, int w, int h) {
+        g.setColor(TINTA);
+        g.drawRect(x, y, w, h);
     }
 
-    /** [CA] El triangle de la tònica al teclat, amb la punta a la dreta. / [EN] Tonic triangle. */
-    public static void triangleDeTonica(Graphics2D g, int punta, int cy, int costat, Color c) {
+    // ═════════════════════════════════════════════════════════════════════════
+    //  BOTONS, TECLAT I LÍNIA D'ESTAT
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** [CA] El fons del panell de botons. / [EN] Button panel background. */
+    public static void fonsDelPanellDeBotons(Graphics2D g, int x, int y, int w, int h) {
+        g.setColor(ColorSets.getColorFons());
+        g.fillRect(x, y, w, h);
+    }
+
+    /**
+     * [CA] Un botó, amb el seu rètol centrat, en la font actual.
+     * [EN] A button with its centred label.
+     */
+    public static void boto(Graphics2D g, double x, double y, double w, double h, Color aparenca, String rotul) {
+        FontMetrics fm = g.getFontMetrics();
+        float tx = (float) (x + (w - fm.stringWidth(rotul)) / 2.0);
+        float ty = (float) (y + (h + fm.getAscent() - fm.getDescent()) / 2.0);
+        g.setColor(aparenca);
+        g.fillRect((int) x, (int) y, (int) w, (int) h);
+        g.setColor(TEXT_DE_BOTO);
+        g.drawString(rotul, tx, ty);
+    }
+
+    /** [CA] Una tecla, amb l'aparença que tingui. / [EN] A key. */
+    public static void tecla(Graphics2D g, int x, int y, int w, int h, Color aparenca) {
+        g.setColor(aparenca == null ? TECLA_SENSE_COLOR : aparenca);
+        g.fillRect(x, y, w, h);
+    }
+
+    /**
+     * [CA] El nom d'una tecla, en una lletra proporcional a la seva alçada.
+     * Mentre sona, en negre; si no, del color que toca a la nota.
+     * [EN] A key name, sized to the key; black while sounding.
+     */
+    public static void nomDeTecla(Graphics2D g, String nom, double x, double y, double h, int midi, boolean sona) {
+        int baseY = (int) (y + h * 0.8);
+        Font abans = g.getFont();
+        int mida = Math.max(FONT_DE_TECLA_MINIMA, (int) (h * FONT_DE_TECLA_PER_ALCADA));
+        if (mida != abans.getSize()) g.setFont(abans.deriveFont((float) mida));
+        g.setColor(sona ? TEXT_TECLA_QUE_SONA : tintaDeNota(midi));
+        g.drawString(nom, (float) x, (float) baseY);
+        g.setFont(abans);
+    }
+
+    /** [CA] El slide del costat d'una tecla. / [EN] A key's slide. */
+    public static void slide(Graphics2D g, int x, int y, int w, int h) {
+        g.setColor(colorDelSlide());
+        g.fillRect(x, y, w, h);
+    }
+
+    /** [CA] El triangle que marca la tònica al teclat, amb la punta a la dreta. / [EN] Tonic triangle. */
+    public static void triangleDeTonica(Graphics2D g, int punta, int cy, int costat, int midi) {
         int[] xp = {punta - costat, punta - costat, punta};
         int[] yp = {cy - costat / 2, cy + costat / 2, cy};
-        g.setColor(c);
+        g.setColor(tintaDeNota(midi));
         g.fillPolygon(xp, yp, 3);
     }
 
-    /** [CA] El fons de la línia d'estat. Deixa la tinta del text posada. / [EN] Status line. */
+    /**
+     * [CA] Acaba el teclat deixant la tinta per defecte posada: el que es dibuixa
+     * després pot comptar-hi.
+     * [EN] Ends the keyboard leaving the default ink set.
+     */
+    public static void tancaTeclat(Graphics2D g) {
+        g.setColor(TINTA);
+    }
+
+    /** [CA] El fons de la línia d'estat. / [EN] Status line background. */
     public static void fonsDeLiniaDEstat(Graphics2D g, int x, int y, int w, int h) {
         g.setColor(FONS_LINIA_DESTAT);
         g.fillRect(x, y, w, h);
         g.setColor(TEXT_LINIA_DESTAT);
+    }
+
+    /** [CA] Una línia de text de la línia d'estat, en la font actual. / [EN] A status line text line. */
+    public static void textDeLiniaDEstat(Graphics2D g, String text, int x, int y) {
+        g.setColor(TEXT_LINIA_DESTAT);
+        g.drawString(text, x, y);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  FONTANERIA: buffers, imatges, retalls i context
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** [CA] Prepara el context d'un buffer offscreen. / [EN] Prepares an offscreen buffer. */
+    public static void preparaOffscreen(Graphics2D g) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    }
+
+    /** [CA] Prepara el context de l'exportació SVG. / [EN] Prepares the SVG export. */
+    public static void preparaSvg(Graphics2D g) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    }
+
+    /** [CA] Prepara la pantalla per a text comprimit nítid. / [EN] Antialiasing on screen. */
+    public static void preparaTextComprimit(Graphics2D g) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    }
+
+    /** [CA] Torna a posar una font desada abans. / [EN] Restores a saved font. */
+    public static void restauraFont(Graphics2D g, Font font) {
+        g.setFont(font);
+    }
+
+    /** [CA] Torna a posar una tinta desada abans. / [EN] Restores a saved ink. */
+    public static void restauraTinta(Graphics2D g, Color tinta) {
+        g.setColor(tinta);
+    }
+
+    /** [CA] Retalla a un rectangle i torna el retall d'abans. / [EN] Clips; returns the old clip. */
+    public static Shape retalla(Graphics2D g, int x, int y, int w, int h) {
+        Shape abans = g.getClip();
+        g.clipRect(x, y, w, h);
+        return abans;
+    }
+
+    /** [CA] Torna el retall desat. / [EN] Restores a saved clip. */
+    public static void restauraRetall(Graphics2D g, Shape retall) {
+        g.setClip(retall);
+    }
+
+    /** [CA] Fixa el retall a un rectangle (no l'intersecta). / [EN] Sets the clip. */
+    public static void posaRetall(Graphics2D g, int x, int y, int w, int h) {
+        g.setClip(x, y, w, h);
+    }
+
+    /**
+     * [CA] Omple un buffer nou més ample amb el contingut del vell i posa fons a
+     * la resta.
+     * [EN] Fills a wider new buffer with the old one.
+     */
+    public static void ampliaOffscreen(Graphics2D nou, Image vell, int ampladaVella, int ampladaNova, int alcada) {
+        preparaOffscreen(nou);
+        nou.drawImage(vell, 0, 0, null);
+        nou.setColor(FONS);
+        nou.fillRect(ampladaVella, 0, ampladaNova - ampladaVella, alcada);
+    }
+
+    /** [CA] Copia una porció d'una imatge. / [EN] Blits an image region. */
+    public static void copiaImatge(Graphics2D g, Image img,
+            int dx1, int dy1, int dx2, int dy2, int sx1, int sy1, int sx2, int sy2) {
+        g.drawImage(img, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2, null);
+    }
+
+    /** [CA] Copia una porció d'una imatge estirant-la, bilineal. / [EN] Bilinear stretched blit. */
+    public static void copiaImatgeEstirada(Graphics2D g, Image img,
+            int dx1, int dy1, int dx2, int dy2, int sx1, int sy1, int sx2, int sy2) {
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2, null);
+    }
+
+    /**
+     * [CA] Dibuixa una imatge amb una transformació, bilineal, dins d'un retall,
+     * i torna el context com estava.
+     * [EN] Draws a transformed image, bilinear, inside a clip.
+     */
+    public static void imatgeTransformada(Graphics2D g, BufferedImage img, AffineTransform at,
+            int clipX, int clipY, int clipW, int clipH) {
+        Shape oldClip = g.getClip();
+        Object oldInterp = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
+        g.clipRect(clipX, clipY, clipW, clipH);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, at, null);
+        if (oldInterp != null) {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, oldInterp);
+        }
+        g.setClip(oldClip);
     }
 }

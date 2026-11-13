@@ -835,7 +835,7 @@ public class MyLyrics extends MyComponent {
         DrawKit.preparaOffscreen(offscreenGraphics);
         // Font explícita proporcional a l'alçada de fila per garantir llegibilitat.
         int fontSize = Math.max(12, (int) Math.round(Settings.getRowHeight() * 0.85));
-        DrawKit.font(offscreenGraphics, DrawKit.fontLletra(fontSize));
+        DrawKit.fontDeLletra(offscreenGraphics, fontSize);
         Utilities.printOutWithPriority(false,
                 "MyLyrics::initOffscreen: w=" + w + ", h=" + h + ", fontSize=" + fontSize);
         needsDrawing = true;
@@ -865,7 +865,7 @@ public class MyLyrics extends MyComponent {
         synchronized (offscreenGraphics) {
             if (!needsDrawing) return;
             // Clear background
-            DrawKit.esborra(offscreenGraphics, 0, 0,
+            DrawKit.fons(offscreenGraphics, 0, 0,
                     offscreenImage.getWidth(), offscreenImage.getHeight());
 
             int numCols = score.getNumCols();
@@ -878,7 +878,7 @@ public class MyLyrics extends MyComponent {
             // vegi borrós, i evita blitejar aquest buffer per no duplicar-lo.
             List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
             if (segs != null && !segs.isEmpty()) {
-                DrawKit.tinta(offscreenGraphics, DrawKit.LLETRA);
+                DrawKit.comencaLletra(offscreenGraphics, false);
                 for (LyricSegment seg : segs) {
                     drawSegment(seg, offscreenGraphics);
                 }
@@ -886,7 +886,7 @@ public class MyLyrics extends MyComponent {
 
             // Preview: text currently being typed (shown in dark-grey).
             if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {
-                DrawKit.tinta(offscreenGraphics, DrawKit.LLETRA_EN_EDICIO);
+                DrawKit.comencaLletra(offscreenGraphics, true);
                 LyricSegment preview = new LyricSegment(
                         editCursorCol, editTrack,
                         editBuffer.toString(), previewRow, 0);
@@ -938,14 +938,14 @@ public class MyLyrics extends MyComponent {
                 java.awt.Font prevFont = g.getFont();
                 Color prevColor = g.getColor();
                 Shape prevClip = DrawKit.retalla(g, x1, y1, w, h);
-                DrawKit.antialiasing(g);
-                DrawKit.font(g, offscreenGraphics.getFont());
+                DrawKit.preparaTextComprimit(g);
+                DrawKit.restauraFont(g, offscreenGraphics.getFont());
                 FontMetrics fmScreen = g.getFontMetrics();
                 double rowH = Settings.getRowHeight();
                 // Segments confirmats
                 List<LyricSegment> segsScreen = lyricsByTrack.get(displayTrackId);
                 if (segsScreen != null) {
-                    DrawKit.tinta(g, DrawKit.LLETRA);
+                    DrawKit.comencaLletra(g, false);
                     for (LyricSegment seg : segsScreen) {
                         int segX = colToScreenX(seg.col) + 2;
                         int segY = (int) Math.round(screenPosY + seg.row * rowH
@@ -955,14 +955,14 @@ public class MyLyrics extends MyComponent {
                 }
                 // Preview (text en curs d'edició)
                 if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {
-                    DrawKit.tinta(g, DrawKit.LLETRA_EN_EDICIO);
+                    DrawKit.comencaLletra(g, true);
                     int previewX = colToScreenX(editCursorCol) + 2;
                     int textY = (int) Math.round(screenPosY + previewRow * rowH
                             + (rowH + fmScreen.getAscent() - fmScreen.getDescent()) / 2.0);
                     DrawKit.sillabaEscalada(g, editBuffer.toString(), previewX, textY, fitScaleXScreen);
                 }
-                DrawKit.font(g, prevFont);
-                DrawKit.tinta(g, prevColor);
+                DrawKit.restauraFont(g, prevFont);
+                DrawKit.restauraTinta(g, prevColor);
                 DrawKit.restauraRetall(g, prevClip);
             }
 

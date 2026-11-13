@@ -58,13 +58,16 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 
 ### La capa de dibuix (`DrawKit`)
 
-**Res no pinta directament amb `Graphics2D`**: totes les crides de dibuix (pantalla, buffers offscreen, files del PDF, SVG) passen per `ui/DrawKit`, que són mètodes estàtics que reben el `Graphics2D` i diuen *què* es dibuixa (`cella`, `nomDeNota`, `barraDeCompas`, `marca`, `boto`…). Els colors, els traços i les famílies de font viuen a dalt de tot de la classe: **canviar l'aspecte gràfic és canviar DrawKit**, no els components. Les consultes que no pinten (`getFontMetrics`, `getFont`) es queden on són, perquè formen part del càlcul de la composició.
+**Tot l'aspecte gràfic viu a `ui/DrawKit`.** Cap altra classe no pinta amb `Graphics2D` ni tria un color, un gruix, una font o on va un text dins de la seva caixa: **canviar el disseny és canviar DrawKit**. Són mètodes estàtics que reben el `Graphics2D` i no creen cap objecte per crida (`drawSquare` en fa milers per redibuix).
 
-- **No es crea cap objecte per crida**: els traços del tema es creen un sol cop. `drawSquare` es crida milers de vegades per redibuix.
-- **Cada mètode reprodueix exactament les crides que substituïa**, també els que deixen el color o el traç posats sense restaurar-los: el codi de després pot comptar-hi.
+- **El repartiment**: els components decideixen *on* va cada cosa (el rectangle d'una cel·la, d'una tecla, d'una marca), perquè aquella geometria també serveix per saber què hi ha sota el ratolí. DrawKit decideix *com es veu*. Per això els mètodes reben l'**estat** (la nota `midi`, si sona, el tipus de marca `DrawKit.Marca`) i no un color: `nomDeNota(…, midi)`, `nomDeTecla(…, midi, sona)`, `marca(…, Marca.TEMPO, rotul)`.
+- **Les aparences**: la cel·la, la tecla i el botó guarden l'estat visual com un `Color` calculat d'avançada (canvia quan sona o es prem). Aquests valors **només surten de la paleta** de DrawKit (`aparencaDeNota`, `aparencaDePauta`, `aparencaDelPatro`, `aparencaDeTecla`, `aparencaDeBoto`…), i els components els guarden i els tornen a passar sense mirar-los.
+- **`ColorSets` només el crida DrawKit** (i `initColors`, el controlador). No s'hi ha esborrat res: els colors que avui no es fan servir s'hi queden per si es volen recuperar.
+- **La fontaneria** (copiar buffers, retalls, preparar un context, tornar una font o una tinta desades) també hi passa, perquè cap crida quedi fora. Les consultes que no pinten (`getFontMetrics`, `getFont`) es queden als components: formen part de la composició.
+- **Cada mètode reprodueix exactament les crides que substituïa**, també els que deixen el color o el traç posats: el codi de després pot comptar-hi (`tancaTeclat` existeix per això).
 - **Dues barres de compàs**: la del buffer fa 1,5 px (`barraDeCompas`) i la que es redibuixa damunt de la pantalla, 2 px (`barraDeCompasEnPantalla`). Ja era així abans de DrawKit.
-- **La migració (13-11-26) es va comprovar píxel a píxel**: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`; i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
-- Les classes de `model/proves/` no hi passen: són proves soltes.
+- **El PDF vectorial té la seva pròpia capa**, `PdfDrawKit` (PDFBox, no `Graphics2D`), amb els seus colors. Les classes de `model/proves/` i les fonts dels quadres de diàleg de Swing queden fora.
+- **La migració (13-11-26) es va comprovar píxel a píxel** en dues passades: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`, i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
 
 ### Altura dibuixada vs altura que sona (`displayOffset`)
 

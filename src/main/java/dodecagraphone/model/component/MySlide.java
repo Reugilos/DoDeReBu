@@ -8,10 +8,8 @@ package dodecagraphone.model.component;
 import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
-import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
-import java.awt.Color;
 import java.awt.Graphics2D;
 
 /**
@@ -33,7 +31,6 @@ import java.awt.Graphics2D;
  */
 public class MySlide extends MyComponent {
     private final int keyId;
-    private Color color_fill;
     private final int midi;
     private String position;
     private int aux = 0;
@@ -60,21 +57,6 @@ public class MySlide extends MyComponent {
         this.position = "notSelected";
     }
 
-    /**
-     * [CA] Actualitza el color de fons del slide segons el mode de visualització actiu
-     * (pentagrama o escala/mode).
-     * <p>
-     * [EN] Updates the fill colour of the slide according to the active display mode
-     * (pentagram strips or scale/mode).
-     */
-    public void setColor(){
-            if (this.controller.getAllPurposeScore().isShowPentagramaStrips()){
-                color_fill = ColorSets.getPentagramaColor(midi);
-            } else {
-                color_fill = ColorSets.getChoiceColor(midi,this.controller.getAllPurposeScore().getChoice().getChoiceList());
-            }
-            color_fill = ColorSets.getEncesColor(ColorSets.LINIA_PENTA);
-    }
 
     /**
      * [CA] Estableix les dimensions del slide en estat "selected" (nota seleccionada).
@@ -95,7 +77,6 @@ public class MySlide extends MyComponent {
         }
         this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
         this.height = nRows * Settings.getRowHeight();
-        this.setColor();
     }
 
     /**
@@ -116,7 +97,6 @@ public class MySlide extends MyComponent {
         }
         this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
         this.height = nRows * Settings.getRowHeight();
-        this.setColor();
     }
 
     /**
@@ -130,7 +110,6 @@ public class MySlide extends MyComponent {
         this.width = 0;
         this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
         this.height = nRows * Settings.getRowHeight();
-        this.setColor();
     }
 
     /**
@@ -188,7 +167,7 @@ public class MySlide extends MyComponent {
         once = false;
         aux++;
         if (width>0){
-            DrawKit.rectangle(g, (int) screenPosX, (int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height), color_fill);
+            DrawKit.slide(g, (int) screenPosX, (int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height));
         }
     }
 }

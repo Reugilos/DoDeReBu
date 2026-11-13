@@ -7,7 +7,6 @@ package dodecagraphone.ui;
 
 import dodecagraphone.MyController;
 import dodecagraphone.model.ToneRange;
-import dodecagraphone.model.color.ColorSets;
 import dodecagraphone.model.component.*;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -581,7 +580,7 @@ public class DodecagramPdfPrinter {
         int rowImgW = keyW + fullSliceW;
         BufferedImage row = new BufferedImage(rowImgW, totalH, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = row.createGraphics();
-        DrawKit.esborra(g, 0, 0, rowImgW, totalH);
+        DrawKit.fons(g, 0, 0, rowImgW, totalH);
 
         // Narrow keyboard (covers only the grid rows)
         if (keyImg != null && keyW > 0) {
@@ -648,18 +647,16 @@ public class DodecagramPdfPrinter {
         int w = 4 * colWidthPx;
         BufferedImage img = new BufferedImage(w, gridH, BufferedImage.TYPE_INT_RGB);
         Graphics2D gk = img.createGraphics();
-        DrawKit.esborra(gk, 0, 0, w, gridH);
+        DrawKit.fons(gk, 0, 0, w, gridH);
 
         double rowH      = (double) gridH / nKeys;
         boolean showChoice = keyboard != null && keyboard.isShowChoice();
-        Color slideColor = ColorSets.getEncesColor(ColorSets.LINIA_PENTA);
         double keyFrac   = Settings.KEY_WIDTH_REDUCTION;
         double slideFrac = 1.0 - keyFrac;
 
         for (int keyId = 0; keyId < nKeys; keyId++) {
             int midi = ToneRange.keyIdToMidi(keyId);
-            Color keyColor = ColorSets.getEncesColor(midi % 12);
-            if (keyColor == null) keyColor = Color.LIGHT_GRAY;
+            Color keyColor = DrawKit.aparencaDeTecla(midi);
 
             int y     = (int) Math.round(keyId * rowH);
             int nextY = (int) Math.round((keyId + 1) * rowH);
@@ -670,14 +667,14 @@ public class DodecagramPdfPrinter {
                 int slideW = (int) Math.round(slideFrac * w);
                 int keyW2  = w - slideW;
                 if (selected) {
-                    DrawKit.cella(gk, 0, y, slideW, h, slideColor);
-                    DrawKit.cella(gk, slideW, y, keyW2, h, keyColor);
+                    DrawKit.slide(gk, 0, y, slideW, h);
+                    DrawKit.tecla(gk, slideW, y, keyW2, h, keyColor);
                 } else {
-                    DrawKit.cella(gk, 0, y, keyW2, h, keyColor);
-                    DrawKit.cella(gk, keyW2, y, slideW, h, slideColor);
+                    DrawKit.tecla(gk, 0, y, keyW2, h, keyColor);
+                    DrawKit.slide(gk, keyW2, y, slideW, h);
                 }
             } else {
-                DrawKit.cella(gk, 0, y, w, h, keyColor);
+                DrawKit.tecla(gk, 0, y, w, h, keyColor);
             }
         }
 
@@ -692,12 +689,12 @@ public class DodecagramPdfPrinter {
                 int h     = Math.max(1, nextY - y - 1);
                 int triH  = Math.max(5, (int)(h * 0.55));
                 int cy    = y + h / 2;
-                DrawKit.triangleDeTonica(gk, w - 2, cy, triH, ColorSets.getGridSquareFontColor(midi));
+                DrawKit.triangleDeTonica(gk, w - 2, cy, triH, midi);
             }
         }
 
         // Right-edge separator between keyboard and score
-        DrawKit.filetVertical(gk, w - 1, 0, gridH - 1);
+        DrawKit.separadorDeTeclat(gk, w - 1, 0, gridH - 1);
         gk.dispose();
         return img;
     }
