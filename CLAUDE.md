@@ -26,7 +26,9 @@ El codi font és a `src/main/java/dodecagraphone/`.
 | `model/component/MyCamera.java` | Viewport (càmera) |
 | `ui/AppConfig.java` / `AppPaths.java` | Càrrega/desat de config.properties |
 | `ui/I18n.java` | Internacionalització (`I18n.t("clau")`, `I18n.f("clau", arg)`) |
-| `ui/DrawKit.java` | La capa de dibuix: totes les crides de pintar i el tema (colors, traços, fonts) |
+| `ui/DrawKit.java` | La capa de dibuix: totes les crides de pintar; els valors surten del tema |
+| `ui/Tema.java` | El tema gràfic: carrega el fitxer triat a `config/temes/`, amb el clàssic de reserva |
+| `resources/temes/*.properties` | Els temes de fàbrica (`classic`, `manual`), que es copien a la carpeta |
 | `resources/i18n/messages_ca.properties` | Textos en català |
 | `resources/i18n/messages_en.properties` | Textos en anglès |
 | `resources/i18n/messages_es.properties` | Textos en castellà |
@@ -70,11 +72,23 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - **Branques**: `drawkit` (congelada a l'etiqueta `drawkit-13-11-26`) és la migració, sense cap canvi visual. Les proves de disseny es fan a **`disseny-grafic`**, que en surt. El javadoc de la classe explica què es pot tocar (tema, paleta, cos dels mètodes) i què s'ha de respectar (signatures, caixes, velocitat).
 - **La migració (13-11-26) es va comprovar píxel a píxel** en dues passades: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`, i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
 
+### Els temes gràfics (`Tema`)
+
+**Els valors de DrawKit no són al codi: són en un tema**, un fitxer de text a la carpeta `temes`, al costat del `config.properties` (`<arrel>/config/temes/` des del NetBeans; al costat de l'exe a la portable). El config en tria un amb `tema=<nom>`; per defecte, `classic`.
+
+- **Sembra**: el programa porta dins els temes de fàbrica (`resources/temes/classic.properties` i `manual.properties`) i, en arrencar, copia a la carpeta **només els que hi falten**. Un tema editat no es trepitja mai; per recuperar el de fàbrica, s'esborra el fitxer. La llista dels que es copien és `Tema.DE_FABRICA`: un tema nou de fàbrica s'hi ha d'afegir.
+- **Reserva**: el clàssic de dins del programa respon per a tot. Un tema que no existeix, un fitxer que no es pot llegir, una clau que falta o un valor mal escrit cauen al clàssic, amb un avís a la consola. L'aplicació no es pot quedar sense colors.
+- **Format**: colors `r,g,b` o `r,g,b,a`, o `colorsets` (el color el decideix `ColorSets`, com feia l'aplicació abans dels temes); gruixos amb punt decimal; guions `llarg,buit`; estils `normal`/`negreta`; interruptors `si`/`no`. `nota.vora.color = text` vol dir del color del text de la nota. Una família de lletra que no estigui instal·lada cau a SansSerif.
+- **Es llegeix una sola vegada**, quan es carrega la classe DrawKit: canviar de tema demana reiniciar. Els valors queden en camps `static final`, o sigui que dibuixar costa el mateix que abans.
+- **Clàssic = `master`**: comprovat píxel a píxel (30 imatges), llevat de la correcció de les cel·les velles de `drawSquare` (vegeu els criteris), que canvia el fons d'aquelles cel·les amb qualsevol tema.
+- **`TemesTest`** (un `main`, com els altres): tota clau que DrawKit demana ha de ser al clàssic, i els temes de fàbrica han de tenir les mateixes claus. Afegir un valor nou al tema vol dir afegir-lo a **tots** els fitxers de `resources/temes/`, i també a l'ajuda si cal.
+- La clau `tema` surt al `config.properties` de fàbrica (`config.tema.comment`) i a la taula de configuració de l'ajuda (`help.config.tema.desc`), en els tres idiomes.
+
 ### Criteris de disseny gràfic
 
 Les proves es fan a la branca `disseny-grafic` (vegeu la secció de DrawKit). Aquí s'apunten **els criteris que es decideixen**, amb el perquè, a mesura que es van provant: el que es prova i no agrada també s'hi apunta, perquè no es torni a provar. Fins que no s'hi decideixi res, l'aspecte és el de l'etiqueta `drawkit-13-11-26`, idèntic al de `master`.
 
-**Primera prova (13-11-26): l'estil del manual del DoDeRe-Bú** (`Metallochrome/ManualDus/Guia_Mara/Downloaded Nov 26/DoDeRe-BÚ libro ENG.pdf`, fet per un dissenyador). Tot és a DrawKit; `ColorSets` no es toca, i els colors de les dotze notes són els de sempre. Colors mesurats sobre el PDF:
+**Primera prova (13-11-26): l'estil del manual del DoDeRe-Bú**, ara el tema `manual` (`tema=manual`) (`Metallochrome/ManualDus/Guia_Mara/Downloaded Nov 26/DoDeRe-BÚ libro ENG.pdf`, fet per un dissenyador). Tot és a DrawKit; `ColorSets` no es toca, i els colors de les dotze notes són els de sempre. Colors mesurats sobre el PDF:
 
 - **Pentagrama**: files blanques; les línies del pentagrama en gris càlid (238,236,236) i el do central en rosa (255,214,214). `aparencaDePauta` pregunta a `ColorSets` de quin tipus és la fila i hi posa el color del tema.
 - **Plantilla**: les notes del patró en groc pàl·lid (245,255,171) i la resta en blanc (`aparencaDelPatro`).

@@ -430,6 +430,7 @@ public class MyHelpDialog {
             { "nColsQuarter",                         I18n.t("help.config.resolution.desc") },
             { "nColsScore",                           I18n.t("help.config.capacity.desc") },
             { "autoCorrect",                          I18n.t("help.config.autocorrect.desc") },
+            { "tema",                                 I18n.t("help.config.tema.desc") },
         };
     }
 }

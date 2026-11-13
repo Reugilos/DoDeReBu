@@ -57,7 +57,9 @@ import java.util.List;
  * píxel a píxel al de {@code master}, i és la referència per comparar. El que
  * es toca per canviar l'aspecte és, per ordre:
  * <ol>
- *   <li>el <b>tema</b> (la secció de dalt): colors, traços, fonts i mides;</li>
+ *   <li>el <b>tema</b>: colors, traços, fonts i mides. No és al codi sinó en un
+ *       fitxer de la carpeta {@code temes} (vegeu {@link Tema}), o sigui que
+ *       canviar un valor o fer un tema nou no demana compilar;</li>
  *   <li>la <b>paleta</b> ({@code aparencaDe…}): quin color té cada estat;</li>
  *   <li>el <b>cos</b> d'un mètode, quan el canvi no és de valor sinó de forma
  *       (arrodonir una cel·la, posar el nom en un altre lloc).</li>
@@ -95,116 +97,117 @@ public final class DrawKit {
     //  TEMA
     // ═════════════════════════════════════════════════════════════════════════
 
+    // Tots els valors surten del tema triat al config.properties (vegeu
+    // {@link Tema}): els temes són fitxers de text a la carpeta «temes», i el
+    // clàssic de dins del programa fa de reserva per a qualsevol valor que falti.
+    // Es llegeixen una sola vegada, en carregar-se aquesta classe.
+
+    private static final Tema T = Tema.actual();
+
     // ── Colors ───────────────────────────────────────────────────────────────
 
-    // Estil del manual del DoDeRe-Bú (Guia_Mara, nov. 2026): fons blanc, files
-    // del pentagrama en gris càlid, el do central en rosa, la plantilla en groc
-    // pàl·lid, separadors gris clar d'un píxel, text blanc sobre els colors de
-    // les notes, i plafons en blau clar amb una capçalera gris. Els colors de les
-    // dotze notes són els de ColorSets, que no es toca.
-
-    private static final Color FONS = Color.WHITE;
-    private static final Color TINTA = Color.BLACK;
-    /** [CA] Separadors entre files: gris clar d'un píxel, com al manual. */
-    private static final Color SEPARADOR_DE_FILA = new Color(217, 217, 217);
-    /** [CA] Fila d'espai del pentagrama (entre línies). */
-    private static final Color PAUTA_ESPAI = Color.WHITE;
-    /** [CA] Fila d'una línia del pentagrama: gris càlid molt suau. */
-    private static final Color PAUTA_LINIA = new Color(238, 236, 236);
-    /** [CA] Fila del do central: rosa pàl·lid. */
-    private static final Color PAUTA_DO_CENTRAL = new Color(255, 214, 214);
-    /** [CA] Fila d'una nota de la plantilla: groc pàl·lid. */
-    private static final Color PATRO_TRIAT = new Color(245, 255, 171);
-    /** [CA] Fila fora de la plantilla. */
-    private static final Color PATRO_FORA = Color.WHITE;
-    /** [CA] Text i marques damunt dels colors de les notes i de les tecles. */
-    private static final Color TEXT_SOBRE_NOTA = Color.WHITE;
-    /** [CA] Separació blanca entre dues notes seguides. */
-    private static final Color VORA_DE_NOTA = Color.WHITE;
-    /** [CA] Blau clar dels plafons del manual (panell de botons, botó de format). */
-    private static final Color PLAFO = new Color(219, 231, 249);
-    /** [CA] Gris de la capçalera del manual (línia d'estat). */
-    private static final Color CAPCALERA = new Color(242, 242, 242);
-    /** [CA] Botó en repòs: blanc sobre el plafó blau, com les bafarades del manual. */
-    private static final Color BOTO_NORMAL = Color.WHITE;
-    /** [CA] Botó premut: el blau de la marca de tempo. */
-    private static final Color BOTO_PREMUT = new Color(32, 89, 164);
-    /** [CA] Text fosc dels botons i de la capçalera. */
-    private static final Color TEXT_FOSC = new Color(35, 35, 45);
-    private static final int BOTO_ARC = 12;
-    private static final Color FONS_NOTA_PUNTEJADA = Color.BLACK;
-    private static final Color TEXT_NOTA_PUNTEJADA = Color.WHITE;
-    private static final Color SELECCIO_FARCIMENT = new Color(0, 100, 255);
-    private static final float SELECCIO_FARCIMENT_ALFA = 0.3f;
-    private static final Color SELECCIO_VORA = new Color(0, 50, 200);
-    private static final float SELECCIO_VORA_ALFA = 0.8f;
-    private static final Color SELECCIO_LLETRA_FARCIMENT = new Color(0, 90, 190, 60);
-    private static final Color SELECCIO_LLETRA_VORA = new Color(0, 90, 190, 160);
-    private static final Color MARCA_SELECCIONADA_FILET = Color.BLACK;
-    private static final Color MARCA_SELECCIONADA_MARC = Color.YELLOW;
-    private static final Color LLETRA = Color.BLACK;
-    private static final Color LLETRA_EN_EDICIO = Color.DARK_GRAY;
-    private static final Color CURSOR_DE_TEXT = Color.BLUE;
-    private static final Color BOTO_DE_FORMAT = PLAFO;
-    private static final Color FONS_LINIA_DESTAT = CAPCALERA;
-    private static final Color TEXT_LINIA_DESTAT = TEXT_FOSC;
-    private static final Color TEXT_TECLA_QUE_SONA = Color.BLACK;
+    private static final Color FONS = T.color("fons");
+    private static final Color TINTA = T.color("tinta");
+    private static final Color SEPARADOR_DE_FILA = T.color("graella.separador.color");
+    /** [CA] {@code null} vol dir que el color el decideix ColorSets. */
+    private static final Color PAUTA_ESPAI = T.color("pauta.espai");
+    private static final Color PAUTA_LINIA = T.color("pauta.linia");
+    private static final Color PAUTA_DO_CENTRAL = T.color("pauta.doCentral");
+    private static final Color PATRO_TRIAT = T.color("patro.triat");
+    private static final Color PATRO_FORA = T.color("patro.fora");
+    private static final Color TEXT_SOBRE_NOTA = T.color("nota.text");
+    /** [CA] {@code null}: la vora de la nota va del color del text de la nota. */
+    private static final Color VORA_DE_NOTA = T.color("nota.vora.color");
+    private static final int VORA_DE_NOTA_DESPLACAMENT = T.enter("nota.vora.desplacament");
+    private static final Color FONS_NOTA_PUNTEJADA = T.color("notaPuntejada.fons");
+    private static final Color TEXT_NOTA_PUNTEJADA = T.color("notaPuntejada.text");
+    private static final Color SELECCIO_FARCIMENT = T.color("seleccio.farciment");
+    private static final float SELECCIO_FARCIMENT_ALFA = T.decimal("seleccio.farciment.alfa");
+    private static final Color SELECCIO_VORA = T.color("seleccio.vora");
+    private static final float SELECCIO_VORA_ALFA = T.decimal("seleccio.vora.alfa");
+    private static final Color SELECCIO_LLETRA_FARCIMENT = T.color("seleccioLletra.farciment");
+    private static final Color SELECCIO_LLETRA_VORA = T.color("seleccioLletra.vora");
+    private static final Color MARCA_SELECCIONADA_FILET = T.color("marcaSeleccionada.filet");
+    private static final Color MARCA_SELECCIONADA_MARC = T.color("marcaSeleccionada.marc");
+    private static final Color LLETRA = T.color("lletra.text");
+    private static final Color LLETRA_EN_EDICIO = T.color("lletra.edicio");
+    private static final Color CURSOR_DE_TEXT = T.color("lletra.cursor");
+    private static final Color BOTO_DE_FORMAT = T.color("botoFormat.fons");
+    private static final Color FONS_LINIA_DESTAT = T.color("liniaEstat.fons");
+    private static final Color TEXT_LINIA_DESTAT = T.color("liniaEstat.text");
+    private static final Color PANELL_DE_BOTONS = T.color("panellBotons.fons");
+    private static final Color BOTO_NORMAL = T.color("boto.normal");
+    private static final Color BOTO_PREMUT = T.color("boto.premut");
+    private static final Color TEXT_DE_BOTO = T.color("boto.text");
+    private static final Color TEXT_DE_BOTO_PREMUT = T.color("boto.textPremut");
+    private static final int BOTO_ARC = T.enter("boto.arrodoniment");
+    private static final int BOTO_MARGE = T.enter("boto.marge");
+    private static final Color SLIDE = T.color("slide");
+    private static final Color TEXT_TECLA_QUE_SONA = T.color("tecla.textQueSona");
     /** [CA] Tecla del PDF sense color a la paleta. / [EN] PDF key fallback. */
-    private static final Color TECLA_SENSE_COLOR = Color.LIGHT_GRAY;
+    private static final Color TECLA_SENSE_COLOR = T.color("tecla.senseColor");
+    private static final boolean TEXT_SUAVITZAT = T.si("text.suavitzat");
 
     /**
-     * [CA] Els quatre tipus de marca de canvi de la franja d'acords, cadascun
-     * amb el seu fons. El text pren el color que hi contrasti.
-     * [EN] The four change-mark kinds, each with its background.
+     * [CA] Els quatre tipus de marca de canvi de la franja d'acords. El color de
+     * cadascuna el posa el tema; el text pren el color que hi contrasti.
+     * [EN] The four change-mark kinds; their colours come from the theme.
      */
     public enum Marca {
-        /** [CA] El blau del «60» del manual. */
-        TEMPO(new Color(32, 89, 164)),
-        /** [CA] El morat del «Do» del manual. */
-        TONALITAT(new Color(85, 84, 160)),
-        VOLUM(new Color(22, 132, 96)),
-        TRANSPOSICIO(new Color(240, 205, 0));
+        TEMPO, TONALITAT, VOLUM, TRANSPOSICIO
+    }
 
-        private final Color fons;
+    private static final Color MARCA_TEMPO = T.color("marca.tempo");
+    private static final Color MARCA_TONALITAT = T.color("marca.tonalitat");
+    private static final Color MARCA_VOLUM = T.color("marca.volum");
+    private static final Color MARCA_TRANSPOSICIO = T.color("marca.transposicio");
 
-        Marca(Color fons) {
-            this.fons = fons;
+    private static Color fonsDeMarca(Marca m) {
+        switch (m) {
+            case TEMPO:     return MARCA_TEMPO;
+            case TONALITAT: return MARCA_TONALITAT;
+            case VOLUM:     return MARCA_VOLUM;
+            default:        return MARCA_TRANSPOSICIO;
         }
     }
 
     // ── Traços ───────────────────────────────────────────────────────────────
 
-    private static final Stroke TRAC_COMPAS = new BasicStroke(1.5f);
-    /** [CA] La barra de compàs damunt de la pantalla és més gruixuda que la del buffer. */
-    private static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(2f);
-    /** [CA] Temps: guions curts, com al dodecagrama del manual. */
-    private static final Stroke TRAC_TEMPS = new BasicStroke(1, BasicStroke.CAP_BUTT,
-            BasicStroke.JOIN_BEVEL, 0, new float[]{5, 4}, 0);
-    private static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(1f);
-    private static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(1f);
-    private static final Stroke TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(3);
-    private static final Stroke TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(2);
-    private static final int DOBLE_BARRA_SEPARACIO = 4;
-    private static final Stroke TRAC_BARRA_DE_REPRODUCCIO = new BasicStroke(3f);
-    private static final Stroke TRAC_MARCA_FILET = new BasicStroke(1f);
-    private static final Stroke TRAC_MARCA_MARC = new BasicStroke(3f);
-    private static final Stroke TRAC_CURSOR = new BasicStroke(2f);
+    private static final Stroke TRAC_COMPAS = new BasicStroke(T.decimal("compas.gruix"));
+    /** [CA] La barra de compàs damunt de la pantalla, sobre la del buffer. */
+    private static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(T.decimal("compas.pantalla.gruix"));
+    private static final Stroke TRAC_TEMPS = new BasicStroke(T.decimal("temps.gruix"), BasicStroke.CAP_BUTT,
+            BasicStroke.JOIN_BEVEL, 0, T.decimals("temps.guions"), 0);
+    private static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(T.decimal("graella.separador.gruix"));
+    private static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(T.decimal("nota.vora.gruix"));
+    private static final Stroke TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(T.decimal("dobleBarra.gruixuda"));
+    private static final Stroke TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(T.decimal("dobleBarra.prima"));
+    private static final int DOBLE_BARRA_SEPARACIO = T.enter("dobleBarra.separacio");
+    private static final Stroke TRAC_BARRA_DE_REPRODUCCIO = new BasicStroke(T.decimal("reproduccio.gruix"));
+    private static final Stroke TRAC_MARCA_FILET = new BasicStroke(T.decimal("marcaSeleccionada.filet.gruix"));
+    private static final Stroke TRAC_MARCA_MARC = new BasicStroke(T.decimal("marcaSeleccionada.marc.gruix"));
+    private static final Stroke TRAC_CURSOR = new BasicStroke(T.decimal("lletra.cursor.gruix"));
 
     // ── Fonts ────────────────────────────────────────────────────────────────
 
-    /**
-     * [CA] La lletra del manual és una geomètrica rodona; la més propera que porta
-     * Windows és la Century Gothic. Si no hi és, la SansSerif de Java.
-     */
-    private static final String FAMILIA_GEOMETRICA = familiaDisponible("Century Gothic", "SansSerif");
-    private static final String FAMILIA_ACORDS = FAMILIA_GEOMETRICA;
-    private static final int ESTIL_ACORDS = Font.BOLD;
-    private static final String FAMILIA_LLETRA = FAMILIA_GEOMETRICA;
-    private static final int ESTIL_LLETRA = Font.PLAIN;
-    private static final String FAMILIA_INTERFICIE = FAMILIA_GEOMETRICA;
-    private static final int ESTIL_INTERFICIE = Font.BOLD;
+    private static final String FAMILIA_ACORDS = familiaDisponible(T.text("font.acords"));
+    private static final int ESTIL_ACORDS = T.estil("font.acords.estil");
+    private static final String FAMILIA_LLETRA = familiaDisponible(T.text("font.lletra"));
+    private static final int ESTIL_LLETRA = T.estil("font.lletra.estil");
+    private static final String FAMILIA_INTERFICIE = familiaDisponible(T.text("font.interficie"));
+    private static final int ESTIL_INTERFICIE = T.estil("font.interficie.estil");
+    /** [CA] La lletra d'una tecla és una fracció de la seva alçada. */
+    private static final double FONT_DE_TECLA_PER_ALCADA = T.decimal("tecla.font.proporcio");
+    private static final int FONT_DE_TECLA_MINIMA = T.enter("tecla.font.minima");
 
-    private static String familiaDisponible(String preferida, String alternativa) {
+    /**
+     * [CA] La família demanada si és instal·lada o és una de les lògiques de Java
+     * (Dialog, SansSerif…); si no, la SansSerif.
+     */
+    private static String familiaDisponible(String preferida) {
+        for (String logica : new String[]{"Dialog", "DialogInput", "SansSerif", "Serif", "Monospaced"}) {
+            if (logica.equalsIgnoreCase(preferida)) return logica;
+        }
         try {
             for (String f : java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
                     .getAvailableFontFamilyNames()) {
@@ -212,21 +215,20 @@ public final class DrawKit {
             }
         } catch (Exception ignored) {
         }
-        return alternativa;
+        System.err.println("Tema: la lletra «" + preferida + "» no és instal·lada; es fa servir SansSerif");
+        return "SansSerif";
     }
-    /** [CA] La lletra d'una tecla és una fracció de la seva alçada. */
-    private static final double FONT_DE_TECLA_PER_ALCADA = 0.65;
-    private static final int FONT_DE_TECLA_MINIMA = 8;
 
     // ── Mides ────────────────────────────────────────────────────────────────
 
-    private static final int TRIANGLET_MITJA_AMPLADA = 4;
-    private static final int TRIANGLET_ALCADA = 6;
-    private static final int BOTO_DE_FORMAT_ARC = 4;
+    private static final int TRIANGLET_MITJA_AMPLADA = T.enter("trianglet.mitjaAmplada");
+    private static final int TRIANGLET_ALCADA = T.enter("trianglet.alcada");
+    private static final int BOTO_DE_FORMAT_ARC = T.enter("botoFormat.arrodoniment");
     /**
      * [CA] Marge del text dins de la caixa d'una marca. És públic perquè la
-     * franja d'acords el necessita per saber quant ocupa una marca.
-     * [EN] Text padding inside a mark box (the chord strip needs it for layout).
+     * franja d'acords el necessita per saber quant ocupa una marca; no és del
+     * tema, perquè és composició.
+     * [EN] Text padding inside a mark box (layout, not theme).
      */
     public static final int MARGE_DE_MARCA = 2;
 
@@ -254,24 +256,31 @@ public final class DrawKit {
         return ColorSets.getColorFons();
     }
 
-    /** [CA] Una fila buida, a la vista de pentagrama. / [EN] An empty row, staff view. */
+    /**
+     * [CA] Una fila buida, a la vista de pentagrama. ColorSets diu de quin tipus
+     * és la fila (espai, línia o do central); el color el posa el tema, o
+     * ColorSets mateix si el tema hi diu {@code colorsets}.
+     * [EN] An empty row, staff view.
+     */
     public static Color aparencaDePauta(int midi) {
-        // ColorSets diu de quin tipus és la fila; el color el posa el tema.
         Color c = ColorSets.getPentagramaColor(midi);
-        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.LINIA_PENTA))) return PAUTA_LINIA;
-        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.DO_PENTA))) return PAUTA_DO_CENTRAL;
-        return PAUTA_ESPAI;
+        Color delTema;
+        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.LINIA_PENTA))) delTema = PAUTA_LINIA;
+        else if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.DO_PENTA))) delTema = PAUTA_DO_CENTRAL;
+        else delTema = PAUTA_ESPAI;
+        return delTema != null ? delTema : c;
     }
 
     /**
-     * [CA] Una fila buida, a la vista de plantilla: s'il·lumina si la nota és
-     * del patró.
+     * [CA] Una fila buida, a la vista de plantilla. ColorSets diu si la nota és
+     * del patró; el color el posa el tema, o ColorSets si hi diu {@code colorsets}.
      * [EN] An empty row, template view.
      */
     public static Color aparencaDelPatro(int midi, List<Integer> patro) {
-        // ColorSets diu si la nota és del patró (MARFIL); el color el posa el tema.
         Color c = ColorSets.getChoiceColor(midi, patro);
-        return (c != null && c.equals(ColorSets.getEncesColor(ColorSets.MARFIL))) ? PATRO_TRIAT : PATRO_FORA;
+        boolean triat = c != null && c.equals(ColorSets.getEncesColor(ColorSets.MARFIL));
+        Color delTema = triat ? PATRO_TRIAT : PATRO_FORA;
+        return delTema != null ? delTema : c;
     }
 
     /** [CA] Una tecla en silenci. / [EN] A silent key. */
@@ -286,15 +295,15 @@ public final class DrawKit {
 
     /** [CA] Un botó, premut o no. / [EN] A button, pressed or not. */
     public static Color aparencaDeBoto(boolean premut) {
-        return premut ? BOTO_PREMUT : BOTO_NORMAL;
+        if (premut) {
+            return BOTO_PREMUT != null ? BOTO_PREMUT : ColorSets.getIluminatColor(ColorSets.BUTO);
+        }
+        return BOTO_NORMAL != null ? BOTO_NORMAL : ColorSets.getEncesColor(ColorSets.BUTO);
     }
 
-    /** [CA] La tinta del text sobre una nota (i de la seva vora). */
+    /** [CA] La tinta del text sobre una nota o una tecla. */
     private static Color tintaDeNota(int midi) {
-        // El manual escriu en blanc damunt de totes les notes, també del groc.
-        // L'alternativa de sempre (negre sobre re, ri i mi):
-        // ColorSets.getGridSquareFontColor(midi).
-        return TEXT_SOBRE_NOTA;
+        return TEXT_SOBRE_NOTA != null ? TEXT_SOBRE_NOTA : ColorSets.getGridSquareFontColor(midi);
     }
 
     /** [CA] Negre o blanc, el que contrasti amb el fons. */
@@ -303,8 +312,8 @@ public final class DrawKit {
     }
 
     /**
-     * [CA] El color dels slides del teclat. Ara és sempre el de la línia del
-     * pentagrama. Abans de DrawKit, {@code MySlide} en calculava dues
+     * [CA] El color dels slides del teclat. Amb {@code colorsets}, el de la línia
+     * del pentagrama. Abans de DrawKit, {@code MySlide} en calculava dues
      * alternatives que després sobreescrivia; es deixen aquí per si es volen
      * recuperar:
      * <ul>
@@ -314,9 +323,7 @@ public final class DrawKit {
      * [EN] Keyboard slide colour; former alternatives kept above.
      */
     private static Color colorDelSlide() {
-        // Al manual, la columna dels slides és blanca. El gris de sempre:
-        // ColorSets.getEncesColor(ColorSets.LINIA_PENTA).
-        return FONS;
+        return SLIDE != null ? SLIDE : ColorSets.getEncesColor(ColorSets.LINIA_PENTA);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -341,11 +348,11 @@ public final class DrawKit {
      * [EN] A note's left edge. Leaves the colour set.
      */
     public static void voraDeNota(Graphics2D g, int x, int y, int h, int midi) {
-        // Al manual, dues notes seguides se separen amb un filet blanc.
         Stroke abans = g.getStroke();
-        g.setColor(VORA_DE_NOTA);
+        g.setColor(VORA_DE_NOTA != null ? VORA_DE_NOTA : tintaDeNota(midi));
         g.setStroke(TRAC_VORA_DE_NOTA);
-        g.drawLine(x, y, x, y + h - 1);
+        int xv = x + VORA_DE_NOTA_DESPLACAMENT;
+        g.drawLine(xv, y, xv, y + h - 1);
         g.setStroke(abans);
     }
 
@@ -473,9 +480,10 @@ public final class DrawKit {
      */
     public static void marca(Graphics2D g, int x, int y, int w, int h, Marca tipus, String rotul) {
         FontMetrics fm = g.getFontMetrics();
-        g.setColor(tipus.fons);
+        Color fons = fonsDeMarca(tipus);
+        g.setColor(fons);
         g.fillRect(x, y, w, h);
-        g.setColor(tintaQueContrasta(tipus.fons));
+        g.setColor(tintaQueContrasta(fons));
         int dalt = y + (h - (fm.getAscent() + fm.getDescent())) / 2;
         g.drawString(rotul, x + MARGE_DE_MARCA, dalt + fm.getAscent());
     }
@@ -546,7 +554,9 @@ public final class DrawKit {
 
     /** [CA] El fons de la pantalla sencera, amb la font de la interfície. / [EN] Screen background. */
     public static void fonsDePantalla(Graphics2D g, int w, int h, int midaDeLletra) {
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        if (TEXT_SUAVITZAT) {
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        }
         g.setFont(new Font(FAMILIA_INTERFICIE, ESTIL_INTERFICIE, midaDeLletra));
         g.setColor(FONS);
         g.fillRect(0, 0, w, h);
@@ -595,7 +605,7 @@ public final class DrawKit {
 
     /** [CA] El fons del panell de botons. / [EN] Button panel background. */
     public static void fonsDelPanellDeBotons(Graphics2D g, int x, int y, int w, int h) {
-        g.setColor(PLAFO);
+        g.setColor(PANELL_DE_BOTONS != null ? PANELL_DE_BOTONS : ColorSets.getColorFons());
         g.fillRect(x, y, w, h);
     }
 
@@ -607,12 +617,18 @@ public final class DrawKit {
         FontMetrics fm = g.getFontMetrics();
         float tx = (float) (x + (w - fm.stringWidth(rotul)) / 2.0);
         float ty = (float) (y + (h + fm.getAscent() - fm.getDescent()) / 2.0);
-        Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setColor(aparenca);
-        g.fillRoundRect((int) x + 2, (int) y + 2, (int) w - 4, (int) h - 4, BOTO_ARC, BOTO_ARC);
-        if (aa != null) g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
-        g.setColor(BOTO_PREMUT.equals(aparenca) ? Color.WHITE : TEXT_FOSC);
+        if (BOTO_ARC <= 0) {
+            g.fillRect((int) x + BOTO_MARGE, (int) y + BOTO_MARGE,
+                    (int) w - 2 * BOTO_MARGE, (int) h - 2 * BOTO_MARGE);
+        } else {
+            Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.fillRoundRect((int) x + BOTO_MARGE, (int) y + BOTO_MARGE,
+                    (int) w - 2 * BOTO_MARGE, (int) h - 2 * BOTO_MARGE, BOTO_ARC, BOTO_ARC);
+            if (aa != null) g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+        }
+        g.setColor(aparenca.equals(aparencaDeBoto(true)) ? TEXT_DE_BOTO_PREMUT : TEXT_DE_BOTO);
         g.drawString(rotul, tx, ty);
     }
 
@@ -680,7 +696,9 @@ public final class DrawKit {
     /** [CA] Prepara el context d'un buffer offscreen. / [EN] Prepares an offscreen buffer. */
     public static void preparaOffscreen(Graphics2D g) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        if (TEXT_SUAVITZAT) {
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        }
     }
 
     /** [CA] Prepara el context de l'exportació SVG. / [EN] Prepares the SVG export. */
