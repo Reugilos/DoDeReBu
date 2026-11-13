@@ -3025,6 +3025,9 @@ public class MyController {
                 // applyChangesAt síncron: cal que s'executi abans de getNanosPerSquareGrid()
                 // perquè les marques de tempo del changeMap actualitzin playbackTempo a temps.
                 applyChangesAt(getEditingCol());
+                // La vista llisca d'aquesta columna a la següent mentre dura el
+                // pas: comença quan ha sonat (nextStep) i dura el que dura el pas.
+                cam.markStep(nextStep, MyTempo.getNanosPerSquareGrid());
                 if (Settings.isMetronome()) {
                     int scoreColAtPlayBar = allPurposeScore.getScoreCol(camPBar);
                     if (scoreColAtPlayBar >= 0 && scoreColAtPlayBar < metroIsBeat.length && metroIsBeat[scoreColAtPlayBar]) {

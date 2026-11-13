@@ -11,7 +11,11 @@ import dodecagraphone.ui.Settings;
 import dodecagraphone.ui.Utilities;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.Stroke;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 
 /**
  * [CA] La càmera conté la partitura, la franja d'acords i la barra de reproducció.
@@ -58,6 +62,29 @@ public class MyCamera extends MyComponent {
     private volatile boolean playing;
     /** The page of the score that is currently on display.*/
     private int currentPage;
+
+    /**
+     * [CA] L'últim pas del fil de reproducció: quina columna ha deixat com a
+     * {@code currentCol}, en quin moment i quant dura. Va en un sol objecte
+     * immutable perquè el fil de dibuix no en llegeixi mai una meitat d'un pas
+     * i l'altra meitat del següent.
+     * <p>
+     * [EN] The playback thread's last step: which column it left as
+     * {@code currentCol}, when, and how long the step lasts. Kept in a single
+     * immutable object so the drawing thread never reads half of one step and
+     * half of the next.
+     */
+    private static final class Step {
+        final int col;
+        final long startNanos;
+        final double durNanos;
+        Step(int col, long startNanos, double durNanos) {
+            this.col = col;
+            this.startNanos = startNanos;
+            this.durNanos = durNanos;
+        }
+    }
+    private volatile Step lastStep = null;
 
     /**
      * [CA] Constructor. Estableix les coordenades de pantalla de la càmera i inicialitza l'estat.
@@ -255,6 +282,249 @@ public class MyCamera extends MyComponent {
         } else {
             this.playing = false;
         }
+    }
+
+    /**
+     * [CA] L'anota el fil de reproducció just després d'avançar la columna:
+     * a partir d'ara i durant {@code durNanos}, la vista llisca de la columna
+     * anterior a la nova. El so no en depèn gens.
+     * <p>
+     * [EN] Called by the playback thread right after advancing the column:
+     * from now and for {@code durNanos}, the view slides from the previous
+     * column to the new one. Sound does not depend on it at all.
+     *
+     * @param startNanos [CA] instant en què ha sonat la columna (el {@code nanoTime}
+     *                   previst pel fil, no el d'ara) / [EN] instant the column
+     *                   sounded (the thread's scheduled {@code nanoTime})
+     * @param durNanos   [CA] durada del pas / [EN] step duration
+     */
+    public void markStep(long startNanos, double durNanos) {
+        lastStep = new Step(score.getCurrentCol(), startNanos, durNanos);
+    }
+
+    /**
+     * [CA] La posició de la vista en columnes de partitura, amb decimals: és el
+     * {@code currentCol} que es dibuixa. Fora del play és {@code currentCol}
+     * tal qual. Durant el play va de {@code currentCol - 1} a
+     * {@code currentCol} al llarg del pas, o sigui que la columna que sona
+     * arriba a la barra en el mateix instant que sona, i la partitura llisca
+     * a velocitat constant en lloc d'anar a salts d'una columna.
+     * <p>
+     * [EN] The view position in score columns, with decimals: the
+     * {@code currentCol} that gets drawn. Outside playback it is
+     * {@code currentCol}. During playback it goes from {@code currentCol - 1}
+     * to {@code currentCol} over the step, so the column being played reaches
+     * the bar exactly when it sounds and the score slides at constant speed.
+     *
+     * @return [CA] posició fraccionària / [EN] fractional position
+     */
+    public double getViewPos() {
+        int cc = score.getCurrentCol();
+        Step s = lastStep;
+        if (!playing || s == null || s.col != cc || s.durNanos <= 0) {
+            return cc;
+        }
+        double frac = (System.nanoTime() - s.startNanos) / s.durNanos;
+        if (frac < 0) frac = 0;
+        if (frac > 1) frac = 1;
+        return cc - 1 + frac;
+    }
+
+    /**
+     * [CA] Què es veu a la càmera: la columna de partitura (amb decimals) que cau
+     * a la vora esquerra i l'escala horitzontal. Totes les franges (graella,
+     * acords, lletra) i les seves barres de temps i compàs es col·loquen amb
+     * aquest mateix objecte, o sigui que no es poden desajustar entre elles.
+     * <p>
+     * Amb escala 1, el desplaçament s'arrodoneix a píxels sencers i la còpia de
+     * l'offscreen es fa 1:1: el text no es reescala mai i es manté nítid. Amb
+     * <i>fit anacrusis</i> l'escala és menor que 1 i es redueix de mica en mica
+     * mentre la vista recorre el primer compàs, en lloc de saltar de cop a
+     * l'escala normal al primer pas de la reproducció.
+     * <p>
+     * [EN] What the camera shows: the score column (with decimals) at its left
+     * edge and the horizontal scale. Every strip (grid, chords, lyrics) and
+     * their beat and measure lines are placed with this same object, so they
+     * cannot drift apart. With scale 1 the shift is rounded to whole pixels and
+     * the offscreen is copied 1:1, so text is never resampled. With fit
+     * anacrusis the scale is below 1 and relaxes gradually over the first
+     * measure instead of jumping on the first playback step.
+     */
+    public static final class ViewWindow {
+        /** [CA] Vora esquerra de la càmera a la pantalla. / [EN] Camera left edge on screen. */
+        public final int camX;
+        /** [CA] Amplada de la càmera a la pantalla. / [EN] Camera width on screen. */
+        public final int camW;
+        /** [CA] Columna de partitura a la vora esquerra. / [EN] Score column at the left edge. */
+        public final double startCol;
+        /** [CA] Columnes de partitura que hi caben. / [EN] Score columns that fit. */
+        public final double spanCols;
+        /** [CA] Píxels de pantalla per píxel d'offscreen. / [EN] Screen pixels per offscreen pixel. */
+        public final double scale;
+        /** [CA] {@code startCol * colWidth} arrodonit (escala 1). / [EN] Rounded shift (scale 1). */
+        public final int shiftPx;
+        private final double colW;
+
+        ViewWindow(int camX, int camW, double startCol, double spanCols, double colW) {
+            this.camX = camX;
+            this.camW = camW;
+            this.startCol = startCol;
+            this.spanCols = spanCols;
+            this.colW = colW;
+            double nColsCam = Settings.getnColsCam();
+            double s = spanCols > 0 ? nColsCam / spanCols : 1.0;
+            this.scale = Math.abs(s - 1.0) < 1e-9 ? 1.0 : s;
+            this.shiftPx = (int) Math.round(startCol * colW);
+        }
+
+        /** [CA] Hi ha compressió (fit anacrusis). / [EN] Compressed (fit anacrusis). */
+        public boolean isScaled() {
+            return scale != 1.0;
+        }
+
+        /**
+         * [CA] On cau a la pantalla una x de l'offscreen.
+         * [EN] Screen x of an offscreen x.
+         */
+        public double screenX(double offX) {
+            if (scale == 1.0) return camX + offX - shiftPx;
+            return camX + (offX - startCol * colW) * scale;
+        }
+
+        /** [CA] On cau a la pantalla una columna de partitura. / [EN] Screen x of a score column. */
+        public double colToScreenX(double col) {
+            return screenX(col * colW);
+        }
+
+        /** [CA] Quina columna de partitura hi ha sota una x de pantalla. / [EN] Score column under a screen x. */
+        public double screenXToCol(double x) {
+            return startCol + (x - camX) / (colW * scale);
+        }
+
+        /**
+         * [CA] Copia a la pantalla la porció visible d'un offscreen, a l'alçada
+         * {@code y}..{@code y+h}. Amb escala 1, 1:1 i sense reescalar; amb
+         * compressió, amb interpolació bilineal.
+         * <p>
+         * [EN] Blits the visible part of an offscreen to the screen at
+         * {@code y}..{@code y+h}. 1:1 with scale 1; bilinear when compressed.
+         */
+        public void blit(Graphics2D g, BufferedImage img, int y, int h) {
+            if (img == null) return;
+            int iw = img.getWidth(), ih = img.getHeight();
+            int sh = Math.min(h, ih);
+            if (iw <= 0 || sh <= 0) return;
+            if (scale == 1.0) {
+                int sx1 = Math.max(0, shiftPx);
+                int sx2 = Math.min(iw, shiftPx + camW);
+                if (sx2 <= sx1) return;
+                int dx1 = camX + (sx1 - shiftPx);
+                g.drawImage(img, dx1, y, dx1 + (sx2 - sx1), y + sh,
+                        sx1, 0, sx2, sh, null);
+            } else {
+                double offL = startCol * colW;
+                int sx1 = Math.max(0, (int) Math.floor(offL));
+                int sx2 = Math.min(iw, (int) Math.ceil(offL + spanCols * colW) + 1);
+                if (sx2 <= sx1) return;
+                BufferedImage sub = img.getSubimage(sx1, 0, sx2 - sx1, sh);
+                Shape oldClip = g.getClip();
+                Object oldInterp = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
+                g.clipRect(camX, y, camW, h);
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                AffineTransform at = new AffineTransform(scale, 0, 0, 1,
+                        screenX(sx1), y);
+                g.drawImage(sub, at, null);
+                if (oldInterp != null) {
+                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, oldInterp);
+                }
+                g.setClip(oldClip);
+            }
+        }
+
+        /**
+         * [CA] Dibuixa les barres de temps (discontínues) i de compàs (gruixudes)
+         * d'una franja, a l'alçada {@code y1}..{@code y2}, només les visibles.
+         * <p>
+         * [EN] Draws the visible beat (dashed) and measure (thick) lines of a
+         * strip between {@code y1} and {@code y2}.
+         */
+        public void drawBeatAndMeasureLines(Graphics2D g, boolean[] isBeat, boolean[] isMeasure,
+                int y1, int y2, int clipY, int clipH) {
+            int from = Math.max(0, (int) Math.floor(startCol) - 1);
+            int to = Math.min(isBeat.length - 1, (int) Math.ceil(startCol + spanCols) + 1);
+            Shape oldClip = g.getClip();
+            g.clipRect(camX, clipY, camW, clipH);
+            Stroke saved = g.getStroke();
+            g.setColor(java.awt.Color.BLACK);
+            Stroke thick = new BasicStroke(2f);
+            Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
+                    BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
+            for (int col = from; col <= to; col++) {
+                if (!isBeat[col] && !isMeasure[col]) continue;
+                int offX = (int) Math.floor(col * colW);
+                int sx = (int) Math.round(screenX(offX));
+                g.setStroke(isMeasure[col] ? thick : dashed);
+                g.drawLine(sx, y1, sx, y2);
+            }
+            g.setStroke(saved);
+            g.setClip(oldClip);
+        }
+
+        /**
+         * [CA] La doble barra final, a la columna {@code stopCol}.
+         * [EN] The final double bar at {@code stopCol}.
+         */
+        public void drawStopBar(Graphics2D g, int stopCol, int y1, int y2, int clipY, int clipH) {
+            int sx = (int) Math.floor(colToScreenX(stopCol)) - 1;
+            Shape oldClip = g.getClip();
+            g.clipRect(camX, clipY, camW, clipH);
+            Stroke saved = g.getStroke();
+            g.setColor(java.awt.Color.BLACK);
+            g.setStroke(new BasicStroke(3));
+            g.drawLine(sx, y1, sx, y2);
+            g.setStroke(new BasicStroke(2));
+            g.drawLine(sx + 4, y1, sx + 4, y2);
+            g.setStroke(saved);
+            g.setClip(oldClip);
+        }
+    }
+
+    /**
+     * [CA] La finestra visible ara mateix (vegeu {@link ViewWindow}).
+     * <p>
+     * Sense <i>fit</i>, la vora esquerra és {@code getViewPos() - nColsCam}
+     * (negativa amb el teclat a la dreta a l'inici, i aleshores la partitura
+     * comença més endins). Amb <i>fit anacrusis</i> i el teclat a l'esquerra,
+     * mentre la vora esquerra {@code L} no ha recorregut el compàs extra
+     * {@code E}, la vora dreta es queda a {@code nColsCam + E} i l'escala és
+     * {@code nColsCam / (nColsCam + E - L)}: a {@code L = 0} és la pàgina
+     * encabida de sempre i a {@code L = E} ja és l'escala normal, sense cap salt.
+     * <p>
+     * [EN] The current visible window. Without fit the left edge is
+     * {@code getViewPos() - nColsCam}. With fit anacrusis (left keyboard),
+     * while the left edge {@code L} has not travelled the extra measure
+     * {@code E}, the right edge stays at {@code nColsCam + E} and the scale is
+     * {@code nColsCam / (nColsCam + E - L)}, which is continuous.
+     *
+     * @return [CA] la finestra / [EN] the window
+     */
+    public ViewWindow getViewWindow() {
+        double colW = Settings.getColWidth();
+        int nColsCam = Settings.getnColsCam();
+        int camX = (int) Math.round(this.screenPosX);
+        int camW = (int) Math.ceil(nColsCam * colW);
+        double L = getViewPos() - nColsCam;
+        double span = nColsCam;
+        boolean left = !this.controller.getAllPurposeScore().isUseScreenKeyboardRight();
+        if (left && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
+            if (L < 0) L = 0;
+            int extra = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
+            double right = Math.max(L + nColsCam,
+                    Math.min(nColsCam + extra, score.getNumCols()));
+            span = right - L;
+        }
+        return new ViewWindow(camX, camW, L, span, colW);
     }
 
     /**
