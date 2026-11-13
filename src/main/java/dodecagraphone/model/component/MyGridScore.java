@@ -1437,13 +1437,14 @@ public class MyGridScore extends MyComponent {
             int ccol = getCurrentCol();
             int firstDrawCol = Math.max(0, ccol - Settings.getnColsCam());
             int lastDrawCol = ccol;//Math.min(ccol-delay, nCols);
-            // Quan fit+anacrusis és actiu, la vista mostra un compàs extra;
-            // cal redibuixar totes les columnes visibles perquè el drag sigui correcte.
-            if (!this.isUseScreenKeyboardRight()
-                    && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()
-                    && firstDrawCol == 0) {
-                int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                lastDrawCol = Math.min(lastDrawCol + extraCols, nCols);
+            // Quan fit+anacrusis és actiu, la vista mostra fins a un compàs extra
+            // (sencer a la primera pàgina, i menys si la reproducció s'ha aturat
+            // dins del primer compàs); cal redibuixar tot el que es veu.
+            MyCamera.ViewWindow view = cam.getViewWindow();
+            if (view.isScaled()) {
+                firstDrawCol = Math.max(0, (int) Math.floor(view.startCol));
+                lastDrawCol = Math.min(nCols,
+                        (int) Math.ceil(view.startCol + view.spanCols));
             }
 
             //------------------------------------
@@ -1824,100 +1825,28 @@ public class MyGridScore extends MyComponent {
         MySlide.once = true;
 
         if (this.getOffscreenImage() != null) {
-            boolean left = !this.isUseScreenKeyboardRight();
-            int firstColToDraw, lastColToDraw;
-            int x1, x2;
-            int y1;//  = (int) Math.round(this.cam.getScreenY(Settings.getScoreFirstRow())); //Settings.getCamFirstRow();
-            int w, w2;
-            int h;
-            int cc = getCurrentCol();
-            int ccol = cc;
-            if (left) {
-                x1 = (int) Math.round(this.cam.getScreenX(0));//Settings.getCamFirstCol(this.isUseScreenKeyboardRight());
-                y1 = (int) Math.round(this.cam.getScreenY(Settings.getScoreFirstRow())); //Settings.getCamFirstRow();
-                w = (int) Math.ceil(this.cam.getWidth());//(int) this.getWidth();
-                h = (int) Math.ceil(nKeys * Settings.getRowHeight() * Settings.getnRowsSquare());
-                firstColToDraw = (int) Math.max(0, ccol - Settings.getnColsCam());
-                lastColToDraw = ccol;
-                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
-                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                    lastColToDraw = Math.min(lastColToDraw + extraCols, nCols);
-                }
-                x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
-                w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
-            } else {
-                int firstCamColIn = Math.max(0, Settings.getnColsCam() - ccol);
-                int actualWidthInCols = Settings.getnColsCam() - firstCamColIn;
-                x1 = (int) Math.round(this.cam.getScreenX(firstCamColIn));//Settings.getCamFirstCol(this.isUseScreenKeyboardRight());
-                y1 = (int) Math.round(this.cam.getScreenY(Settings.getScoreFirstRow())); //Settings.getCamFirstRow();
-                w = (int) Math.ceil(actualWidthInCols * Settings.getColWidth());//(int) this.getWidth();
-                h = (int) Math.ceil(nKeys * Settings.getRowHeight() * Settings.getnRowsSquare());
-                firstColToDraw = (int) Math.max(0, ccol - Settings.getnColsCam());
-                lastColToDraw = ccol;
-                x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
-                w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
-            }
+            // La finestra la decideix la càmera, amb la posició fraccionària del
+            // play: la graella, els acords i la lletra llisquen junts i a
+            // velocitat constant, i amb escala 1 la còpia és 1:1 (text nítid).
+            MyCamera.ViewWindow view = this.cam.getViewWindow();
+            int y1 = (int) Math.round(this.cam.getScreenY(Settings.getScoreFirstRow()));
+            int h = (int) Math.ceil(nKeys * Settings.getRowHeight() * Settings.getnRowsSquare());
 
-            Utilities.printOutWithPriority(false, "MyGridScore::draw(): left = " + left + ", CurrentCol = " + ccol);
-            Utilities.printOutWithPriority(false, "MyGridScore::draw(): left = " + left + ", firstColToDraw, lastColToDraw = "
-                    + firstColToDraw + "," + lastColToDraw);
-            Utilities.printOutWithPriority(false, "MyGridScore::draw(): left = " + left + ", x1,y1,w,h,x2,w2 = "
-                    + x1 + "," + y1 + "," + w + "," + h + "," + x2 + "," + w2);
+            view.blit(g, this.getOffscreenImage(), y1, h);
 
-//            g.drawImage(this.getOffscreenImage(),
-//                    x1, y1, x1 + w, y1 + h, // destí (pantalla) 
-//                    x2, 0, x2 + w2, h, // origen (imatge)
-//                    null);
-            
-            drawImageClamped(g, this.getOffscreenImage(),
-                    x1, y1, x1 + w, y1 + h, // destí (pantalla)
-                    x2, 0, x2 + w2, h);
-
-            // Línies de beat i compàs en screen-space per evitar desaparicions amb fit
-            {
-                int numCols = this.getnCols();
-                boolean[] isBeat    = new boolean[numCols + 1];
-                boolean[] isMeasure = new boolean[numCols + 1];
-                computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
-                double scaleX = w2 > 0 ? (double) w / w2 : 1.0;
-                Shape oldClip = g.getClip();
-                g.clipRect(x1, y1, w, h);
-                Stroke saved = g.getStroke();
-                g.setColor(Color.BLACK);
-                for (int col = 0; col <= numCols; col++) {
-                    if (!isBeat[col] && !isMeasure[col]) continue;
-                    int offX = (int) Math.floor(col * Settings.getColWidth());
-                    int sx = x1 + (int) Math.round((offX - x2) * scaleX);
-                    if (isMeasure[col]) {
-                        g.setStroke(new BasicStroke(2f));
-                        g.drawLine(sx, y1 + 1, sx, y1 + h - 2);
-                    } else {
-                        g.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT,
-                                BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0));
-                        g.drawLine(sx, y1 + 1, sx, y1 + h - 2);
-                    }
-                }
-                g.setStroke(saved);
-                g.setClip(oldClip);
-            }
+            // Línies de beat i compàs en screen-space, amb la mateixa finestra.
+            int numCols = this.getnCols();
+            boolean[] isBeat    = new boolean[numCols + 1];
+            boolean[] isMeasure = new boolean[numCols + 1];
+            computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
+            view.drawBeatAndMeasureLines(g, isBeat, isMeasure, y1 + 1, y1 + h - 2, y1, h);
 
             // Doble barra al stopCol. Només es dibuixa si el marcador és vigent:
             // es recalcula en reproduir i en desar, i qualsevol edició el caduca.
             int stopC = this.controller.getAllPurposeScore().getStopCol();
             if (stopC > 0 && this.controller.getAllPurposeScore().isStopMarkerValid()) {
-                int sx = (int) Math.floor(this.getScreenX(stopC)) - 1;
-                Shape oldClip = g.getClip();
-                g.clipRect(x1, y1, w, h);
-                Stroke saved = g.getStroke();
-                g.setColor(Color.BLACK);
-                g.setStroke(new BasicStroke(3));
-                g.drawLine(sx, y1, sx, y1 + h);
-                g.setStroke(new BasicStroke(2));
-                g.drawLine(sx + 4, y1, sx + 4, y1 + h);
-                g.setStroke(saved);
-                g.setClip(oldClip);
+                view.drawStopBar(g, stopC, y1, y1 + h, y1, h);
             }
-
         }
     }
 
@@ -1947,14 +1876,12 @@ public class MyGridScore extends MyComponent {
     public int getCol(double screenX) {
         // Quan fit+anacrusis comprimeix la primera pàgina (keyboard esquerre),
         // la relació píxel→columna és diferent de colWidth estàndard.
+        // Amb la compressió, la inversa la fa la mateixa finestra que dibuixa
+        // (també mentre l'escala es relaxa al primer compàs del play).
         if (!isUseScreenKeyboardRight() && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
-            int cc = getCurrentCol();
-            int firstColToDraw = (int) Math.max(0, cc - Settings.getnColsCam());
-            if (firstColToDraw == 0) {
-                int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                int lastColToDraw = Math.min(cc + extraCols, nCols);
-                double relX = screenX - cam.getScreenPosX();
-                int col = (int)(relX * lastColToDraw / (Settings.getColWidth() * Settings.getnColsCam()));
+            MyCamera.ViewWindow view = cam.getViewWindow();
+            if (view.isScaled()) {
+                int col = (int) Math.floor(view.screenXToCol(screenX));
                 return Math.max(0, Math.min(col, nCols - 1));
             }
         }

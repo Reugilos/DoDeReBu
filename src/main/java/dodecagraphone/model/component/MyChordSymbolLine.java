@@ -1348,43 +1348,14 @@ public class MyChordSymbolLine extends MyComponent {
 
         if (offscreenImage != null) {
             if (needsDrawing) drawFullChordLineInOffscreen();
-            // ---- Offscreen path: extract visible slice ----
-            boolean left = !score.isUseScreenKeyboardRight();
-            int ccol = score.getCurrentCol();
-            int firstColToDraw, x1, y1, w, h, x2, w2;
+            // ---- Offscreen path: la finestra la decideix la càmera ----
+            // (MyCamera.ViewWindow): els acords llisquen amb la graella i la
+            // lletra, a velocitat constant, i amb escala 1 la còpia és 1:1.
+            MyCamera.ViewWindow view = contr.getCam().getViewWindow();
+            int y1 = (int) Math.round(screenPosY);
+            int h  = (int) Math.ceil(height);
 
-            if (left) {
-                x1 = (int) Math.round(screenPosX);
-                y1 = (int) Math.round(screenPosY);
-                w  = (int) Math.ceil(width);
-                h  = (int) Math.ceil(height);
-                firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-                int lastColToDraw = ccol;
-                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
-                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
-                }
-                x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
-                w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
-            } else {
-                // Teclat dret: chord dins la càmera, desplaçament idèntic al grid.
-                int firstCamColIn = Math.max(0, Settings.getnColsCam() - ccol);
-                int actualWidthInCols = Settings.getnColsCam() - firstCamColIn;
-                x1 = (int) Math.round(contr.getCam().getScreenX(firstCamColIn));
-                y1 = (int) Math.round(screenPosY);
-                w  = (int) Math.ceil(actualWidthInCols * Settings.getColWidth());
-                h  = (int) Math.ceil(height);
-                firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-                int lastColToDraw = ccol;
-                x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
-                w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
-            }
-
-            Utilities.printOutWithPriority(false, "MyChordSymbolLine::draw(): left=" + left + ", ccol=" + ccol
-                    + ", x1=" + x1 + ", y1=" + y1 + ", w=" + w + ", h=" + h + ", x2=" + x2 + ", w2=" + w2);
-            drawImageClamped(g, offscreenImage,
-                    x1, y1, x1 + w, y1 + h,
-                    x2, 0, x2 + w2, h);
+            view.blit(g, offscreenImage, y1, h);
 
             // Línies de beat i compàs en screen-space (no a l'offscreen) per evitar
             // que desapareguin en escalar amb fit-anacrusis.
@@ -1393,47 +1364,15 @@ public class MyChordSymbolLine extends MyComponent {
                 boolean[] isBeat    = new boolean[numCols + 1];
                 boolean[] isMeasure = new boolean[numCols + 1];
                 score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
-                double scaleX = w2 > 0 ? (double) w / w2 : 1.0;
-                int sy1 = y1;
-                int sy2 = y1 + h;
-                Shape oldClip = g.getClip();
-                g.clipRect(x1, y1, w, h);
-                Stroke saved = g.getStroke();
-                g.setColor(Color.BLACK);
-                for (int col = 0; col <= numCols; col++) {
-                    if (!isBeat[col] && !isMeasure[col]) continue;
-                    int offX = (int) Math.floor(col * Settings.getColWidth());
-                    int sx = x1 + (int) Math.round((offX - x2) * scaleX);
-                    if (isMeasure[col]) {
-                        g.setStroke(new BasicStroke(2f));
-                        g.drawLine(sx, sy1, sx, sy2);
-                    } else {
-                        Stroke dashed = new BasicStroke(1, BasicStroke.CAP_BUTT,
-                                BasicStroke.JOIN_BEVEL, 0, new float[]{15, 3}, 0);
-                        g.setStroke(dashed);
-                        g.drawLine(sx, sy1, sx, sy2);
-                    }
-                }
-                g.setStroke(saved);
-                g.setClip(oldClip);
+                view.drawBeatAndMeasureLines(g, isBeat, isMeasure, y1, y1 + h, y1, h);
             }
 
             // Doble barra al stopCol — dibuixada sobre la vista (sempre actualitzada)
             int stopC = contr.getAllPurposeScore().getStopCol();
             if (stopC > 0 && contr.getAllPurposeScore().isStopMarkerValid()) {
-                int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
                 int sy1 = (int) Math.round(score.getScreenY(-nRows));
                 int sy2 = sy1 + (int) Math.round(nRows * Settings.getRowHeight());
-                Shape oldClip = g.getClip();
-                g.clipRect(x1, y1, w, h);
-                Stroke saved = g.getStroke();
-                g.setColor(Color.BLACK);
-                g.setStroke(new BasicStroke(3));
-                g.drawLine(sx, sy1, sx, sy2);
-                g.setStroke(new BasicStroke(2));
-                g.drawLine(sx + 4, sy1, sx + 4, sy2);
-                g.setStroke(saved);
-                g.setClip(oldClip);
+                view.drawStopBar(g, stopC, sy1, sy2, y1, h);
             }
 
         } else {

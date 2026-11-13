@@ -121,16 +121,8 @@ public class MyLyrics extends MyComponent {
             boolean left = !score.isUseScreenKeyboardRight();
             int col;
             if (left) {
-                int ccol = score.getCurrentCol();
-                int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-                int lastColToDraw  = ccol;
-                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
-                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
-                }
-                double relX = screenX - screenPosX;
-                int visibleCols = lastColToDraw - firstColToDraw;
-                col = firstColToDraw + (int)(relX * visibleCols / (Settings.getColWidth() * Settings.getnColsCam()));
+                // La mateixa finestra que dibuixa (també amb fit anacrusis).
+                col = (int) Math.floor(controller.getCam().getViewWindow().screenXToCol(screenX));
             } else {
                 col = controller.getAllPurposeScore().getCol(screenX);
             }
@@ -802,42 +794,20 @@ public class MyLyrics extends MyComponent {
      * @return [CA] factor d'escala (1.0 = sense compressió) / [EN] scale factor (1.0 = no compression)
      */
     private double getFitScaleX() {
-        if (!score.isUseScreenKeyboardRight()
-                && Settings.isFitAnacrusis() && Settings.isHasAnacrusis()) {
-            int ccol = score.getCurrentCol();
-            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-            if (firstColToDraw == 0) {
-                int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                int lastColToDraw = Math.min(ccol + extraCols, score.getNumCols());
-                int visibleCols = lastColToDraw - firstColToDraw;
-                if (visibleCols > 0) return (double) Settings.getnColsCam() / visibleCols;
-            }
-        }
-        return 1.0;
+        return controller.getCam().getViewWindow().scale;
     }
 
     /**
      * Converts a score column index to a screen X coordinate, taking the
-     * current camera scroll position into account.
+     * current camera scroll position into account. It uses the camera's
+     * {@link MyCamera.ViewWindow}, so during playback it follows the smooth
+     * fractional scroll exactly like the grid and the chord strip.
      *
      * @param col  score column
      * @return screen X in panel coordinates
      */
     private int colToScreenX(int col) {
-        boolean left = !score.isUseScreenKeyboardRight();
-        int ccol = score.getCurrentCol();
-        if (left) {
-            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-            double scaleX = getFitScaleX();
-            return (int) Math.round(screenPosX
-                    + (col - firstColToDraw) * Settings.getColWidth() * scaleX);
-        } else {
-            int firstCamColIn  = Math.max(0, Settings.getnColsCam() - ccol);
-            int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-            return (int) Math.round(screenPosX
-                    + firstCamColIn  * Settings.getColWidth()
-                    + (col - firstColToDraw) * Settings.getColWidth());
-        }
+        return (int) Math.round(controller.getCam().getViewWindow().colToScreenX(col));
     }
 
     // -------------------------------------------------------------------------
@@ -1011,50 +981,21 @@ public class MyLyrics extends MyComponent {
         }
         if (offscreenImage != null) {
             if (needsDrawing) drawFullLyricsInOffscreen();
-            boolean left = !score.isUseScreenKeyboardRight();
-            int ccol = score.getCurrentCol();
+            // La finestra la decideix la càmera (vegeu MyCamera.ViewWindow): la
+            // lletra llisca amb la graella i els acords, a velocitat constant.
+            MyCamera.ViewWindow view = controller.getCam().getViewWindow();
+            int x1 = view.camX;
+            int y1 = (int) Math.round(screenPosY);
+            int w  = view.camW;
+            int h  = (int) Math.ceil(height);
 
-            int x1, y1, w, h, x2, w2;
-            if (left) {
-                x1 = (int) Math.round(screenPosX);
-                y1 = (int) Math.round(screenPosY);
-                w  = (int) Math.ceil(width);
-                h  = (int) Math.ceil(height);
-                int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-                int lastColToDraw  = ccol;
-                if (Settings.isFitAnacrusis() && Settings.isHasAnacrusis() && firstColToDraw == 0) {
-                    int extraCols = Settings.getnBeatsMeasure() * Settings.getnColsBeat();
-                    lastColToDraw = Math.min(lastColToDraw + extraCols, score.getNumCols());
-                }
-                x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
-                w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
-            } else {
-                // Teclat dret: lyrics dins la càmera, desplaçament idèntic al grid.
-                int firstCamColIn = Math.max(0, Settings.getnColsCam() - ccol);
-                int actualWidthInCols = Settings.getnColsCam() - firstCamColIn;
-                x1 = (int) Math.round(controller.getCam().getScreenX(firstCamColIn));
-                y1 = (int) Math.round(screenPosY);
-                w  = (int) Math.ceil(actualWidthInCols * Settings.getColWidth());
-                h  = (int) Math.ceil(height);
-                int firstColToDraw = Math.max(0, ccol - Settings.getnColsCam());
-                int lastColToDraw  = ccol;
-                x2 = (int) Math.round(firstColToDraw * Settings.getColWidth());
-                w2 = (int) Math.ceil((lastColToDraw - firstColToDraw) * Settings.getColWidth());
-            }
-
-            Utilities.printOutWithPriority(false,
-                    "MyLyrics::draw(): left=" + left + ", ccol=" + ccol
-                    + ", x1=" + x1 + ", y1=" + y1 + ", w=" + w
-                    + ", h=" + h + ", x2=" + x2 + ", w2=" + w2);
             // Quan el fit comprimeix la vista, el buffer offscreen (sempre ple, a
             // escala 1:1, per a l'exportació SVG/PDF) es veuria borrós si es
             // blitegés comprimit; s'omet el blit i es dibuixa el text nítid en
             // screen-space més avall, que ja cobreix tota la zona visible.
-            double fitScaleXScreen = getFitScaleX();
+            double fitScaleXScreen = view.scale;
             if (fitScaleXScreen >= 1.0) {
-                drawImageClamped(g, offscreenImage,
-                        x1, y1, x1 + w, y1 + h,
-                        x2, 0, x2 + w2, h);
+                view.blit(g, offscreenImage, y1, h);
             }
 
             // Text en screen-space quan fit actiu: evita text borrós per la compressió offscreen.
@@ -1107,44 +1048,13 @@ public class MyLyrics extends MyComponent {
                 boolean[] isBeat    = new boolean[numCols + 1];
                 boolean[] isMeasure = new boolean[numCols + 1];
                 score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
-                double scaleX = w2 > 0 ? (double) w / w2 : 1.0;
-                Shape oldClip = g.getClip();
-                g.clipRect(x1, y1, w, h);
-                Stroke saved = g.getStroke();
-                g.setColor(java.awt.Color.BLACK);
-                for (int col = 0; col <= numCols; col++) {
-                    if (!isBeat[col] && !isMeasure[col]) continue;
-                    int offX = (int) Math.floor(col * Settings.getColWidth());
-                    int sx = x1 + (int) Math.round((offX - x2) * scaleX);
-                    if (isMeasure[col]) {
-                        g.setStroke(new java.awt.BasicStroke(2f));
-                        g.drawLine(sx, y1, sx, y1 + h);
-                    } else {
-                        java.awt.Stroke dashed = new java.awt.BasicStroke(1,
-                                java.awt.BasicStroke.CAP_BUTT, java.awt.BasicStroke.JOIN_BEVEL,
-                                0, new float[]{15, 3}, 0);
-                        g.setStroke(dashed);
-                        g.drawLine(sx, y1, sx, y1 + h);
-                    }
-                }
-                g.setStroke(saved);
-                g.setClip(oldClip);
+                view.drawBeatAndMeasureLines(g, isBeat, isMeasure, y1, y1 + h, y1, h);
             }
 
             // Doble barra al stopCol — sempre actualitzada en coordenades de pantalla
             int stopC = controller.getAllPurposeScore().getStopCol();
             if (stopC > 0 && controller.getAllPurposeScore().isStopMarkerValid()) {
-                int sx = (int) Math.floor(score.getScreenX(stopC)) - 1;
-                Shape oldClip = g.getClip();
-                g.clipRect(x1, y1, w, h);
-                Stroke saved = g.getStroke();
-                g.setColor(java.awt.Color.BLACK);
-                g.setStroke(new java.awt.BasicStroke(3));
-                g.drawLine(sx, y1, sx, y1 + h);
-                g.setStroke(new java.awt.BasicStroke(2));
-                g.drawLine(sx + 4, y1, sx + 4, y1 + h);
-                g.setStroke(saved);
-                g.setClip(oldClip);
+                view.drawStopBar(g, stopC, y1, y1 + h, y1, h);
             }
         }
 
