@@ -82,7 +82,7 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - **Es llegeix una sola vegada**, quan es carrega la classe DrawKit: canviar de tema demana reiniciar. Els valors queden en camps `static final`, o sigui que dibuixar costa el mateix que abans.
 - **Clàssic = `master`**: comprovat píxel a píxel (30 imatges), llevat de la correcció de les cel·les velles de `drawSquare` (vegeu els criteris), que canvia el fons d'aquelles cel·les amb qualsevol tema.
 - **`TemesTest`** (un `main`, com els altres): tota clau que DrawKit demana ha de ser al clàssic, i els temes de fàbrica han de tenir les mateixes claus. Afegir un valor nou al tema vol dir afegir-lo a **tots** els fitxers de `resources/temes/`, i també a l'ajuda si cal.
-- La clau `tema` surt al `config.properties` de fàbrica (`config.tema.comment`) i a la taula de configuració de l'ajuda (`help.config.tema.desc`), en els tres idiomes.
+- La clau `tema` surt al `config.properties` de fàbrica, amb quatre línies de comentari que expliquen com es canvia i com es fa un tema propi (`config.tema.comment` … `comment4`; una clau `#i18n:` per línia, perquè cada una dona una sola línia de comentari), i a la taula de configuració de l'ajuda (`help.config.tema.desc`), en els tres idiomes.
 
 ### Criteris de disseny gràfic
 
