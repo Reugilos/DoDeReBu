@@ -421,6 +421,8 @@ public class MyDialogs {
      * [EN] Shows a custom dialog with a text field and a combo box. The user
      * can enter text or choose an option. If text is entered, it takes priority
      * over the combo selection.
+     * A number is returned as typed; a name (even partial, e.g. «sax», «guit»)
+     * is searched in the list and the user is asked to confirm it.
      *
      * @param parent   [CA] Component pare per centrar el diàleg / [EN] Parent component for centering
      * @param prompt   [CA] Missatge inicial del diàleg / [EN] Initial dialog message
@@ -460,10 +462,19 @@ public class MyDialogs {
             String textValue = textField.getText().trim();
             String comboValue = (String) comboBox.getSelectedItem();
 
-            if (!textValue.isEmpty()) {
+            if (textValue.isEmpty()) {
+                // Res escrit: mana el desplegable
+                userInput[0] = comboValue;
+            } else if (comencaPerNumero(textValue)) {
+                // Un número (o «65 altsax»): tal qual, com sempre
                 userInput[0] = textValue;
             } else {
-                userInput[0] = comboValue;
+                // Un nom, encara que sigui parcial: es busca a la llista i es demana
+                // confirmació. Si no se'n tria cap, el diàleg es queda obert perquè
+                // es pugui corregir el text.
+                String triat = triaPerNom(dialog, textValue, dataList);
+                if (triat == null) return;
+                userInput[0] = triat;
             }
 
             dialog.dispose();
@@ -483,6 +494,67 @@ public class MyDialogs {
         dialog.setVisible(true);
 
         return userInput[0];
+    }
+
+    /** [CA] Cert si la primera paraula del text és un número. / [EN] True if the first word is a number. */
+    private static boolean comencaPerNumero(String text) {
+        String primera = text.trim().split(" ")[0];
+        if (primera.isEmpty()) return false;
+        for (int i = 0; i < primera.length(); i++) {
+            if (!Character.isDigit(primera.charAt(i))) return false;
+        }
+        return true;
+    }
+
+    /** [CA] Minúscules i sense accents, per cercar sense mirar-los. / [EN] Lower-case, accent-free. */
+    private static String normalitzaPerCercar(String text) {
+        String n = java.text.Normalizer.normalize(text == null ? "" : text, java.text.Normalizer.Form.NFD);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n.length(); i++) {
+            char c = n.charAt(i);
+            if (Character.getType(c) != Character.NON_SPACING_MARK) sb.append(c);
+        }
+        return sb.toString().toLowerCase();
+    }
+
+    /**
+     * [CA] Cerca per nom a una llista: cada paraula escrita ha de ser en alguna
+     * part de l'element (sense mirar majúscules ni accents), i l'ordre no
+     * importa. Sense cap resultat, ho diu; amb un de sol, en demana confirmació;
+     * amb diversos, deixa triar-ne un.
+     * <p>
+     * [EN] Searches the list by name (every typed word must appear somewhere in
+     * the item, ignoring case and accents). No match: says so; one: asks for
+     * confirmation; several: lets the user pick.
+     *
+     * @return [CA] l'element triat, o {@code null} si no n'hi ha o l'usuari no el confirma /
+     *         [EN] the chosen item, or null if none or not confirmed
+     */
+    private static String triaPerNom(Component parent, String consulta, List<String> dades) {
+        String[] paraules = normalitzaPerCercar(consulta).trim().split(" +");
+        java.util.List<String> trobats = new java.util.ArrayList<>();
+        for (String d : dades) {
+            String dn = normalitzaPerCercar(d);
+            boolean totes = true;
+            for (String w : paraules) {
+                if (!dn.contains(w)) { totes = false; break; }
+            }
+            if (totes) trobats.add(d);
+        }
+        String titol = I18n.t("dialogs.search.title");
+        if (trobats.isEmpty()) {
+            JOptionPane.showMessageDialog(parent, I18n.f("dialogs.search.none", consulta), titol,
+                    JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        if (trobats.size() == 1) {
+            int r = JOptionPane.showConfirmDialog(parent, I18n.f("dialogs.search.one", trobats.get(0).trim()),
+                    titol, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            return r == JOptionPane.YES_OPTION ? trobats.get(0) : null;
+        }
+        Object r = JOptionPane.showInputDialog(parent, I18n.f("dialogs.search.many", trobats.size(), consulta),
+                titol, JOptionPane.QUESTION_MESSAGE, null, trobats.toArray(), trobats.get(0));
+        return r == null ? null : (String) r;
     }
 
     /** [CA] Clau de config per al darrer directori MIDI / [EN] Config key for the last MIDI directory */

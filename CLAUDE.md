@@ -379,6 +379,10 @@ L'HTML es munta a `buildHtml()` amb claus i18n. Dues coses que no es veuen miran
 
 Els botons documentats han de cobrir `resources/defaults/ButtonLayout.csv`. Hi faltava el metrònom (`help.playback.metronome.*`).
 
+## Diàleg de canvi d'instrument (`MyDialogs.showDialog`)
+
+Camp de text + desplegable amb els 128 instruments GM. Si s'escriu un **número** (o «65 …») es fa servir tal qual; si s'escriu un **nom, encara que sigui parcial**, es busca a la llista (`triaPerNom`): cada paraula ha de ser en alguna part de l'element, sense mirar majúscules ni accents ni l'ordre (`sax`, `alto sax`, `guit`, `violí`). Cap resultat: ho diu i el diàleg es queda obert; un de sol: demana confirmació; diversos: deixa triar-ne un. Els textos són a `dialogs.search.*`.
+
 ## Selecció, porta-retalls i undo/redo
 
 ### Selecció
