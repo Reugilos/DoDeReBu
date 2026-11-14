@@ -8,6 +8,7 @@ package dodecagraphone.model.component;
 import dodecagraphone.ui.DrawKit;
 import dodecagraphone.MyController;
 import dodecagraphone.model.*;
+import dodecagraphone.model.InstrumentRange;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SampleOrMidi;
 import dodecagraphone.model.sound.Sound;
@@ -197,9 +198,21 @@ public class MyXiloKey extends MyComponent {
         } else {
             String nameOnly = this.noteName.replaceAll("[0-9]+$", "");
             text = " " + nameOnly;
-            // Fins al 14-11-26 aquí s'afegia un «>» a les dues tecles extremes de
-            // la tessitura de l'instrument. Es va treure: ocupava lloc i no deia res
-            // que el color de la tecla no digués.
+            // Sense metal·lòfon, les dues tecles extremes de la tessitura de
+            // l'instrument actual porten un punt volat «·» (abans, fins al 14-11-26,
+            // un «>»: ocupava massa). Amb metal·lòfon la graella ja és la tessitura.
+            if (!ToneRange.isMetallophone()) {
+                MyTrack currentTrackForRange = controller.getMixer().getCurrentTrack();
+                if (currentTrackForRange != null) {
+                    int dispOffRange = currentTrackForRange.getDisplayOffset();
+                    int prog = SoundWithMidi.getInstrumentInChannel(currentTrackForRange.getCurrentChannel());
+                    int visualLow  = InstrumentRange.getLowest(prog)  + dispOffRange;
+                    int visualHigh = InstrumentRange.getHighest(prog) + dispOffRange;
+                    if (this.midi == visualLow || this.midi == visualHigh) {
+                        text += "·";
+                    }
+                }
+            }
         }
         // Keyboard esquerre (doNotHighlight=false): quan la tecla sona → text negre sobre fons blanc.
         // Keyboard dret (doNotHighlight=true): la tecla NO es posa blanca, i el text
