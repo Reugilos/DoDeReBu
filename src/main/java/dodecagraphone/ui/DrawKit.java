@@ -699,7 +699,8 @@ public final class DrawKit {
         g.setColor(aparenca.equals(aparencaDeBoto(true)) ? TEXT_DE_BOTO_PREMUT : TEXT_DE_BOTO);
         if (rotul.startsWith("{") && rotul.endsWith("}") && dibuixaIcona(g, x, y, w, h, rotul)) return;
         int k = rotul.lastIndexOf('{');
-        if (k > 0 && rotul.endsWith("}") && dibuixaRotulAmbFletxes(g, x, y, w, ty, rotul, k)) return;
+        // k == 0: només fletxes ({<<}), com els botons de columna i de pàgina
+        if (k >= 0 && rotul.endsWith("}") && dibuixaRotulAmbFletxes(g, x, y, w, ty, rotul, k)) return;
         g.drawString(rotul, tx, ty);
     }
 
@@ -776,9 +777,10 @@ public final class DrawKit {
         double gruix = Math.max(1.2, mida / 9.0);
         double buit = fm.stringWidth(" ") * 0.8;
         int n = fletxes.length();
+        if (paraula.isEmpty()) buit = 0;
         double total = fm.stringWidth(paraula) + buit + n * fw + (n - 1) * sep;
         double x0 = x + (w - total) / 2.0;
-        g.drawString(paraula, (float) x0, ty);
+        if (!paraula.isEmpty()) g.drawString(paraula, (float) x0, ty);
         double cy = ty - alcadaMajuscula / 2.0;
         Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
         Stroke abans = g.getStroke();
