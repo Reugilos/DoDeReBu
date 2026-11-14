@@ -69,7 +69,7 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - **Cada mètode reprodueix exactament les crides que substituïa**, també els que deixen el color o el traç posats: el codi de després pot comptar-hi (`tancaTeclat` existeix per això).
 - **Dues barres de compàs**: la del buffer fa 1,5 px (`barraDeCompas`) i la que es redibuixa damunt de la pantalla, 2 px (`barraDeCompasEnPantalla`). Ja era així abans de DrawKit.
 - **El PDF vectorial té la seva pròpia capa**, `PdfDrawKit` (PDFBox, no `Graphics2D`), amb els seus colors. Les classes de `model/proves/` i les fonts dels quadres de diàleg de Swing queden fora.
-- **Branques**: `drawkit` (congelada a l'etiqueta `drawkit-13-11-26`) és la migració, sense cap canvi visual. Les proves de disseny es fan a **`disseny-grafic`**, que en surt. El javadoc de la classe explica què es pot tocar (tema, paleta, cos dels mètodes) i què s'ha de respectar (signatures, caixes, velocitat).
+- **Branques**: des del 14-11-26 **tot és a `master`**: `drawkit` (congelada a l'etiqueta `drawkit-13-11-26`) i `disseny-grafic` s'hi van fusionar (fast-forward) i les proves de disseny segueixen des d'allà. `drawkit` era la migració, sense cap canvi visual. El javadoc de la classe explica què es pot tocar (tema, paleta, cos dels mètodes) i què s'ha de respectar (signatures, caixes, velocitat).
 - **La migració (13-11-26) es va comprovar píxel a píxel** en dues passades: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`, i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
 
 ### Els temes gràfics (`Tema`)
