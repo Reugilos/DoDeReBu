@@ -618,12 +618,10 @@ public final class DrawKit {
     /**
      * [CA] L'aspecte d'un tip: el color de fons, el del text, el marc, el marge i
      * la mida de la lletra els posa el tema. Un color {@code colorsets} deixa el
-     * del sistema. La finestreta (el {@code JPopupMenu}) no hi posa cap marc propi:
-     * el del tip és l'únic, o es veurien dos.
+     * del sistema (el groc de sempre, amb el doble marc de la finestreta i del tip).
      * [EN] Styles a tip popup from the theme.
      */
     public static void estilDeTip(javax.swing.JPopupMenu popup, javax.swing.JToolTip tip) {
-        popup.setBorder(javax.swing.BorderFactory.createEmptyBorder());
         if (TIP_FONS != null) {
             popup.setOpaque(true);
             popup.setBackground(TIP_FONS);
