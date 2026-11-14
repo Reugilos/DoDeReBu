@@ -148,6 +148,25 @@ public final class DrawKit {
     private static final Color TECLA_SENSE_COLOR = T.color("tecla.senseColor");
     private static final boolean TEXT_SUAVITZAT = T.si("text.suavitzat");
 
+    // Les caixes d'Acords i de Lletra, a l'esquerra, per sobre i per sota del teclat
+    private static final Color CAIXA_ACORDS = T.color("caixaAcords.fons");
+    private static final Color CAIXA_LLETRA = T.color("caixaLletra.fons");
+    private static final Color CAIXA_VORA = T.color("caixa.vora.color");
+    private static final Stroke TRAC_CAIXA = new BasicStroke(T.decimal("caixa.vora.gruix"));
+    private static final boolean CAIXA_AMB_VORA = T.decimal("caixa.vora.gruix") > 0;
+
+    // Els tips (les finestretes que expliquen un botó). Color null = el del sistema.
+    private static final Color TIP_FONS = T.color("tip.fons");
+    private static final Color TIP_TEXT = T.color("tip.text");
+    private static final Color TIP_VORA = T.color("tip.vora.color");
+    private static final int TIP_VORA_GRUIX = T.enter("tip.vora.gruix");
+    private static final int TIP_MARGE = T.enter("tip.marge");
+    private static final int TIP_FONT_MIDA = T.enter("tip.font.mida");
+
+    // Les icones dels botons (play, pausa, inici) i les fletxes de «Tò >>»
+    private static final double ICONA_PROPORCIO = T.decimal("icona.proporcio");
+    private static final double FLETXA_PROPORCIO = T.decimal("fletxa.proporcio");
+
     /**
      * [CA] Els quatre tipus de marca de canvi de la franja d'acords. El color de
      * cadascuna el posa el tema; el text pren el color que hi contrasti.
@@ -572,6 +591,57 @@ public final class DrawKit {
         g.fillRect(x, y, w, h);
     }
 
+    /** [CA] Les dues caixes que hi ha al costat del teclat. / [EN] The two boxes beside the keyboard. */
+    public enum Caixa {
+        ACORDS, LLETRA
+    }
+
+    /**
+     * [CA] La caixa d'Acords o de Lletra, a la columna del teclat: el seu fons (que
+     * és del tema, cadascuna el seu) i el seu marc. El marc va dins del rectangle
+     * i, amb gruix 0, no es dibuixa.
+     * [EN] One of the two boxes beside the keyboard: its own background and frame.
+     */
+    public static void caixaDeFranja(Graphics2D g, int x, int y, int w, int h, Caixa quina) {
+        Color fons = quina == Caixa.ACORDS ? CAIXA_ACORDS : CAIXA_LLETRA;
+        g.setColor(fons != null ? fons : FONS);
+        g.fillRect(x, y, w, h);
+        if (CAIXA_AMB_VORA) {
+            Stroke abans = g.getStroke();
+            g.setStroke(TRAC_CAIXA);
+            g.setColor(CAIXA_VORA != null ? CAIXA_VORA : TINTA);
+            g.drawRect(x, y, w, h);
+            g.setStroke(abans);
+        }
+    }
+
+    /**
+     * [CA] L'aspecte d'un tip: el color de fons, el del text, el marc, el marge i
+     * la mida de la lletra els posa el tema. Un color {@code colorsets} deixa el
+     * del sistema. La finestreta (el {@code JPopupMenu}) no hi posa cap marc propi:
+     * el del tip és l'únic, o es veurien dos.
+     * [EN] Styles a tip popup from the theme.
+     */
+    public static void estilDeTip(javax.swing.JPopupMenu popup, javax.swing.JToolTip tip) {
+        popup.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        if (TIP_FONS != null) {
+            popup.setOpaque(true);
+            popup.setBackground(TIP_FONS);
+            tip.setOpaque(true);
+            tip.setBackground(TIP_FONS);
+        }
+        if (TIP_TEXT != null) tip.setForeground(TIP_TEXT);
+        if (TIP_FONT_MIDA > 0) tip.setFont(new Font(FAMILIA_INTERFICIE, Font.PLAIN, TIP_FONT_MIDA));
+        javax.swing.border.Border marge = javax.swing.BorderFactory.createEmptyBorder(
+                TIP_MARGE, TIP_MARGE, TIP_MARGE, TIP_MARGE);
+        if (TIP_VORA != null && TIP_VORA_GRUIX > 0) {
+            tip.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                    javax.swing.BorderFactory.createLineBorder(TIP_VORA, TIP_VORA_GRUIX), marge));
+        } else if (TIP_MARGE > 0) {
+            tip.setBorder(javax.swing.BorderFactory.createCompoundBorder(tip.getBorder(), marge));
+        }
+    }
+
     /** [CA] La línia que separa el teclat de la partitura. / [EN] Keyboard/score separator. */
     public static void separadorDeTeclat(Graphics2D g, int x, int y1, int y2) {
         g.setColor(TINTA);
@@ -629,7 +699,111 @@ public final class DrawKit {
             if (aa != null) g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
         }
         g.setColor(aparenca.equals(aparencaDeBoto(true)) ? TEXT_DE_BOTO_PREMUT : TEXT_DE_BOTO);
+        if (rotul.startsWith("{") && rotul.endsWith("}") && dibuixaIcona(g, x, y, w, h, rotul)) return;
+        int k = rotul.lastIndexOf('{');
+        if (k > 0 && rotul.endsWith("}") && dibuixaRotulAmbFletxes(g, x, y, w, ty, rotul, k)) return;
         g.drawString(rotul, tx, ty);
+    }
+
+    // ── Icones i fletxes dels botons ─────────────────────────────────────────
+    //
+    // Els rètols d'un botó poden portar una icona dibuixada, en lloc de caràcters
+    // que cada lletra dibuixa a la seva manera: {play}, {pausa} i {inici}. I els
+    // de Tò/Ex acaben amb una o dues fletxes («Tò {>>}», «Ex {<<}»), que es
+    // dibuixen centrades en alçada amb la paraula. Tot va amb el color del text
+    // del botó (que ja és del tema) i la mida surt de l'alçada del botó.
+
+    private static boolean dibuixaIcona(Graphics2D g, double x, double y, double w, double h, String marca) {
+        double s = Math.min(w, h) * ICONA_PROPORCIO;
+        double cx = x + w / 2.0, cy = y + h / 2.0;
+        Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        boolean fet = true;
+        switch (marca) {
+            case "{play}": {
+                // Triangle ple que apunta a la dreta, centrat per l'ull (el centre de
+                // gravetat d'un triangle és a un terç de la base, no al mig)
+                double tw = s * 0.9, x0 = cx - tw * 0.4;
+                g.fill(triangle(x0, cy - s / 2, x0, cy + s / 2, x0 + tw, cy));
+                break;
+            }
+            case "{pausa}": {
+                double bw = s * 0.28, gap = s * 0.2, x0 = cx - (2 * bw + gap) / 2.0;
+                g.fill(new java.awt.geom.Rectangle2D.Double(x0, cy - s / 2, bw, s));
+                g.fill(new java.awt.geom.Rectangle2D.Double(x0 + bw + gap, cy - s / 2, bw, s));
+                break;
+            }
+            case "{inici}": {
+                // Una barra i un triangle que apunta a l'esquerra: «torna al principi»
+                double bw = s * 0.2, tw = s * 0.72, x0 = cx - s / 2;
+                g.fill(new java.awt.geom.Rectangle2D.Double(x0, cy - s / 2, bw, s));
+                g.fill(triangle(x0 + s, cy - s / 2, x0 + s, cy + s / 2, x0 + s - tw, cy));
+                break;
+            }
+            default:
+                fet = false;
+        }
+        if (aa != null) g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+        return fet;
+    }
+
+    private static Shape triangle(double x1, double y1, double x2, double y2, double x3, double y3) {
+        java.awt.geom.Path2D.Double p = new java.awt.geom.Path2D.Double();
+        p.moveTo(x1, y1);
+        p.lineTo(x2, y2);
+        p.lineTo(x3, y3);
+        p.closePath();
+        return p;
+    }
+
+    /**
+     * [CA] «Paraula {>>}»: la paraula i les fletxes, tot centrat al botó, amb les
+     * fletxes centrades en alçada amb les majúscules de la paraula (les lletres
+     * «>» i «<» queden més amunt o més avall segons la font).
+     * [EN] A word followed by one or two drawn chevrons, vertically centred on it.
+     */
+    private static boolean dibuixaRotulAmbFletxes(Graphics2D g, double x, double y, double w, float ty,
+            String rotul, int k) {
+        String fletxes = rotul.substring(k + 1, rotul.length() - 1);
+        boolean dreta = fletxes.matches(">+");
+        if (!dreta && !fletxes.matches("<+")) return false;
+        String paraula = rotul.substring(0, k).trim();
+        FontMetrics fm = g.getFontMetrics();
+        double alcadaMajuscula = g.getFont().createGlyphVector(g.getFontRenderContext(), "H")
+                .getVisualBounds().getHeight();
+        double mida = g.getFont().getSize2D();
+        double fw = alcadaMajuscula * 0.34 * FLETXA_PROPORCIO;   // amplada d'una fletxa
+        double fh = alcadaMajuscula * 0.42 * FLETXA_PROPORCIO;   // mitja alçada
+        double sep = fw * 0.9;                                    // entre dues fletxes
+        double gruix = Math.max(1.2, mida / 9.0);
+        double buit = fm.stringWidth(" ") * 0.8;
+        int n = fletxes.length();
+        double total = fm.stringWidth(paraula) + buit + n * fw + (n - 1) * sep;
+        double x0 = x + (w - total) / 2.0;
+        g.drawString(paraula, (float) x0, ty);
+        double cy = ty - alcadaMajuscula / 2.0;
+        Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+        Stroke abans = g.getStroke();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setStroke(new BasicStroke((float) gruix, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        double fx = x0 + fm.stringWidth(paraula) + buit;
+        for (int i = 0; i < n; i++) {
+            double a = fx + i * (fw + sep);
+            java.awt.geom.Path2D.Double p = new java.awt.geom.Path2D.Double();
+            if (dreta) {
+                p.moveTo(a, cy - fh);
+                p.lineTo(a + fw, cy);
+                p.lineTo(a, cy + fh);
+            } else {
+                p.moveTo(a + fw, cy - fh);
+                p.lineTo(a, cy);
+                p.lineTo(a + fw, cy + fh);
+            }
+            g.draw(p);
+        }
+        g.setStroke(abans);
+        if (aa != null) g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+        return true;
     }
 
     /** [CA] Una tecla, amb l'aparença que tingui. / [EN] A key. */

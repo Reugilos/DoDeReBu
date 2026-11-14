@@ -285,6 +285,7 @@ public class MyButtonPanel extends MyComponent {
             this.popUp.removeAll();
             JToolTip toolTip = new JToolTip();
             toolTip.setTipText(tipText);
+            DrawKit.estilDeTip(this.popUp, toolTip);
             this.popUp.add(toolTip); // tipText text pot ser html: "<html><b>Funció del botó:</b><br>Aquest botó executa X acció.</html>"
             popUp.pack();
             popUp.show(this.controller.getUi().getPanel(),
@@ -302,6 +303,7 @@ public class MyButtonPanel extends MyComponent {
             this.popUp.removeAll();
             JToolTip toolTip = new JToolTip();
             toolTip.setTipText(text);
+            DrawKit.estilDeTip(this.popUp, toolTip);
             this.popUp.add(toolTip);
             popUp.pack();
             popUp.show(this.controller.getUi().getPanel(), screenX, screenY);

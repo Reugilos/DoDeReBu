@@ -753,15 +753,11 @@ public class MyController {
         int lyricsH = (int) Math.round(Settings.getnRowsLyrics()    * rowH);
         int kw      = (int) Math.ceil(keyW);
         int kx      = right ? (int) Math.ceil(camW) : 0;  // x on comença la zona del keyboard
-        int sepX    = right ? (int) Math.ceil(camW) : kw; // línia separadora càmera/keyboard
 
-        // White fill for the keyboard-column part of each strip
-        DrawKit.fons(g, kx, chordY,  kw, chordH);
-        DrawKit.fons(g, kx, lyricsY, kw, lyricsH);
-
-        // Vertical separator line between keyboard column and camera area
-        DrawKit.separadorDeTeclat(g, sepX, chordY,  chordY  + chordH);
-        DrawKit.separadorDeTeclat(g, sepX, lyricsY, lyricsY + lyricsH);
+        // Les dues caixes del costat del teclat, cadascuna amb el seu fons i el seu
+        // marc (del tema). El marc ja fa de línia separadora de la càmera.
+        DrawKit.caixaDeFranja(g, kx, chordY,  kw, chordH,  DrawKit.Caixa.ACORDS);
+        DrawKit.caixaDeFranja(g, kx, lyricsY, kw, lyricsH, DrawKit.Caixa.LLETRA);
 
         // Labels: vertically centered, aligned with keyboard zone
         java.awt.FontMetrics fm = g.getFontMetrics();

@@ -118,7 +118,7 @@ public class Settings {
 
     // ── Valors per defecte de partitura ───────────────────────────────────
     public static final int DEFAULT_NMEASURES_CAM  = 4;
-    public static final double KEY_WIDTH_REDUCTION = 0.75; // ràtio XiloKey vs Slides
+    public static final double KEY_WIDTH_REDUCTION = 2.0 / 3.0; // ràtio XiloKey vs Slides: les tecles ocupen 2/3 del teclat
     private static final int DEFAULT_NBEATS_MEASURE = 4;
     private static final int DEFAULT_NCOLS_QUARTER  = 12;
     private static final int DEFAULT_BEAT_FIGURE    = 4;   // denominador compàs (4 = negra)

@@ -101,6 +101,15 @@ Les proves es fan a la branca `disseny-grafic` (vegeu la secció de DrawKit). Aq
 
 Pendent de decidir: si agrada, si el text blanc sobre el groc es llegeix prou, i si la lletra Century Gothic s'ha de mantenir.
 
+**Segona tanda (14-11-26), sobre el tema `manual`**, a tots els temes quan no es diu el contrari:
+
+- **El `>` de les tecles extremes s'ha tret.** Marcava les dues notes de la tessitura de l'instrument (`MyXiloKey.draw`); ocupava lloc i el color ja ho diu.
+- **Les tecles fan 2/3 de l'amplada del teclat** (`Settings.KEY_WIDTH_REDUCTION` = 2/3, abans 0,75); els slides, l'1/3 restant. El PDF ho segueix.
+- **Les caixes d'Acords i de Lletra** (a l'esquerra, per sobre i per sota del teclat) tenen entitat pròpia: `DrawKit.caixaDeFranja(…, Caixa.ACORDS|LLETRA)`, amb el fons de cadascuna al tema (`caixaAcords.fons`, `caixaLletra.fons`) i un marc (`caixa.vora.color`, `caixa.vora.gruix`; gruix 0 = sense marc). El marc fa de línia separadora de la càmera: **el clàssic també l'ha guanyat**, o sigui que ja no és idèntic a `master` en aquest punt.
+- **Els tips són del tema** (`DrawKit.estilDeTip`): `tip.fons`, `tip.text`, `tip.vora.color`, `tip.vora.gruix`, `tip.marge`, `tip.font.mida`. Amb `colorsets` i 0 queda el del sistema (clàssic). La finestreta (`JPopupMenu`) ja no posa cap marc propi, o es veien dos marcs.
+- **Icones dibuixades als botons.** Un rètol `{play}`, `{pausa}` o `{inici}` es dibuixa com a figura (triangle ple a la dreta, dues barres, barra + triangle a l'esquerra) amb el color del text del botó; la mida és `icona.proporcio`. Els rètols de to i d'exercici acaben amb `{>>}` o `{<<}` (`Tò {>>}`, `Ex {<<}`): les fletxes es dibuixen centrades en alçada amb les majúscules de la paraula, perquè els `>` de la font queden més amunt o més avall segons la lletra (`fletxa.proporcio`). Els `<<`/`>>` de pàgina segueixen sent text.
+- **Textos**: el botó de to diu **Tò** en català i **Tono** en castellà (en anglès, Key). L'ajuda ho diu igual.
+
 ### Altura dibuixada vs altura que sona (`displayOffset`)
 
 La graella representa l'altura **escrita**; l'instrument pot sonar en un altre registre. La conversió és una resta:
@@ -196,6 +205,8 @@ Per comprovar que res no s'ha trencat: round-trip símbol → intervals → sím
 **Els símbols es desen sempre.** Van al MIDI com a metadades de text 0x7F amb prefix `CHORD:`, **a la pista 0**, i `readMidiScore` les llegeix en una passada pròpia sobre `tracks[0]`, independent del bucle de pistes (que es salta la pista de capçalera). El format de cada entrada és `CHORD:<basicString> <info>::<nCols>`.
 
 El flag `saveChordMidiTrack` decideix **només les notes**, i ja no surt d'una pregunta pròpia («vols guardar-los també com a notes MIDI?», que es recordava tota la sessió): surt de la consulta de pistes amagades (vegeu «Desar: pistes visibles i amagades»), on la pista d'acords segueix la regla de qualsevol altra. Fins al 3-10-26 hi penjava també el bucle dels símbols: qui responia que no es trobava el fitxer sense cap acord, i una partitura només d'acords es desava **buida del tot**. Ara la pista d'acords es desa sempre —hi va l'instrument, el canal i el volum de l'acompanyament— i el flag només decideix si entra al `trackMap`; sense entrada, el bucle de la graella se'n salta les notes (`track != null`).
+
+**El text 0x01 de cada acord** (el que veu un altre programa, com el MuseScore) es desa en el **format que es veu ara** i en una sola línia: `ChordSymbols.chordToHorizontalLine`, que dona `arrel[baix;acord;extensions]` (DodecaFormat: `do[-5;0,3,7;14]`; Solfeig: `Do[sol;do,mib,sol;re]`; Símbol i Nom genèric, tal qual). **No es llegeix en carregar**: la persistència segueix sent el `CHORD:` amb `basicString()`.
 
 **Les notes de la pista d'acords són una exportació, no partitura.** L'acompanyament es torna a generar sol en carregar: cada símbol `CHORD:` passa per `placeChordSymbol`, que escriu les notes a la graella. Per això la pista d'acords desada va **marcada amb el seu id especial** (`id=1003`, la metadada de pista que escriu `saveTrackData`) i en carregar se li salten els `NOTE_ON`/`NOTE_OFF`: llegir-les hi afegiria una segona tanda amb les durades velles, que no les esborra ningú (`removeChordMidiNotes` busca el símbol que hi havia abans a aquella columna, i en una càrrega nova no n'hi ha cap). El mateix id evita que la pista entri al mesclador com una de normal: va a `setChordTrack`, no a `addTrack`.
 

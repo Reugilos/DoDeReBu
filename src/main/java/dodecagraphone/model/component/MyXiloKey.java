@@ -197,24 +197,9 @@ public class MyXiloKey extends MyComponent {
         } else {
             String nameOnly = this.noteName.replaceAll("[0-9]+$", "");
             text = " " + nameOnly;
-            MyTrack currentTrackForRange = controller.getMixer().getCurrentTrack();
-            if (currentTrackForRange != null) {
-                int visualLow, visualHigh;
-                if (ToneRange.isMetallophone()) {
-                    // Metallòfon: els límits de tesitura coincideixen amb els del grid
-                    visualLow  = ToneRange.getLowestMidi();
-                    visualHigh = ToneRange.getHighestMidi();
-                } else {
-                    int dispOffRange = currentTrackForRange.getDisplayOffset();
-                    int chan = currentTrackForRange.getCurrentChannel();
-                    int prog = SoundWithMidi.getInstrumentInChannel(chan);
-                    visualLow  = InstrumentRange.getLowest(prog) + dispOffRange;
-                    visualHigh = InstrumentRange.getHighest(prog) + dispOffRange;
-                }
-                if (this.midi == visualLow || this.midi == visualHigh) {
-                    text += ">";
-                }
-            }
+            // Fins al 14-11-26 aquí s'afegia un «>» a les dues tecles extremes de
+            // la tessitura de l'instrument. Es va treure: ocupava lloc i no deia res
+            // que el color de la tecla no digués.
         }
         // Keyboard esquerre (doNotHighlight=false): quan la tecla sona → text negre sobre fons blanc.
         // Keyboard dret (doNotHighlight=true): la tecla NO es posa blanca, i el text

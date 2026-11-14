@@ -11,6 +11,7 @@ import dodecagraphone.model.MyKeyCircles;
 import dodecagraphone.model.MyTempo;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
+import dodecagraphone.model.chord.ChordSymbols;
 import dodecagraphone.model.mixer.MyMixer;
 import dodecagraphone.model.mixer.MyTrack;
 import dodecagraphone.model.sound.SoundWithMidi;
@@ -1311,10 +1312,19 @@ public class MyMidiScore extends MyExercise {
                     e.printStackTrace();
                 }
                 metaTrack.add(new MidiEvent(textMsg, tick));
-                // Deso també el simbol de l'acord al text 0x01 per al MuseScore
+                // Deso també el nom de l'acord al text 0x01 per al MuseScore i companyia:
+                // en el format que s'estigui veient ara, en una sola línia
+                // (arrel[baix;acord;extensions]). Aquest text no es torna a llegir en
+                // carregar: el que es llegeix és el CHORD: de dalt.
                 textMsg = new MetaMessage();
+                String nomVisible = null;
+                if (controller.getMyChordSymbolLine() != null) {
+                    nomVisible = ChordSymbols.chordToHorizontalLine(chord,
+                            controller.getMyChordSymbolLine().getDisplayFormat());
+                }
+                if (nomVisible == null) nomVisible = chord.basicString();
                 try {
-                    data = chord.basicString().getBytes("UTF-8");
+                    data = nomVisible.getBytes("UTF-8");
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }

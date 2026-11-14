@@ -926,6 +926,63 @@ public class ChordSymbols {
     }
 
     /**
+     * [CA] L'acord en el format donat, tot en <b>una sola línia</b>: l'arrel i,
+     * entre claudàtors, el baix, l'acord i les extensions separats per
+     * {@code ;}. Exemple en DodecaFormat: {@code do[-5;0,3,7;14]}. El baix i les
+     * extensions només hi surten si n'hi ha. Els formats que ja són una sola
+     * cadena (Símbol: {@code Cm7/G}) es tornen tal qual.
+     * <p>
+     * Va pensat per al text de l'acord que es desa al MIDI perquè el vegi un
+     * altre programa; <b>no és un format d'entrada ni de persistència</b> (això
+     * és {@link Chord#basicString()}). Torna {@code null} si l'acord és de text
+     * lliure o no té intervals.
+     * <p>
+     * [EN] The chord in the given format on one line: root, then
+     * {@code [bass;chord;extensions]}. Untabulated chords in Simbol/Nom fall
+     * back to the DodecaFormat line.
+     *
+     * @param chord [CA] l'acord / [EN] the chord
+     * @param fmt   [CA] el format (una de les constants {@code FORMAT_*}) / [EN] the format
+     * @return [CA] la línia, o {@code null} / [EN] the line, or null
+     */
+    public static String chordToHorizontalLine(Chord chord, String fmt) {
+        if (chord == null || !chord.isValidChord()
+                || chord.getRoot() == Settings.USE_INFO_AS_SIMBOL || chord.getShape() == null) return null;
+        if (FORMAT_SIMBOL.equals(fmt) || FORMAT_NOM.equals(fmt)) {
+            String s = chordToFormat(chord, fmt);
+            if (s != null) return s;
+            fmt = FORMAT_MY;
+        }
+        int[] ivs = chord.getShape();
+        boolean hiHaBaix = chord.getBass() != Chord.NULL_BASS;
+        String arrel;
+        String baix = null;
+        List<String> base = new ArrayList<>();
+        List<String> ext = new ArrayList<>();
+        if (FORMAT_MY.equals(fmt) || !(FORMAT_DODECA.equals(fmt) || FORMAT_POSICIONS.equals(fmt)
+                || FORMAT_SOLFEIG.equals(fmt) || FORMAT_NOTES.equals(fmt) || FORMAT_MIDI.equals(fmt))) {
+            int rootPc = ((chord.getMidiRoot()) % 12 + 12) % 12;
+            arrel = arrelEnMajuscula(ivs) ? cap(DODECA[rootPc]) : DODECA[rootPc];
+            if (hiHaBaix) baix = String.valueOf(chord.getBass());
+            for (int iv : ivs) (iv > 11 ? ext : base).add(String.valueOf(iv));
+        } else {
+            List<String> lines = chordToFormatLines(chord, fmt);
+            if (lines == null || lines.isEmpty()) return chordToHorizontalLine(chord, FORMAT_MY);
+            String primera = lines.get(0);
+            int sl = primera.indexOf('/');
+            arrel = sl >= 0 ? primera.substring(0, sl) : primera;
+            if (sl >= 0) baix = primera.substring(sl + 1);
+            int nBase = baseLinesCount(chord) - 1;
+            for (int i = 1; i < lines.size(); i++) (i <= nBase ? base : ext).add(lines.get(i));
+        }
+        StringBuilder sb = new StringBuilder(arrel).append('[');
+        if (baix != null) sb.append(baix).append(';');
+        sb.append(String.join(",", base));
+        if (!ext.isEmpty()) sb.append(';').append(String.join(",", ext));
+        return sb.append(']').toString();
+    }
+
+    /**
      * Returns the number of lines that correspond to base-chord notes (root line included),
      * i.e. the index at which tensions start in the list returned by chordToFormatLines.
      * Tensions are intervals > 11.
