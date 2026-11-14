@@ -597,22 +597,30 @@ public final class DrawKit {
     }
 
     /**
-     * [CA] La caixa d'Acords o de Lletra, a la columna del teclat: el seu fons (que
-     * és del tema, cadascuna el seu) i el seu marc. El marc va dins del rectangle
-     * i, amb gruix 0, no es dibuixa.
-     * [EN] One of the two boxes beside the keyboard: its own background and frame.
+     * [CA] El fons de la caixa d'Acords o de Lletra, a la columna del teclat (el
+     * de cadascuna és del tema). El marc va a part, {@link #margeDeCaixa}, perquè
+     * s'ha de dibuixar <b>després</b> del teclat: les tecles toquen la caixa i, si
+     * el marc anés amb el fons, en taparien la vora.
+     * [EN] Background of one of the two boxes beside the keyboard.
      */
     public static void caixaDeFranja(Graphics2D g, int x, int y, int w, int h, Caixa quina) {
         Color fons = quina == Caixa.ACORDS ? CAIXA_ACORDS : CAIXA_LLETRA;
         g.setColor(fons != null ? fons : FONS);
         g.fillRect(x, y, w, h);
-        if (CAIXA_AMB_VORA) {
-            Stroke abans = g.getStroke();
-            g.setStroke(TRAC_CAIXA);
-            g.setColor(CAIXA_VORA != null ? CAIXA_VORA : TINTA);
-            g.drawRect(x, y, w, h);
-            g.setStroke(abans);
-        }
+    }
+
+    /**
+     * [CA] El marc d'una caixa (color i gruix del tema; gruix 0 = sense marc).
+     * Es dibuixa sobre el teclat i la càmera, com una vora senzilla d'un píxel.
+     * [EN] The frame of a box; drawn on top of everything else.
+     */
+    public static void margeDeCaixa(Graphics2D g, int x, int y, int w, int h) {
+        if (!CAIXA_AMB_VORA) return;
+        Stroke abans = g.getStroke();
+        g.setStroke(TRAC_CAIXA);
+        g.setColor(CAIXA_VORA != null ? CAIXA_VORA : TINTA);
+        g.drawRect(x, y, w, h);
+        g.setStroke(abans);
     }
 
     /**

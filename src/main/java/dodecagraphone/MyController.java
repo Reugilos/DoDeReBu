@@ -786,6 +786,24 @@ public class MyController {
                 lyricsY + (lyricsH + lineH) / 2);
     }
 
+    /**
+     * El marc de les caixes d'Acords i de Lletra. Va per separat del fons i es
+     * dibuixa al final: les tecles del teclat toquen les caixes, i si el marc
+     * anés amb el fons les tecles en taparien el costat de baix o de dalt.
+     */
+    private void drawStripsFrames(Graphics2D g) {
+        double rowH   = Settings.getRowHeight();
+        double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
+        double camW   = Settings.getnColsCam()      * Settings.getColWidth();
+        boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
+        int kw = (int) Math.ceil(keyW);
+        int kx = right ? (int) Math.ceil(camW) : 0;
+        DrawKit.margeDeCaixa(g, kx, (int) Math.round(Settings.getChordFirstRow() * rowH),
+                kw, (int) Math.round(Settings.getnRowsChord() * rowH));
+        DrawKit.margeDeCaixa(g, kx, (int) Math.round(Settings.getLyricsFirstRow() * rowH),
+                kw, (int) Math.round(Settings.getnRowsLyrics() * rowH));
+    }
+
     private boolean isChordFormatButtonClick(double posX, double posY) {
         double rowH   = Settings.getRowHeight();
         double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
@@ -818,6 +836,7 @@ public class MyController {
         DrawKit.fonsDePantalla(g, pw, ph, fontSize);
         drawStripsBackground(g);
         this.screen.draw(g);
+        drawStripsFrames(g);
         this.setNeedsDrawing(false);
 //        aux++;
         //System.out.flush();
