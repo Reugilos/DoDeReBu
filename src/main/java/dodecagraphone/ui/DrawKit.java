@@ -144,6 +144,8 @@ public final class DrawKit {
     private static final int BOTO_MARGE = T.enter("boto.marge");
     private static final Color SLIDE = T.color("slide");
     private static final Color TEXT_TECLA_QUE_SONA = T.color("tecla.textQueSona");
+    /** [CA] Si una tecla que sona es ressalta (fons blanc, text negre). Amb {@code no} es veu igual que en silenci. */
+    private static final boolean TECLA_RESSALTA = T.si("tecla.ressalta");
     /** [CA] Tecla del PDF sense color a la paleta. / [EN] PDF key fallback. */
     private static final Color TECLA_SENSE_COLOR = T.color("tecla.senseColor");
     private static final boolean TEXT_SUAVITZAT = T.si("text.suavitzat");
@@ -307,9 +309,9 @@ public final class DrawKit {
         return ColorSets.getEncesColor(midi % 12);
     }
 
-    /** [CA] Una tecla que sona. / [EN] A sounding key. */
-    public static Color aparencaDeTeclaQueSona() {
-        return ColorSets.getColorFons();
+    /** [CA] Una tecla que sona: el color de ressaltat, o el de sempre si el tema no ressalta. / [EN] A sounding key. */
+    public static Color aparencaDeTeclaQueSona(int midi) {
+        return TECLA_RESSALTA ? ColorSets.getColorFons() : aparencaDeTecla(midi);
     }
 
     /** [CA] Un botó, premut o no. / [EN] A button, pressed or not. */
@@ -830,7 +832,7 @@ public final class DrawKit {
         Font abans = g.getFont();
         int mida = Math.max(FONT_DE_TECLA_MINIMA, (int) (h * FONT_DE_TECLA_PER_ALCADA));
         if (mida != abans.getSize()) g.setFont(abans.deriveFont((float) mida));
-        g.setColor(sona ? TEXT_TECLA_QUE_SONA : tintaDeNota(midi));
+        g.setColor(sona && TECLA_RESSALTA ? TEXT_TECLA_QUE_SONA : tintaDeNota(midi));
         g.drawString(nom, (float) x, (float) baseY);
         g.setFont(abans);
     }

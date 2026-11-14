@@ -104,7 +104,7 @@ public class MyXiloKey extends MyComponent {
         this.row = firstRow;
         this.midi = ToneRange.keyIdToMidi(this.keyId);
         this.noteName = ToneRange.getNoteName(midi);
-        this.color_playing = DrawKit.aparencaDeTeclaQueSona();
+        this.color_playing = DrawKit.aparencaDeTeclaQueSona(midi);
         this.color_silent = DrawKit.aparencaDeTecla(midi);
         if (!SampleOrMidi.isMidi()) {
             this.so = new Sound(ToneRange.getFilename(midi));
