@@ -1128,9 +1128,54 @@ public class ChordSymbols {
         return r;
     }
 
+    /**
+     * [CA] Els parentesis d'entrada: <b>dues coses segons el que hi ha davant</b>.
+     * <ul>
+     *   <li>Darrere d'una arrel sola ({@code Do(0,4,7)}, {@code Do(5;0,4,7;2,4)},
+     *       {@code Re(1,b3,5)}) valen pels claudators.</li>
+     *   <li>Darrere d'un simbol ({@code C7(b9)}, {@code Cmaj7(#11)},
+     *       {@code C7(b9,#11)}) son les <b>extensions</b> del simbol: s'hi
+     *       enganxen, sense comes ni espais, i queda {@code C7b9},
+     *       {@code C7b9#11}. El parser de sufixos ja sap treure les tensions de
+     *       la cua.</li>
+     * </ul>
+     * Nomes a l'entrada: el que es mostra i el que es desa no porta parentesis.
+     */
     private static String ambClaudators(String input) {
         if (input == null) return null;
-        return input.replace('(', '[').replace(')', ']');
+        java.util.regex.Matcher m = PARENTESIS.matcher(input);
+        StringBuilder sb = new StringBuilder();
+        int last = 0;
+        while (m.find()) {
+            String davant = sb.toString() + input.substring(last, m.start());
+            sb.append(input, last, m.start());
+            if (esSimbolAmbExtensions(davant)) {
+                sb.append(m.group(1).replaceAll("[\\s,;]+", ""));
+            } else {
+                sb.append('[').append(m.group(1)).append(']');
+            }
+            last = m.end();
+        }
+        sb.append(input.substring(last));
+        return sb.toString().replace('(', '[').replace(')', ']');
+    }
+
+    private static final java.util.regex.Pattern PARENTESIS =
+            java.util.regex.Pattern.compile("\\(([^()\\[\\]]*)\\)");
+
+    /**
+     * [CA] Cert si el que va davant del parentesi es un simbol (arrel anglosaxona
+     * i sufix) i no una arrel sola: aleshores el parentesi porta extensions.
+     */
+    private static boolean esSimbolAmbExtensions(String davant) {
+        String d = davant.trim();
+        if (d.isEmpty() || d.indexOf('[') >= 0) return false;
+        char c0 = Character.toUpperCase(d.charAt(0));
+        if (c0 < 'A' || c0 > 'G') return false;
+        if (d.matches("(?i)[A-G][b#]?")) return false;
+        if (ROOT_TO_PC.containsKey(d) || ROOT_TO_PC.containsKey(d.toLowerCase())
+                || ROOT_TO_PC.containsKey(cap(d.toLowerCase()))) return false;
+        return solfeigToDodeca(d.toLowerCase()) == null;
     }
 
     /**
