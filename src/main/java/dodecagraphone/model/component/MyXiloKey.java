@@ -56,6 +56,8 @@ public class MyXiloKey extends MyComponent {
     private final Color color_full;
     /** [CA] Color en silenci d'una tecla no seleccionada: apagat (segons el tema). */
     private final Color color_dim;
+    /** [CA] Cert si la tecla és fora de la plantilla triada (apagada quan calla). */
+    private boolean dimmed = false;
     /**
      * The sound sample associated with the key (when not using midi).
      */
@@ -185,6 +187,7 @@ public class MyXiloKey extends MyComponent {
      * otherwise. Takes effect at once unless the key is sounding.
      */
     private void setSilentLook(boolean dim) {
+        this.dimmed = dim;
         this.color_silent = dim ? this.color_dim : this.color_full;
         if (this.activeChannels == null || this.activeChannels.isEmpty()) {
             this.color = this.color_silent;
@@ -242,7 +245,7 @@ public class MyXiloKey extends MyComponent {
         // Keyboard dret (doNotHighlight=true): la tecla NO es posa blanca, i el text
         // ha de mantenir el color normal (no canviar a negre quan sona).
         boolean litAndShouldChangeText = !activeChannels.isEmpty() && !this.doNotHighlight;
-        DrawKit.nomDeTecla(g, text, screenPosX, screenPosY, height, this.midi, litAndShouldChangeText);
+        DrawKit.nomDeTecla(g, text, screenPosX, screenPosY, height, this.midi, litAndShouldChangeText, this.dimmed);
         this.slide.draw(g);
         if (!this.controller.isDrumsMode()) {
             int midiKey = this.controller.getAllPurposeScore().getMidiKey();

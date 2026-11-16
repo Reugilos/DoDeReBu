@@ -122,8 +122,8 @@ public final class DrawKit {
     private static final Color NOTA_GRIS = T.color("nota.gris");
     /**
      * [CA] Com d'apagades es veuen les tecles <b>no seleccionades</b> del teclat
-     * (les que no són a la plantilla triada): 0 = color ple, 1 = negre. Les
-     * seleccionades sempre van amb el color ple.
+     * (les que no són a la plantilla triada): 0 = color ple, 1 = blanc (el color
+     * «es desfà»). Les seleccionades sempre van amb el color ple.
      */
     private static final float TECLA_APAGA = Math.max(0f, Math.min(1f, T.decimal("tecla.apaga")));
     /** [CA] {@code null}: el text de les tecles en silenci és el de les notes. */
@@ -337,15 +337,17 @@ public final class DrawKit {
 
     /**
      * [CA] Una tecla en silenci que <b>no és de la plantilla triada</b>: el color
-     * de la nota apagat (barrejat amb negre segons {@code tecla.apaga}). Amb
+     * de la nota apagat (barrejat amb blanc segons {@code tecla.apaga}). Amb
      * {@code tecla.apaga = 0} (el clàssic) és igual que {@link #aparencaDeTecla}.
      * [EN] A silent key outside the chosen template: the note colour dimmed.
      */
     public static Color aparencaDeTeclaApagada(int midi) {
         Color c = colorDeNota(midi);
         if (c == null || TECLA_APAGA <= 0f) return c;
-        float f = 1f - TECLA_APAGA;
-        return new Color(Math.round(c.getRed() * f), Math.round(c.getGreen() * f), Math.round(c.getBlue() * f));
+        return new Color(
+                Math.round(c.getRed() + (255 - c.getRed()) * TECLA_APAGA),
+                Math.round(c.getGreen() + (255 - c.getGreen()) * TECLA_APAGA),
+                Math.round(c.getBlue() + (255 - c.getBlue()) * TECLA_APAGA));
     }
 
     /** [CA] Una tecla que sona: el color de ressaltat, o el color ple de la nota si el tema no ressalta. / [EN] A sounding key. */
@@ -867,13 +869,24 @@ public final class DrawKit {
      * [EN] A key name, sized to the key; black while sounding.
      */
     public static void nomDeTecla(Graphics2D g, String nom, double x, double y, double h, int midi, boolean sona) {
+        nomDeTecla(g, nom, x, y, h, midi, sona, false);
+    }
+
+    /**
+     * [CA] Com {@link #nomDeTecla(Graphics2D, String, double, double, double, int, boolean)},
+     * però sabent si la tecla és <b>apagada</b> (no seleccionada, en silenci): llavors el
+     * nom va del color {@code tecla.text} del tema, si en té.
+     * [EN] Same, knowing whether the key is dimmed (unselected and silent).
+     */
+    public static void nomDeTecla(Graphics2D g, String nom, double x, double y, double h, int midi,
+                                  boolean sona, boolean apagada) {
         int baseY = (int) (y + h * 0.8);
         Font abans = g.getFont();
         int mida = Math.max(FONT_DE_TECLA_MINIMA, (int) (h * FONT_DE_TECLA_PER_ALCADA));
         if (mida != abans.getSize()) g.setFont(abans.deriveFont((float) mida));
         Color tinta;
         if (sona && TECLA_RESSALTA) tinta = TEXT_TECLA_QUE_SONA;
-        else if (!sona && TEXT_TECLA_SILENCI != null) tinta = TEXT_TECLA_SILENCI;
+        else if (!sona && apagada && TEXT_TECLA_SILENCI != null) tinta = TEXT_TECLA_SILENCI;
         else tinta = tintaDeNota(midi);
         g.setColor(tinta);
         g.drawString(nom, (float) x, (float) baseY);
