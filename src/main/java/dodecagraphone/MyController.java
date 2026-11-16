@@ -4478,6 +4478,10 @@ public class MyController {
             instr = (channel == 9)
                     ? I18n.t("mixer.drumsTrack")
                     : SoundWithMidi.getInstrumentMnemonic(SoundWithMidi.getInstrumentInChannel(channel));
+            // Transposició de l'instrument (so − dibuix, en semitons): «Glock (24 st)».
+            // Sense transposició o a la bateria, només el nom: «Piano».
+            int semis = (channel == 9) ? 0 : -track.getDisplayOffset();
+            if (semis != 0) instr += " (" + semis + " st)";
         }
 //        this.buttons.updateTrackButton(name);
 //        this.buttons.updateChannelButton("" + channel);
@@ -4640,6 +4644,9 @@ public class MyController {
                 break;
             }
             case TRANSPOSE: {
+                // EN DESÚS: la marca de transposició ja no es dibuixa a la franja (la
+                // transposició surt al botó de l'instrument), així que aquest cas no
+                // s'assoleix. Es conserva per si la marca torna.
                 // Signe de músic (8va): positiu = sona per sobre del que es
                 // dibuixa. displayOffset guarda dibuix−so, per això es nega.
                 int semis = (track != null) ? -track.getDisplayOffset() : 0;
@@ -4950,6 +4957,11 @@ public class MyController {
      * dialog as the matching button, pre-filled with the current value, and
      * applies it with undo support. Editing a key mark does not transpose the
      * notes: the user is correcting an existing mark, not making a new key change.
+     * <p>
+     * [CA] La guarda de {@code TRANSPOSE} és codi en desús: aquesta marca ja no es
+     * dibuixa ni es pot seleccionar, però es conserva per si torna.
+     * [EN] The {@code TRANSPOSE} guard is unused code: that mark is no longer
+     * drawn or selectable; kept in case it returns.
      */
     public void editSelectedMark() {
         if (selectedMarkKind == null) return;
@@ -5040,6 +5052,11 @@ public class MyController {
      * [EN] Deletes the selected change mark. Column-0 marks are the score's
      * baseline and cannot be deleted (only edited): in that case a tip is shown
      * and nothing happens.
+     * <p>
+     * [CA] La línia de {@code TRANSPOSE} és codi en desús: aquesta marca ja no es
+     * dibuixa ni es pot seleccionar, però es conserva per si torna.
+     * [EN] The {@code TRANSPOSE} line is unused code (the mark is no longer
+     * drawn or selectable); kept in case it returns.
      *
      * @return [CA] cert si hi havia una marca seleccionada (el clic/tecla queda
      *         consumit) / [EN] true if a mark was selected (key consumed)

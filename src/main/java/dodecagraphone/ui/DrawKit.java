@@ -116,6 +116,14 @@ public final class DrawKit {
     private static final Color PATRO_TRIAT = T.color("patro.triat");
     private static final Color PATRO_FORA = T.color("patro.fora");
     private static final Color TEXT_SOBRE_NOTA = T.color("nota.text");
+    /** [CA] {@code null}: el MI té el color de ColorSets. */
+    private static final Color NOTA_MI = T.color("nota.mi");
+    /** [CA] {@code null}: les notes de la partitura van del color de la seva nota. Si no, totes van d'aquest. */
+    private static final Color NOTA_GRIS = T.color("nota.gris");
+    /** [CA] Com de pàl·lides es veuen les tecles en silenci: 0 = color ple, 1 = blanc. */
+    private static final float TECLA_PAL = Math.max(0f, Math.min(1f, T.decimal("tecla.pal")));
+    /** [CA] {@code null}: el text de les tecles en silenci és el de les notes. */
+    private static final Color TEXT_TECLA_SILENCI = T.color("tecla.text");
     /** [CA] {@code null}: la vora de la nota va del color del text de la nota. */
     private static final Color VORA_DE_NOTA = T.color("nota.vora.color");
     private static final int VORA_DE_NOTA_DESPLACAMENT = T.enter("nota.vora.desplacament");
@@ -173,6 +181,12 @@ public final class DrawKit {
      * [CA] Els quatre tipus de marca de canvi de la franja d'acords. El color de
      * cadascuna el posa el tema; el text pren el color que hi contrasti.
      * [EN] The four change-mark kinds; their colours come from the theme.
+     * <p>
+     * [CA] {@link #TRANSPOSICIO} està <b>en desús</b>: la franja ja no dibuixa la
+     * marca de transposició (ara surt al botó de l'instrument, p. ex.
+     * {@code Glock (24 st)}). Es conserva, amb la clau {@code marca.transposicio}
+     * dels temes, per si la marca torna; ara no la fa servir res.
+     * [EN] {@link #TRANSPOSICIO} is unused: the strip no longer draws it.
      */
     public enum Marca {
         TEMPO, TONALITAT, VOLUM, TRANSPOSICIO
@@ -181,6 +195,7 @@ public final class DrawKit {
     private static final Color MARCA_TEMPO = T.color("marca.tempo");
     private static final Color MARCA_TONALITAT = T.color("marca.tonalitat");
     private static final Color MARCA_VOLUM = T.color("marca.volum");
+    /** [CA] En desús: la marca de transposició ja no es dibuixa (vegeu {@link Marca}). */
     private static final Color MARCA_TRANSPOSICIO = T.color("marca.transposicio");
 
     private static Color fonsDeMarca(Marca m) {
@@ -269,7 +284,14 @@ public final class DrawKit {
 
     /** [CA] Una cel·la amb nota. / [EN] A cell holding a note. */
     public static Color aparencaDeNota(int midi) {
-        return ColorSets.getEncesColor(midi % 12);
+        return NOTA_GRIS != null ? NOTA_GRIS : colorDeNota(midi);
+    }
+
+    /** [CA] El color de la nota (0–11): el del tema per al MI si en té, o ColorSets. */
+    private static Color colorDeNota(int midi) {
+        int n = midi % 12;
+        if (n == ColorSets.MI && NOTA_MI != null) return NOTA_MI;
+        return ColorSets.getEncesColor(n);
     }
 
     /** [CA] Una cel·la amb una nota que sona. / [EN] A cell whose note is sounding. */
@@ -306,12 +328,17 @@ public final class DrawKit {
 
     /** [CA] Una tecla en silenci. / [EN] A silent key. */
     public static Color aparencaDeTecla(int midi) {
-        return ColorSets.getEncesColor(midi % 12);
+        Color c = colorDeNota(midi);
+        if (c == null || TECLA_PAL <= 0f) return c;
+        return new Color(
+                Math.round(c.getRed() + (255 - c.getRed()) * TECLA_PAL),
+                Math.round(c.getGreen() + (255 - c.getGreen()) * TECLA_PAL),
+                Math.round(c.getBlue() + (255 - c.getBlue()) * TECLA_PAL));
     }
 
-    /** [CA] Una tecla que sona: el color de ressaltat, o el de sempre si el tema no ressalta. / [EN] A sounding key. */
+    /** [CA] Una tecla que sona: el color de ressaltat, o el color ple de la nota si el tema no ressalta. / [EN] A sounding key. */
     public static Color aparencaDeTeclaQueSona(int midi) {
-        return TECLA_RESSALTA ? ColorSets.getColorFons() : aparencaDeTecla(midi);
+        return TECLA_RESSALTA ? ColorSets.getColorFons() : colorDeNota(midi);
     }
 
     /** [CA] Un botó, premut o no. / [EN] A button, pressed or not. */
@@ -832,7 +859,11 @@ public final class DrawKit {
         Font abans = g.getFont();
         int mida = Math.max(FONT_DE_TECLA_MINIMA, (int) (h * FONT_DE_TECLA_PER_ALCADA));
         if (mida != abans.getSize()) g.setFont(abans.deriveFont((float) mida));
-        g.setColor(sona && TECLA_RESSALTA ? TEXT_TECLA_QUE_SONA : tintaDeNota(midi));
+        Color tinta;
+        if (sona && TECLA_RESSALTA) tinta = TEXT_TECLA_QUE_SONA;
+        else if (!sona && TEXT_TECLA_SILENCI != null) tinta = TEXT_TECLA_SILENCI;
+        else tinta = tintaDeNota(midi);
+        g.setColor(tinta);
         g.drawString(nom, (float) x, (float) baseY);
         g.setFont(abans);
     }

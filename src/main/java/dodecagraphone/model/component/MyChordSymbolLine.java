@@ -31,18 +31,19 @@ import java.util.TreeMap;
  * [CA] Franja horitzontal de símbols d'acord que fa scroll juntament amb la
  * partitura. Mostra els símbols d'acord del {@code chordSymbolLine} del
  * {@link MyGridScore}, les marques de canvi (tempo en blau, tonalitat en
- * granate, volum en verd i transposició en groc), i les línies de compàs i
- * temps. Les de volum i transposició són del track actual; les altres dues,
- * globals. Utilitza un buffer offscreen
+ * granate i volum en verd), i les línies de compàs i temps. La de volum és
+ * del track actual; les altres dues, globals. (La transposició de
+ * l'instrument ja no hi surt com a marca groga: vegeu {@link MarkKind#TRANSPOSE}.) Utilitza un buffer offscreen
  * ({@link BufferedImage}) per minimitzar el redibuix; el mètode
  * {@code drawFullChordLineInOffscreen()} regenera tot el buffer i
  * {@code draw(Graphics2D)} n'extreu la porció visible.
  * <p>
  * [EN] Horizontal chord symbol strip that scrolls with the score. Displays
  * chord symbols from the {@link MyGridScore} {@code chordSymbolLine}, change
- * markers (tempo in blue, key in maroon, volume in green and transposition in
- * yellow), and bar/beat lines. The volume and transposition ones belong to the
- * current track; the other two are global. Uses an
+ * markers (tempo in blue, key in maroon and volume in green), and bar/beat
+ * lines. The volume one belongs to the current track; the other two are
+ * global. (Instrument transposition is no longer a yellow mark here: see
+ * {@link MarkKind#TRANSPOSE}.) Uses an
  * offscreen buffer ({@link BufferedImage}) to minimise redraws;
  * {@code drawFullChordLineInOffscreen()} regenerates the whole buffer and
  * {@code draw(Graphics2D)} extracts the visible slice.
@@ -125,7 +126,22 @@ public class MyChordSymbolLine extends MyComponent {
         KEY,
         /** Canvi de volum; verd, per pista. */
         VOLUME,
-        /** Transposició de la pista; groc, informativa i no editable. */
+        /**
+         * [CA] Transposició de la pista; groc, informativa i no editable.
+         * <b>En desús:</b> ja no es dibuixa a la franja. La transposició de
+         * l'instrument surt ara al botó de l'instrument, entre parèntesis
+         * ({@code Glock (24 st)}, vegeu {@code MyController.updateTextOfButtons}).
+         * Es conserva el valor, i el tractament que en fan {@code MyController}
+         * i {@link DrawKit.Marca#TRANSPOSICIO}, per si es torna a posar la marca;
+         * ara no hi ha cap codi que el crei, de manera que és inabastable.
+         * <p>
+         * [EN] Track transposition; yellow, informational, not editable.
+         * <b>Deprecated in practice:</b> it is no longer drawn in the strip; the
+         * instrument's transposition now appears on the instrument button, in
+         * brackets ({@code Glock (24 st)}). Kept, with its handling in
+         * {@code MyController} and {@link DrawKit.Marca#TRANSPOSICIO}, in case the
+         * mark returns; nothing creates it now, so it is unreachable.
+         */
         TRANSPOSE;
 
         /** [CA] Com es dibuixa (el color el tria DrawKit). / [EN] How it is drawn. */
@@ -141,32 +157,39 @@ public class MyChordSymbolLine extends MyComponent {
 
     /**
      * [CA] Marca dibuixada, descrita en termes independents de la
-     * transformació de dibuix: la columna on comença, quantes columnes ocupa la
-     * caixeta, i la seva posició dins la pila vertical de marques d'aquella
-     * columna ({@code yOff} des de baix i alçada {@code h}).
+     * transformació de dibuix: la columna on comença el grup de marques, el
+     * desplaçament horitzontal de la caixeta dins d'aquell grup ({@code xOff},
+     * en píxels: les marques d'una mateixa columna van <b>una al costat de
+     * l'altra</b> al carril de dalt) i l'amplada {@code w}.
      * <p>
      * [EN] A drawn mark, described in terms independent of the drawing
-     * transform: the starting column, how many columns the box spans, and its
-     * place in that column's vertical stack of marks ({@code yOff} from the
-     * bottom, height {@code h}).
+     * transform: the column where the group of marks starts, the box's
+     * horizontal offset inside that group ({@code xOff}, pixels: marks of one
+     * column sit <b>side by side</b> in the top lane) and its width {@code w}.
      */
     public static class MarkBox {
-        /** Columna de partitura on comença la caixeta. */
+        /** Columna de partitura on comença el grup de marques. */
         public final int col;
         /** Tipus de marca que representa. */
         public final MarkKind kind;
-        /** Columnes de partitura que ocupa la caixeta (mínim 1). */
-        public final int spanCols;
-        /** Desplaçament de la caixeta des de la base de la pila, en píxels. */
-        public final int yOff;
+        /** Primera columna de partitura que cobreix la caixeta. */
+        public final int firstCol;
+        /** Última columna de partitura que cobreix la caixeta (inclosa). */
+        public final int lastCol;
+        /** Desplaçament horitzontal de la caixeta des de la columna {@code col}, en píxels. */
+        public final int xOff;
+        /** Amplada de la caixeta en píxels. */
+        public final int w;
         /** Alçada de la caixeta en píxels. */
         public final int h;
 
-        MarkBox(int col, MarkKind kind, int spanCols, int yOff, int h) {
+        MarkBox(int col, MarkKind kind, int firstCol, int lastCol, int xOff, int w, int h) {
             this.col      = col;
             this.kind     = kind;
-            this.spanCols = spanCols;
-            this.yOff     = yOff;
+            this.firstCol = firstCol;
+            this.lastCol  = lastCol;
+            this.xOff     = xOff;
+            this.w        = w;
             this.h        = h;
         }
     }
@@ -183,6 +206,10 @@ public class MyChordSymbolLine extends MyComponent {
     private static final int LINE_GAP = 1;
     /** Pixels reserved at the very bottom of the chord strip for the attack triangle. */
     private static final int TRIANGLE_SPACE = 10;
+    /** [CA] Marge entre la vora de dalt de la franja i el carril de marques, en píxels. */
+    private static final int LANE_PAD = 1;
+    /** [CA] Separació horitzontal entre dues marques d'una mateixa columna, en píxels. */
+    private static final int MARK_GAP = 2;
 
     /** Mida mínima a què es pot encongir la font d'un acord. */
     private static final int MIN_CHORD_FONT = 6;
@@ -471,6 +498,10 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
+     * [CA] <b>En desús</b>: les marques ja no s'apilen sobre els acords sinó que
+     * van una al costat de l'altra al carril de dalt ({@link #drawMarkGroup}), de
+     * manera que no cal encongir-ne la pila. Es conserva per si torna la pila.
+     * <p>
      * [CA] Prepara la franja perquè {@code nMarks} marques apilades hi càpiguen.
      * Les marques s'apilen cap amunt des de la base, o sigui que quan la pila és
      * massa alta la que es perd és la de dalt de tot; amb quatre marques
@@ -585,12 +616,12 @@ public class MyChordSymbolLine extends MyComponent {
         // compensa la compressió de fit-anacrusis.
         int col = this.contr.getAllPurposeScore().getCol(screenX);
         if (col < 0) return null;
-        int stripH    = (int) Math.round(nRows * Settings.getRowHeight());
-        double stackY = screenPosY + stripH - TRIANGLE_SPACE;
+        // Les marques viuen al carril de dalt de la franja: una sola banda
+        // vertical, i la columna decideix quina caixeta és.
+        double top = screenPosY + LANE_PAD;
         for (int i = markBoxes.size() - 1; i >= 0; i--) {
             MarkBox mb = markBoxes.get(i);
-            if (col < mb.col || col >= mb.col + mb.spanCols) continue;
-            double top = stackY - mb.yOff - mb.h;
+            if (col < mb.firstCol || col > mb.lastCol) continue;
             if (screenY >= top && screenY < top + mb.h) return mb;
         }
         return null;
@@ -922,84 +953,86 @@ public class MyChordSymbolLine extends MyComponent {
     // -----------------------------------------------------------------------
 
     /**
-     * Draws a tempo-change marker at the bottom-left corner of the chord strip
-     * cell at {@code col}, offset {@code existingXOff} pixels to the right to
-     * allow stacking multiple markers.  Returns the pixel width of the drawn box.
+     * [CA] Text de la marca de tempo, en notació musical: {@code ♩=120}.
+     * [EN] Tempo mark text in musical notation.
      */
-    /**
-     * Draws a tempo-change marker stacked {@code existingYOff} pixels above the
-     * bottom of the chord strip.  Returns the height of the drawn box.
-     */
-    private int drawTempoMark(int col, int bpm, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "" + bpm, MarkKind.TEMPO, g, offscreen, existingYOff);
+    private static String tempoText(int bpm) {
+        return "♩=" + bpm;
     }
 
     /**
-     * Draws a key-change marker stacked {@code existingYOff} pixels above the
-     * bottom of the chord strip.  Returns the height of the drawn box.
+     * [CA] Text de la marca de tonalitat: el nom de la tonalitat.
+     * [EN] Key mark text: the key's name.
      */
-    private int drawKeyMark(int col, int midiKey, char mode, Graphics2D g, boolean offscreen, int existingYOff) {
-        String text;
+    private static String keyText(int midiKey, char mode) {
         try {
-            text = ToneRange.getKeyName(midiKey, mode);
+            return ToneRange.getKeyName(midiKey, mode);
         } catch (Exception ex) {
-            text = "?";
+            return "?";
         }
-        return drawChangeMark(col, text, MarkKind.KEY, g, offscreen, existingYOff);
     }
 
     /**
-     * [CA] Marca de transposició: quants semitons amunt sona la pista respecte
-     * del que es dibuixa, amb el signe de l'8va clàssica (el glockenspiel, que
-     * sona dues octaves amunt, hi surt com a t+24). És el {@code displayOffset}
-     * canviat de signe: el camp guarda dibuix−so i aquí volem so−dibuix.
-     * Ve de l'instrument (no del changeMap), o sigui que és informativa: no es
-     * pot editar ni esborrar.
+     * [CA] Matís (dinàmica) que correspon a una velocitat MIDI: el més proper de
+     * {@code pp, p, mp, mf, f, ff} (velocitats de referència 33, 49, 64, 80, 96 i
+     * 112). El valor exacte no surt a la franja; es veu i s'edita amb el botó de
+     * volum.
      * <p>
-     * [EN] Transposition mark: how many semitones above the drawn pitch the
-     * track sounds, with the sign of classical 8va (the glockenspiel, sounding
-     * two octaves up, shows as t+24). It is {@code displayOffset} negated: the
-     * field stores drawn−sounding and here we want sounding−drawn.
-     * It comes from the instrument (not from the changeMap), so it is
-     * informational: it cannot be edited or deleted.
+     * [EN] The dynamic marking nearest to a MIDI velocity. The exact value is not
+     * shown in the strip; it is seen and edited with the volume button.
      */
-    private int drawTransposeMark(int col, int semitones, Graphics2D g, boolean offscreen, int existingYOff) {
-        String txt = "t" + (semitones > 0 ? "+" : "") + semitones;
-        return drawChangeMark(col, txt, MarkKind.TRANSPOSE, g, offscreen, existingYOff);
+    static String dynamicText(int velocity) {
+        if (velocity < 41) return "pp";
+        if (velocity < 57) return "p";
+        if (velocity < 72) return "mp";
+        if (velocity < 88) return "mf";
+        if (velocity < 104) return "f";
+        return "ff";
     }
 
     /**
-     * Transposició vigent de la pista actual, en semitons, amb el signe que
-     * espera un músic: positiu vol dir que sona més amunt del que es dibuixa.
-     * Alimenta tant el text de la marca com el càlcul de la seva amplada.
-     */
-    private int currentTrackTranspose() {
-        dodecagraphone.model.mixer.MyTrack t = contr.getMixer().getCurrentTrack();
-        return (t != null) ? -t.getDisplayOffset() : 0;
-    }
-
-    private int drawVolumeMark(int col, int velocity, Graphics2D g, boolean offscreen, int existingYOff) {
-        return drawChangeMark(col, "v" + velocity, MarkKind.VOLUME, g, offscreen, existingYOff);
-    }
-
-    /**
-     * [CA] Dibuixa la caixeta d'una marca de canvi a baix a l'esquerra de la
-     * cel·la {@code col} de la franja, {@code existingYOff} píxels per sobre de
-     * la base (les marques s'apilen cap amunt). El text va del color que
-     * contrasti amb el fons: blanc sobre els foscos, negre sobre el groc.
-     * L'alçada de la caixa és la d'una línia d'acord ({@link #markBoxHeight}),
-     * no la que demanaria la font, i es torna perquè qui crida hi pugui apilar
-     * la següent.
+     * [CA] Dibuixa les marques d'una columna <b>una al costat de l'altra</b> al
+     * carril de dalt de la franja, començant a la vora esquerra de la columna, i
+     * en torna l'amplada total. Les dibuixa en ordre tempo, tonalitat, volum;
+     * les que són {@code null} se salten. No s'ajusta a la columna següent: si hi
+     * ha marques molt juntes poden quedar una sobre de l'altra.
      * <p>
-     * [EN] Draws a change mark's box at the bottom left of the strip cell at
-     * {@code col}, {@code existingYOff} pixels above the bottom edge (marks
-     * stack upward). The text takes the colour that contrasts with the
-     * background: white on the dark ones, black on the yellow one. The box
-     * height is one chord line ({@link #markBoxHeight}), not what the font
-     * would ask for, and it is returned so the caller can stack the next one.
+     * [EN] Draws a column's marks <b>side by side</b> in the strip's top lane,
+     * starting at the column's left edge, and returns the total width. Order:
+     * tempo, key, volume; {@code null} ones are skipped. It does not fit itself
+     * to the next column: marks very close together may overlap.
+     */
+    private int drawMarkGroup(int col, Integer tempo, Integer midiKey, char mode, Integer velocity,
+                              Graphics2D g, boolean offscreen) {
+        int x = 0;
+        if (tempo != null) {
+            x += drawChangeMark(col, tempoText(tempo), MarkKind.TEMPO, g, offscreen, x) + MARK_GAP;
+        }
+        if (midiKey != null) {
+            x += drawChangeMark(col, keyText(midiKey, mode), MarkKind.KEY, g, offscreen, x) + MARK_GAP;
+        }
+        if (velocity != null) {
+            x += drawChangeMark(col, dynamicText(velocity), MarkKind.VOLUME, g, offscreen, x) + MARK_GAP;
+        }
+        return x;
+    }
+
+    /**
+     * [CA] Dibuixa la caixeta d'una marca de canvi al carril de dalt de la franja,
+     * {@code xOff} píxels a la dreta de la vora esquerra de la cel·la {@code col}
+     * (les marques d'una mateixa columna van una al costat de l'altra). El text va
+     * del color que contrasti amb el fons. L'alçada de la caixa és la d'una línia
+     * d'acord ({@link #markBoxHeight}). Retorna l'amplada de la caixa, perquè qui
+     * crida hi pugui posar la següent al costat.
+     * <p>
+     * [EN] Draws a change mark's box in the strip's top lane, {@code xOff} pixels
+     * to the right of the left edge of cell {@code col} (marks of one column sit
+     * side by side). The text takes the colour that contrasts with the
+     * background. The box height is one chord line ({@link #markBoxHeight}). The
+     * box width is returned so the caller can place the next one beside it.
      */
     private int drawChangeMark(int col, String text, MarkKind kind,
-                               Graphics2D g, boolean offscreen, int existingYOff) {
+                               Graphics2D g, boolean offscreen, int xOff) {
         Font prevFont = g.getFont();
         DrawKit.comencaMarques(g, getMarkFont());
         FontMetrics fm = g.getFontMetrics();
@@ -1011,10 +1044,9 @@ public class MyChordSymbolLine extends MyComponent {
         int cellX   = offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
-        int stripH  = (int) Math.round(nRows * Settings.getRowHeight());
         int cellTop = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
-        int boxX    = cellX;
-        int boxY    = cellTop + stripH - TRIANGLE_SPACE - boxH - existingYOff;
+        int boxX    = cellX + xOff;
+        int boxY    = cellTop + LANE_PAD;
 
         DrawKit.marca(g, boxX, boxY, boxW, boxH, kind.dibuix(), text);
 
@@ -1022,8 +1054,10 @@ public class MyChordSymbolLine extends MyComponent {
         // l'exportació a PDF reutilitza aquest mètode amb un altre Graphics2D.
         boolean toOwnBuffer = offscreen && g == offscreenGraphics;
         if (toOwnBuffer) {
-            int spanCols = Math.max(1, (int) Math.ceil(boxW / Settings.getColWidth()));
-            markBoxes.add(new MarkBox(col, kind, spanCols, existingYOff, boxH));
+            double colW = Settings.getColWidth();
+            int firstCol = col + (int) Math.floor(xOff / colW);
+            int lastCol  = col + (int) Math.floor((xOff + Math.max(1, boxW) - 1) / colW);
+            markBoxes.add(new MarkBox(col, kind, firstCol, lastCol, xOff, boxW, boxH));
         }
         // Marca seleccionada: marc groc gruixut PER FORA de la caixa, amb un
         // filet negre exterior. Dibuixat a dins i de 2 px amb prou feines es
@@ -1033,7 +1067,7 @@ public class MyChordSymbolLine extends MyComponent {
         }
 
         DrawKit.restauraFont(g, prevFont);
-        return boxH;
+        return boxW;
     }
 
     /**
@@ -1126,6 +1160,31 @@ public class MyChordSymbolLine extends MyComponent {
     private boolean hideInitialMarks = false;
 
     /**
+     * [CA] Cert mentre s'imprimeix (PDF). Les marques de la columna 0 (tempo,
+     * tonalitat i volum inicials) <b>només es dibuixen en imprimir</b>: a la
+     * pantalla ja les mostren els botons de dalt i serien redundants. L'aixeca
+     * {@code DodecagramPdfPrinter.print}, que la torna a baixar al {@code finally}.
+     * <p>
+     * [EN] True while printing (PDF). Column 0 marks (initial tempo, key and
+     * volume) are <b>drawn only when printing</b>: on screen the buttons above
+     * already show them.
+     */
+    private boolean printingMarks = false;
+
+    /**
+     * [CA] Activa o desactiva el mode d'impressió de la franja (vegeu
+     * {@link #printingMarks}). Qui l'activa l'ha de desactivar en un {@code finally}
+     * i forçar un redibuix, o la pantalla es quedaria amb les marques inicials.
+     * <p>
+     * [EN] Turns the strip's print mode on or off.
+     *
+     * @param printing [CA] cert per dibuixar-hi les marques inicials / [EN] true to draw the initial marks
+     */
+    public void setPrintingMarks(boolean printing) {
+        this.printingMarks = printing;
+    }
+
+    /**
      * [CA] Amaga o mostra la pila de marques de la columna 0. Qui l'aixequi ha de
      * tornar-la a baixar (en un {@code finally}) i forçar un redibuix, o la franja
      * es quedaria sense marques a la pantalla.
@@ -1167,89 +1226,39 @@ public class MyChordSymbolLine extends MyComponent {
             // Només mostrem la marca de volum del track actual.
             int currentTrackId = contr.getMixer().getCurrentTrackId();
 
-            // Col 0: sempre es dibuixa (amb fallback als defaults si el changeMap no té
-            // entrada), tret que s'hagi demanat un dodecagrama en blanc sense marques.
-            if (!hideInitialMarks) {
+            // Col 0: les marques inicials només es dibuixen en imprimir (a la pantalla
+            // ja les mostren els botons de dalt), amb fallback als defaults si el
+            // changeMap no té entrada, i no en un dodecagrama en blanc sense marques.
+            if (printingMarks && !hideInitialMarks) {
                 MyGridScore.ScoreChange sc0 = changeMap.get(0);
                 int tempo0   = (sc0 != null && sc0.tempo    != null) ? sc0.tempo    : Settings.DEFAULT_TEMPO;
                 int midiKey0 = (sc0 != null && sc0.midiKey  != null) ? sc0.midiKey  : ToneRange.getDefaultKey();
                 char mode0   = (sc0 != null && sc0.scaleMode != null) ? sc0.scaleMode : ToneRange.getDefaultMode();
-                // Quatre marques a la columna 0: transposició, tempo, tonalitat i
-                // volum. Cal encongir la font si no hi caben totes.
-                fitMarkStack(offscreenGraphics, 4);
-                int yOff = 0;
-                // Primera de la pila = fila inferior (les marques s'apilen cap amunt).
-                yOff += drawTransposeMark(0, currentTrackTranspose(), offscreenGraphics, true, yOff);
-                yOff += drawTempoMark(0, tempo0, offscreenGraphics, true, yOff);
-                yOff += drawKeyMark(0, midiKey0, mode0, offscreenGraphics, true, yOff);
                 // Volum: es mostra sempre, com el tempo i la tonalitat. Sense marca
                 // explícita el valor és el del track actual, que arrenca a
                 // Settings.getDefaultVelocity(); així la marca no menteix mai.
                 Integer vel0 = (sc0 != null) ? sc0.trackVelocities.get(currentTrackId) : null;
                 int vel0Shown = (vel0 != null) ? vel0 : currentTrackVelocity();
-                yOff += drawVolumeMark(0, vel0Shown, offscreenGraphics, true, yOff);
-                if (yOff > 0) {
-                    DrawKit.comencaMarques(offscreenGraphics, getMarkFont());
-                    FontMetrics fm = offscreenGraphics.getFontMetrics();
-                    int pad = 2;
-                    int maxW = fm.stringWidth("" + tempo0) + 2 * pad;
-                    try { maxW = Math.max(maxW, fm.stringWidth(ToneRange.getKeyName(midiKey0, mode0)) + 2 * pad); }
-                    catch (Exception ignored) {}
-                    maxW = Math.max(maxW, fm.stringWidth("v" + vel0Shown) + 2 * pad);
-                    int tr0 = currentTrackTranspose();
-                    maxW = Math.max(maxW, fm.stringWidth("t" + (tr0 > 0 ? "+" : "") + tr0) + 2 * pad);
-                    markerMaxWidths.put(0, maxW);
-                }
-                clearMarkStackFit();
+                drawMarkGroup(0, tempo0, midiKey0, mode0, vel0Shown, offscreenGraphics, true);
             }
 
-            // Col > 0: marques del changeMap.
+            // Col > 0: marques del changeMap, al carril de dalt, una al costat de l'altra.
             for (Map.Entry<Integer, MyGridScore.ScoreChange> entry : changeMap.entrySet()) {
                 int col = entry.getKey();
                 if (col <= 0 || col >= numCols) continue;
                 MyGridScore.ScoreChange sc = entry.getValue();
-                int yOff   = 0;
-                int maxW   = 0;
-                if (sc.tempo != null) {
-                    yOff += drawTempoMark(col, sc.tempo, offscreenGraphics, true, yOff);
-                }
-                if (sc.midiKey != null) {
-                    char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
-                    yOff += drawKeyMark(col, sc.midiKey, mode, offscreenGraphics, true, yOff);
-                }
+                char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
                 // Volum: només el del track actual.
                 Integer velCur = sc.trackVelocities.get(currentTrackId);
-                if (velCur != null) {
-                    yOff += drawVolumeMark(col, velCur, offscreenGraphics, true, yOff);
-                }
-                if (yOff > 0) {
-                    DrawKit.comencaMarques(offscreenGraphics, getMarkFont());
-                    FontMetrics fm = offscreenGraphics.getFontMetrics();
-                    int pad = 2;
-                    if (sc.tempo != null) {
-                        maxW = Math.max(maxW, fm.stringWidth("" + sc.tempo) + 2 * pad);
-                    }
-                    if (sc.midiKey != null) {
-                        char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
-                        String kn;
-                        try { kn = ToneRange.getKeyName(sc.midiKey, mode); }
-                        catch (Exception e) { kn = "?"; }
-                        maxW = Math.max(maxW, fm.stringWidth(kn) + 2 * pad);
-                    }
-                    if (velCur != null) {
-                        maxW = Math.max(maxW, fm.stringWidth("v" + velCur) + 2 * pad);
-                    }
-                    markerMaxWidths.put(col, maxW);
-                }
+                drawMarkGroup(col, sc.tempo, sc.midiKey, mode, velCur, offscreenGraphics, true);
             }
 
-            // Acords (el text comença desplaçat per l'amplada màxima de les marques).
+            // Acords: ja no cal desplaçar-los, les marques tenen carril propi.
             computeChordFontOverride(offscreenGraphics, chords, numCols, markerMaxWidths);
             for (int col = 0; col < numCols; col++) {
                 Chord chord = chords.get(col);
                 if (chord != null) {
-                    int xOff = markerMaxWidths.getOrDefault(col, 0);
-                    drawChordSymbol(chord, col, offscreenGraphics, true, xOff);
+                    drawChordSymbol(chord, col, offscreenGraphics, true, 0);
                 }
             }
 

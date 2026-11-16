@@ -7,6 +7,7 @@ package dodecagraphone.model.color;
 
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.ui.Settings;
+import dodecagraphone.ui.Tema;
 import dodecagraphone.ui.Utilities;
 import java.util.List;
 import java.util.TreeMap;
@@ -75,6 +76,8 @@ public class ColorSets {
     private static final TreeMap<Integer,Color> xinos=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> pau=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> bu=new TreeMap<Integer,Color>();
+    private static final TreeMap<Integer,Color> moni=new TreeMap<Integer,Color>();
+    private static final TreeMap<Integer,Color> moni2=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> ences=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> mutted=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> iluminat=new TreeMap<Integer,Color>();
@@ -378,6 +381,57 @@ public class ColorSets {
     }
 
     /**
+     * [CA] Inicialitza la gamma «moni»: els colors de les làmines del xilòfon físic
+     * (mesurats sobre una foto). La tria el tema amb {@code gama = moni}. El MI és el
+     * groc de la làmina del xilòfon.
+     * <p>
+     * [EN] Initializes the «moni» palette: the colours of the physical xylophone's
+     * bars (measured on a photo). Selected by the theme with {@code gama = moni}.
+     */
+    private static void setGamaMoni() {
+        moni.put(DO, new Color(230, 48, 75));
+        moni.put(DE, new Color(236, 62, 92));
+        moni.put(RE, new Color(241, 105, 38));
+        moni.put(RI, new Color(246, 140, 55));
+        moni.put(MI, new Color(252, 222, 25));
+        moni.put(FA, new Color(8, 112, 78));
+        moni.put(FO, new Color(22, 150, 106));
+        moni.put(SO, new Color(28, 140, 206));
+        moni.put(SA, new Color(55, 128, 215));
+        moni.put(LA, new Color(18, 70, 162));
+        moni.put(LI, new Color(92, 56, 152));
+        moni.put(TI, new Color(108, 42, 116));
+    }
+
+    /**
+     * [CA] Inicialitza la gamma «moni2»: els colors de les làmines del xilòfon
+     * <b>mesurats</b> sobre la foto. De cada làmina s'ha pres la mediana dels
+     * píxels d'un tros llis entre els caragols (les notes que surten a les dues
+     * octaves, promediades), i s'ha corregit l'exposició i el balanç de blancs
+     * amb el paper blanc del teclat com a referència (guanys 1,38 / 1,44 / 1,37,
+     * paper → 240). La tria el tema amb {@code gama = moni2}.
+     * <p>
+     * [EN] The «moni2» palette: xylophone bar colours <b>measured</b> on the photo
+     * (median of a smooth patch per bar, repeated notes averaged, exposure and
+     * white balance corrected against the white keyboard paper). Selected with
+     * {@code gama = moni2}.
+     */
+    private static void setGamaMoni2() {
+        moni2.put(DO, new Color(222, 50, 74));
+        moni2.put(DE, new Color(246, 72, 93));
+        moni2.put(RE, new Color(244, 104, 59));
+        moni2.put(RI, new Color(255, 138, 81));
+        moni2.put(MI, new Color(249, 228, 85));
+        moni2.put(FA, new Color(14, 89, 68));
+        moni2.put(FO, new Color(25, 144, 116));
+        moni2.put(SO, new Color(21, 120, 193));
+        moni2.put(SA, new Color(55, 124, 206));
+        moni2.put(LA, new Color(14, 58, 142));
+        moni2.put(LI, new Color(80, 65, 131));
+        moni2.put(TI, new Color(98, 52, 92));
+    }
+
+    /**
      * [CA] Combina les gammes «pau» i «xinos» amb els pesos indicats per obtenir
      * un color intermedi. Ús intern per a la gamme «bu».
      * <p>
@@ -430,7 +484,18 @@ public class ColorSets {
      * auxiliary colors (BUTO, FONS, IVORI, MARFIL, APAGAT, BUIT, LINIA_PENTA, DO_PENTA).
      */
     private static void setGamaBasicColors(){
-        if (Settings.COLORS_BU){
+        String gama = Tema.actual().text("gama");
+        if ("moni".equalsIgnoreCase(gama)){
+            setGamaMoni();
+            for (int nota = DO; nota <= TI; nota++){
+                ences.put(nota,moni.get(nota));
+            }
+        } else if ("moni2".equalsIgnoreCase(gama)){
+            setGamaMoni2();
+            for (int nota = DO; nota <= TI; nota++){
+                ences.put(nota,moni2.get(nota));
+            }
+        } else if (Settings.COLORS_BU){
             setGamaBu();
             for (int nota = DO; nota <= TI; nota++){
                 ences.put(nota,bu.get(nota));

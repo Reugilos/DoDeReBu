@@ -58,7 +58,7 @@ public final class Tema {
     /** [CA] El tema de reserva, i el de partida si el config no en diu cap. */
     public static final String CLASSIC = "classic";
     /** [CA] Els temes de fàbrica, que es copien a la carpeta si hi falten. */
-    private static final String[] DE_FABRICA = {CLASSIC, "manual"};
+    private static final String[] DE_FABRICA = {CLASSIC, "manual", "moni", "moni2"};
     private static final String RECURS = "/temes/";
     private static final String EXTENSIO = ".properties";
 

@@ -313,6 +313,22 @@ public class DodecagramPdfPrinter {
      *                     [EN] If creating or writing the PDF fails
      */
     public void print(File outputFile) throws IOException {
+        // Les marques inicials (tempo, tonalitat, volum de la columna 0) només es
+        // dibuixen en imprimir: a la pantalla ja les mostren els botons. S'activen
+        // el mode d'impressió de la franja i es torna a la normalitat al final.
+        MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
+        chordLine.setPrintingMarks(true);
+        chordLine.setNeedsDrawing(true);
+        try {
+            printBody(outputFile);
+        } finally {
+            chordLine.setPrintingMarks(false);
+            controller.redrawChordLine();
+        }
+    }
+
+    /** [CA] El cos de {@link #print(File)}, amb la franja ja en mode d'impressió. */
+    private void printBody(File outputFile) throws IOException {
         MyAllPurposeScore score = controller.getAllPurposeScore();
         MyChordSymbolLine chordLine = controller.getMyChordSymbolLine();
         MyLyrics lyrics = controller.getMyLyrics();

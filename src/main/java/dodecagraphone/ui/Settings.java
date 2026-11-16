@@ -110,7 +110,14 @@ public class Settings {
      * lowered without touching the text. In the PDF, lowering it helps:
      * scoreRowH is smaller and scaleY larger.
      */
-    private static final int    DEFAULT_NROWS_CHORD         = 6;
+    /**
+     * [CA] Files de la franja d'acords: 6 pels acords (quatre línies de text i
+     * el trianglet d'atac) i <b>1 de carril de dalt per a les marques</b> de
+     * tempo, tonalitat i volum (que abans s'apilaven sobre els acords).
+     * [EN] Chord strip rows: 6 for chords (four text lines plus the attack
+     * triangle) and 1 for the top lane holding the tempo, key and volume marks.
+     */
+    private static final int    DEFAULT_NROWS_CHORD         = 7;
     private static final int    DEFAULT_NROWS_LYRICS        = 3;
     private static final int    DEFAULT_NCOLS_SQUARE        = 1;
     private static final int    DEFAULT_NROWS_BUTTON        = 2;
