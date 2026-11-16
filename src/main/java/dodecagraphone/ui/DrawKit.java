@@ -120,6 +120,8 @@ public final class DrawKit {
     private static final Color NOTA_MI = T.color("nota.mi");
     /** [CA] {@code null}: les notes de la partitura van del color de la seva nota. Si no, totes van d'aquest. */
     private static final Color NOTA_GRIS = T.color("nota.gris");
+    /** [CA] Si una nota que sona a la graella agafa el seu color (en lloc del fons). */
+    private static final boolean NOTA_SONA_COLOR = T.si("nota.sona.color");
     /**
      * [CA] Com d'apagades es veuen les tecles <b>no seleccionades</b> del teclat
      * (les que no són a la plantilla triada): 0 = color ple, 1 = blanc (el color
@@ -301,6 +303,16 @@ public final class DrawKit {
     /** [CA] Una cel·la amb una nota que sona. / [EN] A cell whose note is sounding. */
     public static Color aparencaDeNotaQueSona() {
         return ColorSets.getColorFons();
+    }
+
+    /**
+     * [CA] Una cel·la amb la nota {@code midi} sonant. Amb {@code nota.sona.color = si}
+     * (tema) pren el <b>color propi de la nota</b>, encara que la resta de notes de la
+     * graella siguin d'un sol color ({@code nota.gris}); si no, el de fons de sempre.
+     * [EN] A cell whose note is sounding: the note's own colour if the theme says so.
+     */
+    public static Color aparencaDeNotaQueSona(int midi) {
+        return NOTA_SONA_COLOR ? colorDeNota(midi) : aparencaDeNotaQueSona();
     }
 
     /**

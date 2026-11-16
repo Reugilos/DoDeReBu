@@ -194,7 +194,7 @@ public class MyGridSquare extends MyComponent {
         this.midi = ToneRange.getHighestMidi() - firstRow;
         this.color_on = DrawKit.aparencaDeNota(this.midi);
         this.color_off = DrawKit.aparencaDePauta(this.midi);
-        this.color_playing = DrawKit.aparencaDeNotaQueSona();
+        this.color_playing = DrawKit.aparencaDeNotaQueSona(this.midi);
         this.color = color_off;
         this.width = Settings.getColWidth()*nCols;
         this.height = Settings.getRowHeight()*nRows;
@@ -220,7 +220,7 @@ public class MyGridSquare extends MyComponent {
         this.midi = ToneRange.getHighestMidi() - row;
         this.color_on = DrawKit.aparencaDeNota(this.midi);
         this.color_off = DrawKit.aparencaDePauta(this.midi);
-        this.color_playing = DrawKit.aparencaDeNotaQueSona();
+        this.color_playing = DrawKit.aparencaDeNotaQueSona(this.midi);
         this.color = this.isSqVisible() ? this.color_on : this.color_off;
         this.width = sq.width;
         this.height = sq.height;
