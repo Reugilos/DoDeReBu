@@ -217,7 +217,14 @@ public class MyXiloKey extends MyComponent {
         aux++;
         int posY = (int) (screenPosY + height * 0.8);
         int h = (int) Math.ceil(height);
-        DrawKit.tecla(g, (int) screenPosX, (int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height), this.color);
+        // Si el tema ressalta les tecles que sonen, s'il·lumina TOTA la tecla: també la
+        // franja del costat (el slide), que normalment en ocupa el 33%.
+        boolean litWhole = DrawKit.teclaRessalta() && !activeChannels.isEmpty() && !this.doNotHighlight;
+        if (litWhole) {
+            DrawKit.tecla(g, (int) parent.screenPosX, (int) screenPosY, (int) Math.ceil(parent.width), (int) Math.ceil(height), this.color);
+        } else {
+            DrawKit.tecla(g, (int) screenPosX, (int) screenPosY, (int) Math.ceil(width), (int) Math.ceil(height), this.color);
+        }
         String text;
         if (this.controller.isDrumsMode()) {
             int drumMidi = ToneRange.getDrumMidi(this.keyId);
@@ -246,7 +253,7 @@ public class MyXiloKey extends MyComponent {
         // ha de mantenir el color normal (no canviar a negre quan sona).
         boolean litAndShouldChangeText = !activeChannels.isEmpty() && !this.doNotHighlight;
         DrawKit.nomDeTecla(g, text, screenPosX, screenPosY, height, this.midi, litAndShouldChangeText, this.dimmed);
-        this.slide.draw(g);
+        if (!litWhole) this.slide.draw(g);
         if (!this.controller.isDrumsMode()) {
             int midiKey = this.controller.getAllPurposeScore().getMidiKey();
             if (this.midi % 12 == midiKey % 12) {

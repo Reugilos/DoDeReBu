@@ -350,6 +350,11 @@ public final class DrawKit {
                 Math.round(c.getBlue() + (255 - c.getBlue()) * TECLA_APAGA));
     }
 
+    /** [CA] Cert si el tema ressalta (il·lumina) les tecles que sonen. / [EN] True if sounding keys are highlighted. */
+    public static boolean teclaRessalta() {
+        return TECLA_RESSALTA;
+    }
+
     /** [CA] Una tecla que sona: el color de ressaltat, o el color ple de la nota si el tema no ressalta. / [EN] A sounding key. */
     public static Color aparencaDeTeclaQueSona(int midi) {
         return TECLA_RESSALTA ? ColorSets.getColorFons() : colorDeNota(midi);
