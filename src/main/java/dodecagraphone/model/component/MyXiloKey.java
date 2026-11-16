@@ -51,7 +51,11 @@ public class MyXiloKey extends MyComponent {
     /**
      * The color that the key takes when it is not playing
      */
-    private final Color color_silent;
+    private Color color_silent;
+    /** [CA] Color en silenci d'una tecla seleccionada (o amb l'elecció amagada): el ple. */
+    private final Color color_full;
+    /** [CA] Color en silenci d'una tecla no seleccionada: apagat (segons el tema). */
+    private final Color color_dim;
     /**
      * The sound sample associated with the key (when not using midi).
      */
@@ -106,7 +110,9 @@ public class MyXiloKey extends MyComponent {
         this.midi = ToneRange.keyIdToMidi(this.keyId);
         this.noteName = ToneRange.getNoteName(midi);
         this.color_playing = DrawKit.aparencaDeTeclaQueSona(midi);
-        this.color_silent = DrawKit.aparencaDeTecla(midi);
+        this.color_full = DrawKit.aparencaDeTecla(midi);
+        this.color_dim = DrawKit.aparencaDeTeclaApagada(midi);
+        this.color_silent = this.color_full;
         if (!SampleOrMidi.isMidi()) {
             this.so = new Sound(ToneRange.getFilename(midi));
         }
@@ -127,6 +133,7 @@ public class MyXiloKey extends MyComponent {
      * when parent dimensions have changed.
      */
     public final void setDimensionsNotSelected() {
+        setSilentLook(true);
         if (this.controller.getAllPurposeScore().isUseScreenKeyboardRight()){
             this.screenPosX = parent.screenPosX + (1-Settings.KEY_WIDTH_REDUCTION)*parent.width;
             this.width = parent.width * Settings.KEY_WIDTH_REDUCTION;
@@ -144,6 +151,7 @@ public class MyXiloKey extends MyComponent {
      * [EN] Resets the dimensions of the key in "selected" state.
      */
     public final void setDimensionsSelected() {
+        setSilentLook(false);
         if (!this.controller.getAllPurposeScore().isUseScreenKeyboardRight()){
             this.screenPosX = parent.screenPosX + (1-Settings.KEY_WIDTH_REDUCTION)*parent.width;
             this.width = parent.width * Settings.KEY_WIDTH_REDUCTION;
@@ -161,10 +169,26 @@ public class MyXiloKey extends MyComponent {
      * [EN] Resets the dimensions of the key in "off" state (full parent width).
      */
     public final void setDimensionsOff() {
+        setSilentLook(false);
         this.screenPosX = parent.screenPosX;
         this.width = parent.width;
         this.screenPosY = parent.screenPosY + parentFirstRow * Settings.getRowHeight();
         this.height = nRows * Settings.getRowHeight();
+    }
+
+    /**
+     * [CA] Tria el color de la tecla en silenci: l'apagat si no és de la plantilla
+     * triada, el ple si ho és (o si l'elecció no es mostra). Si la tecla no sona,
+     * el canvi es veu de seguida; si sona, es veurà en callar.
+     * <p>
+     * [EN] Picks the silent colour: dimmed when outside the chosen template, full
+     * otherwise. Takes effect at once unless the key is sounding.
+     */
+    private void setSilentLook(boolean dim) {
+        this.color_silent = dim ? this.color_dim : this.color_full;
+        if (this.activeChannels == null || this.activeChannels.isEmpty()) {
+            this.color = this.color_silent;
+        }
     }
 
     /** [CA] Flag estàtic per al log de jerarquia de dibuix. */

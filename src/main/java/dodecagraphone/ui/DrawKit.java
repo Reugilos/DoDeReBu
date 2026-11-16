@@ -120,8 +120,12 @@ public final class DrawKit {
     private static final Color NOTA_MI = T.color("nota.mi");
     /** [CA] {@code null}: les notes de la partitura van del color de la seva nota. Si no, totes van d'aquest. */
     private static final Color NOTA_GRIS = T.color("nota.gris");
-    /** [CA] Com de pàl·lides es veuen les tecles en silenci: 0 = color ple, 1 = blanc. */
-    private static final float TECLA_PAL = Math.max(0f, Math.min(1f, T.decimal("tecla.pal")));
+    /**
+     * [CA] Com d'apagades es veuen les tecles <b>no seleccionades</b> del teclat
+     * (les que no són a la plantilla triada): 0 = color ple, 1 = negre. Les
+     * seleccionades sempre van amb el color ple.
+     */
+    private static final float TECLA_APAGA = Math.max(0f, Math.min(1f, T.decimal("tecla.apaga")));
     /** [CA] {@code null}: el text de les tecles en silenci és el de les notes. */
     private static final Color TEXT_TECLA_SILENCI = T.color("tecla.text");
     /** [CA] {@code null}: la vora de la nota va del color del text de la nota. */
@@ -328,12 +332,20 @@ public final class DrawKit {
 
     /** [CA] Una tecla en silenci. / [EN] A silent key. */
     public static Color aparencaDeTecla(int midi) {
+        return colorDeNota(midi);
+    }
+
+    /**
+     * [CA] Una tecla en silenci que <b>no és de la plantilla triada</b>: el color
+     * de la nota apagat (barrejat amb negre segons {@code tecla.apaga}). Amb
+     * {@code tecla.apaga = 0} (el clàssic) és igual que {@link #aparencaDeTecla}.
+     * [EN] A silent key outside the chosen template: the note colour dimmed.
+     */
+    public static Color aparencaDeTeclaApagada(int midi) {
         Color c = colorDeNota(midi);
-        if (c == null || TECLA_PAL <= 0f) return c;
-        return new Color(
-                Math.round(c.getRed() + (255 - c.getRed()) * TECLA_PAL),
-                Math.round(c.getGreen() + (255 - c.getGreen()) * TECLA_PAL),
-                Math.round(c.getBlue() + (255 - c.getBlue()) * TECLA_PAL));
+        if (c == null || TECLA_APAGA <= 0f) return c;
+        float f = 1f - TECLA_APAGA;
+        return new Color(Math.round(c.getRed() * f), Math.round(c.getGreen() * f), Math.round(c.getBlue() * f));
     }
 
     /** [CA] Una tecla que sona: el color de ressaltat, o el color ple de la nota si el tema no ressalta. / [EN] A sounding key. */
