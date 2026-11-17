@@ -120,6 +120,8 @@ public final class DrawKit {
     private static final Color NOTA_MI = T.color("nota.mi");
     /** [CA] {@code null}: les notes de la partitura van del color de la seva nota. Si no, totes van d'aquest. */
     private static final Color NOTA_GRIS = T.color("nota.gris");
+    /** [CA] Text de les notes de la graella quan van totes d'un sol color ({@code null} = el de sempre). */
+    private static final Color NOTA_GRIS_TEXT = T.color("nota.gris.text");
     /** [CA] Si una nota que sona a la graella agafa el seu color (en lloc del fons). */
     private static final boolean NOTA_SONA_COLOR = T.si("nota.sona.color");
     /**
@@ -198,6 +200,10 @@ public final class DrawKit {
         TEMPO, TONALITAT, VOLUM, TRANSPOSICIO
     }
 
+    /** [CA] Fons del carril de marques ({@code null} = cap). */
+    private static final Color MARQUES_FONS = T.color("marques.fons");
+    /** [CA] Color de la fletxeta i de les comes del carril de marques. */
+    private static final Color MARQUES_FLETXA = T.color("marques.fletxa");
     private static final Color MARCA_TEMPO = T.color("marca.tempo");
     private static final Color MARCA_TONALITAT = T.color("marca.tonalitat");
     private static final Color MARCA_VOLUM = T.color("marca.volum");
@@ -412,7 +418,7 @@ public final class DrawKit {
 
     /** [CA] El nom d'una nota dins de la seva cel·la, en la font actual. / [EN] A note name. */
     public static void nomDeNota(Graphics2D g, String nom, int x, int y, int w, int h, int midi) {
-        g.setColor(tintaDeNota(midi));
+        g.setColor(NOTA_GRIS != null && NOTA_GRIS_TEXT != null ? NOTA_GRIS_TEXT : tintaDeNota(midi));
         g.drawString(nom, (int) (2 + x + w / 3), (int) (y + h * 0.8));
     }
 
@@ -560,6 +566,48 @@ public final class DrawKit {
         g.setColor(tintaQueContrasta(fons));
         int dalt = y + (h - (fm.getAscent() + fm.getDescent())) / 2;
         g.drawString(rotul, x + MARGE_DE_MARCA, dalt + fm.getAscent());
+    }
+
+    /**
+     * [CA] El fons de la franja de marques (el carril de dalt de la franja
+     * d'acords), si el tema en té ({@code marques.fons}); amb {@code colorsets}
+     * no es pinta res.
+     * [EN] Background of the marks lane, if the theme has one.
+     */
+    public static void franjaDeMarques(Graphics2D g, int x, int y, int w, int h) {
+        if (MARQUES_FONS == null) return;
+        g.setColor(MARQUES_FONS);
+        g.fillRect(x, y, w, h);
+    }
+
+    /**
+     * [CA] La fletxeta d'una marca: un triangle <b>mirant avall</b> amb el vèrtex a
+     * baix, just a la vora esquerra de la columna on va la marca. {@code mida} és
+     * l'alçada del carril; el triangle en fa un 70%. Retorna l'amplada que ocupa.
+     * [EN] A mark's arrow: a down-pointing triangle at the column's left edge.
+     */
+    public static int fletxaDeMarca(Graphics2D g, int x, int y, int mida) {
+        int w = Math.max(5, (int) Math.round(mida * 0.7));
+        int h = w;
+        int top = y + (mida - h) / 2;
+        int[] xp = {x, x + w, x + w / 2};
+        int[] yp = {top, top, top + h};
+        g.setColor(MARQUES_FLETXA);
+        g.fillPolygon(xp, yp, 3);
+        return w;
+    }
+
+    /** [CA] El text d'una marca, del color del seu tipus. Fa servir la font de {@link #comencaMarques}. */
+    public static void textDeMarca(Graphics2D g, String text, int x, int baseline, Marca tipus) {
+        g.setColor(fonsDeMarca(tipus));
+        g.drawString(text, x, baseline);
+    }
+
+    /** [CA] La coma que separa dues marques d'una mateixa columna; en retorna l'amplada. */
+    public static int comaDeMarca(Graphics2D g, String coma, int x, int baseline) {
+        g.setColor(MARQUES_FLETXA);
+        g.drawString(coma, x, baseline);
+        return g.getFontMetrics().stringWidth(coma);
     }
 
     /** [CA] El marc d'una marca seleccionada, per fora de la caixa. / [EN] Selected mark frame. */
