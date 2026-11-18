@@ -815,6 +815,23 @@ public class MyController {
                 kw, (int) Math.round(Settings.getnRowsLyrics() * rowH));
     }
 
+    /**
+     * [CA] Cert si el punt és dins de la <b>franja de marques</b> (tonalitat, tempo i
+     * volum): la banda de dalt de la franja d'acords, tant la caixa «Tò, Tempo, Vol» del
+     * costat del teclat com la part de la càmera. Aquesta franja <b>no admet cap
+     * entrada</b>: els clics s'hi ignoren (no obren el diàleg d'acords ni seleccionen
+     * marques) i només té el seu tip. Les marques es canvien amb els botons.
+     * [EN] True if the point is inside the marks lane (drawer plus camera part). The
+     * lane accepts no input: clicks are ignored and it only shows its tip.
+     */
+    private boolean isMarksLaneArea(double posX, double posY) {
+        double rowH   = Settings.getRowHeight();
+        double totalW = (Settings.getnColsKeyboard() + Settings.getnColsCam()) * Settings.getColWidth();
+        double top    = Settings.getChordFirstRow() * rowH;
+        return posX >= 0 && posX < totalW
+                && posY >= top && posY < top + Settings.getMarksLaneHeight();
+    }
+
     private boolean isChordFormatButtonClick(double posX, double posY) {
         double rowH   = Settings.getRowHeight();
         double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
@@ -2223,6 +2240,12 @@ public class MyController {
         /* Marca de canvi (tempo/to/volum) de la franja d'acords: el clic la
            selecciona i queda consumit, de manera que no s'obre el diàleg
            d'acords. Qualsevol altre clic fora d'un botó la deselecciona. */
+        // La franja de marques no admet cap entrada: el clic s'ignora (ni diàleg
+        // d'acords, ni selecció de marques). Vegeu isMarksLaneArea.
+        if (isMarksLaneArea(posX, posY)) {
+            this.clearMarkSelection();
+            return;
+        }
         MyChordSymbolLine.MarkBox mark = this.myChordSymbolLine.whichMark(posX, posY);
         if (mark != null) {
             this.selectedMarkCol  = mark.col;
@@ -2868,22 +2891,18 @@ public class MyController {
                 lastTipKeyRow = -1;
                 lastTipMarkKind = null;
             }
-        } else if (hoverMark != null) {
-            // Marca de canvi: mateixa prioritat que al clic (abans que l'acord).
-            MyChordSymbolLine.MarkBox mark = hoverMark;
-            if (lastTipButton != -8 || lastTipKeyRow != mark.col
-                    || lastTipMarkKind != mark.kind) {
+        } else if (isMarksLaneArea(posX, posY)) {
+            // Franja de marques: només té un tip general (no admet cap entrada). Sota el
+            // cursor, perquè el popup no es mengi el clic.
+            if (lastTipButton != -8) {
                 this.buttons.hideTip();
-                // Sota el cursor, com el tip de la graella: la variant de dos
-                // arguments el col·loca a (posX-10, posY-10), és a dir damunt de
-                // la marca, i el popup es menjava el clic.
                 this.buttons.showCustomTip(
-                        markTipText(mark),
+                        I18n.t("myChordSymbolLine.marks.tip"),
                         (int) posX + 12,
                         (int) (posY + Settings.getRowHeight()));
                 lastTipButton = -8;
-                lastTipKeyRow = mark.col;
-                lastTipMarkKind = mark.kind;
+                lastTipKeyRow = -1;
+                lastTipMarkKind = null;
             }
         } else if (myChordSymbolLine.whichCol(posX, posY) != -1) {
             if (lastTipButton != -3) {

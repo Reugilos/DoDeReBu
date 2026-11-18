@@ -583,6 +583,8 @@ public class MyChordSymbolLine extends MyComponent {
      * @return [CA] columna alineada al beat, o -1 / [EN] beat-aligned column, or -1
      */
     public int whichCol(double screenX, double screenY) {
+        // El carril de marques de dalt no és de cap acord: no admet entrada.
+        if (screenY < screenPosY + Settings.getMarksLaneHeight()) return -1;
         if (this.contains(screenX, screenY)) {
             int whichCol = this.contr.getAllPurposeScore().getCol(screenX);
             whichCol = whichCol - (whichCol % Settings.getnColsBeat());
