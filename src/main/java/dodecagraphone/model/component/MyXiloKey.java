@@ -186,6 +186,10 @@ public class MyXiloKey extends MyComponent {
      * [EN] Picks the silent colour: dimmed when outside the chosen template, full
      * otherwise. Takes effect at once unless the key is sounding.
      */
+    public void setDimmed(boolean dim) {
+        setSilentLook(dim);
+    }
+
     private void setSilentLook(boolean dim) {
         this.dimmed = dim;
         this.color_silent = dim ? this.color_dim : this.color_full;

@@ -91,6 +91,14 @@ public class MyXiloKeyboard extends MyComponent {
      * according to the current state (showChoice, keyboard side).
      */
     public void resetDimensions(){
+        // Si no hi ha cap tecla seleccionada, totes es veuen enceses (color ple); només
+        // quan n'hi ha alguna de seleccionada, les altres s'apaguen.
+        boolean anySelected = false;
+        if (isShowChoice()) {
+            for (int k = 0; k < nKeys && !anySelected; k++) {
+                anySelected = this.findIfSelected(this.xilokeys.get(k).getMidi());
+            }
+        }
         for (int keyId = 0; keyId < nKeys; keyId++) {
             MyXiloKey key = this.xilokeys.get(keyId);
             MySlide slide = key.getSlide();
@@ -100,6 +108,7 @@ public class MyXiloKeyboard extends MyComponent {
                     slide.setDimensionsSelected();
                 } else {
                     key.setDimensionsNotSelected();
+                    key.setDimmed(anySelected);
                     slide.setDimensionsNotSelected();
                 }
             } else {

@@ -126,10 +126,12 @@ public final class DrawKit {
     private static final boolean NOTA_SONA_COLOR = T.si("nota.sona.color");
     /**
      * [CA] Com d'apagades es veuen les tecles <b>no seleccionades</b> del teclat
-     * (les que no són a la plantilla triada): 0 = color ple, 1 = blanc (el color
-     * «es desfà»). Les seleccionades sempre van amb el color ple.
+     * (les que no són a la plantilla triada): 0 = color ple, 1 = el color
+     * {@code tecla.apaga.cap} (blanc per defecte; un gris fosc fa un color «apagat» que admet text blanc). Les seleccionades sempre van amb el color ple.
      */
     private static final float TECLA_APAGA = Math.max(0f, Math.min(1f, T.decimal("tecla.apaga")));
+    /** [CA] El color cap al qual s'apaguen les tecles no seleccionades (el blanc, si el tema no en diu cap). */
+    private static final Color TECLA_APAGA_CAP = T.color("tecla.apaga.cap");
     /** [CA] {@code null}: el text de les tecles en silenci és el de les notes. */
     private static final Color TEXT_TECLA_SILENCI = T.color("tecla.text");
     /** [CA] {@code null}: la vora de la nota va del color del text de la nota. */
@@ -360,10 +362,11 @@ public final class DrawKit {
     public static Color aparencaDeTeclaApagada(int midi) {
         Color c = colorDeNota(midi);
         if (c == null || TECLA_APAGA <= 0f) return c;
+        Color cap = TECLA_APAGA_CAP != null ? TECLA_APAGA_CAP : Color.WHITE;
         return new Color(
-                Math.round(c.getRed() + (255 - c.getRed()) * TECLA_APAGA),
-                Math.round(c.getGreen() + (255 - c.getGreen()) * TECLA_APAGA),
-                Math.round(c.getBlue() + (255 - c.getBlue()) * TECLA_APAGA));
+                Math.round(c.getRed() + (cap.getRed() - c.getRed()) * TECLA_APAGA),
+                Math.round(c.getGreen() + (cap.getGreen() - c.getGreen()) * TECLA_APAGA),
+                Math.round(c.getBlue() + (cap.getBlue() - c.getBlue()) * TECLA_APAGA));
     }
 
     /** [CA] Una tecla que sona: el color de ressaltat, o el color ple de la nota si el tema no ressalta. / [EN] A sounding key. */
