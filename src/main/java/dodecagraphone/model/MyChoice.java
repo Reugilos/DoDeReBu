@@ -13,6 +13,7 @@ import dodecagraphone.MyController;
 import dodecagraphone.model.component.MyXiloKey;
 import dodecagraphone.model.ToneRange;
 import dodecagraphone.model.chord.Chord;
+import dodecagraphone.model.chord.ChordSymbols;
 import dodecagraphone.ui.I18n;
 import dodecagraphone.ui.MyDialogs;
 import dodecagraphone.ui.Settings;
@@ -201,20 +202,38 @@ public class MyChoice {
                 return true;
             }
         } else if (tipusSeleccio.equals(kChord)) {
-            String kMaj  = I18n.t("choice.chord.major");
-            String kMin  = I18n.t("choice.chord.minor");
-            String kDim  = I18n.t("choice.chord.diminished");
-            String kAug  = I18n.t("choice.chord.augmented");
-            String[] acords = { kMaj, kMin, kDim, kAug };
-            String sel = MyDialogs.seleccionaOpcio(
+            String kMaj   = I18n.t("choice.chord.major");
+            String kMin   = I18n.t("choice.chord.minor");
+            String kDim   = I18n.t("choice.chord.diminished");
+            String kAug   = I18n.t("choice.chord.augmented");
+            String kMaj7  = I18n.t("choice.chord.major7");
+            String kMin7  = I18n.t("choice.chord.minor7");
+            String kDom   = I18n.t("choice.chord.dominant");
+            String kHDim  = I18n.t("choice.chord.halfDiminished");
+            String[] acords = { kMaj, kMin, kDim, kAug, kMaj7, kMin7, kDom, kHDim };
+            // Desplegable amb els tipus d'acord i, a sota, una finestreta per escriure
+            // l'acord com a text (tots els formats de la banda d'acords).
+            Object[] res = MyDialogs.seleccionaOpcioIText(
                     I18n.t("choice.chord.prompt"),
                     I18n.t("choice.chord.title"),
-                    acords, 0);
-            if (sel == null) return true;
-            if      (sel.equals(kMaj)) setMajorChordChoice();
-            else if (sel.equals(kMin)) setMinorChordChoice();
-            else if (sel.equals(kDim)) setDiminishedChordChoice();
-            else if (sel.equals(kAug)) setAugmentedChordChoice();
+                    acords, 0,
+                    I18n.t("choice.chord.text.prompt"));
+            if (res == null) return true;
+            String text = (String) res[1];
+            if (!text.isEmpty()) {
+                // L'acord escrit mana sobre el desplegable i ja porta l'arrel: s'aplica sense
+                // demanar-la al teclat.
+                return applyChordTextChoice(text);
+            }
+            String sel = (String) res[0];
+            if      (sel.equals(kMaj))  setMajorChordChoice();
+            else if (sel.equals(kMin))  setMinorChordChoice();
+            else if (sel.equals(kDim))  setDiminishedChordChoice();
+            else if (sel.equals(kAug))  setAugmentedChordChoice();
+            else if (sel.equals(kMaj7)) setMajorSeventhChordChoice();
+            else if (sel.equals(kMin7)) setMinorSeventhChordChoice();
+            else if (sel.equals(kDom))  setDominantChordChoice();
+            else if (sel.equals(kHDim)) setHalfDiminishedChordChoice();
         } else if (tipusSeleccio.equals(kScale)) {
             String kMajF5 = I18n.t("choice.scale.majorFirst5");
             String kMaj   = I18n.t("choice.scale.major");
@@ -223,7 +242,8 @@ public class MyChoice {
             String kPenta = I18n.t("choice.scale.pentatonicMajor");
             String kBlues = I18n.t("choice.scale.blues");
             String kChrom = I18n.t("choice.scale.chromatic");
-            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom };
+            String kAdv   = I18n.t("choice.scale.advanced");
+            String[] escales = { kMajF5, kMaj, kMin, kHarm, kPenta, kBlues, kChrom, kAdv };
             String sel = MyDialogs.seleccionaOpcio(
                     I18n.t("choice.scale.prompt"),
                     I18n.t("choice.scale.title"),
@@ -236,6 +256,28 @@ public class MyChoice {
             else if (sel.equals(kPenta)) setPentatonicMajorScaleChoice();
             else if (sel.equals(kBlues)) setBluesScaleChoice();
             else if (sel.equals(kChrom)) setChromaticScaleChoice();
+            else if (sel.equals(kAdv)) {
+                // Escales avançades: els modes de l'escala major (el grau entre parèntesis) i la
+                // frígia dominant. L'arrel és la nota que es clica al teclat, com a les altres.
+                String kDor = I18n.t("choice.scale.dorian");
+                String kPhr = I18n.t("choice.scale.phrygian");
+                String kLyd = I18n.t("choice.scale.lydian");
+                String kMix = I18n.t("choice.scale.mixolydian");
+                String kLoc = I18n.t("choice.scale.locrian");
+                String kPhD = I18n.t("choice.scale.phrygianDominant");
+                String[] avancades = { kDor, kPhr, kLyd, kMix, kLoc, kPhD };
+                String selA = MyDialogs.seleccionaOpcio(
+                        I18n.t("choice.advanced.prompt"),
+                        I18n.t("choice.advanced.title"),
+                        avancades, 0);
+                if (selA == null) return true;
+                if      (selA.equals(kDor)) setDorianScaleChoice();
+                else if (selA.equals(kPhr)) setPhrygianScaleChoice();
+                else if (selA.equals(kLyd)) setLydianScaleChoice();
+                else if (selA.equals(kMix)) setMixolydianScaleChoice();
+                else if (selA.equals(kLoc)) setLocrianScaleChoice();
+                else if (selA.equals(kPhD)) setPhrygianDominantScaleChoice();
+            }
         }
         askAndExtend();
         return false; // cal que l'usuari cliqui la nota arrel
@@ -566,6 +608,121 @@ public class MyChoice {
         extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 8, 12}));
         this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    // ---- Escales avançades: els modes de l'escala major (intervals des de l'arrel del mode)
+
+    /** [CA] Escala dòrica (mode II): 0,2,3,5,7,9,10,12. [EN] Dorian scale. */
+    public void setDorianScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 3, 5, 7, 9, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Escala frígia (mode III): 0,1,3,5,7,8,10,12. [EN] Phrygian scale. */
+    public void setPhrygianScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 1, 3, 5, 7, 8, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Escala lídia (mode IV): 0,2,4,6,7,9,11,12. [EN] Lydian scale. */
+    public void setLydianScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 6, 7, 9, 11, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Escala mixolídia (mode V): 0,2,4,5,7,9,10,12. [EN] Mixolydian scale. */
+    public void setMixolydianScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 5, 7, 9, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Escala locria (mode VII): 0,1,3,5,6,8,10,12. [EN] Locrian scale. */
+    public void setLocrianScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 1, 3, 5, 6, 8, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /**
+     * [CA] Escala frígia dominant (el cinquè mode de la menor harmònica): 0,1,4,5,7,8,10,12.
+     * [EN] Phrygian dominant scale (fifth mode of the harmonic minor).
+     */
+    public void setPhrygianDominantScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 1, 4, 5, 7, 8, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    // ---- Acords de quatre sons (a més dels de tres)
+
+    /** [CA] Acord major amb sèptima major (Maj7): 0,4,7,11,12. [EN] Major seventh chord. */
+    public void setMajorSeventhChordChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 7, 11, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Acord menor amb sèptima (m7): 0,3,7,10,12. [EN] Minor seventh chord. */
+    public void setMinorSeventhChordChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 7, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Acord dominant (7): 0,4,7,10,12. [EN] Dominant seventh chord. */
+    public void setDominantChordChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 7, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /** [CA] Acord semidisminuït (m7b5): 0,3,6,10,12. [EN] Half-diminished chord. */
+    public void setHalfDiminishedChordChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 3, 6, 10, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /**
+     * [CA] Aplica com a patró un acord <b>escrit en text</b>, en qualsevol dels formats que
+     * admet la banda d'acords ({@code ChordSymbols.detectAndConvert}: símbols, solfeig,
+     * anglosaxó, dodecafònic, intervals…). Com que el text ja porta l'arrel, el patró
+     * s'aplica directament a l'octava més baixa del teclat (sense demanar l'arrel); després es
+     * pregunta, com sempre, si s'estén a tot el teclat. El baix de tall s'ignora. Si el text
+     * no és un acord vàlid, mostra un error i no canvia res.
+     * <p>
+     * [EN] Applies a <b>typed chord</b> as the pattern, in any format the chord strip accepts.
+     * The text carries the root, so it is applied straight away on the lowest octave.
+     *
+     * @param text [CA] l'acord escrit / [EN] the typed chord
+     * @return [CA] sempre {@code true}: el patró ja és aplicat (o no hi ha res a aplicar) /
+     *         [EN] always {@code true}: nothing left for the user to click
+     */
+    public boolean applyChordTextChoice(String text) {
+        String myFmt = ChordSymbols.detectAndConvert(text.trim(), null);
+        Chord ch = (myFmt == null) ? null : new Chord(myFmt);
+        if (ch == null || !ch.isValidChord() || ch.getRoot() == Settings.USE_INFO_AS_SIMBOL
+                || ch.getShape() == null || ch.getShape().length == 0) {
+            MyDialogs.mostraError(I18n.t("choice.error.chord"), I18n.t("choice.error.title"));
+            return true;
+        }
+        List<Integer> intervals = new ArrayList<>();
+        for (int iv : ch.getShape()) intervals.add(iv);
+        if (!intervals.contains(12)) intervals.add(12);   // l'octava de l'arrel, com als altres acords
+        Collections.sort(intervals);
+        extendedToFullRange = false;
+        this.choice = intervals;
+        this.controller.getKeyboard().setShowChoice(true);
+        int pc = ((ch.getMidiRoot() % 12) + 12) % 12;
+        int lowest = ToneRange.getLowestMidi();
+        addUpRoot(lowest + ((pc - lowest % 12 + 12) % 12));
+        askAndExtend();
+        this.controller.getAllPurposeScore().updateStripsNKeyboard();
+        return true;
     }
 
     /**

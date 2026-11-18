@@ -204,6 +204,39 @@ public class MyDialogs {
     }
 
     /**
+     * [CA] Diàleg amb un <b>desplegable</b> d'opcions i, a sota, una <b>finestreta de text</b>
+     * per escriure la mateixa cosa lliurement (p. ex. un acord). Retorna {@code null} si es
+     * cancel·la; si no, un array {@code {opcioTriada, textEscrit}} (el text, retallat, pot ser
+     * buit: llavors mana el desplegable).
+     * <p>
+     * [EN] Dialog with a drop-down of options and, below, a free text field. Returns
+     * {@code null} on cancel, otherwise {@code {selectedOption, typedText}} (the trimmed
+     * text may be empty, in which case the drop-down rules).
+     *
+     * @param prompt     [CA] missatge sobre el desplegable / [EN] message above the drop-down
+     * @param header     [CA] títol / [EN] title
+     * @param opcions    [CA] opcions del desplegable / [EN] drop-down options
+     * @param defecte    [CA] índex de l'opció per defecte / [EN] default option index
+     * @param textPrompt [CA] missatge sobre la finestreta de text / [EN] message above the text field
+     * @return [CA] {@code {String opcio, String text}} o {@code null} / [EN] {@code {option, text}} or {@code null}
+     */
+    public static Object[] seleccionaOpcioIText(String prompt, String header, String[] opcions,
+                                                int defecte, String textPrompt) {
+        javax.swing.JComboBox<String> combo = new javax.swing.JComboBox<>(opcions);
+        combo.setSelectedIndex(defecte);
+        javax.swing.JTextField camp = new javax.swing.JTextField(20);
+        javax.swing.JPanel panell = new javax.swing.JPanel(new java.awt.GridLayout(0, 1, 0, 4));
+        panell.add(new javax.swing.JLabel(prompt));
+        panell.add(combo);
+        panell.add(new javax.swing.JLabel(textPrompt));
+        panell.add(camp);
+        int r = JOptionPane.showConfirmDialog(null, panell, header,
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (r != JOptionPane.OK_OPTION) return null;
+        return new Object[] { combo.getSelectedItem(), camp.getText().trim() };
+    }
+
+    /**
      * [CA] Mostra un diàleg perquè l'usuari introdueixi text.
      * Retorna null si l'usuari cancel·la o no introdueix res.
      * <p>
