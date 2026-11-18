@@ -96,14 +96,14 @@ public class MyXiloKeyboard extends MyComponent {
         boolean anySelected = false;
         if (isShowChoice()) {
             for (int k = 0; k < nKeys && !anySelected; k++) {
-                anySelected = this.findIfSelected(this.xilokeys.get(k).getMidi());
+                anySelected = this.findIfSelectedVisible(this.xilokeys.get(k).getMidi());
             }
         }
         for (int keyId = 0; keyId < nKeys; keyId++) {
             MyXiloKey key = this.xilokeys.get(keyId);
             MySlide slide = key.getSlide();
             if (isShowChoice()){
-                if (this.findIfSelected(key.getMidi())){
+                if (this.findIfSelectedVisible(key.getMidi())){
                     key.setDimensionsSelected();
                     slide.setDimensionsSelected();
                 } else {
@@ -292,6 +292,25 @@ public class MyXiloKeyboard extends MyComponent {
      */
     public boolean isShowChoice() {
         return showChoice;
+    }
+
+    /**
+     * [CA] Com {@link #findIfSelected(int)}, però <b>pel que es veu al teclat</b>: en mode
+     * bateria el patró de notes seleccionades no es mostra (cap tecla seleccionada: totes
+     * a l'esquerra i enceses). És <b>només visual</b>: el patró ({@code MyChoice}) no es
+     * toca, de manera que en tornar a música (mateix teclat, mode normal) es veu igual
+     * que abans. Qui vulgui la selecció real (p. ex. el PDF) ha de fer servir
+     * {@code findIfSelected}.
+     * <p>
+     * [EN] Like {@link #findIfSelected(int)} but <b>as shown on the keyboard</b>: in drums
+     * mode the selected-notes pattern is hidden. Display only: the pattern itself is not
+     * touched, so it reappears unchanged when returning to music.
+     *
+     * @param midi [CA] nota MIDI / [EN] MIDI note
+     * @return [CA] cert si s'ha de mostrar com a seleccionada / [EN] true if drawn as selected
+     */
+    public boolean findIfSelectedVisible(int midi){
+        return !this.controller.isDrumsMode() && findIfSelected(midi);
     }
 
     /**

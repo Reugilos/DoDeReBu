@@ -216,6 +216,8 @@ public class MyController {
     private boolean drumsMode = false;
     private boolean tremoloActive = false;
     private int lastMelodyTrackId = 0;
+    /** [CA] Si el teclat s'ha dibuixat amb el patró amagat (mode bateria). */
+    private boolean keyboardShownAsDrums = false;
     private volatile boolean needsDrawing = true;
     private boolean printing = false;
 
@@ -2461,6 +2463,9 @@ public class MyController {
                 this.getUi().getPanel().repinta(true);
                 return;
             }
+            // En mode bateria el patró de notes no es mostra ni es pot canviar des del teclat:
+            // queda intacte (a MyChoice) fins que es torna a música.
+            if (isDrumsMode()) return;
             MyXiloKey key = this.keyboard.getKey(keyId);
             MySlide slide = key.getSlide();
             if (slide.isKeyNotSelected()) {
@@ -3274,7 +3279,8 @@ public class MyController {
     }
 
     public boolean isDrumsMode() {
-        return drumsMode || mixer.getCurrentChannelOfCurrentTrack() == 9;
+        // mixer pot ser null mentre es construeix el teclat (resetDimensions el consulta)
+        return drumsMode || (mixer != null && mixer.getCurrentChannelOfCurrentTrack() == 9);
     }
 
     public void setDrums(boolean drumsOn) {
@@ -4532,6 +4538,12 @@ public class MyController {
 
     public final void updateTextOfButtons() {
         updateWindowTitle();
+        // Si s'entra o se surt del mode bateria (pel botó o canviant de pista), el teclat
+        // amaga o torna a mostrar el patró de notes seleccionades (només visual).
+        if (this.keyboard != null && this.keyboardShownAsDrums != isDrumsMode()) {
+            this.keyboardShownAsDrums = isDrumsMode();
+            this.keyboard.resetDimensions();
+        }
 
         // Aplica els canvis de paràmetres registrats a la columna actual
         applyChangesAt(getEditingCol());
