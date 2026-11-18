@@ -4,7 +4,7 @@
 Editor de partitures i app d'entrenament auditiu (ear training). Java 16 + Swing/AWT, Maven. Paquet principal: `dodecagraphone`. Classe principal: `dodecagraphone.ui.MyMain`.
 
 ## Arrel del projecte
-`G:\La meva unitat\Dodecaphenia\DoDeReBu_v4.1`
+`G:\La meva unitat\Dodecaphenia\DoDeReBu_App`
 
 El codi font és a `src/main/java/dodecagraphone/`.
 
@@ -456,7 +456,7 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
-- **versió 5.0 (18-11-26)** Número de versió: `pom.xml` (`artifactId` `DoDeReBu_v5.0`, `version` `5.0`, `name` `DoDeReBu_v5.0`), `@version 5.0` a tot el javadoc, `README.md` i `LICENSE.txt`. El nom que surt a la finestra i al diàleg de benvinguda ve de `project.name` (filtrat a `app.properties`), o sigui que canvia sol. **El nom de la carpeta del projecte continua sent `DoDeReBu_v4.1`**, i els scripts de build en treuen el nom de l'exe, de la carpeta portable i del zip (`APP_NAME` = nom de la carpeta): si es vol que diguin 5.0, cal reanomenar la carpeta (i les rutes d'aquest fitxer). Tag `publicat_18-11-26` = l'estat de `master` just abans de passar a 5.0 (la branca `disseny_grafic` s'hi va fusionar per fast-forward: ara tot és a `master`).
+- **versió 5.0 (18-11-26)** Número de versió. **La versió viu en un sol lloc: el `<version>` del `pom.xml`** (5.0). D'allà surten el jar (`DoDeReBu_App-5.0.jar`), `app.properties` (filtrat per Maven: `app.name = DoDeReBu_v${project.version}` i `app.version`; `AppConfig.getAppName()` i `getAppVersion()`: títol de la finestra i diàleg de benvinguda), i, **llegida del pom pels scripts de build**, el nom de l'exe, de la carpeta portable i del zip (`DoDeReBu_v5.0.exe`, `portable/DoDeReBu_v5.0/`, `DoDeReBu_v5.0.zip`; jpackage rep també `--app-version`). **Per passar a una versió nova només cal canviar el `<version>` del pom** (i l'`@version` del javadoc, si es vol; no és funcional): **la carpeta del projecte ja no depèn de la versió i es diu `DoDeReBu_App`** (abans `DoDeReBu_v4.1`). `artifactId` i `name` del pom: `DoDeReBu_App`. `README.md`, `LICENSE.txt` i el javadoc diuen 5.0. Tag `publicat_18-11-26` = l'estat de `master` just abans de passar a 5.0; tag **`v5.0`** = la versió 5.0 (la branca `disseny_grafic` s'hi va fusionar per fast-forward: tot és a `master`).
 - **branca `disseny_grafic` (15–18-11-26)** Tema `moni` (per defecte; l'únic de fàbrica) amb la gamma `colors_manual` (colors exactes del PDF del manual); gammes `moni`/`moni2` conservades i temes `moni2`/classic/manual fora de la carpeta d'usuari; tecles seleccionades/apagades/sense selecció i il·luminació en sonar (desactivada); notes de la graella en blau i amb el seu color en sonar; **carril de marques** (fletxeta, `;`, notació, separador, caixa «Tò; Tempo; Vol») amb la **franja d'acords a 7 files**, sense acords però amb les marques editables clicant-hi; botó de volum amb el matís (`127 (ff)`); **barra de compàs fantasma corregida**; transposició al botó de l'instrument; caixes del costat del teclat sempre a la barra inicial; botó de format a la fila del títol; ajuda, `config.properties` i `TemesTest` al dia; traça de consola de `MyChoice.addKey()` esborrada.
 - **d7d872d** Porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat abans amb Ctrl-clic, també per a les notes. El camí antic de Ctrl-V hi queda, sense documentar. Volum per defecte de la pista d'acords a 127.
 - **2d8befe** L'últim acord arriba al final del seu compàs; la doble barra ja no s'arrodoneix a la pàgina; `lastColWritten` compta les notes dels acords; `nNotes` es recompta de la graella; columnes d'intervals amb terra de dues xifres.
@@ -498,12 +498,12 @@ Maven (`pom.xml`). Java 16. Maven no és al PATH, però n'hi ha un dins del NetB
 Els tres passos, en ordre:
 
 1. **Compilar**: `mvn clean package` (o Clean & Build al NetBeans). El JAR va a `target/`.
-2. **Portable**: `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` → `portable/DoDeReBu_v4.1/`.
-3. **Zip**: `03_BuildZip.bat` → `DoDeReBu_v4.1.zip` a l'arrel.
+2. **Portable**: `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` → `portable/DoDeReBu_v<versió>/` (p. ex. `portable/DoDeReBu_v5.0/DoDeReBu_v5.0.exe`; l'exe porta també la versió interna, `--app-version`).
+3. **Zip**: `03_BuildZip.bat` → `DoDeReBu_v<versió>.zip` a l'arrel (p. ex. `DoDeReBu_v5.0.zip`).
 
 **Compte amb el pas 1**: malgrat el nom, el script `02_...CleanNBuild...` **no compila res**. Només agafa el JAR més recent de `target/` i el passa pel `jpackage`. Si no s'ha compilat abans, la portable surt amb codi vell sense avisar de res.
 
-**Què hi ha al paquet**: el zip conté el contingut de `portable/DoDeReBu_v4.1/` (sense la carpeta arrel, per evitar el doble directori en extreure), més `SongsInBooklet/` i `Dodecagrams/`, que el script hi copia abans de comprimir i en treu després. Si `Dodecagrams/` no hi és, avisa i continua.
+**Què hi ha al paquet**: el zip conté el contingut de `portable/DoDeReBu_v<versió>/` (sense la carpeta arrel, per evitar el doble directori en extreure), més `SongsInBooklet/` i `Dodecagrams/`, que el script hi copia abans de comprimir i en treu després. Si `Dodecagrams/` no hi és, avisa i continua.
 
 **Dependències a `target/libs/`**: el JAR de `target/` és prim (només les classes del projecte). Perquè la portable funcioni, `maven-dependency-plugin` copia jMusic, PDFBox i Batik a `target/libs/` i `maven-jar-plugin` escriu al manifest un `Class-Path` amb prefix `libs/`. El `jpackage` copia tot l'arbre de `target/` dins d'`app/`, o sigui que `app/libs/` hi arriba i el manifest la hi troba. **No** treure cap dels dos plugins del `pom.xml`: sense ells la portable arrenca i peta amb `NoClassDefFoundError`. El script busca l'únic `.jar` de l'arrel de `target/` per decidir el `--main-jar`, per això les dependències han d'anar a `libs/` i no a l'arrel.
 
@@ -511,7 +511,7 @@ Els tres passos, en ordre:
 
 **Perquè l'aplicació surti a la llista d'«Obre amb»**, `jpackage --file-associations` no serveix: només escriu al registre als instal·ladors, i aquí es fa un `app-image`. El portable porta dos `.bat` (`registra_obre_amb.bat` i `desregistra_obre_amb.bat`) que escriuen o esborren les claus de `HKCU\Software\Classes\Applications\<exe>` —sense administrador— i que el `02_Build…bat` copia al portable des de `../Complements_Bu/portable_extras/`. Cal tornar a executar el de registre si es canvia la carpeta de lloc.
 
-**Ubicació dels scripts de build**: `01_baixa_jre21_FET_A_HP.bat`, `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` i `03_BuildZip.bat` ja no són a l'arrel del projecte: ara viuen a `../Complements_Bu/` (germana de `DoDeReBu_v4.1/`), fora del control de versions. **Important**: aquests scripts assumeixen que s'executen des de la carpeta del projecte (`pushd "%~dp0"`, `APP_NAME` = nom de la carpeta on és el `.bat`, rutes relatives com `target/`, `vendor/jre21/`) — si s'executen directament des de `Complements_Bu/` fallaran (`target/`, `vendor/` no hi són). Cal copiar-los (o crear un enllaç/còpia) a l'arrel de `DoDeReBu_v4.1/` abans d'executar-los, o adaptar-los per acceptar la ruta del projecte com a paràmetre.
+**Ubicació dels scripts de build**: `01_baixa_jre21_FET_A_HP.bat`, `02_BuildPortableExeAmbJREintegrat_CleanNBuild_runInCmd.bat` i `03_BuildZip.bat` ja no són a l'arrel del projecte: ara viuen a `../Complements_Bu/` (germana de `DoDeReBu_App/`), fora del control de versions. **Important**: aquests scripts assumeixen que s'executen des de la carpeta del projecte (`pushd "%~dp0"`, `APP_NAME` = `DoDeReBu_v<versió>` amb la versió llegida del `pom.xml` de l'arrel, rutes relatives com `target/`, `vendor/jre21/`) — si s'executen directament des de `Complements_Bu/` fallaran (`target/`, `vendor/` no hi són). Cal copiar-los (o crear un enllaç/còpia) a l'arrel de `DoDeReBu_App/` abans d'executar-los, o adaptar-los per acceptar la ruta del projecte com a paràmetre.
 
 **Una trampa del `cmd` al `:log` dels scripts**: `echo %~1` analitza la redirecció **abans** d'imprimir, o sigui que qualsevol `>` dins d'un missatge (el `->` dels passos 10, 11, 12 i 44 del `03_BuildZip.bat`) se'l menjava i provava d'escriure en un fitxer inexistent. La rutina desa ara el text en una variable i l'imprimeix amb expansió retardada (`echo(!MSG!`), que ja no es reanalitza. Si es toca cap dels altres scripts, tenir-ho present.
 
