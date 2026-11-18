@@ -796,13 +796,15 @@ public class MyController {
         int lineH  = fm.getAscent() + fm.getDescent();
         int margin = (int) Math.max(4, Settings.getColWidth());
         int labelX = kx + margin;
+        // Una mica més d'aire per dalt dels títols de les caixes d'Acords i de Lletra
+        int topAir = margin + (int) Math.max(3, Math.round(rowH * 0.25));
 
         // Etiqueta de la caixa de marques, centrada en vertical dins del carril
         DrawKit.rotulDeFranja(g, I18n.t("myChordSymbolLine.marksLabel"), labelX,
                 chordY + (laneH + lineH) / 2 - fm.getDescent());
 
         // "Acords" label at top of chord strip (just below the marks box)
-        int acordsY = chordY + laneH + margin + fm.getAscent();
+        int acordsY = chordY + laneH + topAir + fm.getAscent();
         String acordsText = I18n.t("myChordSymbolLine.label");
         DrawKit.rotulDeFranja(g, acordsText, labelX, acordsY);
 
@@ -812,7 +814,8 @@ public class MyController {
         int btnPad = 2;
         int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
         int btnH = lineH + 2 * btnPad;
-        int btnX = labelX + fm.stringWidth(acordsText) + margin;
+        // El botó de format, més a la dreta del títol (sense sortir de la caixa)
+        int btnX = Math.min(labelX + fm.stringWidth(acordsText) + 3 * margin, kx + kw - btnW - margin);
         int btnY = acordsY - fm.getAscent() - btnPad;
         DrawKit.botoDeFormat(g, fmtLabel, btnX, btnY, btnW, btnH,
                 btnX + btnPad, btnY + btnPad + fm.getAscent());
@@ -820,7 +823,7 @@ public class MyController {
         // Títol de la caixa de lletra: a dalt, amb el mateix aire que el títol d'Acords
         DrawKit.rotulDeFranja(g, I18n.t("myLyrics.label"),
                 labelX,
-                lyricsY + margin + fm.getAscent());
+                lyricsY + topAir + fm.getAscent());
     }
 
     /**
