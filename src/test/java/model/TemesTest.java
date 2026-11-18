@@ -20,8 +20,9 @@ import java.util.regex.Pattern;
  *   <li>Tota clau que {@code DrawKit} demana al tema ({@code T.color("…")},
  *       {@code T.decimal("…")}…) ha de ser al tema clàssic, que fa de reserva:
  *       si no hi fos, {@code Tema} petaria en arrencar.</li>
- *   <li>Els temes de fàbrica han de tenir les mateixes claus que el clàssic, perquè
- *       qui en copiï un per fer-ne un de propi hi trobi tot el que es pot tocar.</li>
+ *   <li>Els temes ({@code moni}, el de fàbrica, i {@code manual}) han de tenir les mateixes
+ *       claus que el clàssic, perquè qui en copiï un per fer-ne un de propi hi trobi tot
+ *       el que es pot tocar.</li>
  * </ul>
  */
 public class TemesTest {
@@ -30,7 +31,6 @@ public class TemesTest {
 
     public static void main(String[] args) throws Exception {
         Properties classic = carrega("classic");
-        Properties manual = carrega("manual");
 
         String drawKit = Files.readString(Path.of("src/main/java/dodecagraphone/ui/DrawKit.java"),
                 StandardCharsets.UTF_8);
@@ -43,11 +43,17 @@ public class TemesTest {
         }
         System.out.println("DrawKit demana " + demanades.size() + " claus al tema");
 
-        for (Object k : classic.keySet()) {
-            if (!manual.containsKey(k)) falla("al tema manual li falta «" + k + "»");
-        }
-        for (Object k : manual.keySet()) {
-            if (!classic.containsKey(k)) falla("el tema manual té «" + k + "», que el clàssic no té");
+        // Els temes que es poden triar: moni (l'únic de fàbrica que es copia a la carpeta de
+        // l'usuari) i manual (que queda com a recurs). Cap no pot tenir més ni menys claus
+        // que el clàssic.
+        for (String nom : new String[] {"moni", "manual"}) {
+            Properties tema = carrega(nom);
+            for (Object k : classic.keySet()) {
+                if (!tema.containsKey(k)) falla("al tema " + nom + " li falta «" + k + "»");
+            }
+            for (Object k : tema.keySet()) {
+                if (!classic.containsKey(k)) falla("el tema " + nom + " té «" + k + "», que el clàssic no té");
+            }
         }
         System.out.println(fallades == 0 ? "TOT BÉ" : fallades + " FALLADES");
         if (fallades > 0) System.exit(1);

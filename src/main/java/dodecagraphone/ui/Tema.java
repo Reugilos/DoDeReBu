@@ -20,13 +20,17 @@ import java.util.Properties;
  * [CA] El tema gràfic: el joc de valors (colors, gruixos, fonts, mides) que fa
  * servir {@link DrawKit}. Cada tema és un fitxer de text a la carpeta
  * {@code temes}, al costat del {@code config.properties}, i el config en tria un
- * amb la clau {@code tema} (per exemple {@code tema=manual}).
+ * amb la clau {@code tema} (per defecte, {@code tema=moni}).
  * <p>
- * <b>D'on surten els temes.</b> El programa porta dins la llavor de cada tema de
- * fàbrica ({@code resources/temes/*.properties}). En arrencar, copia a la
- * carpeta els que hi faltin, i <b>només</b> els que hi faltin: un tema que
- * l'usuari hagi editat no es trepitja mai. Per tornar a la versió de fàbrica
- * d'un tema, n'hi ha prou d'esborrar-ne el fitxer.
+ * <b>D'on surten els temes.</b> El programa porta dins el tema de fàbrica
+ * ({@code resources/temes/moni.properties}, l'únic de {@link #DE_FABRICA}). En
+ * arrencar, el copia a la carpeta si hi falta, i <b>només</b> si hi falta: un tema
+ * que l'usuari hagi editat no es trepitja mai. Per tornar a la versió de fàbrica,
+ * n'hi ha prou d'esborrar-ne el fitxer. Per fer-ne de nous, es copia
+ * {@code moni.properties} amb un altre nom i s'edita. El {@code classic} i el
+ * {@code manual} són recursos interns que no es copien: el clàssic és la reserva
+ * (vegeu més avall) i {@code tema=manual} encara es pot triar, perquè si el fitxer
+ * no és a la carpeta es llegeix del recurs.
  * <p>
  * <b>La xarxa de seguretat.</b> El tema clàssic de dins del programa fa de
  * reserva per a tot: si el tema triat no existeix, si el fitxer no es pot llegir

@@ -343,7 +343,6 @@ public class MyChoice {
      */
     public void addKey(MyXiloKey key) {
         int midi = key.getMidi();
-        System.out.println("MyChoice:addKey() choice = "+this.choice);
         this.choice.add(midi);
         Collections.sort(this.choice);
 //        System.out.println("MyChoice::addKey:"+this.choice);

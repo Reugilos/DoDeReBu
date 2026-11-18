@@ -28,7 +28,7 @@ El codi font és a `src/main/java/dodecagraphone/`.
 | `ui/I18n.java` | Internacionalització (`I18n.t("clau")`, `I18n.f("clau", arg)`) |
 | `ui/DrawKit.java` | La capa de dibuix: totes les crides de pintar; els valors surten del tema |
 | `ui/Tema.java` | El tema gràfic: carrega el fitxer triat a `config/temes/`, amb el clàssic de reserva |
-| `resources/temes/*.properties` | Els temes de fàbrica (`classic`, `manual`), que es copien a la carpeta |
+| `resources/temes/*.properties` | Els temes: `moni` (l'únic de fàbrica, es copia a la carpeta), `classic` (reserva interna) i `manual` (recurs conservat). Vegeu «Els temes gràfics» |
 | `resources/i18n/messages_ca.properties` | Textos en català |
 | `resources/i18n/messages_en.properties` | Textos en anglès |
 | `resources/i18n/messages_es.properties` | Textos en castellà |
@@ -69,26 +69,29 @@ Cada component (graella, chord line, lyrics) té un `BufferedImage` offscreen. `
 - **Cada mètode reprodueix exactament les crides que substituïa**, també els que deixen el color o el traç posats: el codi de després pot comptar-hi (`tancaTeclat` existeix per això).
 - **Dues barres de compàs**: la del buffer fa 1,5 px (`barraDeCompas`) i la que es redibuixa damunt de la pantalla, 2 px (`barraDeCompasEnPantalla`). Ja era així abans de DrawKit.
 - **El PDF vectorial té la seva pròpia capa**, `PdfDrawKit` (PDFBox, no `Graphics2D`), amb els seus colors. Les classes de `model/proves/` i les fonts dels quadres de diàleg de Swing queden fora.
-- **Branques**: des del 14-11-26 **tot és a `master`**: `drawkit` (congelada a l'etiqueta `drawkit-13-11-26`) i `disseny-grafic` s'hi van fusionar (fast-forward) i les proves de disseny segueixen des d'allà. `drawkit` era la migració, sense cap canvi visual. El javadoc de la classe explica què es pot tocar (tema, paleta, cos dels mètodes) i què s'ha de respectar (signatures, caixes, velocitat).
+- **Branques**: el disseny gràfic nou (tema `moni`, carril de marques, teclat) viu a la branca **`disseny_grafic`** (15–18-11-26; vegeu «Tercera tanda»). Fins al 14-11-26 **tot era a `master`**: `drawkit` (congelada a l'etiqueta `drawkit-13-11-26`) i `disseny-grafic` s'hi van fusionar (fast-forward) i les proves de disseny segueixen des d'allà. `drawkit` era la migració, sense cap canvi visual. El javadoc de la classe explica què es pot tocar (tema, paleta, cos dels mètodes) i què s'ha de respectar (signatures, caixes, velocitat).
 - **La migració (13-11-26) es va comprovar píxel a píxel** en dues passades: graella, acords, lletra, pantalla sencera i teclat del PDF, de tres cançons i dues maneres de rotular, idèntics als de `master`, i el cost de pintar durant el play, igual. Qualsevol canvi de tema s'ha de tornar a mirar a 300 bpm.
 
 ### Els temes gràfics (`Tema`)
 
-**Els valors de DrawKit no són al codi: són en un tema**, un fitxer de text a la carpeta `temes`, al costat del `config.properties` (`<arrel>/config/temes/` des del NetBeans; al costat de l'exe a la portable). El config en tria un amb `tema=<nom>`; per defecte, `classic`.
+**Els valors de DrawKit no són al codi: són en un tema**, un fitxer de text a la carpeta `temes`, al costat del `config.properties` (`<arrel>/config/temes/` des del NetBeans; al costat de l'exe a la portable). El config en tria un amb `tema=<nom>`; **per defecte, `moni`** (`resources/defaults/config.properties`). Si el config no té la clau `tema`, `Tema.actual()` cau al `classic` intern.
 
-- **Sembra**: el programa porta dins els temes de fàbrica (`resources/temes/classic.properties` i `manual.properties`) i, en arrencar, copia a la carpeta **només els que hi falten**. Un tema editat no es trepitja mai; per recuperar el de fàbrica, s'esborra el fitxer. La llista dels que es copien és `Tema.DE_FABRICA`: un tema nou de fàbrica s'hi ha d'afegir.
+- **Quins temes hi ha (18-11-26)**: **`moni` és l'únic de fàbrica** i l'únic que es copia a la carpeta de l'usuari (`Tema.DE_FABRICA = {"moni"}`). `classic.properties` és la **reserva interna** (no es copia: `Tema` el llegeix com a recurs) i **no es pot esborrar**: respon per a qualsevol clau que falti. `manual.properties` es conserva com a recurs (el que es va fer a la primera prova) però ja no es copia; `tema=manual` encara funciona perquè, si no és a la carpeta, es llegeix del recurs. El tema `moni2` (còpia de `moni` amb les tecles no seleccionades en color ple) **s'ha eliminat del tot**. Per fer un tema nou: copiar `moni.properties` amb un altre nom, editar-lo i posar-ne el nom a `tema=` (és el que explica el `config.properties`).
+- **Sembra**: en arrencar, copia a la carpeta **només els que hi falten**. Un tema editat no es trepitja mai; per recuperar el de fàbrica, s'esborra el fitxer. **Conseqüència que ha mossegat més d'un cop**: si es canvia un tema a `resources/temes/`, la còpia que ja és a `config/temes/` no es refà; cal esborrar-la o copiar-hi els valors. Passa el mateix amb `target/classes` des del NetBeans: si no es fa un *Clean and Build*, els fitxers de textos (`i18n/messages_*.properties`) i els temes poden quedar vells i l'app mostra `??clau??` en lloc del text.
 - **Reserva**: el clàssic de dins del programa respon per a tot. Un tema que no existeix, un fitxer que no es pot llegir, una clau que falta o un valor mal escrit cauen al clàssic, amb un avís a la consola. L'aplicació no es pot quedar sense colors.
-- **Format**: colors `r,g,b` o `r,g,b,a`, o `colorsets` (el color el decideix `ColorSets`, com feia l'aplicació abans dels temes); gruixos amb punt decimal; guions `llarg,buit`; estils `normal`/`negreta`; interruptors `si`/`no`. `nota.vora.color = text` vol dir del color del text de la nota. Una família de lletra que no estigui instal·lada cau a SansSerif.
-- **Es llegeix una sola vegada**, quan es carrega la classe DrawKit: canviar de tema demana reiniciar. Els valors queden en camps `static final`, o sigui que dibuixar costa el mateix que abans.
-- **Clàssic = `master`**: comprovat píxel a píxel (30 imatges), llevat de la correcció de les cel·les velles de `drawSquare` (vegeu els criteris), que canvia el fons d'aquelles cel·les amb qualsevol tema.
-- **`TemesTest`** (un `main`, com els altres): tota clau que DrawKit demana ha de ser al clàssic, i els temes de fàbrica han de tenir les mateixes claus. Afegir un valor nou al tema vol dir afegir-lo a **tots** els fitxers de `resources/temes/`, i també a l'ajuda si cal.
-- La clau `tema` surt al `config.properties` de fàbrica, amb quatre línies de comentari que expliquen com es canvia i com es fa un tema propi (`config.tema.comment` … `comment4`; una clau `#i18n:` per línia, perquè cada una dona una sola línia de comentari), i a la taula de configuració de l'ajuda (`help.config.tema.desc`), en els tres idiomes.
+- **Format**: colors `r,g,b` o `r,g,b,a`, o `colorsets` (el color el decideix `ColorSets`, com feia l'aplicació abans dels temes); gruixos i proporcions amb punt decimal; guions `llarg,buit`; estils `normal`/`negreta`; interruptors `si`/`no`. `nota.vora.color = text` vol dir del color del text de la nota. Una família de lletra que no estigui instal·lada cau a SansSerif.
+- **Es llegeix una sola vegada**, quan es carrega la classe DrawKit (i `ColorSets.initColors` per a la gamma): canviar de tema demana reiniciar. Els valors queden en camps `static final`, o sigui que dibuixar costa el mateix que abans.
+- **La gamma de colors de les notes** (`gama`): `ColorSets.setGamaBasicColors` llegeix `Tema.actual().text("gama")`. Valors: `config` (la de sempre: «bu» o «pau» segons `Settings.COLORS_BU`), **`colors_manual`** (la que usa `moni`), `moni` (estimada a ull de la foto del xilòfon) i `moni2` (mesurada sobre la foto; **cap tema l'usa ara**, es conserva al codi). **`colors_manual` són els colors exactes del manual** `DoDeRe-BÚ libro ENG.pdf`: no estan mesurats sobre una imatge sinó llegits del color de farciment dels rectangles vectorials del PDF (PyMuPDF), i cada nota s'ha identificat pel nom escrit a dins; les dotze surten amb un sol color a totes les pàgines: do 218,43,53 · de 234,104,96 · re 237,108,17 · ri 244,153,70 · mi 243,222,0 · fa 14,108,72 · fo 22,146,111 · so 53,143,206 · sa 86,134,197 · la 32,89,164 · li 85,84,160 · ti 113,70,128. (La foto del xilòfon no servia: massa fosca i desaturada, i les gammes `moni`/`moni2` sortien poc fidels.)
+- **Claus afegides amb el tema `moni`** (totes són també al clàssic, amb el valor de sempre, perquè `TemesTest` ho exigeix): `gama`; `nota.mi` (color propi del mi, `colorsets` = el de la paleta); `nota.gris` (**totes les notes de la graella d'un sol color**; `colorsets` = cadascuna el seu) i `nota.gris.text` (el text sobre aquell color); `nota.sona.color` (una nota que sona a la graella agafa **el seu color** en lloc del de fons; `DrawKit.aparencaDeNotaQueSona(midi)`); `tecla.apaga` i `tecla.apaga.cap` (les tecles **no seleccionades** es barregen amb `cap`, blanc per defecte, en aquesta proporció: 0 = color ple) i `tecla.text` (el color del nom de les tecles apagades; `colorsets` = el de les notes); `marques.fons` (fons del carril de marques, `colorsets` = cap). `tecla.pal` i `marques.fletxa` van existir una estona i s'han eliminat.
+- **Clàssic = `master`**: comprovat píxel a píxel (30 imatges), llevat de la correcció de les cel·les velles de `drawSquare` (vegeu els criteris), que canvia el fons d'aquelles cel·les amb qualsevol tema, i del marc de les caixes del costat del teclat (vegeu els criteris). Les claus noves valen el de sempre al clàssic, o sigui que no n'hi ha cap altre canvi, **excepte la franja d'acords, que ara té 7 files i el carril de marques a dalt amb tots els temes** (vegeu «Marques de canvi»).
+- **`TemesTest`** (un `main`, com els altres; `javac src/test/java/model/TemesTest.java` i `java model.TemesTest` des de l'arrel): tota clau que DrawKit demana ha de ser al clàssic, i **`moni` i `manual` han de tenir exactament les mateixes claus que el clàssic**. Afegir un valor nou al tema vol dir afegir-lo a **tots** els fitxers de `resources/temes/`, i també a l'ajuda si cal.
+- La clau `tema` surt al `config.properties` de fàbrica, amb quatre línies de comentari (`config.tema.comment` … `comment4`; una clau `#i18n:` per línia, perquè cada una dona una sola línia de comentari) que ara diuen **que només hi ha el tema moni i que es pot copiar, canviar de nom i editar per crear-ne més** (sense cap menció a `classic` ni `manual`), i a la taula de configuració de l'ajuda (`help.config.tema.desc`), en els tres idiomes.
 
 ### Criteris de disseny gràfic
 
-Les proves es fan a la branca `disseny-grafic` (vegeu la secció de DrawKit). Aquí s'apunten **els criteris que es decideixen**, amb el perquè, a mesura que es van provant: el que es prova i no agrada també s'hi apunta, perquè no es torni a provar. Fins que no s'hi decideixi res, l'aspecte és el de l'etiqueta `drawkit-13-11-26`, idèntic al de `master`.
+Les proves es van fer a la branca `disseny-grafic` i ara es fan a **`disseny_grafic`** (vegeu la secció de DrawKit). Aquí s'apunten **els criteris que es decideixen**, amb el perquè, a mesura que es van provant: el que es prova i no agrada també s'hi apunta, perquè no es torni a provar. Fins que no s'hi decideixi res, l'aspecte és el de l'etiqueta `drawkit-13-11-26`, idèntic al de `master`.
 
-**Primera prova (13-11-26): l'estil del manual del DoDeRe-Bú**, ara el tema `manual` (`tema=manual`) (`Metallochrome/ManualDus/Guia_Mara/Downloaded Nov 26/DoDeRe-BÚ libro ENG.pdf`, fet per un dissenyador). Tot és a DrawKit; `ColorSets` no es toca, i els colors de les dotze notes són els de sempre. Colors mesurats sobre el PDF:
+**Primera prova (13-11-26): l'estil del manual del DoDeRe-Bú**, el tema `manual` (ja no es copia a la carpeta; `moni` el continua) (`Metallochrome/ManualDus/Guia_Mara/Downloaded Nov 26/DoDeRe-BÚ libro ENG.pdf`, fet per un dissenyador). Tot és a DrawKit; `ColorSets` no es toca, i els colors de les dotze notes són els de sempre. Colors mesurats sobre el PDF:
 
 - **Pentagrama**: files blanques; les línies del pentagrama en gris càlid (238,236,236) i el do central en rosa (255,214,214). `aparencaDePauta` pregunta a `ColorSets` de quin tipus és la fila i hi posa el color del tema.
 - **Plantilla**: les notes del patró en groc pàl·lid (245,255,171) i la resta en blanc (`aparencaDelPatro`).
@@ -110,6 +113,18 @@ Pendent de decidir: si agrada, si el text blanc sobre el groc es llegeix prou, i
 - **Icones dibuixades als botons.** Un rètol `{play}`, `{pausa}` o `{inici}` es dibuixa com a figura (triangle ple a la dreta, dues barres, barra + triangle a l'esquerra) amb el color del text del botó; la mida és `icona.proporcio`. Els rètols de to i d'exercici acaben amb `{>>}` o `{<<}` (`Tò {>>}`, `Ex {<<}`): les fletxes es dibuixen centrades en alçada amb les majúscules de la paraula, perquè els `>` de la font queden més amunt o més avall segons la lletra (`fletxa.proporcio`). Els botons de columna i de pàgina també (`{<}`, `{>}`, `{<<}`, `{>>}`, sense paraula), perquè totes les fletxes siguin iguals.
 - **Una tecla que sona no canvia d'aspecte** (`tecla.ressalta = no`, als dos temes): abans, en prémer un slide o en reproduir, la tecla es posava blanca amb el text negre un moment. Amb `si` torna el ressaltat de sempre (`aparencaDeTeclaQueSona`, `tecla.textQueSona`).
 - **Textos**: el botó de to diu **Tò** en català i **Tono** en castellà (en anglès, Key). L'ajuda ho diu igual.
+
+**Tercera tanda (15–18-11-26): el tema `moni`**, ara el de per defecte (branca `disseny_grafic`). Parteix del manual i hi afegeix el següent:
+
+- **Colors de les notes = els del manual** (`gama = colors_manual`, vegeu «Els temes gràfics»), també per a les tecles.
+- **Graella**: totes les notes d'un sol **blau** (`nota.gris`, 188,204,231: una mica més intens que el fons de la botonera, 219,231,249; es va anar fosquint i aclarint a ull fins aquí), amb el nom en gris fosc (`nota.gris.text`, 35,35,45) perquè el blanc no es llegeix sobre blau clar. Quan una nota sona, **agafa el seu color** (`nota.sona.color = si`). *Es va provar i es va deixar:* notes grises (128), que va ser la primera versió.
+- **Teclat**: les tecles **seleccionades** (les de la plantilla/choice) van amb el color ple i el nom en blanc; les **no seleccionades** s'apaguen cap al blanc (`tecla.apaga = 0.75`, tons pàl·lids) i el nom és blanc (`tecla.text = colorsets`; es veu poc, i així es va demanar). **Si no hi ha cap tecla seleccionada, totes van enceses**: `MyXiloKeyboard.resetDimensions` calcula `anySelected` i crida `MyXiloKey.setDimmed(anySelected)` (que decideix el color en silenci: `color_dim` o `color_full`). **Una tecla apagada no s'il·lumina en sonar** (`play`/`playWithMidi`). L'**il·luminació en sonar** (blanca amb el nom negre, `tecla.ressalta = si`) **està desactivada** al `moni` (`no`) però el codi i la clau es conserven. *Es va provar i es va descartar:* apagar cap a un gris fosc (`tecla.apaga.cap = 90,90,90`, 50%) per poder dur el nom blanc (tornat als tons pàl·lids), i il·luminar **tota** la tecla incloent la franja del slide (el slide no es toca: es vol poder modificar a part).
+- **Caixes del costat del teclat** (marques, acords i lletra): **sempre acaben exactament a la barra inicial**. L'amplada antiga (`ceil(nColsTeclat × colWidth)` + el marc) sobresortia 2–3 px quan l'amplada de columna no és entera (per exemple amb 9/8 i 4 compassos), i es veia una línia a la dreta de la barra. Ara `MyController.keyboardBoxSpan()` agafa el `floor` de la X de la càmera (és on es dibuixa la barra, i el marc hi queda tapat). Els títols (`Acords`, `Lletra`) van a dalt de la seva caixa amb el mateix aire (`margin + ascent`), i el **botó de format és a la fila del títol d'acords, després de la paraula**.
+- **Franja d'acords de 7 files** (`DEFAULT_NROWS_CHORD`): el carril de marques en pren 1,6 (`Settings.getMarksLaneHeight()`) i els acords 5,4 (quatre línies i el trianglet). A 8 sobrava una fila per dalt. **La caixa del costat s'ha partit en dues**: a dalt la de les marques (`Tò; Tempo; Vol`) i a sota la d'Acords.
+- **Franja de marques**: vegeu «Marques de canvi: la franja de marques».
+- **Transposició**: ja no és una marca, surt al botó de l'instrument (`Glock (24 st)`).
+- **Gammes descartades**: `moni` (a ull) i `moni2` (mesurada de la foto); es conserven al codi però cap tema no les fa servir.
+
 
 ### Altura dibuixada vs altura que sona (`displayOffset`)
 
@@ -221,7 +236,7 @@ El flag `saveChordMidiTrack` decideix **només les notes**, i ja no surt d'una p
 
 **El dibuix són tres columnes** (`drawChordSymbol`): arrel i baix, la quatríada, les extensions. Les dues apilades van **alineades a la dreta**, altrament els intervals de dues xifres desquadren la columna. Dues coses sobre la mida de la font:
 
-- La base és **una fila de la franja per línia de text** (`min(alçada/4, rowH*0.85)`). Repartint tota l'alçada entre quatre línies, que és el que feia, la lletra sortia enorme d'ençà que la franja va passar de 4 a 8 files. Ara la mida no depèn de l'alçada de la banda, i per això la banda s'ha pogut abaixar a 6 sense tocar el text.
+- La base és **una fila de la franja per línia de text** (`min(alçada/4, rowH*0.85)`). Repartint tota l'alçada entre quatre línies, que és el que feia, la lletra sortia enorme d'ençà que la franja va passar de 4 a 8 files. Ara la mida no depèn de l'alçada de la banda, i per això la banda s'ha pogut abaixar (avui té 7 files, 1,6 de les quals són el carril de marques) sense tocar el text.
 - Si així i tot els acords es trepitgessin, `computeChordFontOverride` busca **una mida comuna a tota la franja**: la més petita que necessiti cap d'ells. Una mida per acord deixaria una filera amb lletres de mides diferents, que es llegeix malament. Es calcula un cop per redibuix complet i **abans** de dibuixar cap acord, perquè canviar de font mou també la línia de base.
 
 **El PDF no dibuixa res d'això**: copia `chordLine.getOffscreenImage()`. Qualsevol canvi al dibuix de la franja hi surt sol.
@@ -353,13 +368,13 @@ El buffer no depèn de `stopCol`: `expandBufferIfNeeded` es dimensiona amb `last
 Si en prémer el botó de PDF la partitura no té **ni notes ni acords** (`MyPatternScore.isBlankScore()`), `onPrintButtonPressed` fa **dues preguntes**:
 
 1. `print.blank.question` — vols un dodecagrama en blanc? Si es respon que no, no s'imprimeix res.
-2. `print.blank.dropMarks.question` — en vols treure les marques inicials? Si es respon que sí, la pàgina surt sense la pila de la columna 0 (volum, tonalitat, tempo i transposició): paper pautat genèric, bo per a qualsevol tonalitat i qualsevol tempo.
+2. `print.blank.dropMarks.question` — en vols treure les marques inicials? Si es respon que sí, la pàgina surt sense les marques inicials de la columna 0 (tonalitat, tempo i volum): paper pautat genèric, bo per a qualsevol tonalitat i qualsevol tempo.
 
 Després, `DodecagramPdfPrinter.printBlank(file, dropInitialMarks)` treu **`BLANK_ROWS` = 4 files buides**.
 
 Amb acords i sense notes s'imprimeix com sempre: hi ha contingut a treure.
 
-**Com es treuen les marques.** Des de `42003ca` el PDF no les dibuixa ell: copia l'offscreen de la banda d'acords, que ja les porta. O sigui que treure-les és amagar-les d'aquell offscreen i prou. Ho fa `MyChordSymbolLine.hideInitialMarks`, un senyal que **només** viu entre el redibuix del buffer i el final del PDF: `printBlank` l'aixeca, força `setNeedsDrawing(true)` (sense això `drawFullChordLineInOffscreen` no refà res i el buffer sortiria amb les marques velles) i, en un `finally`, el baixa i crida `redrawChordLine()` perquè la pantalla les recuperi. A la pantalla no s'amaguen mai: són la base de la partitura i a la columna 0 continuen sent editables però no esborrables.
+**Com es treuen les marques.** Des de `42003ca` el PDF no les dibuixa ell: copia l'offscreen de la banda d'acords, que ja les porta. O sigui que treure-les és amagar-les d'aquell offscreen i prou. Ho fa `MyChordSymbolLine.hideInitialMarks`, un senyal que **només** viu entre el redibuix del buffer i el final del PDF: `printBlank` l'aixeca, força `setNeedsDrawing(true)` (sense això `drawFullChordLineInOffscreen` no refà res i el buffer sortiria amb les marques velles) i, en un `finally`, el baixa i crida `redrawChordLine()` perquè la pantalla les recuperi. A la pantalla no s'amaguen mai: són la base de la partitura i es veuen sempre al carril de marques.
 
 Dues coses que el mode en blanc canvia dins de `print()`:
 
@@ -415,92 +430,22 @@ Selecció pròpia, dins de `MyLyrics` (`selActive`, `selTrack`, `selColA/B`): un
 - `ScoreChangeEvent` — marques de canvi (tempo/to/volum/compàs). Desa l'entrada **sencera** del `changeMap` abans i després (no el delta), perquè el redo no perdi els camps que ja hi havia a la columna. Si la marca de to va transposar, l'event també desfà la transposició, en ordre invers a la col·locació (primer restaura l'entrada, després destransposa). Només es registra si l'entrada realment canvia.
 - El diàleg de transposició en canviar de to té **tres opcions** (`MyDialogs.demanaTransposicio`): amunt, avall o no transportar. Amunt i avall porten a la mateixa tonalitat i es diferencien en el registre — el pas es normalitza a `0..11` (amunt) i al mateix menys 12 (avall). L'event desa el pas realment aplicat.
 
-### Marques de canvi: selecció, edició i esborrat
-- `MyChordSymbolLine` registra el rectangle real de cada marca dibuixada (`markBoxes`, buidada a cada `drawFullChordLineInOffscreen`) i desa la transformació offscreen→pantalla de l'últim `draw()`; `whichMark(x, y)` la inverteix (compensa l'escala de fit-anacrusis).
-- `MyController.onMousePressed` consulta `whichMark` **abans** de `myChordSymbolLine.whichCol`, altrament el clic obriria el diàleg d'acords. Un clic selecciona, doble clic edita (`editSelectedMark`), Supr esborra (`deleteSelectedMark`, a `MyNewPanel.keyPressed`).
-- Les marques de la columna 0 són editables però **no** esborrables (són la base de la partitura).
-- El compàs no té caixeta dibuixada: guanya undo, però no és seleccionable.
+### Marques de canvi: la franja de marques
+
+**Disseny (15–18-11-26).** Les marques de tonalitat, tempo i volum ja no es dibuixen sobre els acords. Viuen en un **carril propi a dalt de la franja d'acords** (`Settings.getMarksLaneHeight()` = 1,6 files), separat dels acords per una **línia horitzontal de banda a banda** (`DrawKit.liniaDeMarques`) i amb un fons opcional del tema (`marques.fons`, `DrawKit.franjaDeMarques`). A l'esquerra, la caixa del costat del teclat té un títol propi: «Tò; Tempo; Vol» / «Tono; Tempo; Vol» / «Key; Tempo; Vol» (`myChordSymbolLine.marksLabel`).
+
+- **Com es dibuixen** (`MyChordSymbolLine.drawMarkGroup`): a cada columna amb marques hi va una **fletxeta mirant avall** (és el trianglet d'atac dels acords, `DrawKit.triangletDAtac`, de la mateixa mida) al centre de la columna i, al costat, **el text de totes les marques separades per `; `**, en **negre i amb la lletra dels acords** (`getMarkFont()` = `getBaseChordFont()`). Ordre fix: **tonalitat, tempo, volum**.
+- **Notació**: **tonalitat** `Do` (major) / `do` (menor) (`ToneRange.getKeyName`); **tempo** `<figura> = <bpm>`, amb una **negra** en compàs simple (`beatFigure` 4) i una **negra amb punt** en compost (`beatFigure` 8), triada per `beatFigureAt(col)` (últim canvi de compàs del `changeMap` fins a la columna, o el de la partitura); **volum** el matís més proper (`dynamicText`: pp < 41, p < 57, mp < 72, mf < 88, f < 104, ff). La figura del tempo **es dibuixa com a forma vectorial** (`DrawKit.simbolDeBeat`: cap ple inclinat, plica i punt) perquè la tipografia dels acords no té els glifs ♩/♪ (sortien buits). El valor exacte del volum només es veu al botó de volum.
+- **Globals i per pista**: tonalitat i tempo són globals; el **volum és per pista** (`ScoreChange.trackVelocities`, només es dibuixa el de la pista actual: en canviar de pista canvien les marques de volum).
+- **Columna 0**: les marques inicials **es dibuixen sempre** (pantalla i PDF), amb fallback als valors per defecte quan no hi ha entrada explícita; només `hideInitialMarks` (dodecagrama en blanc sense marques) les amaga. `printingMarks`/`setPrintingMarks` queden sense efecte (van servir un moment per dibuixar-les només en imprimir).
+- **La franja de marques no admet cap entrada.** `MyController.isMarksLaneArea` (caixa de l'esquerra + part de la càmera, banda vertical del carril) fa que el **clic s'ignori** (no obre el diàleg d'acords ni selecciona marques) i que només tingui un **tip** (`myChordSymbolLine.marks.tip`); `MyChordSymbolLine.whichCol` torna `-1` dins el carril. **Conseqüència: ja no es poden seleccionar, editar ni esborrar marques clicant-hi.** Es canvia una marca col·locant-ne una de nova a la mateixa columna amb el botó corresponent (les inicials, amb «A l'inici»). `whichMark`, `markBoxes` (ara amb `col`, `firstCol`, `lastCol`, `xOff`, `w`, `h`), `editSelectedMark`, `deleteSelectedMark` i `markTipText` **es conserven però ja no s'assoleixen** per si es vol recuperar l'edició. Els clics per **col·locar** una marca pendent (`pendingChange`) sí que funcionen sobre el carril.
+- **`TRANSPOSE` ja no es dibuixa** (`MarkKind.TRANSPOSE`, `DrawKit.Marca.TRANSPOSICIO`, la clau `marca.transposicio` dels temes i el seu tractament al controlador són codi en desús, documentat al javadoc, **no esborrat**). La transposició de l'instrument surt al **botó de l'instrument**: `MyController.updateTextOfButtons` afegeix `(N st)` al nom, amb el signe de músic (`-displayOffset`; sense transposició o a la bateria, només el nom: `Glock (24 st)`, `Piano`). El tip del botó és `Instrument (transposició)` (`buttonLayout.InstrButton.tipText`, tres idiomes).
+- **Bug corregit: la barra de compàs fantasma.** Qualsevol `ScoreChange` sense canvi de compàs ni fase (o sigui, una marca de tempo, tonalitat o volum) **reiniciava el comptador de compàs a (0,0)** a `computeBeatMeasureLines`, `getMeasureAndBeatAt`, `getFirstColOfMeasure` i al recompte de fases de `MyController` (el de després d'una inserció de columnes), i a la columna de la marca apareixia una barra de compàs que no tenia a veure amb res. Ara **només toquen el comptador** els canvis de compàs reals (`nColsBeat`, `nBeatsMeasure`, `nColsQuarter`) o una fase guardada (`colInBeatPhase`/`measurePhase`).
 - `MyGridScore.putScoreChange` **substitueix** l'entrada sencera (i l'elimina si queda buida), a diferència de `setScoreChange`, que fa merge i el segueixen usant la càrrega MIDI i el paste. La col·locació de marques també usa `putScoreChange`.
-- Editar una marca la **deselecciona** en acabar (`clearMarkSelection()` al final d'`editSelectedMark`).
-- Hi ha **quatre** tipus de marca (`MarkKind`): TEMPO (blau), KEY (granate), VOLUME (verd) i TRANSPOSE (groc). La de volum i la de transposició són **per track**; les altres dues, globals.
-- **TRANSPOSE** mostra quants semitons amunt sona la pista respecte del que es dibuixa, o sigui el `displayOffset` **canviat de signe** (glock: camp −24 → marca `t+24`). Ve de l'instrument, no del `changeMap`: és informativa i `editSelectedMark`/`deleteSelectedMark` la ignoren.
-- A la columna 0 es dibuixen sempre les quatre, amb fallback als valors per defecte quan no hi ha entrada explícita. `fitMarkStack()` encongeix la font si la pila no hi cabés, reservant sempre `TRIANGLE_SPACE` per al trianglet d'atac. **Una marca i una línia del símbol d'acord fan exactament el mateix.** Comparteixen la font (`getBaseChordFont()`, la base de `getChordFont` sense l'ajust horitzontal) i la caixa de la marca fa una línia d'alt (`markBoxHeight()` = `ascent+descent+LINE_GAP`), amb la lletra centrada a dins. O sigui que la pila de quatre marques inicials té el mateix alt que les quatre línies d'un acord. `fitMarkStack` només actua si no hi cabessin, i llavors abaixa caixa i lletra alhora: encongir només la lletra no serviria de res, perquè l'alçada ja no en depèn.
-
-`DEFAULT_NROWS_CHORD` és **6**: quatre línies amb la font a `rowH*0.85` fan unes 4,7 files i el trianglet se'n menja mitja més. Amb 5 el text s'encongiria a totes les pantalles provades (600, 768, 900, 1080, 1200, 1440) menys la de 2160. Va arribar a 8 quan la font de l'acord es repartia tota l'alçada de la banda entre quatre línies; des que és una fila per línia, la banda es pot abaixar sense tocar el text. Abaixar-la també dona aire al PDF: `scoreRowH` és més petit i `scaleY`, més gran.
-- El text de la caixeta es tria per contrast amb el fons (`ColorSets.getSeparatorColor`): blanc sobre els fons foscos, negre sobre el groc.
-- El tip d'una marca (`MyController.markTipText`) mostra què és i quant val. La condició de refresc compara **columna i tipus** (`lastTipMarkKind`): com que les quatre marques inicials són a la columna 0, mirant només la columna no es refrescava en passar d'una a l'altra.
-
-### Autocorrect en drag ADD i EXTEND
-`processDragCell` i `onMousePressed` comproven si el track **actual** té una nota a la cel·la (stream sobre `sq.getPoliNotes()`), **no** `isSqVisible()` (global). Afecta els modes ADD, EXTEND_PENDING, EXTEND_RIGHT i EXTEND_LEFT. Si el `mouseReleased` és fora del grid (`whichCol == -1`), l'autocorrect usa `lastColPressed` com a posició final.
-
-L'autocorrect **no reescriu** on ja hi ha nota del track actual (`currentTrackHasNoteAt`): abans hi passava per sobre amb `addNoteAtCell` i duplicava el `SubSquare`.
-
-### Enllaç de notes: sempre per pista
-**Mai** usar `sq.isSq_is_linked()` per decidir si cal enllaçar: és un AND sobre **tots els tracks visibles** i, a més, és un valor calculat a `updateState()`, o sigui que durant un drag (que processa diverses cel·les sense repintar entremig) pot estar caducat. Usar `MyController.isCurrentTrackNoteLinked(sq)`, que mira `poliNotes` del track actual sense cau.
-
-S'aplica a ADD, EXTEND_PENDING (els dos sentits), EXTEND_RIGHT, EXTEND_LEFT, `removeNoteAtCell`, `unlinkNoteForUndo` i als helpers de MOVE (`findNoteHeadCol` / `findNoteTailCol`).
-
-### Un SubSquare per track i cel·la
-La identitat d'un `SubSquare` és `(canal, track, square)`. `MyGridSquare.addNote` **conserva** la nota existent en lloc d'afegir-ne una segona: amb duplicats, `linkNote` (`indexOf`) només n'enllaçava una i `removeNote` (`lastIndexOf`) només n'esborrava una — superposar una nota llarga sobre una de curta deixava un cap de nota, i esborrar amb shift-drag deixava la curta a sota.
-
-### Tip del porta-retalls
-`MyController.showClipboardTip()` mostra el tip via `buttons.showCustomTip(I18n.t("clipboard.full.tip"), ...)`. Respecta `Settings.isTipsVisible()` automàticament.
-
-### Rendiment Ctrl+Z
-Ctrl+Z usa `drawCurrentCamInOffscreen()` (ràpid). **No** usar `drawFullGridinOffscreen()` aquí: és molt lent per partitures grans.
-
-## Anacrusa (`hasAnacrusis`)
-
-### Detecció
-`MyController.detectAnacrusis()` comprova si `lastColWritten == 0` (sense notes → `false`) o si el primer beat (cols 0..beatCols-1) és buit → `hasAnacrusis = true`. S'executa automàticament a:
-- `updateTextOfButtons()` — cada cop que es navega o carrega
-- `undo()` / `redo()` — via `refreshAnacrusis()`
-- `onMouseReleased` — al final del drag (ADD/ERASE/EXTEND/PASTE), via `refreshAnacrusis()`
-- `newScore()` — força `hasAnacrusis = false` directament
-
-**No** cridar `refreshAnacrusis()` des de `addNoteAtCell`/`removeNoteAtCell`: canviaria `hasAnacrusis` a mig drag i desajustaria `getCol()` respecte la vista visual.
-
-### Numeració de compassos
-`getMeasureAndBeatAt` comença en compàs `0` si `hasAnacrusis`, en `1` si no. Independentment del flag `fitAnacrusis`.
-
-### Fit anacrusis (botó Encabir/Fit)
-`Settings.fitAnacrusis` es persisteix al fitxer MIDI (text meta `fitAnacrusis=`). El valor per defecte és `false`. En carregar un MIDI, `loadScore()` aplica el valor via `buttons.setFitAnacrusisButton(allPurposeScore.isFitAnacrusisScore())`. Quan l'usuari prem el botó, `onFitAnacrusisButtonPressed` actualitza `Settings` i `allPurposeScore.fitAnacrusis`.
-Quan `fitAnacrusis && hasAnacrusis` a la primera pàgina, `draw()` estén `lastColToDraw` en un compàs extra (`nBeatsMeasure * nColsBeat`) → Java2D escala la imatge més ampla al mateix ample → columnes visuals més estretes.
-
-`MyGridScore.getCol()` compensa aquesta compressió: si `fitAnacrusis && hasAnacrusis && firstColToDraw == 0` (keyboard esquerre), usa:
-```java
-col = (int)(relX * lastColToDraw / (colWidth * nColsCam));
-```
-en lloc del càlcul estàndard `relX / colWidth`.
-
-### Paginació fit (`MyCamera`)
-`nextPage`/`prevPage` usen `getBaseColsPerMeasure()` per calcular la mida de la primera pàgina ampliada quan `fitAnacrusis && hasAnacrusis`.
-
-## Punts de retorn (tags)
-- `punt-de-partida` — abans de la sèrie de correccions de l'agost del 2026.
-- `divendres-28-8-26` — amb les sis tandes de correccions fetes.
-- `29-8-26` — ajuda reescrita i javadoc revisat, encara sense castellà.
-- `castella-29-8-26` — tot l'anterior, més la interfície en castellà (`ca`/`en`/`es`), el `config.properties` en UTF-8 i `ConfigManager` esborrat.
-- `5-9-26` — tot l'anterior, més la columna de l'acord numerada d'1 a 12, el tip de Ctrl-V i el nom del PDF igual que el del MIDI.
-- `7-9-26` — do central = do4, graella de metal·lòfon 55–79, `displayOffset` calculat i no desat, i la biblioteca migrada. Inclou també el diàleg de benvinguda amb tria d'idioma, el fix del `choiceExtended`, el del `PROGRAM_CHANGE` de la pista de direcció, els de la banda d'acords i la lletra al PDF, i els botons de Swing traduïts. Inclou també la nomenclatura nova de les cançons i els dodecagrames al repositori.
-- `5-10-26` — porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat amb Ctrl-clic abans del Ctrl-V, també per a les notes. Inclou la franja d'acords a 6 files amb la marca de la mida d'una línia d'acord, les notes dels acords que es desen de debò i no es tornen a llegir, l'últim acord que arriba al final del seu compàs, la doble barra sense arrodonir a la pàgina, el recompte de `nNotes` i les vies de contacte al README i a la benvinguda.
-
-- `drawkit-13-11-26` — a la branca `drawkit`: tot el dibuix passant per `DrawKit`, amb l'aspecte idèntic píxel a píxel al de `master`. És la referència de les proves de disseny (`disseny-grafic`).
-- `publicat-12-11-26` — la versió penjada al web el 12-11-26: pistes amagades que es pregunten en desar (acords i bateria inclosos), la lletra que segueix la nota, Supr sobre la selecció, Nova que reinicia mesclador i instruments, el piano per defecte sense metal·lòfon i «Obre amb» des del sistema.
-
-Tots els tags són a `origin`. Per veure com era el codi en un punt sense tocar res: `git switch --detach <tag>`; per recuperar-ne un sol fitxer: `git checkout <tag> -- <ruta>`.
-
-## Migració de la biblioteca (7-9-26)
-
-En baixar la graella de 79–103 a 55–79, els fitxers ja desats s'havien de reescriure: guardaven l'altura amb el `displayOffset` antic i la tonalitat en coordenades de la graella vella. La regla aplicada, **per pista**:
-
-```
-nou_desat = desat_antic + displayOffset_antic     (conservar el dibuix)
-midiKey / choice / CHANGEMAP:midiKey  −24         (la finestra ha baixat 24)
-displayOffset=  →  -24
-```
-
-El `+ displayOffset_antic` no és sempre +12: `Vem kan segla forutan vind_mi` el tenia a 0 i les seves notes no s'havien de moure gens. La percussió (canal 9, `displayOffset=0`) no es toca.
+- El compàs no té marca dibuixada al carril: guanya undo, però no és seleccionable.
+- La mida: la caixa d'una marca (`markBoxHeight()`) fa una línia d'acord (`ascent+descent+LINE_GAP`); el text es centra al carril (`Settings.getMarksLaneHeight()`). `fitMarkStack` i `clearMarkStackFit` ja no es fan servir (la pila vertical va desaparèixer).
+- **`DEFAULT_NROWS_CHORD` és 7** (1,6 de carril + 5,4 d'acords: quatre línies amb la font a `rowH*0.85` fan unes 4,7 files i el trianglet se'n menja mitja més). Va passar per 8 (quan la font es repartia tota l'alçada) i 6 (sense carril).
+- **No hi ha cap altre lloc que dibuixi marques**: el PDF copia l'offscreen de la franja (`chordLine.getOffscreenImage()`), o sigui que el carril hi surt sol. `DodecagramPdfPrinter.print` es parteix en `print` (aixeca `setPrintingMarks(true)` i redibuixa a la fi) i `printBody`.
 
 Migrats: els 16 `.ddcgr.mid` de `SongsInBooklet/` i els 10 de `../Complements_Bu/OtherSongsBu/`. **Còpies de seguretat**, totes dues fora del control de versions: `../Complements_Bu/SongsInBooklet_bkp_20260907/` i `../Complements_Bu/OtherSongsBu_bkp_20260907/`.
 
@@ -509,6 +454,7 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **branca `disseny_grafic` (15–18-11-26)** Tema `moni` (per defecte; l'únic de fàbrica) amb la gamma `colors_manual` (colors exactes del PDF del manual); gammes `moni`/`moni2` conservades i temes `moni2`/classic/manual fora de la carpeta d'usuari; tecles seleccionades/apagades/sense selecció i il·luminació en sonar (desactivada); notes de la graella en blau i amb el seu color en sonar; **carril de marques** (fletxeta, `;`, notació, separador, caixa «Tò; Tempo; Vol») amb la **franja d'acords a 7 files** i sense cap entrada; **barra de compàs fantasma corregida**; transposició al botó de l'instrument; caixes del costat del teclat sempre a la barra inicial; botó de format a la fila del títol; ajuda, `config.properties` i `TemesTest` al dia; traça de consola de `MyChoice.addKey()` esborrada.
 - **d7d872d** Porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat abans amb Ctrl-clic, també per a les notes. El camí antic de Ctrl-V hi queda, sense documentar. Volum per defecte de la pista d'acords a 127.
 - **2d8befe** L'últim acord arriba al final del seu compàs; la doble barra ja no s'arrodoneix a la pàgina; `lastColWritten` compta les notes dels acords; `nNotes` es recompta de la graella; columnes d'intervals amb terra de dues xifres.
 - **f62059d** Les notes dels acords es desaven només si la pista era visible (o sigui mai): la porta del bucle de desat passa a ser el `trackMap`. En carregar, a la pista marcada amb `id=1003` se li salten els `NOTE_ON`/`NOTE_OFF`: els símbols ja regeneren l'acompanyament.

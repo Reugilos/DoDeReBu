@@ -504,8 +504,9 @@ public class ColorSets {
     }
 
     /**
-     * [CA] Inicialitza la gamme de colors bàsics (encesos), que és la gamme «pau»
-     * o «bu» segons la configuració {@link Settings#COLORS_BU}, i afegeix els colors
+     * [CA] Inicialitza la gamme de colors bàsics (encesos): la que demana la clau
+     * {@code gama} del tema ({@code colors_manual}, {@code moni} o {@code moni2}) o, amb
+     * {@code gama = config}, la «pau» o la «bu» segons {@link Settings#COLORS_BU}. Afegeix els colors
      * auxiliars (BUTO, FONS, IVORI, MARFIL, APAGAT, BUIT, LINIA_PENTA, DO_PENTA).
      * <p>
      * [EN] Initializes the basic (active) color palette, which is the «pau»
