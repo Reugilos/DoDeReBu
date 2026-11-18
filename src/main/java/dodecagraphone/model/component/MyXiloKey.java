@@ -285,7 +285,8 @@ public class MyXiloKey extends MyComponent {
      */
     public void play(int channel,int velocity) {
         if (!this.doNotHighlight) {
-            this.color = this.color_playing;
+            // Una tecla no seleccionada (apagada) no s'il·lumina en sonar.
+            this.color = this.dimmed ? this.color_silent : this.color_playing;
         }
         if (!this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
@@ -347,7 +348,8 @@ public class MyXiloKey extends MyComponent {
      */
     public void playWithMidi(int realMidi, int channel, int velocity) {
         if (!this.doNotHighlight) {
-            this.color = this.color_playing;
+            // Una tecla no seleccionada (apagada) no s'il·lumina en sonar.
+            this.color = this.dimmed ? this.color_silent : this.color_playing;
         }
         if (!this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
