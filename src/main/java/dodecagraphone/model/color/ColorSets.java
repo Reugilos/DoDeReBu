@@ -78,6 +78,7 @@ public class ColorSets {
     private static final TreeMap<Integer,Color> bu=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> moni=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> moni2=new TreeMap<Integer,Color>();
+    private static final TreeMap<Integer,Color> colorsManual=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> ences=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> mutted=new TreeMap<Integer,Color>();
     private static final TreeMap<Integer,Color> iluminat=new TreeMap<Integer,Color>();
@@ -432,6 +433,34 @@ public class ColorSets {
     }
 
     /**
+     * [CA] Inicialitza la gamma «colors_manual»: els colors de les notes <b>exactes
+     * del manual</b> («DoDeRe-BÚ libro ENG.pdf»). No són mesurats sobre una imatge:
+     * s'han llegit directament del color de farciment de cada rectangle vectorial
+     * del PDF, i cada nota s'ha identificat pel nom que porta escrit a dins (les
+     * dotze coincideixen a totes les pàgines amb dodecagrama). La tria el tema amb
+     * {@code gama = colors_manual}.
+     * <p>
+     * [EN] The «colors_manual» palette: the booklet's exact note colours, read
+     * from the PDF's vector fill colours (not sampled from an image), each note
+     * identified by the name written inside its rectangle. Selected with
+     * {@code gama = colors_manual}.
+     */
+    private static void setGamaColorsManual() {
+        colorsManual.put(DO, new Color(218, 43, 53));
+        colorsManual.put(DE, new Color(234, 104, 96));
+        colorsManual.put(RE, new Color(237, 108, 17));
+        colorsManual.put(RI, new Color(244, 153, 70));
+        colorsManual.put(MI, new Color(243, 222, 0));
+        colorsManual.put(FA, new Color(14, 108, 72));
+        colorsManual.put(FO, new Color(22, 146, 111));
+        colorsManual.put(SO, new Color(53, 143, 206));
+        colorsManual.put(SA, new Color(86, 134, 197));
+        colorsManual.put(LA, new Color(32, 89, 164));
+        colorsManual.put(LI, new Color(85, 84, 160));
+        colorsManual.put(TI, new Color(113, 70, 128));
+    }
+
+    /**
      * [CA] Combina les gammes «pau» i «xinos» amb els pesos indicats per obtenir
      * un color intermedi. Ús intern per a la gamme «bu».
      * <p>
@@ -489,6 +518,11 @@ public class ColorSets {
             setGamaMoni();
             for (int nota = DO; nota <= TI; nota++){
                 ences.put(nota,moni.get(nota));
+            }
+        } else if ("colors_manual".equalsIgnoreCase(gama)){
+            setGamaColorsManual();
+            for (int nota = DO; nota <= TI; nota++){
+                ences.put(nota,colorsManual.get(nota));
             }
         } else if ("moni2".equalsIgnoreCase(gama)){
             setGamaMoni2();
