@@ -259,19 +259,21 @@ public class MyChoice {
             else if (sel.equals(kAdv)) {
                 // Escales avançades: els modes de l'escala major (el grau entre parèntesis) i la
                 // frígia dominant. L'arrel és la nota que es clica al teclat, com a les altres.
+                String kTon = I18n.t("choice.scale.wholeTone");
                 String kDor = I18n.t("choice.scale.dorian");
                 String kPhr = I18n.t("choice.scale.phrygian");
                 String kLyd = I18n.t("choice.scale.lydian");
                 String kMix = I18n.t("choice.scale.mixolydian");
                 String kLoc = I18n.t("choice.scale.locrian");
                 String kPhD = I18n.t("choice.scale.phrygianDominant");
-                String[] avancades = { kDor, kPhr, kLyd, kMix, kLoc, kPhD };
+                String[] avancades = { kTon, kDor, kPhr, kLyd, kMix, kLoc, kPhD };
                 String selA = MyDialogs.seleccionaOpcio(
                         I18n.t("choice.advanced.prompt"),
                         I18n.t("choice.advanced.title"),
                         avancades, 0);
                 if (selA == null) return true;
-                if      (selA.equals(kDor)) setDorianScaleChoice();
+                if      (selA.equals(kTon)) setWholeToneScaleChoice();
+                else if (selA.equals(kDor)) setDorianScaleChoice();
                 else if (selA.equals(kPhr)) setPhrygianScaleChoice();
                 else if (selA.equals(kLyd)) setLydianScaleChoice();
                 else if (selA.equals(kMix)) setMixolydianScaleChoice();
@@ -607,6 +609,17 @@ public class MyChoice {
     public void setAugmentedChordChoice() {
         extendedToFullRange = false;
         choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 4, 8, 12}));
+        this.controller.getKeyboard().setShowChoice(true);
+    }
+
+    /**
+     * [CA] Escala de tons (sis tons sencers, simètrica): 0,2,4,6,8,10,12. És la primera
+     * de les avançades; no és cap mode de la major.
+     * [EN] Whole-tone scale: 0,2,4,6,8,10,12. First of the advanced scales.
+     */
+    public void setWholeToneScaleChoice() {
+        extendedToFullRange = false;
+        choice = new ArrayList<>(Arrays.asList(new Integer[]{0, 2, 4, 6, 8, 10, 12}));
         this.controller.getKeyboard().setShowChoice(true);
     }
 
