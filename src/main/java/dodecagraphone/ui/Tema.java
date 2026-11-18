@@ -22,12 +22,13 @@ import java.util.Properties;
  * {@code temes}, al costat del {@code config.properties}, i el config en tria un
  * amb la clau {@code tema} (per defecte, {@code tema=moni}).
  * <p>
- * <b>D'on surten els temes.</b> El programa porta dins el tema de fàbrica
- * ({@code resources/temes/moni.properties}, l'únic de {@link #DE_FABRICA}). En
- * arrencar, el copia a la carpeta si hi falta, i <b>només</b> si hi falta: un tema
- * que l'usuari hagi editat no es trepitja mai. Per tornar a la versió de fàbrica,
- * n'hi ha prou d'esborrar-ne el fitxer. Per fer-ne de nous, es copia
- * {@code moni.properties} amb un altre nom i s'edita. El {@code classic} i el
+ * <b>D'on surten els temes.</b> El programa porta dins els temes de fàbrica
+ * ({@code resources/temes/moni.properties} i {@code moni2.properties}, els de
+ * {@link #DE_FABRICA}; {@code moni2} és idèntic a {@code moni} però amb les notes
+ * de la graella de colors). En arrencar, els copia a la carpeta si hi falten, i
+ * <b>només</b> si hi falten: un tema que l'usuari hagi editat no es trepitja mai.
+ * Per tornar a la versió de fàbrica, n'hi ha prou d'esborrar-ne el fitxer. Per fer-ne
+ * de nous, es copia {@code moni.properties} amb un altre nom i s'edita. El {@code classic} i el
  * {@code manual} són recursos interns que no es copien: el clàssic és la reserva
  * (vegeu més avall) i {@code tema=manual} encara es pot triar, perquè si el fitxer
  * no és a la carpeta es llegeix del recurs.
@@ -62,7 +63,7 @@ public final class Tema {
     /** [CA] El tema de reserva, i el de partida si el config no en diu cap. */
     public static final String CLASSIC = "classic";
     /** [CA] Els temes de fàbrica, que es copien a la carpeta si hi falten. */
-    private static final String[] DE_FABRICA = {"moni"};
+    private static final String[] DE_FABRICA = {"moni", "moni2"};
     private static final String RECURS = "/temes/";
     private static final String EXTENSIO = ".properties";
 

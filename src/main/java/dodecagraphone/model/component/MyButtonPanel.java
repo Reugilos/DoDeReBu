@@ -179,6 +179,9 @@ public class MyButtonPanel extends MyComponent {
                 if (fields.length > 8) {
                     active = fields[8].trim();
                 }
+                // Només es creen els botons amb IsActive = On. Amb qualsevol altre valor (p. ex. Off)
+                // el botó no existeix: el seu lloc queda en blanc i no fa res, però el codi i els textos
+                // es conserven. Ara mateix només és Off el botó SVG (ExportButton, id 37).
                 if (active.equals("On")) {
                     buttonLayout.put(id, new ButtonInfo(id, name, type, row, col, textOn, textOff, tipText));
                 }
