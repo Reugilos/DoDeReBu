@@ -1002,7 +1002,7 @@ public class MyChordSymbolLine extends MyComponent {
      * <p>
      * [EN] The dynamic marking nearest to a MIDI velocity.
      */
-    static String dynamicText(int velocity) {
+    public static String dynamicText(int velocity) {
         if (velocity < 41) return "pp";
         if (velocity < 57) return "p";
         if (velocity < 72) return "mp";

@@ -846,13 +846,25 @@ public class MyController {
     }
 
     /**
+     * [CA] El text del botó de volum: el valor (0–127) i, entre parèntesis, el matís
+     * tal com surt a la marca de la franja ({@code 127 (ff)}, {@code 80 (mf)}).
+     * [EN] Volume button text: the value plus, in brackets, the dynamic marking
+     * shown on the mark.
+     */
+    private static String volumeButtonText(int velocity) {
+        return velocity + " (" + MyChordSymbolLine.dynamicText(velocity) + ")";
+    }
+
+    /**
      * [CA] Cert si el punt és dins de la <b>franja de marques</b> (tonalitat, tempo i
-     * volum): la banda de dalt de la franja d'acords, tant la caixa «Tò, Tempo, Vol» del
-     * costat del teclat com la part de la càmera. Aquesta franja <b>no admet cap
-     * entrada</b>: els clics s'hi ignoren (no obren el diàleg d'acords ni seleccionen
-     * marques) i només té el seu tip. Les marques es canvien amb els botons.
-     * [EN] True if the point is inside the marks lane (drawer plus camera part). The
-     * lane accepts no input: clicks are ignored and it only shows its tip.
+     * volum): la banda de dalt de la franja d'acords, tant la caixa «Tò; Tempo; Vol» del
+     * costat del teclat com la part de la càmera. Aquesta franja <b>no admet acords</b>:
+     * un clic en un lloc buit s'ignora (no obre el diàleg d'acords). Sí que es poden
+     * <b>seleccionar, editar (doble clic) i esborrar (Supr) les marques</b> clicant-hi,
+     * com sempre. Té el seu tip, general o el de la marca sota el cursor.
+     * [EN] True if the point is inside the marks lane. The lane accepts no chords: a
+     * click on an empty spot is ignored; the marks themselves can be selected, edited
+     * (double click) and deleted (Del) by clicking them.
      */
     private boolean isMarksLaneArea(double posX, double posY) {
         double rowH   = Settings.getRowHeight();
@@ -2270,9 +2282,9 @@ public class MyController {
         /* Marca de canvi (tempo/to/volum) de la franja d'acords: el clic la
            selecciona i queda consumit, de manera que no s'obre el diàleg
            d'acords. Qualsevol altre clic fora d'un botó la deselecciona. */
-        // La franja de marques no admet cap entrada: el clic s'ignora (ni diàleg
-        // d'acords, ni selecció de marques). Vegeu isMarksLaneArea.
-        if (isMarksLaneArea(posX, posY)) {
+        // La franja de marques no admet acords: un clic en un lloc buit s'ignora (no
+        // obre el diàleg d'acords). Un clic sobre una marca la selecciona (a sota).
+        if (isMarksLaneArea(posX, posY) && this.myChordSymbolLine.whichMark(posX, posY) == null) {
             this.clearMarkSelection();
             return;
         }
@@ -2921,16 +2933,32 @@ public class MyController {
                 lastTipKeyRow = -1;
                 lastTipMarkKind = null;
             }
+        } else if (hoverMark != null) {
+            // Marca de canvi: el seu tip (què és i quant val)
+            MyChordSymbolLine.MarkBox mark = hoverMark;
+            if (lastTipButton != -8 || lastTipKeyRow != mark.col
+                    || lastTipMarkKind != mark.kind) {
+                this.buttons.hideTip();
+                // Sota el cursor, com el tip de la graella: la variant de dos
+                // arguments el col·loca damunt de la marca i el popup es menjava el clic.
+                this.buttons.showCustomTip(
+                        markTipText(mark),
+                        (int) posX + 12,
+                        (int) (posY + Settings.getRowHeight()));
+                lastTipButton = -8;
+                lastTipKeyRow = mark.col;
+                lastTipMarkKind = mark.kind;
+            }
         } else if (isMarksLaneArea(posX, posY)) {
-            // Franja de marques: només té un tip general (no admet cap entrada). Sota el
+            // Franja de marques, fora de cap marca: només té un tip general (no admet cap entrada). Sota el
             // cursor, perquè el popup no es mengi el clic.
-            if (lastTipButton != -8) {
+            if (lastTipButton != -9) {
                 this.buttons.hideTip();
                 this.buttons.showCustomTip(
                         I18n.t("myChordSymbolLine.marks.tip"),
                         (int) posX + 12,
                         (int) (posY + Settings.getRowHeight()));
-                lastTipButton = -8;
+                lastTipButton = -9;
                 lastTipKeyRow = -1;
                 lastTipMarkKind = null;
             }
@@ -3604,7 +3632,7 @@ public class MyController {
             this.pendingVolumeTrackId = trackId;
             this.pendingVolumePrevVelocity = currentVol;
             this.getMixer().getCurrentTrack().setVelocity(clamped);
-            this.buttons.updateVolumeButton("" + clamped);
+            this.buttons.updateVolumeButton(volumeButtonText(clamped));
         } catch (NumberFormatException e) {
             MyDialogs.mostraError(
                     I18n.f("MyController.onVolumeButtonPressed.invalidInput", input),
@@ -4521,7 +4549,7 @@ public class MyController {
         if (track != null) {
             volume = track.getVelocity();
         }
-        this.buttons.updateVolumeButton("" + volume);
+        this.buttons.updateVolumeButton(volumeButtonText(volume));
         String timeSignature = allPurposeScore.params2TimeSignature();
         this.buttons.updateTimeSignatureButton(timeSignature);
         if (this.allPurposeScore != null) {
@@ -5261,7 +5289,7 @@ public class MyController {
             if (t != null) {
                 t.setVelocity(e.getValue());
                 if (e.getKey() == getMixer().getCurrentTrackId()) {
-                    this.buttons.updateVolumeButton("" + e.getValue());
+                    this.buttons.updateVolumeButton(volumeButtonText(e.getValue()));
                 }
             }
         }
