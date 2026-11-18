@@ -756,7 +756,11 @@ public class MyController {
 
         // Les dues caixes del costat del teclat, cadascuna amb el seu fons i el seu
         // marc (del tema). El marc ja fa de línia separadora de la càmera.
-        DrawKit.caixaDeFranja(g, kx, chordY,  kw, chordH,  DrawKit.Caixa.ACORDS);
+        // La caixa d'Acords es parteix en dues: a dalt la de les marques (Tò, Tempo,
+        // Vol), de l'alçada del carril, i a sota la dels acords.
+        int laneH = Settings.getMarksLaneHeight();
+        DrawKit.caixaDeFranja(g, kx, chordY,         kw, laneH,          DrawKit.Caixa.ACORDS);
+        DrawKit.caixaDeFranja(g, kx, chordY + laneH, kw, chordH - laneH, DrawKit.Caixa.ACORDS);
         DrawKit.caixaDeFranja(g, kx, lyricsY, kw, lyricsH, DrawKit.Caixa.LLETRA);
 
         // Labels: vertically centered, aligned with keyboard zone
@@ -765,8 +769,12 @@ public class MyController {
         int margin = (int) Math.max(4, Settings.getColWidth());
         int labelX = kx + margin;
 
-        // "Acords" label at top of chord strip
-        int acordsY = chordY + margin + fm.getAscent();
+        // Etiqueta de la caixa de marques, centrada en vertical dins del carril
+        DrawKit.rotulDeFranja(g, I18n.t("myChordSymbolLine.marksLabel"), labelX,
+                chordY + (laneH + lineH) / 2 - fm.getDescent());
+
+        // "Acords" label at top of chord strip (just below the marks box)
+        int acordsY = chordY + laneH + margin + fm.getAscent();
         DrawKit.rotulDeFranja(g, I18n.t("myChordSymbolLine.label"), labelX, acordsY);
 
         // Format button 2 rows below the "Acords" label
@@ -776,7 +784,7 @@ public class MyController {
         int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
         int btnH = lineH + 2 * btnPad;
         int btnX = labelX;
-        int btnY = (int) Math.round(chordY + 2 * rowH);
+        int btnY = (int) Math.round(chordY + laneH + 2 * rowH);
         DrawKit.botoDeFormat(g, fmtLabel, btnX, btnY, btnW, btnH,
                 btnX + btnPad, btnY + btnPad + fm.getAscent());
 
@@ -798,8 +806,11 @@ public class MyController {
         boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
         int kw = (int) Math.ceil(keyW);
         int kx = right ? (int) Math.ceil(camW) : 0;
-        DrawKit.margeDeCaixa(g, kx, (int) Math.round(Settings.getChordFirstRow() * rowH),
-                kw, (int) Math.round(Settings.getnRowsChord() * rowH));
+        int chordTop = (int) Math.round(Settings.getChordFirstRow() * rowH);
+        int laneH = Settings.getMarksLaneHeight();
+        DrawKit.margeDeCaixa(g, kx, chordTop, kw, laneH);
+        DrawKit.margeDeCaixa(g, kx, chordTop + laneH,
+                kw, (int) Math.round(Settings.getnRowsChord() * rowH) - laneH);
         DrawKit.margeDeCaixa(g, kx, (int) Math.round(Settings.getLyricsFirstRow() * rowH),
                 kw, (int) Math.round(Settings.getnRowsLyrics() * rowH));
     }
@@ -809,8 +820,9 @@ public class MyController {
         double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
         boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
         double kx     = right ? Settings.getnColsCam() * Settings.getColWidth() : 0;
-        double chordY = Settings.getChordFirstRow()  * rowH;
-        double chordH = Settings.getnRowsChord()     * rowH;
+        double laneH  = Settings.getMarksLaneHeight();
+        double chordY = Settings.getChordFirstRow()  * rowH + laneH;   // la caixa d'Acords, sota la de marques
+        double chordH = Settings.getnRowsChord()     * rowH - laneH;
         return posX >= kx && posX < kx + keyW && posY >= chordY && posY < chordY + chordH;
     }
 

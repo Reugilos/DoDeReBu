@@ -618,11 +618,12 @@ public class MyChordSymbolLine extends MyComponent {
         if (col < 0) return null;
         // Les marques viuen al carril de dalt de la franja: una sola banda
         // vertical, i la columna decideix quina caixeta és.
-        double top = screenPosY + LANE_PAD;
+        double top = screenPosY;
+        int laneH = Settings.getMarksLaneHeight();
         for (int i = markBoxes.size() - 1; i >= 0; i--) {
             MarkBox mb = markBoxes.get(i);
             if (col < mb.firstCol || col > mb.lastCol) continue;
-            if (screenY >= top && screenY < top + mb.h) return mb;
+            if (screenY >= top && screenY < top + laneH) return mb;
         }
         return null;
     }
@@ -969,22 +970,15 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /**
-     * [CA] Text de la marca de tempo: la figura del beat, un igual i els bpm.
-     * Compàs simple: negra ({@code ♩ = 123}); compàs compost: {@link #COMPOUND_BEAT}
-     * ({@code ♪. = 123}, corxera amb punt).
-     * [EN] Tempo mark text: beat figure, equals and bpm.
+     * [CA] Text de la marca de tempo <b>sense la figura</b>: {@code " = 123"}. La figura
+     * (negra en compàs simple, negra amb punt en compost) la dibuixa
+     * {@link DrawKit#simbolDeBeat} com a figura vectorial, perquè la tipografia
+     * dels acords no té els glifs ♩ ni ♪.
+     * [EN] Tempo mark text without the note figure, which is drawn as a shape.
      */
-    private static String tempoText(int bpm, int beatFigure) {
-        return (beatFigure == 8 ? COMPOUND_BEAT : "♩") + " = " + bpm;
+    private static String tempoText(int bpm) {
+        return " = " + bpm;
     }
-
-    /**
-     * [CA] Símbol del beat en compàs compost: la corxera amb punt (♪.), tal com
-     * es va demanar. (La convenció més habitual és la negra amb punt, ♩.; si es
-     * vol canviar, és aquesta constant.)
-     * [EN] Beat symbol in compound meter: dotted eighth, as requested.
-     */
-    private static final String COMPOUND_BEAT = "♪.";
 
     /**
      * [CA] Text de la marca de tonalitat: {@code Do} si és major, {@code do} si és menor.
@@ -1018,7 +1012,7 @@ public class MyChordSymbolLine extends MyComponent {
     /**
      * [CA] Dibuixa les marques d'una columna al carril de dalt de la franja: una
      * <b>fletxeta mirant avall</b> a la columna on va la marca i, al costat, el text
-     * de totes les marques <b>separades per comes</b> (tempo, tonalitat, volum;
+     * de totes les marques <b>separades per comes</b> (tonalitat, tempo, volum;
      * les {@code null} se salten), cada una del color del seu tipus. En torna
      * l'amplada total. No s'ajusta a la columna següent: si hi ha marques molt
      * juntes poden quedar una sobre de l'altra.
@@ -1031,51 +1025,73 @@ public class MyChordSymbolLine extends MyComponent {
                               Graphics2D g, boolean offscreen) {
         List<String> texts = new java.util.ArrayList<>();
         List<MarkKind> kinds = new java.util.ArrayList<>();
-        if (tempo != null) {
-            texts.add(tempoText(tempo, beatFigureAt(col)));
-            kinds.add(MarkKind.TEMPO);
-        }
+        // Símbol de beat que precedeix el text: 0 = cap, 1 = negra, 2 = negra amb punt.
+        List<Integer> symbols = new java.util.ArrayList<>();
+        // Ordre: tonalitat, tempo, volum.
         if (midiKey != null) {
             texts.add(keyText(midiKey, mode));
             kinds.add(MarkKind.KEY);
+            symbols.add(0);
+        }
+        if (tempo != null) {
+            texts.add(tempoText(tempo));
+            kinds.add(MarkKind.TEMPO);
+            symbols.add(beatFigureAt(col) == 8 ? 2 : 1);
         }
         if (velocity != null) {
             texts.add(dynamicText(velocity));
             kinds.add(MarkKind.VOLUME);
+            symbols.add(0);
         }
         if (texts.isEmpty()) return 0;
 
         Font prevFont = g.getFont();
-        DrawKit.comencaMarques(g, getMarkFont());
+        // Mateixa lletra, mida i color (negre) que els acords.
+        DrawKit.comencaAcord(g, getMarkFont());
         FontMetrics fm = g.getFontMetrics();
         int boxH = markBoxHeight();
+        int laneH = Settings.getMarksLaneHeight();
         int cellX   = offscreen
                 ? (int) Math.floor(col * Settings.getColWidth())
                 : (int) Math.floor(score.getScreenX(col));
         int cellTop = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
-        int boxY    = cellTop + LANE_PAD;
+        int boxY    = cellTop + (laneH - boxH) / 2;
         int baseline = boxY + (boxH - (fm.getAscent() + fm.getDescent())) / 2 + fm.getAscent();
 
-        int x = DrawKit.fletxaDeMarca(g, cellX, boxY, boxH) + MARK_GAP;
+        // La fletxeta és el trianglet d'atac dels acords (mateixa mida), amb la punta
+        // al centre de la columna, centrada en vertical dins del carril.
+        int cw = (int) Settings.getColWidth();
+        int arrowX = cellX + cw / 2;
+        int arrowTip = cellTop + laneH / 2 + DrawKit.alcadaDeTrianglet() / 2;
+        DrawKit.triangletDAtac(g, arrowX, arrowTip);
+        int x = cw / 2 + DrawKit.mitjaAmpladaDeTrianglet() + MARK_GAP + 1;
+
         // Només el buffer de pantalla registra rectangles i pinta la selecció:
         // l'exportació a PDF reutilitza aquest mètode amb un altre Graphics2D.
         boolean toOwnBuffer = offscreen && g == offscreenGraphics;
         double colW = Settings.getColWidth();
         for (int i = 0; i < texts.size(); i++) {
             if (i > 0) {
-                x += DrawKit.comaDeMarca(g, ", ", cellX + x, baseline);
+                DrawKit.textAcord(g, ", ", cellX + x, baseline);
+                x += fm.stringWidth(", ");
             }
             String t = texts.get(i);
             MarkKind kind = kinds.get(i);
-            int w = fm.stringWidth(t);
-            DrawKit.textDeMarca(g, t, cellX + x, baseline, kind.dibuix());
+            int sym = symbols.get(i);
+            int segX = x;
+            int symW = 0;
+            if (sym > 0) {
+                symW = DrawKit.simbolDeBeat(g, cellX + x, baseline, fm.getAscent(), sym == 2);
+            }
+            DrawKit.textAcord(g, t, cellX + x + symW, baseline);
+            int w = symW + fm.stringWidth(t);
             if (toOwnBuffer) {
-                int firstCol = col + (int) Math.floor(x / colW);
-                int lastCol  = col + (int) Math.floor((x + Math.max(1, w) - 1) / colW);
-                markBoxes.add(new MarkBox(col, kind, firstCol, lastCol, x, w, boxH));
+                int firstCol = col + (int) Math.floor(segX / colW);
+                int lastCol  = col + (int) Math.floor((segX + Math.max(1, w) - 1) / colW);
+                markBoxes.add(new MarkBox(col, kind, firstCol, lastCol, segX, w, boxH));
                 // Marca seleccionada: marc groc gruixut PER FORA, amb filet negre.
                 if (col == contr.getSelectedMarkCol() && kind == contr.getSelectedMarkKind()) {
-                    DrawKit.marcaSeleccionada(g, cellX + x, boxY, w, boxH);
+                    DrawKit.marcaSeleccionada(g, cellX + segX, boxY, w, boxH);
                 }
             }
             x += w;
@@ -1225,7 +1241,10 @@ public class MyChordSymbolLine extends MyComponent {
             // Clear background
             DrawKit.fons(offscreenGraphics, 0, 0, offscreenImage.getWidth(), offscreenImage.getHeight());
             // La franja de marques (carril de dalt), amb el seu fons si el tema en té.
-            DrawKit.franjaDeMarques(offscreenGraphics, 0, 0, offscreenImage.getWidth(), 2 * LANE_PAD + markBoxHeight());
+            int laneH = Settings.getMarksLaneHeight();
+            DrawKit.franjaDeMarques(offscreenGraphics, 0, 0, offscreenImage.getWidth(), laneH);
+            // Línia horitzontal de banda a banda entre el carril de marques i els acords.
+            DrawKit.liniaDeMarques(offscreenGraphics, 0, laneH, offscreenImage.getWidth());
 
             Map<Integer, Chord> chords = score.getChordSimbolLine();
             int numCols = score.getNumCols();

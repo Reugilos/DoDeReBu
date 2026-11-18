@@ -202,8 +202,6 @@ public final class DrawKit {
 
     /** [CA] Fons del carril de marques ({@code null} = cap). */
     private static final Color MARQUES_FONS = T.color("marques.fons");
-    /** [CA] Color de la fletxeta i de les comes del carril de marques. */
-    private static final Color MARQUES_FLETXA = T.color("marques.fletxa");
     private static final Color MARCA_TEMPO = T.color("marca.tempo");
     private static final Color MARCA_TONALITAT = T.color("marca.tonalitat");
     private static final Color MARCA_VOLUM = T.color("marca.volum");
@@ -538,6 +536,11 @@ public final class DrawKit {
      * Torna el color d'abans.
      * [EN] A chord's attack triangle; restores the colour.
      */
+    public static int alcadaDeTrianglet() { return TRIANGLET_ALCADA; }
+
+    /** [CA] Mitja amplada del trianglet d'atac (també la fletxeta de les marques). */
+    public static int mitjaAmpladaDeTrianglet() { return TRIANGLET_MITJA_AMPLADA; }
+
     public static void triangletDAtac(Graphics2D g, int x, int yPunta) {
         int[] xs = {x - TRIANGLET_MITJA_AMPLADA, x + TRIANGLET_MITJA_AMPLADA, x};
         int[] ys = {yPunta - TRIANGLET_ALCADA, yPunta - TRIANGLET_ALCADA, yPunta};
@@ -581,33 +584,45 @@ public final class DrawKit {
     }
 
     /**
-     * [CA] La fletxeta d'una marca: un triangle <b>mirant avall</b> amb el vèrtex a
-     * baix, just a la vora esquerra de la columna on va la marca. {@code mida} és
-     * l'alçada del carril; el triangle en fa un 70%. Retorna l'amplada que ocupa.
-     * [EN] A mark's arrow: a down-pointing triangle at the column's left edge.
+     * [CA] Dibuixa la figura del beat d'una marca de tempo com a forma vectorial:
+     * una <b>negra</b> (cap ple lleugerament inclinat i plica) o, si
+     * {@code puntejada}, una <b>negra amb punt</b>. S'usa perquè la tipografia dels
+     * acords no té els glifs ♩/♪. Es pinta del color actual i en torna l'amplada.
+     * {@code ascent} és l'alçada de la lletra, que en mana la mida.
+     * [EN] Draws a quarter note (dotted if asked) as a shape; returns its width.
      */
-    public static int fletxaDeMarca(Graphics2D g, int x, int y, int mida) {
-        int w = Math.max(5, (int) Math.round(mida * 0.7));
-        int h = w;
-        int top = y + (mida - h) / 2;
-        int[] xp = {x, x + w, x + w / 2};
-        int[] yp = {top, top, top + h};
-        g.setColor(MARQUES_FLETXA);
-        g.fillPolygon(xp, yp, 3);
+    public static int simbolDeBeat(Graphics2D g, int x, int baseline, int ascent, boolean puntejada) {
+        int hw = Math.max(5, Math.round(ascent * 0.62f));
+        int hh = Math.max(4, Math.round(ascent * 0.44f));
+        int cy = baseline - hh / 2 - 1;
+        java.awt.geom.AffineTransform abansT = g.getTransform();
+        g.rotate(Math.toRadians(-20), x + hw / 2.0, cy);
+        g.fillOval(x, cy - hh / 2, hw, hh);
+        g.setTransform(abansT);
+        Stroke abans = g.getStroke();
+        g.setStroke(new java.awt.BasicStroke(Math.max(1f, ascent / 9f)));
+        int plicaX = x + hw - 1;
+        g.drawLine(plicaX, cy, plicaX, baseline - Math.round(ascent * 0.95f));
+        g.setStroke(abans);
+        int w = hw + 2;
+        if (puntejada) {
+            int dd = Math.max(2, ascent / 6);
+            g.fillOval(x + hw + 2, cy - dd / 2, dd, dd);
+            w += 2 + dd;
+        }
         return w;
     }
 
-    /** [CA] El text d'una marca, del color del seu tipus. Fa servir la font de {@link #comencaMarques}. */
-    public static void textDeMarca(Graphics2D g, String text, int x, int baseline, Marca tipus) {
-        g.setColor(fonsDeMarca(tipus));
-        g.drawString(text, x, baseline);
-    }
-
-    /** [CA] La coma que separa dues marques d'una mateixa columna; en retorna l'amplada. */
-    public static int comaDeMarca(Graphics2D g, String coma, int x, int baseline) {
-        g.setColor(MARQUES_FLETXA);
-        g.drawString(coma, x, baseline);
-        return g.getFontMetrics().stringWidth(coma);
+    /**
+     * [CA] La línia horitzontal que separa el carril de marques dels acords, de
+     * banda a banda de la franja, en la tinta del tema.
+     * [EN] Horizontal line between the marks lane and the chords.
+     */
+    public static void liniaDeMarques(Graphics2D g, int x, int y, int w) {
+        Color abans = g.getColor();
+        g.setColor(TINTA);
+        g.drawLine(x, y, x + w, y);
+        g.setColor(abans);
     }
 
     /** [CA] El marc d'una marca seleccionada, per fora de la caixa. / [EN] Selected mark frame. */

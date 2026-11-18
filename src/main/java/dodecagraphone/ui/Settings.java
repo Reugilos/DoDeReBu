@@ -112,12 +112,13 @@ public class Settings {
      */
     /**
      * [CA] Files de la franja d'acords: 6 pels acords (quatre línies de text i
-     * el trianglet d'atac) i <b>1 de carril de dalt per a les marques</b> de
-     * tempo, tonalitat i volum (que abans s'apilaven sobre els acords).
+     * el trianglet d'atac) i 2 per al <b>carril de dalt de les marques</b> de
+     * tempo, tonalitat i volum ({@link #getMarksLaneHeight()} en pren 1,6 i la resta
+     * és de coixí). Abans les marques s'apilaven sobre els acords.
      * [EN] Chord strip rows: 6 for chords (four text lines plus the attack
-     * triangle) and 1 for the top lane holding the tempo, key and volume marks.
+     * triangle) and 2 for the top lane of tempo, key and volume marks.
      */
-    private static final int    DEFAULT_NROWS_CHORD         = 7;
+    private static final int    DEFAULT_NROWS_CHORD         = 8;
     private static final int    DEFAULT_NROWS_LYRICS        = 3;
     private static final int    DEFAULT_NCOLS_SQUARE        = 1;
     private static final int    DEFAULT_NROWS_BUTTON        = 2;
@@ -690,6 +691,14 @@ public class Settings {
      * @return [CA] files de la franja d'acords / [EN] chord strip rows
      */
     public static int getnRowsChord()   { return DEFAULT_NROWS_CHORD; }
+
+    /**
+     * [CA] Alçada, en píxels, del carril de marques (tempo, tonalitat, volum) a dalt
+     * de la franja d'acords: 1,6 files. També és l'alçada de la caixa «Tò, Tempo,
+     * Vol» del costat del teclat. Els acords ocupen la resta de la franja.
+     * [EN] Height in pixels of the marks lane at the top of the chord strip.
+     */
+    public static int getMarksLaneHeight() { return (int) Math.round(1.6 * getRowHeight()); }
 
     /**
      * [CA] Retorna el nombre de files de la franja de lletra.
