@@ -111,14 +111,13 @@ public class Settings {
      * scoreRowH is smaller and scaleY larger.
      */
     /**
-     * [CA] Files de la franja d'acords: 6 pels acords (quatre línies de text i
-     * el trianglet d'atac) i 2 per al <b>carril de dalt de les marques</b> de
-     * tempo, tonalitat i volum ({@link #getMarksLaneHeight()} en pren 1,6 i la resta
-     * és de coixí). Abans les marques s'apilaven sobre els acords.
-     * [EN] Chord strip rows: 6 for chords (four text lines plus the attack
-     * triangle) and 2 for the top lane of tempo, key and volume marks.
+     * [CA] Files de la franja d'acords: 7 en total. El <b>carril de dalt de les marques</b>
+     * de tempo, tonalitat i volum n'ocupa 1,6 ({@link #getMarksLaneHeight()}) i la resta
+     * (5,4) és per als acords: quatre línies de text i el trianglet d'atac. Abans les marques s'apilaven sobre els acords.
+     * [EN] Chord strip rows: 7 in all; the marks lane takes 1.6 and the chords
+     * the remaining 5.4 (four text lines plus the attack triangle).
      */
-    private static final int    DEFAULT_NROWS_CHORD         = 8;
+    private static final int    DEFAULT_NROWS_CHORD         = 7;
     private static final int    DEFAULT_NROWS_LYRICS        = 3;
     private static final int    DEFAULT_NCOLS_SQUARE        = 1;
     private static final int    DEFAULT_NROWS_BUTTON        = 2;
