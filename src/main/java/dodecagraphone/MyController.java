@@ -803,23 +803,24 @@ public class MyController {
 
         // "Acords" label at top of chord strip (just below the marks box)
         int acordsY = chordY + laneH + margin + fm.getAscent();
-        DrawKit.rotulDeFranja(g, I18n.t("myChordSymbolLine.label"), labelX, acordsY);
+        String acordsText = I18n.t("myChordSymbolLine.label");
+        DrawKit.rotulDeFranja(g, acordsText, labelX, acordsY);
 
-        // Format button 2 rows below the "Acords" label
+        // Botó de format: a la mateixa fila que el títol, just després de la paraula
         String fmtLabel = dodecagraphone.model.chord.ChordSymbols.formatLabel(
                 myChordSymbolLine.getDisplayFormat());
         int btnPad = 2;
         int btnW = fm.stringWidth(fmtLabel) + 2 * btnPad;
         int btnH = lineH + 2 * btnPad;
-        int btnX = labelX;
-        int btnY = (int) Math.round(chordY + laneH + 2 * rowH);
+        int btnX = labelX + fm.stringWidth(acordsText) + margin;
+        int btnY = acordsY - fm.getAscent() - btnPad;
         DrawKit.botoDeFormat(g, fmtLabel, btnX, btnY, btnW, btnH,
                 btnX + btnPad, btnY + btnPad + fm.getAscent());
 
-        // Lyrics label
+        // Títol de la caixa de lletra: a dalt, amb el mateix aire que el títol d'Acords
         DrawKit.rotulDeFranja(g, I18n.t("myLyrics.label"),
                 labelX,
-                lyricsY + (lyricsH + lineH) / 2);
+                lyricsY + margin + fm.getAscent());
     }
 
     /**
@@ -5940,11 +5941,12 @@ public class MyController {
                     // Canvi explícit de compàs: el comptador sempre comença a (0,0)
                     colInBeat     = 0;
                     beatInMeasure = 0;
-                } else {
+                } else if (sc.colInBeatPhase != null || sc.measurePhase != null) {
                     // SC de fase pura: usa la fase guardada
                     colInBeat     = (sc.colInBeatPhase != null) ? sc.colInBeatPhase : 0;
                     beatInMeasure = (sc.measurePhase   != null) ? sc.measurePhase   : 0;
                 }
+                // Un SC de tempo, tonalitat o volum no toca el comptador de compàs.
             }
             if (c < col) {
                 colInBeat++;

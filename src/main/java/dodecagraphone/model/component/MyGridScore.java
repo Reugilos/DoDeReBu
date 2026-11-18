@@ -2647,8 +2647,14 @@ public class MyGridScore extends MyComponent {
             if (sc != null) {
                 if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
                 if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
-                colInBeat     = 0;
-                beatInMeasure = 0;
+                if (sc.nColsBeat != null || sc.nBeatsMeasure != null || sc.nColsQuarter != null) {
+                    colInBeat     = 0;
+                    beatInMeasure = 0;
+                } else if (sc.colInBeatPhase != null || sc.measurePhase != null) {
+                    colInBeat     = (sc.colInBeatPhase != null) ? sc.colInBeatPhase : 0;
+                    beatInMeasure = (sc.measurePhase   != null) ? sc.measurePhase   : 0;
+                }
+                // Una marca de tempo, tonalitat o volum NO toca el comptador de compàs.
             }
 
             // Inici de beat
@@ -2688,7 +2694,13 @@ public class MyGridScore extends MyComponent {
             if (sc != null) {
                 if (sc.nColsBeat     != null) curNColsBeat     = sc.nColsBeat;
                 if (sc.nBeatsMeasure != null) curNBeatsMeasure = sc.nBeatsMeasure;
-                colInBeat = 0; beatInMeasure = 0;
+                if (sc.nColsBeat != null || sc.nBeatsMeasure != null || sc.nColsQuarter != null) {
+                    colInBeat = 0; beatInMeasure = 0;
+                } else if (sc.colInBeatPhase != null || sc.measurePhase != null) {
+                    colInBeat     = (sc.colInBeatPhase != null) ? sc.colInBeatPhase : 0;
+                    beatInMeasure = (sc.measurePhase   != null) ? sc.measurePhase   : 0;
+                }
+                // Una marca de tempo, tonalitat o volum NO toca el comptador de compàs.
             }
             if (colInBeat == 0 && beatInMeasure == 0) {
                 if (c > 0) measure++;
@@ -2727,12 +2739,15 @@ public class MyGridScore extends MyComponent {
                     // d'una correcció d'inserció anterior a la mateixa columna.
                     colInBeat     = 0;
                     beatInMeasure = 0;
-                } else {
+                } else if (sc.colInBeatPhase != null || sc.measurePhase != null) {
                     // SC de fase pura (de fixBarlinePhasesAfterInsert):
                     // usa la fase guardada per preservar l'alineació de barres.
                     colInBeat     = (sc.colInBeatPhase != null) ? sc.colInBeatPhase : 0;
                     beatInMeasure = (sc.measurePhase   != null) ? sc.measurePhase   : 0;
                 }
+                // Un SC sense canvi de compàs ni fase (una marca de tempo, tonalitat o
+                // volum) NO toca el comptador: abans el reiniciava a (0,0) i apareixia
+                // una barra de compàs sense cap relació a la columna de la marca.
             }
 
             if (colInBeat == 0) {

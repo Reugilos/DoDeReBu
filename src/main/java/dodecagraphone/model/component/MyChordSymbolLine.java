@@ -1014,14 +1014,14 @@ public class MyChordSymbolLine extends MyComponent {
     /**
      * [CA] Dibuixa les marques d'una columna al carril de dalt de la franja: una
      * <b>fletxeta mirant avall</b> a la columna on va la marca i, al costat, el text
-     * de totes les marques <b>separades per comes</b> (tonalitat, tempo, volum;
+     * de totes les marques <b>separades per punt i coma</b> (tonalitat, tempo, volum;
      * les {@code null} se salten), cada una del color del seu tipus. En torna
      * l'amplada total. No s'ajusta a la columna següent: si hi ha marques molt
      * juntes poden quedar una sobre de l'altra.
      * <p>
      * [EN] Draws a column's marks in the strip's top lane: a down-pointing arrow
      * at the column and, beside it, the text of all marks <b>separated by
-     * commas</b>, each in its kind's colour. Returns the total width.
+     * semicolons</b>, each in its kind's colour. Returns the total width.
      */
     private int drawMarkGroup(int col, Integer tempo, Integer midiKey, char mode, Integer velocity,
                               Graphics2D g, boolean offscreen) {
@@ -1074,8 +1074,8 @@ public class MyChordSymbolLine extends MyComponent {
         double colW = Settings.getColWidth();
         for (int i = 0; i < texts.size(); i++) {
             if (i > 0) {
-                DrawKit.textAcord(g, ", ", cellX + x, baseline);
-                x += fm.stringWidth(", ");
+                DrawKit.textAcord(g, "; ", cellX + x, baseline);
+                x += fm.stringWidth("; ");
             }
             String t = texts.get(i);
             MarkKind kind = kinds.get(i);
