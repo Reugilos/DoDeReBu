@@ -679,7 +679,7 @@ public class DodecagramPdfPrinter {
             int h     = Math.max(1, nextY - y - 1);
 
             if (showChoice) {
-                boolean selected = keyboard.findIfSelected(midi);
+                boolean selected = keyboard.findIfSelectedVisible(midi);
                 int slideW = (int) Math.round(slideFrac * w);
                 int keyW2  = w - slideW;
                 if (selected) {

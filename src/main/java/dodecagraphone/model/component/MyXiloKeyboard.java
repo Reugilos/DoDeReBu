@@ -299,7 +299,7 @@ public class MyXiloKeyboard extends MyComponent {
      * bateria el patró de notes seleccionades no es mostra (cap tecla seleccionada: totes
      * a l'esquerra i enceses). És <b>només visual</b>: el patró ({@code MyChoice}) no es
      * toca, de manera que en tornar a música (mateix teclat, mode normal) es veu igual
-     * que abans. Qui vulgui la selecció real (p. ex. el PDF) ha de fer servir
+     * que abans. El PDF també el fa servir (amaga el patró en bateria, com la pantalla). Qui vulgui la selecció real ha de fer servir
      * {@code findIfSelected}.
      * <p>
      * [EN] Like {@link #findIfSelected(int)} but <b>as shown on the keyboard</b>: in drums
