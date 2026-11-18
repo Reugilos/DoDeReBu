@@ -4545,7 +4545,7 @@ public class MyController {
         int[] mb = allPurposeScore.getMeasureAndBeatAt(editCol);
         String pageNo = mb[0] + " (" + mb[1] + ")";
         this.buttons.updatePageNumButton(pageNo);
-        String tempo = "" + MyTempo.getPlaybackTempo();
+        String tempo = MyTempo.getPlaybackTempo() + " bpm";
         this.buttons.updateTempoButton(tempo);
         MyTrack track = this.getMixer().getCurrentTrack();
         int volume = Settings.getDefaultVelocity();
