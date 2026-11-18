@@ -186,6 +186,20 @@ public class MyXiloKey extends MyComponent {
      * [EN] Picks the silent colour: dimmed when outside the chosen template, full
      * otherwise. Takes effect at once unless the key is sounding.
      */
+    /**
+     * [CA] El color de la tecla mentre sona (en play o en tocar-la). Si el tema ressalta
+     * les tecles que sonen ({@code tecla.ressalta = si}), el de ressaltat (blanc). Si no,
+     * <b>s'inverteix l'estat</b>: una tecla <b>no seleccionada</b> (apagada) s'il·lumina i
+     * agafa el color ple, i una <b>seleccionada</b> (que és de color ple) agafa l'apagat.
+     * [EN] Colour while sounding: the highlight colour if the theme has one, otherwise
+     * the state is inverted (an unselected key takes the full colour, a selected one the
+     * dimmed colour).
+     */
+    private Color colorWhilePlaying() {
+        if (DrawKit.teclaRessalta()) return this.color_playing;
+        return this.dimmed ? this.color_full : this.color_dim;
+    }
+
     public void setDimmed(boolean dim) {
         setSilentLook(dim);
     }
@@ -285,8 +299,7 @@ public class MyXiloKey extends MyComponent {
      */
     public void play(int channel,int velocity) {
         if (!this.doNotHighlight) {
-            // Una tecla no seleccionada (apagada) no s'il·lumina en sonar.
-            this.color = this.dimmed ? this.color_silent : this.color_playing;
+            this.color = colorWhilePlaying();
         }
         if (!this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
@@ -348,8 +361,7 @@ public class MyXiloKey extends MyComponent {
      */
     public void playWithMidi(int realMidi, int channel, int velocity) {
         if (!this.doNotHighlight) {
-            // Una tecla no seleccionada (apagada) no s'il·lumina en sonar.
-            this.color = this.dimmed ? this.color_silent : this.color_playing;
+            this.color = colorWhilePlaying();
         }
         if (!this.isPlaying(channel)) {
             if (SampleOrMidi.isMidi()) {
