@@ -737,6 +737,33 @@ public class MyController {
      * @param g [CA] context gràfic on dibuixar / [EN] graphics context to draw on
      */
     /**
+     * [CA] On comencen i quant fan les caixes del costat del teclat (marques, acords i
+     * lletra): <b>sempre amb el mateix límit que la barra de compàs inicial</b>. Amb el
+     * teclat a l'esquerra, les caixes van de 0 fins al primer píxel de la càmera
+     * ({@code floor} de la seva posició X, que és on es dibuixa la barra); així la vora
+     * dreta de la caixa queda tapada per la barra i no es veu mai una línia a la
+     * seva dreta, sigui quin sigui el compàs o el nombre de compassos per pantalla. Abans
+     * l'amplada era {@code ceil(nColsTeclat * colWidth)} (i el marc hi afegia un píxel
+     * més), que sobresortia fins a 2-3 píxels quan l'amplada de columna no és entera.
+     * <p>
+     * [EN] Where the boxes beside the keyboard start and how wide they are: always
+     * ending exactly at the initial bar, whatever the time signature or measures per
+     * screen.
+     *
+     * @return {@code {x, amplada}} en píxels
+     */
+    private int[] keyboardBoxSpan() {
+        boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
+        int camLeft = (int) Math.floor(cam.getScreenPosX());
+        if (!right) {
+            return new int[] {0, camLeft};
+        }
+        int camRight = (int) Math.floor(cam.getScreenPosX() + cam.getWidth());
+        int kw = (int) Math.ceil(Settings.getnColsKeyboard() * Settings.getColWidth());
+        return new int[] {camRight, kw};
+    }
+
+    /**
      * Fills the keyboard-column areas of the chord and lyrics strips with
      * white, and draws a vertical separator line at the camera left edge for
      * each strip. Called at the start of redraw(), before screen.draw().
@@ -751,8 +778,9 @@ public class MyController {
         int chordH  = (int) Math.round(Settings.getnRowsChord()     * rowH);
         int lyricsY = (int) Math.round(Settings.getLyricsFirstRow() * rowH);
         int lyricsH = (int) Math.round(Settings.getnRowsLyrics()    * rowH);
-        int kw      = (int) Math.ceil(keyW);
-        int kx      = right ? (int) Math.ceil(camW) : 0;  // x on comença la zona del keyboard
+        int[] span  = keyboardBoxSpan();
+        int kx      = span[0];                              // x on comença la zona del keyboard
+        int kw      = span[1];
 
         // Les dues caixes del costat del teclat, cadascuna amb el seu fons i el seu
         // marc (del tema). El marc ja fa de línia separadora de la càmera.
@@ -804,8 +832,9 @@ public class MyController {
         double keyW   = Settings.getnColsKeyboard() * Settings.getColWidth();
         double camW   = Settings.getnColsCam()      * Settings.getColWidth();
         boolean right = allPurposeScore != null && allPurposeScore.isUseScreenKeyboardRight();
-        int kw = (int) Math.ceil(keyW);
-        int kx = right ? (int) Math.ceil(camW) : 0;
+        int[] span = keyboardBoxSpan();
+        int kx = span[0];
+        int kw = span[1];
         int chordTop = (int) Math.round(Settings.getChordFirstRow() * rowH);
         int laneH = Settings.getMarksLaneHeight();
         DrawKit.margeDeCaixa(g, kx, chordTop, kw, laneH);
