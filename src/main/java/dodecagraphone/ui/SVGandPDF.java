@@ -34,7 +34,7 @@ import org.apache.batik.svggen.SVGGraphics2D;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class SVGandPDF {
         private MyController controller;

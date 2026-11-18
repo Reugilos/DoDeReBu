@@ -54,7 +54,7 @@ import java.util.Properties;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.1
+ * @version 5.0
  */
 public final class Tema {
 

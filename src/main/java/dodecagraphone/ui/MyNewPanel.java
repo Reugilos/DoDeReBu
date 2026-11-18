@@ -40,7 +40,7 @@ import javax.swing.Timer;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
 
@@ -572,7 +572,7 @@ public class MyNewPanel extends JPanel implements ActionListener, KeyListener {
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 class MyNewMouseAdapter extends MouseAdapter {
 

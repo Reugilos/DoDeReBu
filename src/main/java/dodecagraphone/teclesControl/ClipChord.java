@@ -16,7 +16,7 @@ import dodecagraphone.model.chord.Chord;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class ClipChord {
     /** Desplaçament de columna respecte la cantonada esquerra de la selecció. */

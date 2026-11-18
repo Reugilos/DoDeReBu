@@ -29,7 +29,7 @@ import java.awt.Color;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class ColorSets {
     /** [CA] Índex de color per a DO. [EN] Color index for C. */

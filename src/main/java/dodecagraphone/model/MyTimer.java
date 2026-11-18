@@ -18,7 +18,7 @@ package dodecagraphone.model;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 ///*
 // * To change this license header, choose License Headers in Project Properties.

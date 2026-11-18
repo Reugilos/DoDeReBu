@@ -25,7 +25,7 @@ import jm.music.data.Score;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class ProvaPauTmp {
 

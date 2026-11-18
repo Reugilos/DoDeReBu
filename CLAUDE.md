@@ -1,4 +1,4 @@
-# DoDeReBu v4.1 — Contexte del projecte per a Claude
+# DoDeReBu v5.0 — Contexte del projecte per a Claude
 
 ## Què és
 Editor de partitures i app d'entrenament auditiu (ear training). Java 16 + Swing/AWT, Maven. Paquet principal: `dodecagraphone`. Classe principal: `dodecagraphone.ui.MyMain`.
@@ -456,6 +456,7 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **versió 5.0 (18-11-26)** Número de versió: `pom.xml` (`artifactId` `DoDeReBu_v5.0`, `version` `5.0`, `name` `DoDeReBu_v5.0`), `@version 5.0` a tot el javadoc, `README.md` i `LICENSE.txt`. El nom que surt a la finestra i al diàleg de benvinguda ve de `project.name` (filtrat a `app.properties`), o sigui que canvia sol. **El nom de la carpeta del projecte continua sent `DoDeReBu_v4.1`**, i els scripts de build en treuen el nom de l'exe, de la carpeta portable i del zip (`APP_NAME` = nom de la carpeta): si es vol que diguin 5.0, cal reanomenar la carpeta (i les rutes d'aquest fitxer). Tag `publicat_18-11-26` = l'estat de `master` just abans de passar a 5.0 (la branca `disseny_grafic` s'hi va fusionar per fast-forward: ara tot és a `master`).
 - **branca `disseny_grafic` (15–18-11-26)** Tema `moni` (per defecte; l'únic de fàbrica) amb la gamma `colors_manual` (colors exactes del PDF del manual); gammes `moni`/`moni2` conservades i temes `moni2`/classic/manual fora de la carpeta d'usuari; tecles seleccionades/apagades/sense selecció i il·luminació en sonar (desactivada); notes de la graella en blau i amb el seu color en sonar; **carril de marques** (fletxeta, `;`, notació, separador, caixa «Tò; Tempo; Vol») amb la **franja d'acords a 7 files**, sense acords però amb les marques editables clicant-hi; botó de volum amb el matís (`127 (ff)`); **barra de compàs fantasma corregida**; transposició al botó de l'instrument; caixes del costat del teclat sempre a la barra inicial; botó de format a la fila del títol; ajuda, `config.properties` i `TemesTest` al dia; traça de consola de `MyChoice.addKey()` esborrada.
 - **d7d872d** Porta-retalls de la lletra (Ctrl + arrossegar a la franja) i punt d'enganxada marcat abans amb Ctrl-clic, també per a les notes. El camí antic de Ctrl-V hi queda, sense documentar. Volum per defecte de la pista d'acords a 127.
 - **2d8befe** L'últim acord arriba al final del seu compàs; la doble barra ja no s'arrodoneix a la pàgina; `lastColWritten` compta les notes dels acords; `nNotes` es recompta de la graella; columnes d'intervals amb terra de dues xifres.

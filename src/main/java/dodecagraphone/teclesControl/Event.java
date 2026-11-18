@@ -16,7 +16,7 @@ package dodecagraphone.teclesControl;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public abstract class Event {
 

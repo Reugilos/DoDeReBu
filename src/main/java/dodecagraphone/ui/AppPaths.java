@@ -25,7 +25,7 @@ import java.util.Optional;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public final class AppPaths {
 

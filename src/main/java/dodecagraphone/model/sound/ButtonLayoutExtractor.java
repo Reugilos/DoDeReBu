@@ -18,7 +18,7 @@ package dodecagraphone.model.sound;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 import java.io.*;
 import java.util.regex.*;

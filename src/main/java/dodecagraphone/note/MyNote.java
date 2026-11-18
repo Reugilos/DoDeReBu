@@ -24,7 +24,7 @@ import dodecagraphone.ui.Settings;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class MyNote {
     double duration; // A whole note (4 beats) has duration 1.

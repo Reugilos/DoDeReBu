@@ -21,7 +21,7 @@ import java.util.Map;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class DummyHandler {
     // Mapa per mantenir la informació de les notes actives (notes que han rebut un NOTE_ON però no un NOTE_OFF)

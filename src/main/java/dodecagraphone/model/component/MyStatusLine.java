@@ -24,7 +24,7 @@ import java.awt.Graphics2D;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class MyStatusLine extends MyComponent{
     /** The text in this attribute is written at the left hand side of the

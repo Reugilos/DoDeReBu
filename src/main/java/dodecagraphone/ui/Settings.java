@@ -29,7 +29,7 @@ import java.awt.Toolkit;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class Settings {
 

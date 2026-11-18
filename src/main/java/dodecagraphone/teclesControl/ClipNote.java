@@ -18,7 +18,7 @@ package dodecagraphone.teclesControl;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class ClipNote {
     /** [CA] Desplaçament de fila respecte la cantonada superior de la selecció. / [EN] Row offset from the top of the selection. */

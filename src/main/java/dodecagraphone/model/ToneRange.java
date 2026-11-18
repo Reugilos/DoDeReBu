@@ -48,7 +48,7 @@ import java.util.HashMap;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class ToneRange {
     public static final int DEFAULT_HIGHEST_MIDI = 84;  // do6 (C6)

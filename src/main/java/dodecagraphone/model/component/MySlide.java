@@ -27,7 +27,7 @@ import java.awt.Graphics2D;
  *
  * @author Pau Bofill
  * @author Claude IA
- * @version 4.0
+ * @version 5.0
  */
 public class MySlide extends MyComponent {
     private final int keyId;
