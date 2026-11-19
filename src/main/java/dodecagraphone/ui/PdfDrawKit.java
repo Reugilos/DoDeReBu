@@ -244,6 +244,20 @@ public class PdfDrawKit {
         cs.stroke();
     }
 
+    /**
+     * Separador de fila de la graella: línia fina del color i gruix donats
+     * (vénen del tema, vegeu {@code pdf.graella.separador.*}).
+     */
+    public void drawRowSeparator(float x1, float x2, float y, float width, Color color) throws IOException {
+        cs.setLineWidth(width);
+        cs.setLineDashPattern(new float[]{}, 0);
+        cs.setStrokingColor(color);
+        cs.moveTo(x1, y);
+        cs.lineTo(x2, y);
+        cs.stroke();
+        cs.setStrokingColor(Color.BLACK);
+    }
+
     // ── Rectangles ────────────────────────────────────────────────────────────
 
     /**

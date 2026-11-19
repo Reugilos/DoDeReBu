@@ -563,7 +563,13 @@ public class MyPatternScore extends MyGridScore {
         if (track == null) return;
         int channel = this.controller.getMixer().getCurrentChannelOfTrack(track.getId());
         int playCol = col + old.getBeatColOffset();
-        int ncols = Math.max(1, old.getNCols());
+        // L'extensió que cal netejar és la més llarga de les dues: la que el
+        // Chord recorda (pot estar desfasada, sobretot si dues columnes
+        // comparteixen el mateix objecte) i la que va fins al següent acord.
+        // Si en quedava una cua d'enllaços, un acord igual col·locat al mig
+        // trobava el seu primer quadre ja ocupat per una continuació
+        // (addNote conserva el que hi ha) i no tornava a atacar.
+        int ncols = Math.max(1, Math.max(old.getNCols(), calcNcols(col, old)));
         for (int midiNote : old.getMidiNotes()) {
             int row = ToneRange.midiToKeyId(midiNote);
             for (int c = playCol; c < playCol + ncols; c++) {
@@ -589,6 +595,12 @@ public class MyPatternScore extends MyGridScore {
         int playCol = col + chord.getBeatColOffset();
         int savedCol = currentWriteCol;
         for (int midiNote : chord.getMidiNotes()) {
+            // Netegem abans el tram: una nota de l'acord que ja hi sigui (cap o
+            // continuació) faria que addNote descartés la nova i no ataqués.
+            int row = ToneRange.midiToKeyId(midiNote);
+            for (int c = playCol; c < playCol + ncols; c++) {
+                removeNoteFromSquare(row, c, channel, track.getId());
+            }
             this.currentWriteCol = playCol;
             this.placeNote(midiNote, ncols, false, false, channel, track.getId(), velocity);
         }

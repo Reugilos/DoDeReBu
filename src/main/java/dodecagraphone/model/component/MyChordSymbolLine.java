@@ -809,7 +809,7 @@ public class MyChordSymbolLine extends MyComponent {
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
-        DrawKit.barraDeCompas(g, camX1, camY1, camY2);
+        DrawKit.barraDeCompas(g, camX1, camY1 + Settings.getMarksLaneHeight() + 1, camY2);
     }
 
     /**
@@ -827,7 +827,7 @@ public class MyChordSymbolLine extends MyComponent {
                 : (int) Math.floor(score.getScreenX(col));
         int camY1 = offscreen ? 0 : (int) Math.round(score.getScreenY(-nRows));
         int camY2 = camY1 + (int) (nRows * Settings.getRowHeight());
-        DrawKit.barraDeTemps(g, camX1, camY1, camY2);
+        DrawKit.barraDeTemps(g, camX1, camY1 + Settings.getMarksLaneHeight() + 1, camY2);
     }
 
     /**
@@ -1339,7 +1339,9 @@ public class MyChordSymbolLine extends MyComponent {
                 boolean[] isBeat    = new boolean[numCols + 1];
                 boolean[] isMeasure = new boolean[numCols + 1];
                 score.computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
-                view.drawBeatAndMeasureLines(g, isBeat, isMeasure, y1, y1 + h, y1, h);
+                // Comencen just sota la línia del carril de marques, sense travessar-lo.
+                view.drawBeatAndMeasureLines(g, isBeat, isMeasure,
+                        y1 + Settings.getMarksLaneHeight() + 1, y1 + h, y1, h);
             }
 
             // Doble barra al stopCol — dibuixada sobre la vista (sempre actualitzada)

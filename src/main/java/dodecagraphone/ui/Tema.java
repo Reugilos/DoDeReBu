@@ -23,19 +23,17 @@ import java.util.Properties;
  * amb la clau {@code tema} (per defecte, {@code tema=moni}).
  * <p>
  * <b>D'on surten els temes.</b> El programa porta dins els temes de fàbrica
- * ({@code resources/temes/moni.properties} i {@code moni2.properties}, els de
- * {@link #DE_FABRICA}; {@code moni2} és idèntic a {@code moni} però amb les notes
- * de la graella de colors). En arrencar, els copia a la carpeta si hi falten, i
+ * ({@code resources/temes/moni.properties}, {@code moni2.properties} i
+ * {@code classic.properties}, els de {@link #DE_FABRICA}; {@code moni2} és idèntic a
+ * {@code moni} però amb les notes de la graella totes blaves, i {@code classic} és
+ * el disseny original). En arrencar, els copia a la carpeta si hi falten, i
  * <b>només</b> si hi falten: un tema que l'usuari hagi editat no es trepitja mai.
  * Per tornar a la versió de fàbrica, n'hi ha prou d'esborrar-ne el fitxer. Per fer-ne
- * de nous, es copia {@code moni.properties} amb un altre nom i s'edita. El {@code classic} i el
- * {@code manual} són recursos interns que no es copien: el clàssic és la reserva
- * (vegeu més avall) i {@code tema=manual} encara es pot triar, perquè si el fitxer
- * no és a la carpeta es llegeix del recurs.
+ * de nous, es copia {@code moni.properties} amb un altre nom i s'edita.
  * <p>
- * <b>La xarxa de seguretat.</b> El tema clàssic de dins del programa fa de
+ * <b>La xarxa de seguretat.</b> El tema {@code moni} de dins del programa fa de
  * reserva per a tot: si el tema triat no existeix, si el fitxer no es pot llegir
- * o si li falta un valor (o el té mal escrit), aquell valor es pren del clàssic.
+ * o si li falta un valor (o el té mal escrit), aquell valor es pren de {@code moni}.
  * L'aplicació no es pot quedar mai sense colors. Els avisos van a la consola.
  * <p>
  * <b>Format dels valors.</b> Colors: {@code r,g,b} o {@code r,g,b,a}, o bé
@@ -49,7 +47,7 @@ import java.util.Properties;
  * [EN] The graphic theme used by {@link DrawKit}. Each theme is a text file in
  * the {@code temes} folder next to {@code config.properties}; the config picks
  * one with {@code tema=…}. Factory themes are seeded into the folder only when
- * missing (user edits are never overwritten). The built-in classic theme is the
+ * missing (user edits are never overwritten). The built-in moni theme is the
  * fallback for any missing or malformed value.
  *
  * @author Pau Bofill
@@ -61,9 +59,11 @@ public final class Tema {
     /** [CA] Clau del config que tria el tema. / [EN] Config key choosing the theme. */
     public static final String CLAU_CONFIG = "tema";
     /** [CA] El tema de reserva, i el de partida si el config no en diu cap. */
+    public static final String DEFECTE = "moni";
+    /** [CA] El disseny original, un tema de fàbrica més. */
     public static final String CLASSIC = "classic";
     /** [CA] Els temes de fàbrica, que es copien a la carpeta si hi falten. */
-    private static final String[] DE_FABRICA = {"moni", "moni2"};
+    private static final String[] DE_FABRICA = {"moni", "moni2", CLASSIC};
     private static final String RECURS = "/temes/";
     private static final String EXTENSIO = ".properties";
 
@@ -86,7 +86,7 @@ public final class Tema {
      */
     public static synchronized Tema actual() {
         if (actual == null) {
-            actual = carrega(AppConfig.get().get(CLAU_CONFIG, CLASSIC).trim());
+            actual = carrega(AppConfig.get().get(CLAU_CONFIG, DEFECTE).trim());
         }
         return actual;
     }
@@ -102,10 +102,10 @@ public final class Tema {
     }
 
     private static Tema carrega(String nom) {
-        Properties reserva = llegeixRecurs(CLASSIC);
+        Properties reserva = llegeixRecurs(DEFECTE);
         if (reserva == null) {
             reserva = new Properties();
-            System.err.println("Tema: falta el tema clàssic de dins del programa");
+            System.err.println("Tema: falta el tema moni de dins del programa");
         }
         sembra();
         Properties valors = null;
@@ -121,8 +121,8 @@ public final class Tema {
             valors = llegeixRecurs(nom);
         }
         if (valors == null) {
-            System.err.println("Tema: no hi ha cap tema que es digui «" + nom + "»; es fa servir el clàssic");
-            return new Tema(CLASSIC, reserva, reserva);
+            System.err.println("Tema: no hi ha cap tema que es digui «" + nom + "»; es fa servir moni");
+            return new Tema(DEFECTE, reserva, reserva);
         }
         return new Tema(nom, valors, reserva);
     }
@@ -167,13 +167,13 @@ public final class Tema {
 
     private String deReserva(String clau) {
         String v = reserva.getProperty(clau);
-        if (v == null) throw new IllegalStateException("El tema clàssic no té la clau «" + clau + "»");
+        if (v == null) throw new IllegalStateException("El tema moni no té la clau «" + clau + "»");
         return v.trim();
     }
 
     private void avisa(String clau, String valor) {
         System.err.println("Tema «" + nom + "»: valor no vàlid per a «" + clau + "» (" + valor
-                + "); es fa servir el del clàssic");
+                + "); es fa servir el de moni");
     }
 
     /** [CA] Cert si el valor és {@code colorsets}: el color el decideix ColorSets. */
@@ -183,7 +183,7 @@ public final class Tema {
 
     /**
      * [CA] Cert si el valor és la paraula donada (per exemple {@code text}). Un
-     * valor que no sigui ni un color ni una paraula clau es pren del clàssic.
+     * valor que no sigui ni un color ni una paraula clau es pren de moni.
      */
     public boolean es(String clau, String paraula) {
         String v = cru(clau);

@@ -18,10 +18,10 @@ import java.util.regex.Pattern;
  * S'executa des de l'arrel del projecte.
  * <ul>
  *   <li>Tota clau que {@code DrawKit} demana al tema ({@code T.color("…")},
- *       {@code T.decimal("…")}…) ha de ser al tema clàssic, que fa de reserva:
+ *       {@code T.decimal("…")}…) ha de ser al tema moni, que fa de reserva:
  *       si no hi fos, {@code Tema} petaria en arrencar.</li>
- *   <li>Els temes ({@code moni} i {@code moni2}, els de fàbrica, i {@code manual}) han de tenir les mateixes
- *       claus que el clàssic, perquè qui en copiï un per fer-ne un de propi hi trobi tot
+ *   <li>Els temes ({@code moni2} i {@code classic}) han de tenir les mateixes
+ *       claus que moni, perquè qui en copiï un per fer-ne un de propi hi trobi tot
  *       el que es pot tocar.</li>
  * </ul>
  */
@@ -30,7 +30,7 @@ public class TemesTest {
     private static int fallades = 0;
 
     public static void main(String[] args) throws Exception {
-        Properties classic = carrega("classic");
+        Properties classic = carrega("moni");
 
         String drawKit = Files.readString(Path.of("src/main/java/dodecagraphone/ui/DrawKit.java"),
                 StandardCharsets.UTF_8);
@@ -39,20 +39,18 @@ public class TemesTest {
         Set<String> demanades = new TreeSet<>();
         while (m.find()) demanades.add(m.group(1));
         for (String k : demanades) {
-            if (!classic.containsKey(k)) falla("DrawKit demana «" + k + "» i el tema clàssic no la té");
+            if (!classic.containsKey(k)) falla("DrawKit demana «" + k + "» i el tema moni no la té");
         }
         System.out.println("DrawKit demana " + demanades.size() + " claus al tema");
 
-        // Els temes que es poden triar: moni (l'únic de fàbrica que es copia a la carpeta de
-        // l'usuari) i manual (que queda com a recurs). Cap no pot tenir més ni menys claus
-        // que el clàssic.
-        for (String nom : new String[] {"moni", "moni2", "manual"}) {
+        // Els altres temes de fàbrica no poden tenir més ni menys claus que moni.
+        for (String nom : new String[] {"moni2", "classic"}) {
             Properties tema = carrega(nom);
             for (Object k : classic.keySet()) {
                 if (!tema.containsKey(k)) falla("al tema " + nom + " li falta «" + k + "»");
             }
             for (Object k : tema.keySet()) {
-                if (!classic.containsKey(k)) falla("el tema " + nom + " té «" + k + "», que el clàssic no té");
+                if (!classic.containsKey(k)) falla("el tema " + nom + " té «" + k + "», que moni no té");
             }
         }
         System.out.println(fallades == 0 ? "TOT BÉ" : fallades + " FALLADES");

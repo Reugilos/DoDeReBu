@@ -30,12 +30,16 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
  * [CA] Impressió de partiture en format PDF. Genera un document A4 multipàgina
  * a partir de les imatges offscreen de la graella de notes, la línia d'acords
  * i la lletra. Afegeix línies vectorials de compàs i beat, doble barra final i
- * teclat estret a l'esquerra de cada fila.
+ * teclat estret a l'esquerra de cada fila. Cada pàgina porta com a màxim
+ * {@link #TARGET_ROWS} sistemes. Les línies de temps i de compàs comencen sota
+ * el carril de marques, i la graella es redibuixa en mode PDF
+ * ({@code DrawKit.setModePdf}): franges i separadors del tema ({@code pdf.*}).
  * <p>
  * [EN] Score printing to PDF format. Generates a multi-page A4 document from
  * the offscreen images of the note grid, chord line and lyrics. Adds vector
  * measure and beat lines, a double final bar and a narrow keyboard strip on
- * the left of each row.
+ * the left of each row. At most {@code TARGET_ROWS} systems per page; beat and
+ * measure lines start below the marks lane; the grid is redrawn in PDF mode.
  *
  * @author Pau Bofill
  * @author Claude IA
@@ -56,10 +60,10 @@ public class DodecagramPdfPrinter {
     private static final float SHORT_HEADER_H  = 18f;
     private static final float ROW_GAP         = 6f;
     private static final float MEASURE_LABEL_H = 10f;
-    private static final int   TARGET_ROWS     = 4;
+    private static final int   TARGET_ROWS     = 2;
     /**
      * [CA] Files d'un dodecagrama en blanc, quan s'imprimeix una partitura
-     * sense notes. Coincideix amb {@link #TARGET_ROWS}: són les files que la
+     * sense notes. Era el mateix que {@link #TARGET_ROWS} (abans 4); ara és propi: són les files que la
      * distribució de pàgina ja mira d'encabir en una sola plana.
      * <p>
      * [EN] Number of rows of a blank dodecagram, when printing a score with no
@@ -171,6 +175,8 @@ public class DodecagramPdfPrinter {
             printLandscape(outputFile);
         } finally {
             chordLine.setHideInitialMarks(false);
+            // La graella s'ha dibuixat en mode PDF: es torna a pintar per a la pantalla.
+            controller.getAllPurposeScore().drawFullGridinOffscreen();
             controller.redrawChordLine();
         }
     }
@@ -227,7 +233,12 @@ public class DodecagramPdfPrinter {
         // assegurar que el buffer offscreen cobreix les columnes demanades.
         ensureBufferFor(score, chordLine, lyrics, cols + 1);
         chordLine.setNeedsDrawing(true);
-        controller.getCam().drawFullCamInOffscreen();
+        DrawKit.setModePdf(true);
+        try {
+            controller.getCam().drawFullCamInOffscreen();
+        } finally {
+            DrawKit.setModePdf(false);
+        }
 
         // resizeOffscreen crea imatges noves: s'han de tornar a demanar.
         gridImg   = score.getOffscreenImage();
@@ -286,12 +297,20 @@ public class DodecagramPdfPrinter {
                     pdf.drawBandSeparator(MARGIN, xRight, sepY);
                 }
 
+                // Línia del carril de marques fins a l'esquerra; les línies de temps hi comencen just a sota.
+                float laneSepY = yImgTop - (Settings.getMarksLaneHeight() + 0.5f) * scale;
+                pdf.drawBandSeparator(MARGIN, xRight, laneSepY);
+                float vLineH = Math.max(0f, rowImgPdfH - (Settings.getMarksLaneHeight() + 1) * scale);
+
+                drawGridRowSeparators(MARGIN + keyWidthPx * scale, MARGIN + rowImgPdfW,
+                        yImgTop - chordH * scale, scale, gridH);
+
                 // Només línies de temps (beat): cap barra de compàs ni doble barra.
                 for (int col = 0; col <= cols; col++) {
                     if (col >= isBeat.length || !isBeat[col]) continue;
                     float lineX = MARGIN + (float) ((keyWidthPx + col * colWidthF) * scale);
                     if (lineX <= MARGIN || lineX >= xRight) continue;
-                    pdf.drawBeatLine(lineX, yImgBottom, rowImgPdfH);
+                    pdf.drawBeatLine(lineX, yImgBottom, vLineH);
                 }
             }
             if (outputFile.exists()) outputFile.delete();
@@ -323,6 +342,8 @@ public class DodecagramPdfPrinter {
             printBody(outputFile);
         } finally {
             chordLine.setPrintingMarks(false);
+            // La graella ha estat dibuixada en mode PDF: es torna a pintar per a la pantalla.
+            controller.getAllPurposeScore().drawFullGridinOffscreen();
             controller.redrawChordLine();
         }
     }
@@ -356,7 +377,14 @@ public class DodecagramPdfPrinter {
             chordLine.setNeedsDrawing(true);
         }
 
-        controller.getCam().drawFullCamInOffscreen();
+        // La graella del PDF porta les franges del pentagrama més fosques i els
+        // separadors de fila com a vectors (vegeu DrawKit.setModePdf).
+        DrawKit.setModePdf(true);
+        try {
+            controller.getCam().drawFullCamInOffscreen();
+        } finally {
+            DrawKit.setModePdf(false);
+        }
 
         BufferedImage gridImg   = score.getOffscreenImage();
         BufferedImage chordImg  = chordLine.getOffscreenImage();
@@ -414,7 +442,7 @@ public class DodecagramPdfPrinter {
 
         // Dynamic row height: use fewer "target rows" when content is small so rows grow.
         // Cap at MAX_ROW_FRAC of available height (e.g. half page for a single row).
-        int   effectiveTarget = Math.max(1, Math.min(totalRows, TARGET_ROWS));
+        int   effectiveTarget = Math.max(1, Math.min(totalRows, (blankRows > 0) ? BLANK_ROWS : TARGET_ROWS));
         float maxRowImgH = (availFirst + ROW_GAP) / effectiveTarget - ROW_GAP - MEASURE_LABEL_H;
         maxRowImgH = Math.min(maxRowImgH, availFirst * MAX_ROW_FRAC - MEASURE_LABEL_H);
 
@@ -435,9 +463,12 @@ public class DodecagramPdfPrinter {
         float rowImgPdfH = scoreRowH * scaleY;
         float rowTotalH  = MEASURE_LABEL_H + rowImgPdfH;
 
-        int rowsPerFirst = Math.max(1, (int) ((availFirst + ROW_GAP) / (rowTotalH + ROW_GAP)));
-        int rowsPerOther = Math.max(1,
-                (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H + ROW_GAP) / (rowTotalH + ROW_GAP)));
+        // Mai mes de TARGET_ROWS sistemes per pagina (el dodecagrama en blanc en fa BLANK_ROWS).
+        int maxRowsPage  = (blankRows > 0) ? Integer.MAX_VALUE : TARGET_ROWS;
+        int rowsPerFirst = Math.max(1, Math.min(maxRowsPage,
+                (int) ((availFirst + ROW_GAP) / (rowTotalH + ROW_GAP))));
+        int rowsPerOther = Math.max(1, Math.min(maxRowsPage,
+                (int) ((PAGE_H - 2 * MARGIN - SHORT_HEADER_H + ROW_GAP) / (rowTotalH + ROW_GAP))));
 
         BufferedImage keyImg = renderNarrowKeyboard(colWidthPx, gridH);
 
@@ -525,6 +556,20 @@ public class DodecagramPdfPrinter {
                     pdf.drawBandSeparator(MARGIN, MARGIN + pdfUsableW, sepY);
                 }
 
+                // Línia del carril de marques, fins a l'esquerra de tot (a la imatge
+                // només arriba on hi ha columnes, i el teclat n'queda fora).
+                // El píxel de la línia és la fila laneH de la imatge: el seu centre és laneH + 0.5.
+                float laneSepY = yImgTop - (Settings.getMarksLaneHeight() + 0.5f) * scaleY;
+                pdf.drawBandSeparator(MARGIN, MARGIN + pdfUsableW, laneSepY);
+                // Les línies verticals de temps i compàs comencen just sota d'aquesta línia.
+                float vLineH = Math.max(0f, rowImgPdfH - (Settings.getMarksLaneHeight() + 1) * scaleY);
+
+                // Separadors de fila de la graella, com a vectors fins (si el tema ho demana).
+                if (drawSliceW > 0) {
+                    drawGridRowSeparators(MARGIN + keyPdfW, MARGIN + (keyWidthPx + drawSliceW) * rowScaleX,
+                            yImgTop - chordH * scaleY, scaleY, gridH);
+                }
+
                 // Beat and measure vertical lines as PDF vectors
                 // (they are drawn in screen-space in draw(), so absent from the offscreen bitmap)
                 // El bucle comença a startCol (no startCol+1) per incloure la primera measureLine
@@ -537,9 +582,9 @@ public class DodecagramPdfPrinter {
                         float lineX = MARGIN + (float) ((keyWidthPx + (col - startCol) * colWidthF) * rowScaleX);
                         if (lineX <= MARGIN || lineX >= MARGIN + pdfUsableW) continue;
                         if (isMeasure[col])
-                            pdf.drawMeasureLine(lineX, yImgBottom, rowImgPdfH);
+                            pdf.drawMeasureLine(lineX, yImgBottom, vLineH);
                         else
-                            pdf.drawBeatLine(lineX, yImgBottom, rowImgPdfH);
+                            pdf.drawBeatLine(lineX, yImgBottom, vLineH);
                     }
                 }
 
@@ -558,6 +603,30 @@ public class DodecagramPdfPrinter {
             // perquè PDFBox no emeti el fals warning "overwriting existing file".
             if (outputFile.exists()) outputFile.delete();
             doc.save(outputFile);
+        }
+    }
+
+    /**
+     * [CA] Dibuixa els separadors de fila de la graella com a línies vectorials
+     * fines (color i gruix del tema, {@code pdf.graella.separador.*}); no fa res si
+     * el tema vol els del bitmap ({@code gruix = 0}).
+     * [EN] Draws the grid row separators as thin vector lines.
+     *
+     * @param xL       [CA] X de l'esquerra (just després del teclat) / [EN] left X
+     * @param xR       [CA] X de la dreta / [EN] right X
+     * @param gridTopY [CA] Y PDF del cim de la graella / [EN] PDF Y of the grid top
+     * @param scaleY   [CA] escala vertical de la imatge / [EN] vertical image scale
+     * @param gridH    [CA] alçada de la graella en píxels / [EN] grid height in px
+     */
+    private void drawGridRowSeparators(float xL, float xR, float gridTopY, float scaleY, int gridH)
+            throws IOException {
+        if (!DrawKit.separadorsPdfVectorials() || gridH <= 0) return;
+        int nKeys = controller.getAllPurposeScore().getnKeys();
+        if (nKeys < 2) return;
+        double rowPx = (double) gridH / nKeys;
+        for (int k = 1; k < nKeys; k++) {
+            float y = gridTopY - (float) (Math.round(k * rowPx) * scaleY);
+            pdf.drawRowSeparator(xL, xR, y, DrawKit.gruixSeparadorPdf(), DrawKit.colorSeparadorPdf());
         }
     }
 

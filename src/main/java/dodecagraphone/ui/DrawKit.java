@@ -99,7 +99,7 @@ public final class DrawKit {
 
     // Tots els valors surten del tema triat al config.properties (vegeu
     // {@link Tema}): els temes són fitxers de text a la carpeta «temes», i el
-    // clàssic de dins del programa fa de reserva per a qualsevol valor que falti.
+    // tema moni de dins del programa fa de reserva per a qualsevol valor que falti.
     // Es llegeixen una sola vegada, en carregar-se aquesta classe.
 
     private static final Tema T = Tema.actual();
@@ -113,6 +113,34 @@ public final class DrawKit {
     private static final Color PAUTA_ESPAI = T.color("pauta.espai");
     private static final Color PAUTA_LINIA = T.color("pauta.linia");
     private static final Color PAUTA_DO_CENTRAL = T.color("pauta.doCentral");
+    /** [CA] Els mateixos valors per al PDF; {@code null} = com a la pantalla. */
+    private static final Color PDF_PAUTA_ESPAI = T.color("pdf.pauta.espai");
+    private static final Color PDF_PAUTA_LINIA = T.color("pdf.pauta.linia");
+    private static final Color PDF_PAUTA_DO_CENTRAL = T.color("pdf.pauta.doCentral");
+    private static final Color PDF_SEPARADOR_DE_FILA = T.color("pdf.graella.separador.color");
+    private static final float PDF_SEPARADOR_GRUIX = T.decimal("pdf.graella.separador.gruix");
+
+    /**
+     * [CA] Cert mentre es prepara el buffer de la graella per al PDF: les files
+     * buides agafen els colors {@code pdf.pauta.*} del tema i els separadors de fila
+     * no es pinten al bitmap (el PDF els dibuixa com a línies vectorials, si el
+     * tema en dóna un gruix). No es fa servir a la pantalla.
+     */
+    private static boolean modePdf = false;
+
+    /** [CA] Activa o desactiva el mode PDF de la graella. / [EN] Toggles PDF grid mode. */
+    public static void setModePdf(boolean on) { modePdf = on; }
+
+    /** [CA] El PDF dibuixa els separadors de fila com a vectors? / [EN] Vector row separators? */
+    public static boolean separadorsPdfVectorials() { return PDF_SEPARADOR_GRUIX > 0f; }
+
+    /** [CA] Gruix (punts PDF) dels separadors de fila al PDF. */
+    public static float gruixSeparadorPdf() { return PDF_SEPARADOR_GRUIX; }
+
+    /** [CA] Color dels separadors de fila al PDF; mai {@code null}. */
+    public static Color colorSeparadorPdf() {
+        return PDF_SEPARADOR_DE_FILA != null ? PDF_SEPARADOR_DE_FILA : SEPARADOR_DE_FILA;
+    }
     private static final Color PATRO_TRIAT = T.color("patro.triat");
     private static final Color PATRO_FORA = T.color("patro.fora");
     private static final Color TEXT_SOBRE_NOTA = T.color("nota.text");
@@ -330,9 +358,12 @@ public final class DrawKit {
     public static Color aparencaDePauta(int midi) {
         Color c = ColorSets.getPentagramaColor(midi);
         Color delTema;
-        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.LINIA_PENTA))) delTema = PAUTA_LINIA;
-        else if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.DO_PENTA))) delTema = PAUTA_DO_CENTRAL;
-        else delTema = PAUTA_ESPAI;
+        if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.LINIA_PENTA)))
+            delTema = (modePdf && PDF_PAUTA_LINIA != null) ? PDF_PAUTA_LINIA : PAUTA_LINIA;
+        else if (c != null && c.equals(ColorSets.getEncesColor(ColorSets.DO_PENTA)))
+            delTema = (modePdf && PDF_PAUTA_DO_CENTRAL != null) ? PDF_PAUTA_DO_CENTRAL : PAUTA_DO_CENTRAL;
+        else
+            delTema = (modePdf && PDF_PAUTA_ESPAI != null) ? PDF_PAUTA_ESPAI : PAUTA_ESPAI;
         return delTema != null ? delTema : c;
     }
 
@@ -356,7 +387,7 @@ public final class DrawKit {
     /**
      * [CA] Una tecla en silenci que <b>no és de la plantilla triada</b>: el color
      * de la nota apagat (barrejat amb blanc segons {@code tecla.apaga}). Amb
-     * {@code tecla.apaga = 0} (el clàssic) és igual que {@link #aparencaDeTecla}.
+     * {@code tecla.apaga = 0} (el classic) és igual que {@link #aparencaDeTecla}.
      * [EN] A silent key outside the chosen template: the note colour dimmed.
      */
     public static Color aparencaDeTeclaApagada(int midi) {
@@ -456,6 +487,7 @@ public final class DrawKit {
 
     /** [CA] El separador de dalt d'una cel·la. Deixa el color posat. / [EN] Row divider. */
     public static void separadorDeFila(Graphics2D g, int x1, int x2, int y) {
+        if (modePdf && PDF_SEPARADOR_GRUIX > 0f) return;
         Stroke abans = g.getStroke();
         g.setStroke(TRAC_SEPARADOR_DE_FILA);
         g.setColor(SEPARADOR_DE_FILA);
