@@ -31,14 +31,14 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
  * a partir de les imatges offscreen de la graella de notes, la línia d'acords
  * i la lletra. Afegeix línies vectorials de compàs i beat, doble barra final i
  * teclat estret a l'esquerra de cada fila. Cada pàgina porta com a màxim
- * {@link #TARGET_ROWS} sistemes. Les línies de temps i de compàs comencen sota
+ * {@code pdfMaxRowsPerPage} sistemes (config, per defecte 2). Les línies de temps i de compàs comencen sota
  * el carril de marques, i la graella es redibuixa en mode PDF
  * ({@code DrawKit.setModePdf}): franges i separadors del tema ({@code pdf.*}).
  * <p>
  * [EN] Score printing to PDF format. Generates a multi-page A4 document from
  * the offscreen images of the note grid, chord line and lyrics. Adds vector
  * measure and beat lines, a double final bar and a narrow keyboard strip on
- * the left of each row. At most {@code TARGET_ROWS} systems per page; beat and
+ * the left of each row. At most {@code pdfMaxRowsPerPage} systems per page (config, default 2); beat and
  * measure lines start below the marks lane; the grid is redrawn in PDF mode.
  *
  * @author Pau Bofill
@@ -60,15 +60,21 @@ public class DodecagramPdfPrinter {
     private static final float SHORT_HEADER_H  = 18f;
     private static final float ROW_GAP         = 6f;
     private static final float MEASURE_LABEL_H = 10f;
-    private static final int   TARGET_ROWS     = 2;
+    /** [CA] Màxim de sistemes per pàgina per defecte (clau {@code pdfMaxRowsPerPage} del config). [EN] Default max systems per page. */
+    public static final int    DEFAULT_TARGET_ROWS = 2;
+    private static final String KEY_MAX_ROWS   = "pdfMaxRowsPerPage";
+    /** [CA] Llegeix el màxim de sistemes per pàgina del config (mínim 1). [EN] Reads max systems per page from config (min 1). */
+    private static int targetRows() {
+        return Math.max(1, AppConfig.get().getInt(KEY_MAX_ROWS, DEFAULT_TARGET_ROWS));
+    }
     /**
      * [CA] Files d'un dodecagrama en blanc, quan s'imprimeix una partitura
-     * sense notes. Era el mateix que {@link #TARGET_ROWS} (abans 4); ara és propi: són les files que la
+     * sense notes. Era el mateix que el màxim de sistemes per pàgina (abans 4); ara és propi: són les files que la
      * distribució de pàgina ja mira d'encabir en una sola plana.
      * <p>
      * [EN] Number of rows of a blank dodecagram, when printing a score with no
-     * notes. It matches {@link #TARGET_ROWS}: those are the rows the page
-     * layout already aims to fit on a single page.
+     * notes. It is independent of the max systems per page
+     * ({@code pdfMaxRowsPerPage}).
      */
     public static final int    BLANK_ROWS      = 4;
     /** Max row image height as fraction of usable page height (single-row case). */
@@ -442,7 +448,7 @@ public class DodecagramPdfPrinter {
 
         // Dynamic row height: use fewer "target rows" when content is small so rows grow.
         // Cap at MAX_ROW_FRAC of available height (e.g. half page for a single row).
-        int   effectiveTarget = Math.max(1, Math.min(totalRows, (blankRows > 0) ? BLANK_ROWS : TARGET_ROWS));
+        int   effectiveTarget = Math.max(1, Math.min(totalRows, (blankRows > 0) ? BLANK_ROWS : targetRows()));
         float maxRowImgH = (availFirst + ROW_GAP) / effectiveTarget - ROW_GAP - MEASURE_LABEL_H;
         maxRowImgH = Math.min(maxRowImgH, availFirst * MAX_ROW_FRAC - MEASURE_LABEL_H);
 
@@ -463,8 +469,8 @@ public class DodecagramPdfPrinter {
         float rowImgPdfH = scoreRowH * scaleY;
         float rowTotalH  = MEASURE_LABEL_H + rowImgPdfH;
 
-        // Mai mes de TARGET_ROWS sistemes per pagina (el dodecagrama en blanc en fa BLANK_ROWS).
-        int maxRowsPage  = (blankRows > 0) ? Integer.MAX_VALUE : TARGET_ROWS;
+        // Mai mes de pdfMaxRowsPerPage sistemes per pagina (el dodecagrama en blanc en fa BLANK_ROWS).
+        int maxRowsPage  = (blankRows > 0) ? Integer.MAX_VALUE : targetRows();
         int rowsPerFirst = Math.max(1, Math.min(maxRowsPage,
                 (int) ((availFirst + ROW_GAP) / (rowTotalH + ROW_GAP))));
         int rowsPerOther = Math.max(1, Math.min(maxRowsPage,

@@ -3427,7 +3427,10 @@ public class MyController {
      * ni barres de compàs, només amb línies de temps). Sense marques la
      * pàgina és paper pautat genèric, bo per a qualsevol tonalitat i
      * qualsevol tempo. Si es respon que no a la primera pregunta, no
-     * s'imprimeix res (no hi hauria contingut a treure).
+     * s'imprimeix res (no hi hauria contingut a treure). Després pregunta
+     * si el PDF s'ha d'<b>obrir</b> (es genera en un fitxer temporal i
+     * s'obre amb el visor del sistema) o <b>desar</b> (selector de fitxer);
+     * tancar el diàleg cancel·la.
      * <p>
      * [EN] Generates the score PDF. If the score is empty (neither notes nor
      * chords), it asks whether a blank dodecagram is wanted and, if so, its
@@ -3436,7 +3439,9 @@ public class MyController {
      * landscape (one full page, always with no marks and no measure bars,
      * only beat lines). With no marks the page is generic staff paper, good
      * for any key and any tempo. Answering no to the first question prints
-     * nothing (there would be no content to output).
+     * nothing (there would be no content to output). It then asks whether to
+     * <b>open</b> the PDF (generated in a temporary file and shown with the
+     * system viewer) or <b>save</b> it (file chooser); closing the dialog cancels.
      *
      * @param togg [CA] botó que ha llançat l'acció / [EN] button that triggered the action
      */
@@ -3461,23 +3466,48 @@ public class MyController {
                         I18n.t("print.blank.title")) == JOptionPane.YES_OPTION;
             }
         }
-        String defaultName = defaultFileName(".ddcgr.pdf");
-        String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
-        if (fitxer == null || fitxer.isBlank()) {
+        int destI = MyDialogs.demanaObreOSalva(
+                I18n.t("print.output.question"),
+                I18n.t("print.output.title"));
+        if (destI < 0) {
             if (togg != null) togg.setPressed(false);
             return;
         }
-        File file = new File(fitxer);
-        if (file.exists()) {
-            int resposta = JOptionPane.showConfirmDialog(
-                    null,
-                    I18n.t("file.overwrite"),
-                    I18n.t("MyController.dialog.confirm.title"),
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-            if (resposta == JOptionPane.NO_OPTION) {
+        boolean obre = (destI == 0);
+        String defaultName = defaultFileName(".ddcgr.pdf");
+        File file;
+        if (obre) {
+            // Obre: es genera en un fitxer temporal i s'obre amb el visor del sistema.
+            try {
+                String base = new File(defaultName).getName().replace(".pdf", "");
+                if (base.length() < 3) base = base + "___";
+                file = File.createTempFile(base + "_", ".pdf");
+                file.deleteOnExit();
+            } catch (java.io.IOException ex) {
+                MyDialogs.mostraError(
+                        I18n.f("print.error", ex.getMessage()),
+                        I18n.t("MyController.dialog.error.title"));
                 if (togg != null) togg.setPressed(false);
                 return;
+            }
+        } else {
+            String fitxer = MyDialogs.seleccionaFitxerEscriptura(null, defaultName, "pdf");
+            if (fitxer == null || fitxer.isBlank()) {
+                if (togg != null) togg.setPressed(false);
+                return;
+            }
+            file = new File(fitxer);
+            if (file.exists()) {
+                int resposta = JOptionPane.showConfirmDialog(
+                        null,
+                        I18n.t("file.overwrite"),
+                        I18n.t("MyController.dialog.confirm.title"),
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (resposta == JOptionPane.NO_OPTION) {
+                    if (togg != null) togg.setPressed(false);
+                    return;
+                }
             }
         }
         try {
@@ -3485,6 +3515,16 @@ public class MyController {
             if (landscape)   printer.printBlankLandscape(file);
             else if (blank)  printer.printBlank(file, dropInitialMarks);
             else             printer.print(file);
+            if (obre) {
+                if (java.awt.Desktop.isDesktopSupported()
+                        && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.OPEN)) {
+                    java.awt.Desktop.getDesktop().open(file);
+                } else {
+                    MyDialogs.mostraError(
+                            I18n.t("print.output.openUnsupported"),
+                            I18n.t("MyController.dialog.error.title"));
+                }
+            }
         } catch (Exception ex) {
             MyDialogs.mostraError(
                     I18n.f("print.error", ex.getMessage()),

@@ -369,6 +369,11 @@ Conseqüències:
 
 El buffer no depèn de `stopCol`: `expandBufferIfNeeded` es dimensiona amb `lastColWritten`, i **passar pàgina l'amplia** (`onNextPageButtonPressed`), altrament `nextPage()` es negava a avançar més enllà del contingut escrit.
 
+## PDF: Obre o Salva i sistemes per pàgina
+
+- **Obre / Salva (20-11-26)**: `onPrintButtonPressed` pregunta (`MyDialogs.demanaObreOSalva`, claus `print.output.*`) si el PDF s'ha d'**obrir** o **desar**. Obre el genera en un fitxer temporal (`File.createTempFile`, `deleteOnExit`) i l'obre amb `Desktop.open`; Salva és el camí de sempre (selector + sobreescriure). Tancar el diàleg cancel·la. En un dodecagrama en blanc, la pregunta va després de les d'orientació i marques.
+- **Sistemes per pàgina**: `pdfMaxRowsPerPage` del `config.properties` (per defecte 2, mínim 1; `DodecagramPdfPrinter.targetRows()`, que el llegeix a cada impressió: no cal reiniciar). Substitueix la constant `TARGET_ROWS`. No afecta `BLANK_ROWS` (4). Documentat a l'ajuda (`help.config.pdfMaxRowsPerPage.desc`) i al config (`config.pdfMaxRowsPerPage.comment`).
+
 ## Dodecagrama en blanc (PDF d'una partitura buida)
 
 Si en prémer el botó de PDF la partitura no té **ni notes ni acords** (`MyPatternScore.isBlankScore()`), `onPrintButtonPressed` fa **dues preguntes**:
@@ -376,7 +381,7 @@ Si en prémer el botó de PDF la partitura no té **ni notes ni acords** (`MyPat
 1. `print.blank.question` — vols un dodecagrama en blanc? Si es respon que no, no s'imprimeix res.
 2. `print.blank.dropMarks.question` — en vols treure les marques inicials? Si es respon que sí, la pàgina surt sense les marques inicials de la columna 0 (tonalitat, tempo i volum): paper pautat genèric, bo per a qualsevol tonalitat i qualsevol tempo.
 
-Després, `DodecagramPdfPrinter.printBlank(file, dropInitialMarks)` treu **`BLANK_ROWS` = 4 files buides**. (El PDF d'una partitura normal porta com a màxim **`TARGET_ROWS` = 2 sistemes per pàgina**, abans 4, que es veien massa petits; el blanc no hi entra.)
+Després, `DodecagramPdfPrinter.printBlank(file, dropInitialMarks)` treu **`BLANK_ROWS` = 4 files buides**. (El PDF d'una partitura normal porta com a màxim **`pdfMaxRowsPerPage` = 2 sistemes per pàgina per defecte (config)**, abans 4, que es veien massa petits; el blanc no hi entra.)
 
 Amb acords i sense notes s'imprimeix com sempre: hi ha contingut a treure.
 
@@ -461,6 +466,7 @@ Deixats fora expressament (imports externs, sense metadades de l'app): `prova.mi
 Aquests fitxers ara **sonen una octava més amunt** que abans de la migració: és el registre real del glockenspiel, que era el que estava malament.
 
 ## Historial de canvis recents (commits rellevants)
+- **20-11-26** PDF: opció `pdfMaxRowsPerPage` (defecte 2) al config i diàleg Obre/Salva en generar-lo.
 - **19-11-26** Temes `moni`/`moni2` intercanviats (`moni` = notes de colors, per defecte); `classic` es copia a la carpeta i `moni` és la reserva; tema `manual` eliminat; PDF amb 2 sistemes per pàgina (`TARGET_ROWS`), línia del carril fins a l'esquerra, línies de temps/compàs sota el carril (pantalla i PDF), claus `pdf.*` (separadors i franges més fosques, només PDF); acords repetits: cada acord de la franja torna a sonar (`MyPatternScore.placeChordMidiNotes`/`removeChordMidiNotes`, **no verificat a l'oïda**); comandes `documenta`/`comita`/`publica`/`pack`.
 - **versió 5.0 (18-11-26)** Número de versió. **La versió viu en un sol lloc: el `<version>` del `pom.xml`** (5.0). D'allà surten el jar (`DoDeReBu_App-5.0.jar`), `app.properties` (filtrat per Maven: `app.name = DoDeReBu_v${project.version}` i `app.version`; `AppConfig.getAppName()` i `getAppVersion()`: títol de la finestra i diàleg de benvinguda), i, **llegida del pom pels scripts de build**, el nom de l'exe, de la carpeta portable i del zip (`DoDeReBu_v5.0.exe`, `portable/DoDeReBu_v5.0/`, `DoDeReBu_v5.0.zip`; jpackage rep també `--app-version`). **Per passar a una versió nova només cal canviar el `<version>` del pom** (i l'`@version` del javadoc, si es vol; no és funcional): **la carpeta del projecte ja no depèn de la versió i es diu `DoDeReBu_App`** (abans `DoDeReBu_v4.1`). `artifactId` i `name` del pom: `DoDeReBu_App`. `README.md`, `LICENSE.txt` i el javadoc diuen 5.0. **Tags de publicació: `publicat_v<versió>_<data>`** (p. ex. `publicat_v5.0_18-11-26`, l'estat publicat de la 5.0; el tag anterior `publicat_18-11-26` s'ha substituït per aquest); tag **`v5.0`** = la versió 5.0 (la branca `disseny_grafic` s'hi va fusionar per fast-forward: tot és a `master`).
 - **branca `disseny_grafic` (15–18-11-26)** Tema `moni` (per defecte; l'únic de fàbrica) amb la gamma `colors_manual` (colors exactes del PDF del manual); gammes `moni`/`moni2` conservades i temes `moni2`/classic/manual fora de la carpeta d'usuari; tecles seleccionades/apagades/sense selecció i il·luminació en sonar (desactivada); notes de la graella en blau i amb el seu color en sonar; **carril de marques** (fletxeta, `;`, notació, separador, caixa «Tò; Tempo; Vol») amb la **franja d'acords a 7 files**, sense acords però amb les marques editables clicant-hi; botó de volum amb el matís (`127 (ff)`); **barra de compàs fantasma corregida**; transposició al botó de l'instrument; caixes del costat del teclat sempre a la barra inicial; botó de format a la fila del títol; ajuda, `config.properties` i `TemesTest` al dia; traça de consola de `MyChoice.addKey()` esborrada.

@@ -135,6 +135,27 @@ public class MyDialogs {
     }
 
     /**
+     * [CA] Pregunta si el PDF s'ha d'obrir (en un fitxer temporal) o desar.
+     * <p>
+     * [EN] Asks whether the PDF should be opened (from a temporary file) or saved.
+     *
+     * @return [CA] 0 = Obre, 1 = Salva, -1 = diàleg tancat (cancel·la) /
+     *         [EN] 0 = Open, 1 = Save, -1 = dialog closed (cancel)
+     */
+    public static int demanaObreOSalva(String missatge, String titol) {
+        Object[] opcions = {
+            I18n.t("print.output.open"),
+            I18n.t("print.output.save")
+        };
+        // 0 = Obre, 1 = Salva, -1 = tancat la finestra (cancel·la)
+        return JOptionPane.showOptionDialog(
+                null, missatge, titol,
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null, opcions, opcions[0]);
+    }
+
+    /**
      * [CA] Pregunta l'orientació del dodecagrama en blanc: vertical (files
      * apilades, amb l'opció de conservar les marques inicials) o apaisat
      * (una sola pàgina sencera, sempre sense marques ni barres de compàs).

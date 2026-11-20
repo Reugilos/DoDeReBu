@@ -431,6 +431,7 @@ public class MyHelpDialog {
             { "nColsScore",                           I18n.t("help.config.capacity.desc") },
             { "autoCorrect",                          I18n.t("help.config.autocorrect.desc") },
             { "tema",                                 I18n.t("help.config.tema.desc") },
+            { "pdfMaxRowsPerPage",                    I18n.t("help.config.pdfMaxRowsPerPage.desc") },
         };
     }
 }
