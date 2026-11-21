@@ -1860,8 +1860,19 @@ public class MyGridScore extends MyComponent {
                 if (sq == null || !sq.isSqVisible()) continue;
                 int sy = (int) Math.round(this.getOffScreenScreenY(row * nRowsSq));
                 // Nota que continua: cobreix els dos costats de la barra; si hi comença, només la dreta.
-                int rx = sq.isSq_is_linked() ? sx - 2 : sx;
-                int rw = sq.isSq_is_linked() ? 5 : 3;
+                // La barra cau just a la vora esquerra d'una nota que hi comença: pel costat
+                // esquerre queda fora de la nota i s'ha de deixar veure, o la barra
+                // semblaria trencada. Només es tapa el costat esquerre si hi ha una altra nota
+                // just abans (aleshores hi ha el píxel de separació) o si la nota continua.
+                MyGridSquare prev = col > 0 ? this.grid[row + BUFFER][col - 1] : null;
+                boolean both = sq.isSq_is_linked() || (prev != null && prev.isSqVisible());
+                // La nota es dibuixa a l'offscreen a round(x) i la barra a floor(x): amb amplades
+                // de columna fraccionàries difereixen en un píxel. Repintar des de la barra
+                // posava un píxel de fons (blanc) abans de la nota; s'ha de repintar des d'on
+                // la nota comença de veritat.
+                int nx = (int) Math.round(view.screenX((int) Math.round(this.getOffScreenScreenX(col))));
+                int rx = both ? nx - 2 : nx;
+                int rw = both ? 5 : 3;
                 view.blitPart(g, img, y1, h, rx, y1 + sy, rw, hght);
             }
         }
