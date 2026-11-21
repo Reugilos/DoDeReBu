@@ -794,9 +794,24 @@ public class MyMidiScore extends MyExercise {
                                         int vel  = Integer.parseInt(p.substring(eq + 1));
                                         csc.trackVelocities.put(trId, vel);
                                     }
+                                } else if (p.startsWith("instr:")) {
+                                    int eq = p.indexOf('=');
+                                    if (eq > 6) {
+                                        int trId = Integer.parseInt(p.substring(6, eq));
+                                        int prog = Integer.parseInt(p.substring(eq + 1));
+                                        csc.trackInstruments.put(trId, prog);
+                                    }
                                 }
                             }
                             if (cmCol >= 0) this.setScoreChange(cmCol, csc);
+                            // L'instrument que s'ha carregat de la pista (el primer PROGRAM_CHANGE)
+                            // és el de base: les marques d'instrument hi canvien a partir de la seva columna.
+                            for (Integer trId : csc.trackInstruments.keySet()) {
+                                MyTrack bt = controller.getMixer().getTrackFromId(trId);
+                                if (bt != null && bt.getBaseProgram() == null && bt.getCurrentChannel() != 9) {
+                                    bt.setBaseProgram(SoundWithMidi.getInstrumentInChannel(bt.getCurrentChannel()));
+                                }
+                            }
                         } catch (Exception e) { e.printStackTrace(); }
                     } else if (text.startsWith("LYRIC:")) {
                         // LYRIC:track=N::col=C::text=TEXT  (format propi DoDeReBu)
@@ -1207,8 +1222,12 @@ public class MyMidiScore extends MyExercise {
                                     // que ja no es desa com a metadada.
                                     pcEscrit.add(trackIndex);
                                     MyTrack trackObjPC = this.controller.getMixer().getTrackFromId(trackIndex);
+                                    // Si la pista té marques d'instrument, es desa el de base (el canal pot
+                                    // tenir ara el d'una marca posterior).
                                     int instrPC = (trackObjPC != null)
-                                            ? SoundWithMidi.getInstrumentInChannel(trackObjPC.getCurrentChannel())
+                                            ? (trackObjPC.getBaseProgram() != null
+                                                    ? trackObjPC.getBaseProgram()
+                                                    : SoundWithMidi.getInstrumentInChannel(trackObjPC.getCurrentChannel()))
                                             : (ToneRange.isMetallophone() ? 9 : 0);
                                     ShortMessage pc = new ShortMessage();
                                     try {
@@ -1225,6 +1244,13 @@ public class MyMidiScore extends MyExercise {
                                     if (rectified < 0) continue;
                                 } else {
                                     int dispOff = (trackObj != null) ? trackObj.getDisplayOffset() : 0;
+                                    // Amb marques d'instrument, el desplaçament actual pot ser el d'una marca
+                                    // posterior: el fitxer es desa amb el de base, que és el que en carregar
+                                    // es recalcula del PROGRAM_CHANGE inicial (així torna igual).
+                                    if (trackObj != null && trackObj.getBaseProgram() != null) {
+                                        dispOff = dodecagraphone.model.InstrumentRange.calcDisplayOffset(
+                                                trackObj.getBaseProgram(), ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                                    }
                                     int realPitch = visualPitch - dispOff;
 //                                    rectified = realPitch - 12 * ToneRange.getOctavesUp();  // OLD: eliminat
                                     rectified = realPitch;  // displayOffset ja cobreix la transposició
@@ -1384,6 +1410,9 @@ public class MyMidiScore extends MyExercise {
             if (csc.colInBeatPhase != null) sbCm.append("::colInBeatPhase=").append(csc.colInBeatPhase);
             for (java.util.Map.Entry<Integer, Integer> ve : csc.trackVelocities.entrySet()) {
                 sbCm.append("::vel:").append(ve.getKey()).append("=").append(ve.getValue());
+            }
+            for (java.util.Map.Entry<Integer, Integer> ie : csc.trackInstruments.entrySet()) {
+                sbCm.append("::instr:").append(ie.getKey()).append("=").append(ie.getValue());
             }
             long cmTick = (long) cmCol * ticksPerCol;
             byte[] cmData = sbCm.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);

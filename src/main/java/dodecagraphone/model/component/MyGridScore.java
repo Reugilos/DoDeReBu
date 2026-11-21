@@ -235,6 +235,8 @@ public class MyGridScore extends MyComponent {
         /** Fase del comptador de col-dins-beat en arribar a aquesta columna (null = reinicia a 0). */
         public Integer colInBeatPhase;
         public final Map<Integer, Integer> trackVelocities = new HashMap<>();
+        /** Instrument (programa GM) per pista a partir d'aquesta columna. / Instrument (GM program) per track from this column on. */
+        public final Map<Integer, Integer> trackInstruments = new HashMap<>();
 
         /**
          * Aplica els camps no-null de {@code other} sobre aquest objecte.
@@ -253,6 +255,7 @@ public class MyGridScore extends MyComponent {
             if (other.measurePhase != null)  this.measurePhase = other.measurePhase;
             if (other.colInBeatPhase != null) this.colInBeatPhase = other.colInBeatPhase;
             this.trackVelocities.putAll(other.trackVelocities);
+            this.trackInstruments.putAll(other.trackInstruments);
         }
 
         /**
@@ -289,7 +292,8 @@ public class MyGridScore extends MyComponent {
                     && java.util.Objects.equals(nMeasuresCam, other.nMeasuresCam)
                     && java.util.Objects.equals(measurePhase, other.measurePhase)
                     && java.util.Objects.equals(colInBeatPhase, other.colInBeatPhase)
-                    && trackVelocities.equals(other.trackVelocities);
+                    && trackVelocities.equals(other.trackVelocities)
+                    && trackInstruments.equals(other.trackInstruments);
         }
 
         /**
@@ -300,7 +304,8 @@ public class MyGridScore extends MyComponent {
                     && nBeatsMeasure == null && beatFigure == null
                     && nColsQuarter == null && nColsBeat == null
                     && nMeasuresCam == null && measurePhase == null
-                    && colInBeatPhase == null && trackVelocities.isEmpty();
+                    && colInBeatPhase == null && trackVelocities.isEmpty()
+                    && trackInstruments.isEmpty();
         }
     }
 

@@ -126,6 +126,8 @@ public class MyChordSymbolLine extends MyComponent {
         KEY,
         /** Canvi de volum; verd, per pista. */
         VOLUME,
+        /** Canvi d'instrument; per pista. / Instrument change, per track. */
+        INSTRUMENT,
         /**
          * [CA] Transposició de la pista; groc, informativa i no editable.
          * <b>En desús:</b> ja no es dibuixa a la franja. La transposició de
@@ -150,6 +152,7 @@ public class MyChordSymbolLine extends MyComponent {
                 case TEMPO:  return DrawKit.Marca.TEMPO;
                 case KEY:    return DrawKit.Marca.TONALITAT;
                 case VOLUME: return DrawKit.Marca.VOLUM;
+                case INSTRUMENT: return DrawKit.Marca.VOLUM;
                 default:     return DrawKit.Marca.TRANSPOSICIO;
             }
         }
@@ -400,7 +403,7 @@ public class MyChordSymbolLine extends MyComponent {
         int arrowH = 7;   // 5px triangle + 2px gap
         int botMargin = 2;
         int available = chordH - arrowH - botMargin;
-        int size = Math.max(MIN_CHORD_FONT, (int) Math.min(available / 4.0, rowH * 0.85));
+        int size = Math.max(MIN_CHORD_FONT, (int) Math.min(available / 4.0, rowH * DrawKit.proporcioDeLletraDAcords()));
         Font f = DrawKit.fontAcords(size);
         FontMetrics fm = metrics().getFontMetrics(f);
         while (lineStep(fm) * 4 - LINE_GAP > available && size > MIN_CHORD_FONT) {
@@ -494,8 +497,25 @@ public class MyChordSymbolLine extends MyComponent {
      */
     private Font getMarkFont() {
         if (markFontOverride != null) return markFontOverride;
-        return getBaseChordFont();
+        double rowH = Settings.getRowHeight();
+        if (cachedMarkFont != null && rowH == cachedMarkRowH) return cachedMarkFont;
+        // Mida pròpia (clau font.marques.proporcio del tema), limitada perquè una línia càpiga
+        // al carril de marques.
+        int laneH = Settings.getMarksLaneHeight();
+        int size = Math.max(MIN_CHORD_FONT, (int) (rowH * DrawKit.proporcioDeLletraDeMarques()));
+        Font f = DrawKit.fontAcords(size);
+        while (size > MIN_CHORD_FONT && lineStep(metrics().getFontMetrics(f)) > laneH - 2) {
+            size--;
+            f = DrawKit.fontAcords(size);
+        }
+        cachedMarkFont = f;
+        cachedMarkRowH = rowH;
+        return f;
     }
+
+    /** Font de les marques i l'alçada de fila per a la qual es va calcular. */
+    private Font   cachedMarkFont = null;
+    private double cachedMarkRowH = 0;
 
     /**
      * [CA] <b>En desús</b>: les marques ja no s'apilen sobre els acords sinó que
@@ -1024,7 +1044,7 @@ public class MyChordSymbolLine extends MyComponent {
      * semicolons</b>, each in its kind's colour. Returns the total width.
      */
     private int drawMarkGroup(int col, Integer tempo, Integer midiKey, char mode, Integer velocity,
-                              Graphics2D g, boolean offscreen) {
+                              Integer instrument, Graphics2D g, boolean offscreen) {
         List<String> texts = new java.util.ArrayList<>();
         List<MarkKind> kinds = new java.util.ArrayList<>();
         // Símbol de beat que precedeix el text: 0 = cap, 1 = negra, 2 = negra amb punt.
@@ -1043,6 +1063,11 @@ public class MyChordSymbolLine extends MyComponent {
         if (velocity != null) {
             texts.add(dynamicText(velocity));
             kinds.add(MarkKind.VOLUME);
+            symbols.add(0);
+        }
+        if (instrument != null) {
+            texts.add(dodecagraphone.model.sound.SoundWithMidi.getInstrumentMnemonic(instrument));
+            kinds.add(MarkKind.INSTRUMENT);
             symbols.add(0);
         }
         if (texts.isEmpty()) return 0;
@@ -1126,6 +1151,20 @@ public class MyChordSymbolLine extends MyComponent {
     private int currentTrackVelocity() {
         dodecagraphone.model.mixer.MyTrack t = contr.getMixer().getCurrentTrack();
         return (t != null) ? t.getVelocity() : Settings.getDefaultVelocity();
+    }
+
+    /**
+     * [CA] Instrument (programa GM) de base de la pista actual, per a la marca de la columna 0
+     * quan no n'hi ha cap d'explícita: el de base si la pista té marques d'instrument, i si no el
+     * que té el canal. {@code null} a la bateria o sense pista.
+     * <p>
+     * [EN] Base instrument of the current track, for the column 0 mark when none is explicit.
+     */
+    private Integer currentTrackBaseInstrument() {
+        dodecagraphone.model.mixer.MyTrack t = contr.getMixer().getCurrentTrack();
+        if (t == null || t.getCurrentChannel() == 9) return null;
+        if (t.getBaseProgram() != null) return t.getBaseProgram();
+        return dodecagraphone.model.sound.SoundWithMidi.getInstrumentInChannel(t.getCurrentChannel());
     }
 
     /**
@@ -1277,7 +1316,11 @@ public class MyChordSymbolLine extends MyComponent {
                 // Settings.getDefaultVelocity(); així la marca no menteix mai.
                 Integer vel0 = (sc0 != null) ? sc0.trackVelocities.get(currentTrackId) : null;
                 int vel0Shown = (vel0 != null) ? vel0 : currentTrackVelocity();
-                drawMarkGroup(0, tempo0, midiKey0, mode0, vel0Shown, offscreenGraphics, true);
+                // Instrument: el de la marca de la columna 0 si n'hi ha; si no, el de base de la
+                // pista (o el que té ara el canal). La bateria no en mostra.
+                Integer instr0 = (sc0 != null) ? sc0.trackInstruments.get(currentTrackId) : null;
+                if (instr0 == null) instr0 = currentTrackBaseInstrument();
+                drawMarkGroup(0, tempo0, midiKey0, mode0, vel0Shown, instr0, offscreenGraphics, true);
             }
 
             // Col > 0: marques del changeMap, al carril de dalt, una al costat de l'altra.
@@ -1288,7 +1331,8 @@ public class MyChordSymbolLine extends MyComponent {
                 char mode = (sc.scaleMode != null) ? sc.scaleMode : 'M';
                 // Volum: només el del track actual.
                 Integer velCur = sc.trackVelocities.get(currentTrackId);
-                drawMarkGroup(col, sc.tempo, sc.midiKey, mode, velCur, offscreenGraphics, true);
+                drawMarkGroup(col, sc.tempo, sc.midiKey, mode, velCur,
+                        sc.trackInstruments.get(currentTrackId), offscreenGraphics, true);
             }
 
             // Acords: ja no cal desplaçar-los, les marques tenen carril propi.

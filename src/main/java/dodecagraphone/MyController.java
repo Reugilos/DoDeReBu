@@ -802,8 +802,19 @@ public class MyController {
         int topAir = margin + (int) Math.max(3, Math.round(rowH * 0.25));
 
         // Etiqueta de la caixa de marques, centrada en vertical dins del carril
-        DrawKit.rotulDeFranja(g, I18n.t("myChordSymbolLine.marksLabel"), labelX,
-                chordY + (laneH + lineH) / 2 - fm.getDescent());
+        // El títol és llarg («Tò; Tempo; Vol; Instrument»): si no cap a la caixa, s'encongeix.
+        String marksText = I18n.t("myChordSymbolLine.marksLabel");
+        java.awt.Font fontBase = g.getFont();
+        int availMarks = kw - (labelX - kx) - margin / 2;
+        float sz = fontBase.getSize2D();
+        while (sz > 7f && g.getFontMetrics().stringWidth(marksText) > availMarks) {
+            sz -= 0.5f;
+            g.setFont(fontBase.deriveFont(sz));
+        }
+        java.awt.FontMetrics fmM = g.getFontMetrics();
+        DrawKit.rotulDeFranja(g, marksText, labelX,
+                chordY + (laneH + fmM.getAscent() + fmM.getDescent()) / 2 - fmM.getDescent());
+        g.setFont(fontBase);
 
         // "Acords" label at top of chord strip (just below the marks box)
         int acordsY = chordY + laneH + topAir + fm.getAscent();
@@ -902,7 +913,7 @@ public class MyController {
         }
 
         // rowHeight (no squareHeight) perquè botons i franges no s'adapten a nRowsSquare
-        int fontSize = Math.max(8, (int)(Settings.getRowHeight() * 0.85));
+        int fontSize = DrawKit.midaDeLletraDeInterficie(Settings.getRowHeight());
 
         // Sempre blit·ejem el buffer offscreen (ja actualitzat) a la pantalla.
         // needsDrawing controlava si es dibuixava, però això deixava la pantalla
@@ -4535,6 +4546,17 @@ public class MyController {
             opcio = opcio.trim();
             String[] parts = opcio.split(" ");
             int newInstr = Integer.parseInt(parts[0]);
+            MyTrack trk = this.mixer.getCurrentTrack();
+            if (chan != 9 && trk != null && !cam.isPlaying()) {
+                // El canvi d'instrument és una marca: es demana la columna, com amb el volum.
+                // No s'aplica fins que es col·loca (applyChangesAt la segueix per la partitura).
+                MyGridScore.ScoreChange sc = new MyGridScore.ScoreChange();
+                sc.trackInstruments.put(this.mixer.getCurrentTrackId(), newInstr);
+                setPendingChange(sc, I18n.t("scoreChange.instrument"));
+                this.mixer.refreshMixer();
+                this.updateTextOfButtons();
+                return;
+            }
             SoundWithMidi.assignInstToChannel(chan, newInstr);
             SoundWithMidi.runProgramChange(chan, newInstr);
             MyTrack currentTrack = this.mixer.getCurrentTrack();
@@ -4793,6 +4815,17 @@ public class MyController {
                 actionsKey = null;
                 break;
             }
+            case INSTRUMENT: {
+                Integer prog = eff.trackInstruments.get(trackId);
+                if (prog == null && track != null) {
+                    prog = (track.getBaseProgram() != null) ? track.getBaseProgram()
+                            : SoundWithMidi.getInstrumentInChannel(track.getCurrentChannel());
+                }
+                info = I18n.f("scoreChange.mark.info.instrument",
+                        prog != null ? SoundWithMidi.getInstrumentMnemonic(prog) : "?");
+                actionsKey = null;
+                break;
+            }
             case TRANSPOSE: {
                 // EN DESÚS: la marca de transposició ja no es dibuixa a la franja (la
                 // transposició surt al botó de l'instrument), així que aquest cas no
@@ -4880,6 +4913,15 @@ public class MyController {
         }
         sc.trackVelocities.entrySet().removeIf(en ->
                 java.util.Objects.equals(en.getValue(), before.trackVelocities.get(en.getKey())));
+        // Instrument: igual que el vigent just abans, o, si no hi havia cap marca, el de base.
+        sc.trackInstruments.entrySet().removeIf(en -> {
+            Integer prev = before.trackInstruments.get(en.getKey());
+            if (prev == null) {
+                MyTrack t = this.getMixer().getTrackFromId(en.getKey());
+                prev = (t != null) ? t.getBaseProgram() : null;
+            }
+            return java.util.Objects.equals(en.getValue(), prev);
+        });
     }
 
     /**
@@ -4898,8 +4940,23 @@ public class MyController {
                 && pendingChange.beatFigure == null && pendingChange.nColsQuarter == null
                 && pendingChange.nColsBeat == null
                 && !pendingChange.trackVelocities.isEmpty();
-        if (!isVolumeOnly) {
+        // L'instrument, com el volum, s'aplica a la columna exacta.
+        boolean isInstrumentOnly = pendingChange.tempo == null && pendingChange.midiKey == null
+                && pendingChange.scaleMode == null && pendingChange.nBeatsMeasure == null
+                && pendingChange.beatFigure == null && pendingChange.nColsQuarter == null
+                && pendingChange.nColsBeat == null
+                && pendingChange.trackVelocities.isEmpty()
+                && !pendingChange.trackInstruments.isEmpty();
+        if (!isVolumeOnly && !isInstrumentOnly) {
             col = allPurposeScore.getFirstColOfCurrentMeasure(col);
+        }
+        // La primera marca d'instrument d'una pista fixa el seu instrument de base (el que té
+        // ara el canal): és el que es desa i al qual es torna abans de la primera marca.
+        for (Integer trId : pendingChange.trackInstruments.keySet()) {
+            MyTrack bt = this.getMixer().getTrackFromId(trId);
+            if (bt != null && bt.getBaseProgram() == null && bt.getCurrentChannel() != 9) {
+                bt.setBaseProgram(SoundWithMidi.getInstrumentInChannel(bt.getCurrentChannel()));
+            }
         }
         // Valors vigents immediatament abans d'aquesta columna. Es calcula ABANS
         // de transposar: transpose() desplaça els midiKey de tot el changeMap i
@@ -5186,6 +5243,25 @@ public class MyController {
                 }
                 break;
             }
+            case INSTRUMENT: {
+                int trackId = this.getMixer().getCurrentTrackId();
+                int chan = this.mixer.getCurrentChannelOfCurrentTrack();
+                String opcio = MyDialogs.showDialog(this.getUi(),
+                        I18n.f("MyController.instr.change.prompt", chan),
+                        I18n.t("MyController.instr.change.title"),
+                        SoundWithMidi.getInstrumentsStringList());
+                if (opcio == null || opcio.trim().isEmpty()) return;
+                try {
+                    newEntry.trackInstruments.put(trackId, Integer.parseInt(opcio.trim().split(" ")[0]));
+                    MyTrack bt = this.getMixer().getTrackFromId(trackId);
+                    if (bt != null && bt.getBaseProgram() == null && chan != 9) {
+                        bt.setBaseProgram(SoundWithMidi.getInstrumentInChannel(bt.getCurrentChannel()));
+                    }
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                break;
+            }
         }
         afegirEvent(new ScoreChangeEvent(this, col, oldEntry, newEntry));
         applyScoreChangeAt(col, newEntry);
@@ -5237,6 +5313,9 @@ public class MyController {
                 break;
             case VOLUME:
                 newEntry.trackVelocities.remove(this.getMixer().getCurrentTrackId());
+                break;
+            case INSTRUMENT:
+                newEntry.trackInstruments.remove(this.getMixer().getCurrentTrackId());
                 break;
         }
         selectedMarkCol  = -1;
@@ -5352,6 +5431,21 @@ public class MyController {
                 if (e.getKey() == getMixer().getCurrentTrackId()) {
                     this.buttons.updateVolumeButton(volumeButtonText(e.getValue()));
                 }
+            }
+        }
+        // Instruments: cada pista amb marques d'instrument sona amb el de la marca vigent, i
+        // amb el de base abans de la primera. Només es toca el sintetitzador si canvia.
+        for (MyTrack t : getMixer().getTracks()) {
+            Integer base = t.getBaseProgram();
+            if (base == null || t.isDeleted() || t.getCurrentChannel() == 9) continue;
+            Integer target = sc.trackInstruments.get(t.getId());
+            int prog = (target != null) ? target : base;
+            int chan = t.getCurrentChannel();
+            if (SoundWithMidi.getInstrumentInChannel(chan) != prog) {
+                SoundWithMidi.assignInstToChannel(chan, prog);
+                SoundWithMidi.runProgramChange(chan, prog);
+                t.setDisplayOffset(InstrumentRange.calcDisplayOffset(
+                        prog, ToneRange.getLowestMidi(), ToneRange.getHighestMidi()));
             }
         }
     }

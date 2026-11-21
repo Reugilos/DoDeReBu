@@ -483,4 +483,22 @@ public class MyTrack {
         this.displayOffset = displayOffset;
     }
 
+    /**
+     * [CA] Instrument (programa GM) de la pista abans de qualsevol marca d'instrument del
+     * {@code changeMap}; {@code null} si la pista no en té cap. És el que es desa com a
+     * {@code PROGRAM_CHANGE} inicial i al qual es torna en navegar abans de la primera marca.
+     * <p>
+     * [EN] The track's instrument (GM program) before any instrument mark in the
+     * {@code changeMap}; {@code null} if the track has none.
+     */
+    private Integer baseProgram = null;
+
+    public Integer getBaseProgram() {
+        return baseProgram;
+    }
+
+    public void setBaseProgram(Integer baseProgram) {
+        this.baseProgram = baseProgram;
+    }
+
 }

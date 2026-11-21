@@ -277,6 +277,25 @@ public final class DrawKit {
     private static final int ESTIL_INTERFICIE = T.estil("font.interficie.estil");
     /** [CA] La lletra d'una tecla és una fracció de la seva alçada. */
     private static final double FONT_DE_TECLA_PER_ALCADA = T.decimal("tecla.font.proporcio");
+    private static final double FONT_INTERFICIE_PROPORCIO = T.decimal("font.interficie.proporcio");
+    private static final double FONT_ACORDS_PROPORCIO = T.decimal("font.acords.proporcio");
+
+    /** [CA] Mida de la lletra de la interfície (botons, estat, títols) per a una fila d'alçada {@code rowH}. */
+    public static int midaDeLletraDeInterficie(double rowH) {
+        return Math.max(8, (int) (rowH * FONT_INTERFICIE_PROPORCIO));
+    }
+
+    private static final double FONT_MARQUES_PROPORCIO = T.decimal("font.marques.proporcio");
+
+    /** [CA] Proporció de l'alçada d'una fila que fa la lletra de les marques de la franja superior. */
+    public static double proporcioDeLletraDeMarques() {
+        return FONT_MARQUES_PROPORCIO;
+    }
+
+    /** [CA] Proporció de l'alçada d'una fila que fa la lletra dels acords. */
+    public static double proporcioDeLletraDAcords() {
+        return FONT_ACORDS_PROPORCIO;
+    }
     private static final int FONT_DE_TECLA_MINIMA = T.enter("tecla.font.minima");
 
     /**

@@ -316,6 +316,7 @@ public class MyHelpDialog {
             { I18n.t("help.markers.key.key"),     I18n.t("help.markers.key.desc") },
             { I18n.t("help.markers.tempo.key"),   I18n.t("help.markers.tempo.desc") },
             { I18n.t("help.markers.volume.key"),  I18n.t("help.markers.volume.desc") },
+            { I18n.t("help.markers.instrument.key"), I18n.t("help.markers.instrument.desc") },
             { I18n.t("help.markers.transpose.key"), I18n.t("help.markers.transpose.desc") },
             { I18n.t("help.markers.place.key"),   I18n.t("help.markers.place.desc") },
             { I18n.t("help.markers.select.key"),  I18n.t("help.markers.select.desc") },
