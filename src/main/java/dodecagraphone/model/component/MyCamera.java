@@ -443,6 +443,29 @@ public class MyCamera extends MyComponent {
         }
 
         /**
+         * [CA] Torna a copiar a la pantalla un rectangle {@code (rx, ry, rw, rh)} (coordenades
+         * de pantalla) de l'offscreen, que a l'alçada {@code y} hi té la fila 0. Serveix per
+         * tornar a pintar una nota per damunt d'una barra de temps o de compàs.
+         * <p>
+         * [EN] Copies a screen-space rectangle of the offscreen to the screen again; used to
+         * repaint a note over a beat or measure line.
+         */
+        public void blitPart(Graphics2D g, BufferedImage img, int y, int h,
+                int rx, int ry, int rw, int rh) {
+            if (img == null || rw <= 0 || rh <= 0) return;
+            if (scale == 1.0) {
+                int sx1 = rx - camX + shiftPx;
+                int sy1 = ry - y;
+                if (sx1 < 0 || sy1 < 0 || sx1 + rw > img.getWidth() || sy1 + rh > img.getHeight()) return;
+                DrawKit.copiaImatge(g, img, rx, ry, rx + rw, ry + rh, sx1, sy1, sx1 + rw, sy1 + rh);
+            } else {
+                Shape oldClip = DrawKit.retalla(g, rx, ry, rw, rh);
+                blit(g, img, y, h);
+                DrawKit.restauraRetall(g, oldClip);
+            }
+        }
+
+        /**
          * [CA] Dibuixa les barres de temps (discontínues) i de compàs (gruixudes)
          * d'una franja, a l'alçada {@code y1}..{@code y2}, només les visibles.
          * <p>

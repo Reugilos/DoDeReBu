@@ -4326,6 +4326,12 @@ public class MyController {
     }
 
     public void onNewButtonPressed(MyButton togg) {
+        if (ToneRange.isModeOverridden()) {
+            // Mode temporal (piano): Nova torna a la configuració del config.properties.
+            dodecagraphone.ui.MyMain.reiniciaInterficie(ToneRange.getConfiguredMetallophone(),
+                    c -> c.newScore());
+            return;
+        }
         this.newScore();
     }
 
@@ -5511,7 +5517,29 @@ public class MyController {
         myLyrics.resizeOffscreen(newNCols);
     }
 
+    /**
+     * [CA] Obre un fitxer. Si la interfície està en un mode temporal (piano obert perquè hi havia
+     * notes fora del rang del glock), abans la torna al mode del {@code config.properties}.
+     * <p>
+     * [EN] Opens a file. If the interface is in a temporary mode (piano, opened because there were
+     * notes outside the glockenspiel range), it first returns to the {@code config.properties} mode.
+     */
     public void loadScore(String fitxer) {
+        loadScore(fitxer, false);
+    }
+
+    /**
+     * [CA] Obre un fitxer conservant el mode actual (el crida {@code MyMain.reiniciaInterficie}
+     * després de passar al mode piano).
+     * <p>
+     * [EN] Opens a file keeping the current mode (called by {@code MyMain.reiniciaInterficie}
+     * after switching to piano mode).
+     */
+    public void loadScoreKeepingMode(String fitxer) {
+        loadScore(fitxer, true);
+    }
+
+    private void loadScore(String fitxer, boolean keepMode) {
 //        this.newScore();
 //        if ("".equals(fitxer)) fitxer = JOptionPane.showInputDialog("Fitxer?", "prova.mid");
         if ("".equals(fitxer)) {
@@ -5529,6 +5557,14 @@ public class MyController {
         }
         String extensio = obtenirExtensio(fitxer);
         this.currentMidiFile = fitxer;
+        if ((extensio.equals("mid")||extensio.equals("midi"))
+                && !keepMode && ToneRange.isModeOverridden()) {
+            // Mode temporal (piano): el següent Obre torna a la configuració del config.
+            final String f = fitxer;
+            dodecagraphone.ui.MyMain.reiniciaInterficie(ToneRange.getConfiguredMetallophone(),
+                    c -> c.loadScore(f));
+            return;
+        }
         if (extensio.equals("mid")||extensio.equals("midi")) {
             this.stop();
             this.buttons.stopPlayButton();
@@ -5549,11 +5585,24 @@ public class MyController {
             allPurposeScore.readMidiScore(fitxer);
             int outOfRange = allPurposeScore.getOutOfRangeCount();
             if (outOfRange > 0) {
-                String msg = I18n.f("load.outOfRange.warning", outOfRange)
-                        + (ToneRange.isMetallophone() ? "\n" + I18n.t("load.outOfRange.metallofonHint") : "");
-                JOptionPane.showMessageDialog(null, msg,
-                        I18n.t("load.outOfRange.title"),
-                        JOptionPane.WARNING_MESSAGE);
+                if (ToneRange.isMetallophone()) {
+                    // Notes fora del rang del glock: es pot obrir amb la configuració de piano,
+                    // només per a aquesta partitura (el config.properties no es toca).
+                    int r = JOptionPane.showConfirmDialog(null,
+                            I18n.f("load.outOfRange.pianoQuestion", outOfRange),
+                            I18n.t("load.outOfRange.title"),
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.WARNING_MESSAGE);
+                    if (r == JOptionPane.YES_OPTION) {
+                        final String f = fitxer;
+                        dodecagraphone.ui.MyMain.reiniciaInterficie(false, c -> c.loadScoreKeepingMode(f));
+                        return;
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, I18n.f("load.outOfRange.warning", outOfRange),
+                            I18n.t("load.outOfRange.title"),
+                            JOptionPane.WARNING_MESSAGE);
+                }
             }
             resetDrumsMode();
             resetTremolo();
@@ -5729,8 +5778,11 @@ public class MyController {
         AppConfig.get().set("autoCorrect", "" + Settings.isAutoCorrect());
         AppConfig.get().set("nColsQuarter", "" + Settings.getnColsQuarter());
         AppConfig.get().set("nColsScore", "" + Settings.getnColsScore());
-        AppConfig.get().set("isMetallophone", "" + ToneRange.isMetallophone());
-        if (ToneRange.isMetallophone()) {
+        // El mode que es desa és el del config, no l'actual: si s'ha obert una partitura
+        // amb la configuració de piano només per a ella (mode temporal), no es desa.
+        boolean configMetal = ToneRange.getConfiguredMetallophone();
+        AppConfig.get().set("isMetallophone", "" + configMetal);
+        if (configMetal) {
             AppConfig.get().set("lowestMidi", "" + ToneRange.DEFAULT_LOWEST_MIDI);
             AppConfig.get().set("highestMidi", "" + ToneRange.DEFAULT_HIGHEST_MIDI);
         } else {

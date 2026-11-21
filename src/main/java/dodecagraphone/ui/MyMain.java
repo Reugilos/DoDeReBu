@@ -94,6 +94,7 @@ public class MyMain {
             }
 
             MyUserInterface iu = new MyUserInterface();
+            iuActual = iu;
             iu.setVisible(true);
             System.out.println(I18n.f("main.welcome", iu.getVersion(), AppConfig.get().getConfigPathForDebug()));
 
@@ -106,7 +107,8 @@ public class MyMain {
                 try { AppConfig.get().save(); } catch (IOException ignored) {}
             }
 
-            new javax.swing.Timer(Settings.REFRESH_PERIOD, e -> iu.update()).start();
+            timerActual = new javax.swing.Timer(Settings.REFRESH_PERIOD, e -> iu.update());
+            timerActual.start();
 
             // Fitxer passat pel sistema («Obre amb»): s'obre un cop la finestra
             // és a punt, després del diàleg de benvinguda si n'hi ha.
@@ -114,6 +116,42 @@ public class MyMain {
                 iu.getController().loadScore(fitxerInicial);
             }
         });
+    }
+
+    private static MyUserInterface iuActual;
+    private static javax.swing.Timer timerActual;
+
+    /**
+     * [CA] Refà tota la interfície amb un mode de graella (metal·lòfon o piano) <b>sense tocar el
+     * config.properties</b>: la graella i el teclat es dimensionen en construir-la, o sigui que
+     * l'única manera de canviar de rang és tornar-la a crear. Tanca la finestra actual, aplica el
+     * mode, en crea una de nova i li passa el controlador nou a {@code despres} (p. ex. per obrir un
+     * fitxer). S'ha de cridar al fil de Swing.
+     * <p>
+     * [EN] Rebuilds the whole interface with a grid mode (metallophone or piano) <b>without
+     * touching config.properties</b>: the grid and keyboard are sized when built, so recreating
+     * them is the only way to change the range. Closes the current window, applies the mode,
+     * creates a new one and hands the new controller to {@code despres} (e.g. to open a file).
+     * Must be called on the Swing thread.
+     *
+     * @param metallophone [CA] mode de graella desitjat / [EN] desired grid mode
+     * @param despres      [CA] què fer amb el controlador nou (pot ser {@code null}) /
+     *                     [EN] what to do with the new controller (may be {@code null})
+     */
+    public static void reiniciaInterficie(boolean metallophone,
+                                          java.util.function.Consumer<dodecagraphone.MyController> despres) {
+        MyUserInterface vella = iuActual;
+        if (timerActual != null) timerActual.stop();
+        if (vella != null) {
+            vella.getController().stop();
+            vella.dispose();
+        }
+        dodecagraphone.model.ToneRange.applyMode(metallophone);
+        MyUserInterface iu = new MyUserInterface();
+        iuActual = iu;
+        timerActual = new javax.swing.Timer(Settings.REFRESH_PERIOD, e -> iu.update());
+        timerActual.start();
+        if (despres != null) despres.accept(iu.getController());
     }
 
     /**

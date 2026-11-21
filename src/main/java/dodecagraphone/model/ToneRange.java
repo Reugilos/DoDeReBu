@@ -64,6 +64,10 @@ public class ToneRange {
     private static int highestMidi;// = 79;
     private static int octavesUp; // = 0; = 2;
     private static boolean isMetallophone;
+    /** Valors del config.properties en arrencar: el mode temporal no els toca mai. */
+    private static boolean configMetallophone;
+    private static int configLowestMidi;
+    private static int configHighestMidi;
 //    private static int lowestMidi = MIDDLE_C - 24; = 36
 //    private static int highestMidi = MIDDLE_C + 24; = 84
     private static int lowestPau = 40;
@@ -98,6 +102,9 @@ public class ToneRange {
         highestMidi = Integer.parseInt(AppConfig.get().get("highestMidi", ""+DEFAULT_HIGHEST_MIDI));
         octavesUp  = DEFAULT_OCTAVES_UP;
         isMetallophone = Boolean.parseBoolean(AppConfig.get().get("isMetallophone", "" + DEFAULT_IS_METALLOPHONE));
+        configMetallophone = isMetallophone;
+        configLowestMidi   = lowestMidi;
+        configHighestMidi  = highestMidi;
         if (isMetallophone()){
             lowestMidi = 55;
             highestMidi = 79;
@@ -158,6 +165,49 @@ public class ToneRange {
      */
     public static void setMetallophone(boolean v) {
         ToneRange.isMetallophone = v;
+    }
+
+    /**
+     * [CA] Valor de {@code isMetallophone} al {@code config.properties}, que és el que es desa
+     * i el que es recupera a la propera partitura quan el mode és temporal.
+     * <p>
+     * [EN] The {@code isMetallophone} value in {@code config.properties}: what gets saved and
+     * what is restored on the next score when the mode is temporary.
+     */
+    public static boolean getConfiguredMetallophone() {
+        return configMetallophone;
+    }
+
+    /**
+     * [CA] Indica si el mode actual és un canvi temporal respecte al del config (p. ex. una
+     * partitura oberta amb la configuració de piano en tenir el config metal·lòfon).
+     * <p>
+     * [EN] Whether the current mode is a temporary change from the config's one (e.g. a score
+     * opened with the piano setup while the config says metallophone).
+     */
+    public static boolean isModeOverridden() {
+        return isMetallophone != configMetallophone;
+    }
+
+    /**
+     * [CA] Posa el mode (i el rang de la graella) sense tocar el config: metal·lòfon = so3–so5;
+     * piano = el {@code lowestMidi}/{@code highestMidi} del config. La graella i el teclat
+     * es dimensionen en construir la interfície, o sigui que cal refer-la després
+     * ({@code MyMain.reiniciaInterficie}).
+     * <p>
+     * [EN] Sets the mode (and the grid range) without touching the config: metallophone =
+     * G3–G5; piano = the config's {@code lowestMidi}/{@code highestMidi}. The grid and keyboard
+     * are sized when the interface is built, so it must be rebuilt afterwards.
+     */
+    public static void applyMode(boolean metallophone) {
+        isMetallophone = metallophone;
+        if (metallophone) {
+            lowestMidi = 55;
+            highestMidi = 79;
+        } else {
+            lowestMidi = configLowestMidi;
+            highestMidi = configHighestMidi;
+        }
     }
 
     /**

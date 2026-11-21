@@ -79,6 +79,7 @@ public class SoundWithMidi {
     // Array per a dades dels canals MIDI
     private static final ChannelData[] channelDataArray = new ChannelData[16];
     private static Receiver receiver;
+    private static Synthesizer sharedSynth;
     private static int[] ntimesChannelIsUsed = new int[16];
     private static int currentVelocity;
     private static int leadInstrument;
@@ -298,6 +299,9 @@ public class SoundWithMidi {
         }
         if (ToneRange.isMetallophone()){
             leadInstrument = Integer.parseInt(AppConfig.get().get("leadInstrument", "" + GLOCKENSPIEL));
+        } else if (ToneRange.isModeOverridden()) {
+            // Mode piano temporal (el config diu metal·lòfon): piano, sense llegir el config.
+            leadInstrument = 0;
         } else {
             // Sense metal·lòfon, l'instrument per defecte és el piano (0), com a
             // resetChannels(); DEFAULT_LEAD_INSTRUMENT és el glockenspiel i només
@@ -308,9 +312,21 @@ public class SoundWithMidi {
 
         contr = controller;
         try {
-            Synthesizer midiSynth = MidiSystem.getSynthesizer();
-            midiSynth.open();
-            receiver = midiSynth.getReceiver();
+            // El sintetitzador es crea UNA sola vegada per procés: MidiSystem.getSynthesizer()
+            // en dóna un de nou a cada crida, i en refer la interfície (mode piano temporal)
+            // en quedaven dos d'oberts, amb el nou arrencant en fred i el vell consumint CPU:
+            // el so sortia amb retard. Si ja n'hi ha un d'obert, es reutilitza i s'aturen
+            // les notes que poguessin sonar.
+            if (sharedSynth == null || !sharedSynth.isOpen()) {
+                sharedSynth = MidiSystem.getSynthesizer();
+                sharedSynth.open();
+                receiver = sharedSynth.getReceiver();
+            } else {
+                for (MidiChannel mc : sharedSynth.getChannels()) {
+                    if (mc != null) { mc.allNotesOff(); mc.allSoundOff(); }
+                }
+            }
+            Synthesizer midiSynth = sharedSynth;
 
             MidiChannel[] midiChannels = midiSynth.getChannels();
 

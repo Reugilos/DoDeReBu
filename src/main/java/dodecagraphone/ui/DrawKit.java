@@ -131,6 +131,9 @@ public final class DrawKit {
     /** [CA] Activa o desactiva el mode PDF de la graella. / [EN] Toggles PDF grid mode. */
     public static void setModePdf(boolean on) { modePdf = on; }
 
+    /** [CA] Si la graella es dibuixa ara per al PDF. / [EN] Whether the grid is being drawn for the PDF. */
+    public static boolean isModePdf() { return modePdf; }
+
     /** [CA] El PDF dibuixa els separadors de fila com a vectors? / [EN] Vector row separators? */
     public static boolean separadorsPdfVectorials() { return PDF_SEPARADOR_GRUIX > 0f; }
 

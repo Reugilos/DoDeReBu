@@ -631,9 +631,11 @@ public class MyDialogs {
      * [EN] Initialises the last directories from the saved configuration.
      */
     public static void initDialogs() {
-        lastDirectory = getLastDirectoryFromConfig();
-        lastDirectorySvg = getLastDirectorySvgFromConfig();
-        lastDirectoryPdf = getLastDirectoryPdfFromConfig();
+        // Només es llegeixen del config la primera vegada: en refer la interfície (mode
+        // piano temporal) es tornaria a cridar i trepitjaria les carpetes d'aquesta sessió.
+        if (lastDirectory == null)    lastDirectory    = getLastDirectoryFromConfig();
+        if (lastDirectorySvg == null) lastDirectorySvg = getLastDirectorySvgFromConfig();
+        if (lastDirectoryPdf == null) lastDirectoryPdf = getLastDirectoryPdfFromConfig();
     }
 
     private static File getLastDirectoryFromConfig() {

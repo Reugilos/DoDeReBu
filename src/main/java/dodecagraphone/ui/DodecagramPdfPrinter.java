@@ -592,6 +592,16 @@ public class DodecagramPdfPrinter {
                         else
                             pdf.drawBeatLine(lineX, yImgBottom, vLineH);
                     }
+                    // Barres al fons (prova): les notes que travessen una barra, repintades per damunt.
+                    if (MyGridScore.LINIES_AL_FONS) {
+                        BufferedImage ov = notesOverLinesOverlay(rowImg, score, startCol, limitCol,
+                                isBeat, isMeasure, keyWidthPx, chordH, colWidthF, rowScaleX);
+                        if (ov != null) {
+                            PDImageXObject ovImg = PDImageXObject.createFromByteArray(
+                                    doc, toBytes(ov), "ov" + i);
+                            cs.drawImage(ovImg, MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
+                        }
+                    }
                 }
 
                 // Double bar at stopCol (un dodecagrama en blanc no té final)
@@ -610,6 +620,51 @@ public class DodecagramPdfPrinter {
             if (outputFile.exists()) outputFile.delete();
             doc.save(outputFile);
         }
+    }
+
+    /**
+     * [CA] Les barres de temps i de compàs del PDF són vectors dibuixats damunt de la imatge; per
+     * posar-les al fons, aquesta imatge transparent (de la mida de la fila) hi duu només els píxels
+     * de les notes que les travessen o hi comencen, copiats de la fila, i es dibuixa després de
+     * les barres. {@code null} si no n'hi ha cap.
+     * <p>
+     * [EN] The PDF beat/measure lines are vectors over the image; to put them behind the notes,
+     * this transparent image (row-sized) carries only the pixels of the notes crossing or starting
+     * at them, copied from the row, and is drawn after the lines. {@code null} if none.
+     */
+    private BufferedImage notesOverLinesOverlay(BufferedImage rowImg, MyAllPurposeScore score,
+            int startCol, int limitCol, boolean[] isBeat, boolean[] isMeasure,
+            int keyWidthPx, int chordH, double colWidthF, float rowScaleX) {
+        int cellH = score.cellHeightPx();
+        int nKeys = score.getnKeys();
+        // Barra de compàs de 1,5 pt: en píxels de la imatge, més un marge.
+        int k = (int) Math.ceil(2f / Math.max(0.05f, rowScaleX)) + 1;
+        BufferedImage ov = null;
+        for (int col = startCol; col <= limitCol && col < isBeat.length; col++) {
+            if (!isBeat[col] && !isMeasure[col]) continue;
+            int xi = (int) Math.round(keyWidthPx + (col - startCol) * colWidthF);
+            for (int row = 0; row < nKeys; row++) {
+                int st = score.noteStateAt(row, col);
+                if (st == 0) continue;
+                int rx = (st == 2) ? xi - k : xi;
+                int rw = (st == 2) ? 2 * k + 1 : k + 1;
+                int ry = chordH + score.rowTopPx(row);
+                rx = Math.max(0, rx);
+                rw = Math.min(rw, rowImg.getWidth() - rx);
+                int rh = Math.min(cellH, rowImg.getHeight() - ry);
+                if (rw <= 0 || rh <= 0 || ry < 0) continue;
+                if (ov == null) {
+                    ov = new BufferedImage(rowImg.getWidth(), rowImg.getHeight(),
+                            BufferedImage.TYPE_INT_ARGB);
+                }
+                for (int y = ry; y < ry + rh; y++) {
+                    for (int x = rx; x < rx + rw; x++) {
+                        ov.setRGB(x, y, rowImg.getRGB(x, y) | 0xFF000000);
+                    }
+                }
+            }
+        }
+        return ov;
     }
 
     /**

@@ -1646,6 +1646,22 @@ public class MyGridScore extends MyComponent {
         // o plantilla), no el que tenia la cel·la quan es va crear: les que es
         // creen després d'un canvi de vista no passen per updateStripsNKeyboard i
         // es quedaven amb el fons de l'altra vista.
+        // Separació entre notes consecutives (substitueix la ratlla vertical de davant del
+        // nom): si la cel·la següent d'aquesta fila és l'inici d'una altra nota, aquesta
+        // es dibuixa un píxel més curta i hi queda el fons, de manera que es veu on acaba.
+        boolean gapAfter = false;
+        if (sq != null && sq.isSqVisible()) {
+            int nc = col + Settings.getnColsSquare();
+            MyGridSquare nx = (nc < this.grid[row + BUFFER].length) ? this.grid[row + BUFFER][nc] : null;
+            if (nx != null) {
+                nx.updateState();
+                gapAfter = nx.isSqVisible() && !nx.isSq_is_linked();
+            }
+        }
+        // Al PDF la imatge es redueix en incrustar-la: amb un sol píxel la separació quedaria
+        // difuminada, o sigui que n'hi ha dos.
+        int gapPx = DrawKit.isModePdf() ? 2 : 1;
+        int wNota = gapAfter ? Math.max(1, wdth - gapPx) : wdth;
         if (sq != null && sq.isSqVisible()) {
             color = sq.getColor();
         } else {
@@ -1659,7 +1675,14 @@ public class MyGridScore extends MyComponent {
 //        g.setColor(color.GREEN);
 //        g.fillRect((int) screenX, (int) screenY, (int) wdth, (int) hght);
 //        if (true) return;
-        DrawKit.casella(g, screenX, screenY, wdth, hght, color);
+        if (gapAfter) {
+            // Fons de la vista a tota la cel·la; la nota hi va a sobre, un píxel més curta.
+            Color fons = this.usePentagramaStrips
+                    ? DrawKit.aparencaDePauta(midi)
+                    : DrawKit.aparencaDelPatro(midi, choice.getChoiceListAt(col));
+            DrawKit.casella(g, screenX, screenY, wdth, hght, fons);
+        }
+        DrawKit.casella(g, screenX, screenY, wNota, hght, color);
 
         if (sq != null) {
             sq.updateState();
@@ -1695,15 +1718,13 @@ public class MyGridScore extends MyComponent {
                         name = null;
                     }
 
-                    DrawKit.casella(g, screenX, screenY, wdth, hght, sq.getColor());
+                    DrawKit.casella(g, screenX, screenY, wNota, hght, sq.getColor());
 
                     if (name != null) {
                         DrawKit.nomDeNota(g, name, screenX, screenY, wdth, hght, midi);
                     }
-                    // Vora esquerra: separa notes contigües. Mateix color que el
-                    // nom de la nota, perquè la barra i el nom es llegeixin com
-                    // una sola marca. Gruix de 2 px perquè sigui prou visible.
-                    DrawKit.voraDeNota(g, screenX, screenY, hght, midi);
+                    // Ja no es dibuixa la ratlla vertical de davant (DrawKit.voraDeNota, que es
+                    // conserva): les notes consecutives se separen amb el píxel de menys de dalt.
 
                 }
                 if (sq.isSqDotted() && !sq.isSq_is_linked()) {
@@ -1767,12 +1788,81 @@ public class MyGridScore extends MyComponent {
             boolean[] isMeasure = new boolean[numCols + 1];
             computeBeatMeasureLines(numCols + 1, isBeat, isMeasure);
             view.drawBeatAndMeasureLines(g, isBeat, isMeasure, y1 + 1, y1 + h - 2, y1, h);
+            if (LINIES_AL_FONS) {
+                repintaNotesSobreLesBarres(g, view, isBeat, isMeasure, y1, h);
+            }
 
             // Doble barra al stopCol. Només es dibuixa si el marcador és vigent:
             // es recalcula en reproduir i en desar, i qualsevol edició el caduca.
             int stopC = this.controller.getAllPurposeScore().getStopCol();
             if (stopC > 0 && this.controller.getAllPurposeScore().isStopMarkerValid()) {
                 view.drawStopBar(g, stopC, y1, y1 + h, y1, h);
+            }
+        }
+    }
+
+    /**
+     * [CA] PROVA TEMPORAL (21-11-26): barres de temps i de compàs al fons. Posa-ho a
+     * {@code false} (o treu aquest mètode, la constant i la crida de {@link #draw}) per tornar
+     * a les barres per damunt de les notes.
+     * <p>
+     * [EN] TEMPORARY TRIAL: beat and measure lines behind the notes. Set to {@code false} (or
+     * remove this method, the constant and the call in {@link #draw}) to put them back on top.
+     */
+    public static final boolean LINIES_AL_FONS = true;
+
+    /**
+     * [CA] Estat de la cel·la {@code (row, col)} per a qui dibuixa barres per damunt de la
+     * graella (el PDF): 0 = sense nota visible, 1 = hi comença una nota, 2 = hi continua una nota.
+     * <p>
+     * [EN] State of cell {@code (row, col)} for whoever draws lines over the grid (the PDF):
+     * 0 = no visible note, 1 = a note starts, 2 = a note continues.
+     */
+    public int noteStateAt(int row, int col) {
+        if (row < 0 || row >= nKeys || col < 0 || col >= this.nCols) return 0;
+        MyGridSquare sq = this.grid[row + BUFFER][col];
+        if (sq == null || !sq.isSqVisible()) return 0;
+        return sq.isSq_is_linked() ? 2 : 1;
+    }
+
+    /** [CA] Y (en píxels de l'offscreen) del cim de la fila {@code row}. / [EN] Offscreen Y of a row's top. */
+    public int rowTopPx(int row) {
+        return (int) Math.round(this.getOffScreenScreenY(row * Settings.getnRowsSquare()));
+    }
+
+    /** [CA] Alçada d'una cel·la en píxels de l'offscreen. / [EN] Cell height in offscreen pixels. */
+    public int cellHeightPx() {
+        return (int) Math.ceil(Settings.getSquareHeight());
+    }
+
+    /**
+     * [CA] Les barres es dibuixen a la pantalla, damunt de la còpia de l'offscreen; aquí es
+     * torna a copiar de l'offscreen, només allà on hi ha nota, la porció que la barra havia
+     * tapat: una nota que travessa una barra (cel·la enllaçada) o que hi comença la tapa.
+     * <p>
+     * [EN] The lines are drawn on screen over the offscreen copy; here the part of the
+     * offscreen where a note sits is copied again, covering the line.
+     */
+    private void repintaNotesSobreLesBarres(Graphics2D g, MyCamera.ViewWindow view,
+            boolean[] isBeat, boolean[] isMeasure, int y1, int h) {
+        BufferedImage img = this.getOffscreenImage();
+        if (img == null) return;
+        double colW = Settings.getColWidth();
+        int from = Math.max(0, (int) Math.floor(view.startCol) - 1);
+        int to = Math.min(isBeat.length - 1, (int) Math.ceil(view.startCol + view.spanCols) + 1);
+        int hght = (int) Math.ceil(Settings.getSquareHeight());
+        int nRowsSq = Settings.getnRowsSquare();
+        for (int col = from; col <= to && col < this.nCols; col++) {
+            if (!isBeat[col] && !isMeasure[col]) continue;
+            int sx = (int) Math.round(view.screenX((int) Math.floor(col * colW)));
+            for (int row = 0; row < nKeys; row++) {
+                MyGridSquare sq = this.grid[row + BUFFER][col];
+                if (sq == null || !sq.isSqVisible()) continue;
+                int sy = (int) Math.round(this.getOffScreenScreenY(row * nRowsSq));
+                // Nota que continua: cobreix els dos costats de la barra; si hi comença, només la dreta.
+                int rx = sq.isSq_is_linked() ? sx - 2 : sx;
+                int rw = sq.isSq_is_linked() ? 5 : 3;
+                view.blitPart(g, img, y1, h, rx, y1 + sy, rw, hght);
             }
         }
     }
