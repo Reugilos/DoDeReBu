@@ -421,6 +421,13 @@ public final class DrawKit {
     public static void ampliaFontsDeSwing() {
         if ((FONT_MENUS_ESCALA <= 0 || Math.abs(FONT_MENUS_ESCALA - 1.0) < 1e-9) && FONT_MENUS_MINIMA <= 0) return;
         javax.swing.UIDefaults defs = javax.swing.UIManager.getDefaults();
+        // Mida de referència: la de l'etiqueta («Label.font», la dels diàlegs com «Canvia l'instrument»),
+        // ampliada. Totes les fonts de la interfície es posen a aquesta mateixa mida: el sistema en
+        // dona de diferents (7, 12, 15…) i uns diàlegs es veien més grossos que altres.
+        Font etiqueta = defs.getFont("Label.font");
+        float base = (etiqueta != null) ? etiqueta.getSize2D() : 12f;
+        float ref = (float) Math.max(base * (FONT_MENUS_ESCALA > 0 ? FONT_MENUS_ESCALA : 1.0), FONT_MENUS_MINIMA);
+        if (etiqueta != null && FONTS_AMPLIADES.contains(etiqueta)) ref = etiqueta.getSize2D();
         java.util.List<Object> claus = java.util.Collections.list(defs.keys());
         for (Object k : claus) {
             if (!(k instanceof String) || !((String) k).toLowerCase().endsWith("font")) continue;
@@ -430,8 +437,7 @@ public final class DrawKit {
             if (!(v instanceof Font)) continue;
             Font f = (Font) v;
             if (FONTS_AMPLIADES.contains(f)) continue;
-            Font nova = new javax.swing.plaf.FontUIResource(
-                    f.deriveFont((float) Math.max(f.getSize2D() * (FONT_MENUS_ESCALA > 0 ? FONT_MENUS_ESCALA : 1.0), FONT_MENUS_MINIMA)));
+            Font nova = new javax.swing.plaf.FontUIResource(f.deriveFont(ref));
             FONTS_AMPLIADES.add(nova);
             javax.swing.UIManager.put(k, nova);
         }

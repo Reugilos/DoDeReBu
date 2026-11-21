@@ -1895,6 +1895,15 @@ public class MyController {
         }
         expandBufferIfNeeded(pasteLastCol);
         List<ClipNote> placed = new ArrayList<>();
+        // Cel·les del porta-retalls (fila, columna, pista): una cel·la «enllaçada» només és una continuació
+        // si la del davant també és al fragment. Si el fragment comença a mig d'una nota (la primera cel·la
+        // copiada és la cua d'una nota que queda fora), enganxada just darrere d'una altra nota
+        // s'hi enganxava formant una sola nota: ha de ser una nota nova (el cap).
+        java.util.Set<String> clipCells = new java.util.HashSet<>();
+        for (ClipNote n : clipboard) {
+            int tr0 = clipboardMultiTrack ? n.trackId : pasteTr;
+            clipCells.add(n.rowOffset + "," + n.colOffset + "," + tr0);
+        }
         for (ClipNote n : clipboard) {
             int row = anchorRow + n.rowOffset;
             int col = anchorCol + n.colOffset;
@@ -1904,14 +1913,28 @@ public class MyController {
             MyTrack track = this.mixer.getTrackFromId(tr);
             if (track == null) continue;
             track.oneNoteMore();
+            boolean linkedOk = n.linked && clipCells.contains(n.rowOffset + "," + (n.colOffset - 1) + "," + tr);
             MyGridSquare sq = this.allPurposeScore.addNoteToSquare(
                     row, col, 1, Settings.getnRowsSquare(),
                     (MyComponent) allPurposeScore, this, allPurposeScore, this.getCam(),
-                    ch, tr, n.velocity, n.visible, n.muted, n.linked, n.dotted);
+                    ch, tr, n.velocity, n.visible, n.muted, linkedOk, n.dotted);
+            // I al revés: si la cel·la següent (fora del fragment) és una continuació «òrfena», passa a ser
+            // el cap d'una nota, o s'enganxaria a la cua del que s'acaba d'enganxar.
+            if (!clipCells.contains(n.rowOffset + "," + (n.colOffset + 1) + "," + tr) && col + 1 < nCols) {
+                MyGridSquare nxt = this.allPurposeScore.getGridSquare(row, col + 1);
+                if (nxt != null && nxt.isSq_is_linked()) {
+                    final int fTr = tr;
+                    boolean hasTrackNote = nxt.getPoliNotes().stream()
+                            .anyMatch(x -> x.getTrack() == fTr && x.isVisible());
+                    if (hasTrackNote) nxt.unlinkNote(ch, tr, n.velocity, n.visible, n.muted, true, n.dotted);
+                }
+            }
             sq.updateState();
             if (col + 1 > this.allPurposeScore.getLastColWritten())
                 this.allPurposeScore.setLastColWritten(col + 1);
-            placed.add(n);
+            // Es guarda la còpia amb l'enllaç ja corregit: el refer (redo) del PasteEvent la fa servir.
+            placed.add(linkedOk == n.linked ? n : new ClipNote(n.rowOffset, n.colOffset, n.velocity,
+                    n.visible, n.muted, linkedOk, n.dotted, n.trackId, n.channel));
         }
         // Redibuixa tot l'interval enganxat, no només la càmera: el fragment pot
         // abastar pàgines que ara mateix no es veuen.
@@ -2451,12 +2474,16 @@ public class MyController {
                     this.turningOn = false;
                     extendStartRow = row;
                     extendStartCol = col;
+                    // Un clic sobre una nota visible també la fa sonar (es para en deixar anar el botó).
+                    applyInstrumentsAt(allPurposeScore.getEffectiveChange(col));   // l'instrument d'aquesta columna
+                    this.keyboard.play(row);
                 } else {
                     dragMode = DragMode.ADD;
                     this.turningOn = true;
                     addNoteAtCell(row, col);
                     firstNote = this.allPurposeScore.getGridSquare(row, col);
                     lastNote = firstNote;
+                    applyInstrumentsAt(allPurposeScore.getEffectiveChange(col));   // l'instrument d'aquesta columna
                     this.keyboard.play(row);
                 }
             }
@@ -3124,6 +3151,8 @@ public class MyController {
 //                System.out.println(allPurposeScore.getDelay(!allPurposeScore.isUseScreenKeyboardRight()));
                 int col = allPurposeScore.getScoreCol(camPBar)+allPurposeScore.getDelay(!allPurposeScore.isUseScreenKeyboardRight());
 
+                // L'instrument de la marca vigent a aquesta columna, ABANS de fer-la sonar.
+                applyInstrumentsAt(allPurposeScore.getEffectiveChange(Math.max(0, col)));
                 boolean played = allPurposeScore.playScoreCol(col);
                 if (!played) {
                     stop();
@@ -5468,6 +5497,21 @@ public class MyController {
                 }
             }
         }
+        // Durant la reproducció els instruments els porta el bucle de play (amb un pas d'avançada): si
+        // s'hi apliquessin també aquí, els canvis de programa es repetirien i es trepitjarien.
+        if (!cam.isPlaying()) applyInstrumentsAt(sc);
+    }
+
+    /**
+     * [CA] Posa a cada pista amb marques d'instrument el de la marca vigent a la columna (el de
+     * base abans de la primera). Només toca el sintetitzador si el programa canvia. La reproducció
+     * ho crida <b>abans</b> de fer sonar cada columna: si no, la nota de la columna de la marca
+     * sonava encara amb l'instrument anterior.
+     * <p>
+     * [EN] Sets each track with instrument marks to the one in force at the column. Playback calls
+     * it before sounding each column.
+     */
+    private void applyInstrumentsAt(MyGridScore.ScoreChange sc) {
         // Instruments: cada pista amb marques d'instrument sona amb el de la marca vigent, i
         // amb el de base abans de la primera. Només es toca el sintetitzador si canvia.
         for (MyTrack t : getMixer().getTracks()) {
@@ -5479,9 +5523,11 @@ public class MyController {
             if (SoundWithMidi.getInstrumentInChannel(chan) != prog) {
                 SoundWithMidi.assignInstToChannel(chan, prog);
                 SoundWithMidi.runProgramChange(chan, prog);
-                t.setDisplayOffset(InstrumentRange.calcDisplayOffset(
-                        prog, ToneRange.getLowestMidi(), ToneRange.getHighestMidi()));
             }
+            // L'offset (el so de les notes) segueix SEMPRE el programa vigent, també quan el canal ja
+            // el tenia (en carregar, el del primer PROGRAM_CHANGE pot no ser el de la marca).
+            int off = InstrumentRange.calcDisplayOffset(prog, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+            if (t.getDisplayOffset() != off) t.setDisplayOffset(off);
         }
     }
 

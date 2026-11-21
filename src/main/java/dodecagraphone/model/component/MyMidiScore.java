@@ -88,6 +88,8 @@ public class MyMidiScore extends MyExercise {
     // Mantindrem un mapa per seguir les notes actives (NOTE_ON) fins que es trobi el corresponent NOTE_OFF
     private Map<Long, NoteInfo> activeNotes = new HashMap<>();
     private int[] loadChannelDisplayOffset = new int[16];
+    /** Primer PROGRAM_CHANGE de cada pista del fitxer que s'està carregant (pista -> programa): l'instrument de base. */
+    private final Map<Integer, Integer> loadFirstProgram = new HashMap<>();
     private int outOfRangeCount = 0;
     //private MyMixer mixer;
 //    private Map<Integer, Boolean> activeChannels = new HashMap<>();
@@ -463,6 +465,7 @@ public class MyMidiScore extends MyExercise {
             return;
         }
         Arrays.fill(loadChannelDisplayOffset, 0);
+        loadFirstProgram.clear();
         boolean ok = this.analyzeMidiHeader(sequence);
         if (!ok) {
             this.controller.updateTextOfButtons();
@@ -531,6 +534,7 @@ public class MyMidiScore extends MyExercise {
                         int newOff = InstrumentRange.calcDisplayOffset(instr2, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
                         // Actualitza l'offset del canal ABANS del primer NOTE_ON
                         mixerTrack.setDisplayOffset(newOff);
+                        loadFirstProgram.put(trId, instr2);
                         if (chan2 >= 0 && chan2 < 16) loadChannelDisplayOffset[chan2] = newOff;
                         pcPropi = true;
                         break;
@@ -625,7 +629,10 @@ public class MyMidiScore extends MyExercise {
                             if (LOCAL_VERBOSE) {
                                 System.out.println("PROGRAM_CHANGE al tick " + tick + ": Program " + pitch + " canal " + channel);
                             }
-                            placeAppendMidiMessage(message);
+                            // NO es desa com a missatge reproduïble (placeAppendMidiMessage): l'instrument el
+                            // gestiona el sistema d'instruments i les marques. Un PROGRAM_CHANGE a mig fitxer
+                            // (p. ex. col 102 d'un fitxer antic) es tornava a executar en reproduir: tallava la
+                            // nota que venia just després i feia sonar com a glock el que era violí.
                             int instr = ((ShortMessage) message).getData1();
                             SoundWithMidi.assignInstToChannel(channel, instr);
                             SoundWithMidi.runProgramChange(channel, instr);
@@ -809,7 +816,9 @@ public class MyMidiScore extends MyExercise {
                             for (Integer trId : csc.trackInstruments.keySet()) {
                                 MyTrack bt = controller.getMixer().getTrackFromId(trId);
                                 if (bt != null && bt.getBaseProgram() == null && bt.getCurrentChannel() != 9) {
-                                    bt.setBaseProgram(SoundWithMidi.getInstrumentInChannel(bt.getCurrentChannel()));
+                                    bt.setBaseProgram(loadFirstProgram.containsKey(trId)
+                                            ? loadFirstProgram.get(trId)
+                                            : SoundWithMidi.getInstrumentInChannel(bt.getCurrentChannel()));
                                 }
                             }
                         } catch (Exception e) { e.printStackTrace(); }
@@ -1243,13 +1252,18 @@ public class MyMidiScore extends MyExercise {
                                     rectified = ToneRange.getDrumMidi(keyId);
                                     if (rectified < 0) continue;
                                 } else {
+                                    // L'offset es deriva SEMPRE de l'instrument que s'escriu al PROGRAM_CHANGE
+                                    // (el de base si la pista té marques d'instrument; si no, el del canal), que
+                                    // és d'on el recalcula la càrrega. Fiar-se de trackObj.getDisplayOffset()
+                                    // deixava fitxers incoherents (programa de glock amb notes sense el +24) que en
+                                    // carregar queden fora de rang.
                                     int dispOff = (trackObj != null) ? trackObj.getDisplayOffset() : 0;
-                                    // Amb marques d'instrument, el desplaçament actual pot ser el d'una marca
-                                    // posterior: el fitxer es desa amb el de base, que és el que en carregar
-                                    // es recalcula del PROGRAM_CHANGE inicial (així torna igual).
-                                    if (trackObj != null && trackObj.getBaseProgram() != null) {
+                                    if (trackObj != null) {
+                                        int progSave = (trackObj.getBaseProgram() != null)
+                                                ? trackObj.getBaseProgram()
+                                                : SoundWithMidi.getInstrumentInChannel(trackObj.getCurrentChannel());
                                         dispOff = dodecagraphone.model.InstrumentRange.calcDisplayOffset(
-                                                trackObj.getBaseProgram(), ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
+                                                progSave, ToneRange.getLowestMidi(), ToneRange.getHighestMidi());
                                     }
                                     int realPitch = visualPitch - dispOff;
 //                                    rectified = realPitch - 12 * ToneRange.getOctavesUp();  // OLD: eliminat
@@ -1864,7 +1878,15 @@ public class MyMidiScore extends MyExercise {
                     sb.append(", ");
                 }
                 firstInst = false;
-                sb.append(channel).append("=").append(SoundWithMidi.getInstrumentInChannel(channel));
+                // Amb marques d'instrument, el programa del canal pot ser el d'una marca: es desa el de base.
+                int progCanal = SoundWithMidi.getInstrumentInChannel(channel);
+                for (MyTrack bt : this.controller.getMixer().getTracks()) {
+                    if (!bt.isDeleted() && bt.getCurrentChannel() == channel && bt.getBaseProgram() != null) {
+                        progCanal = bt.getBaseProgram();
+                        break;
+                    }
+                }
+                sb.append(channel).append("=").append(progCanal);
             }
             sb.append("}");
             addTextMeta(metaTrack, sb.toString());

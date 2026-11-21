@@ -725,6 +725,15 @@ public class SoundWithMidi {
      *                                  [EN] if the MIDI data is invalid
      */
     public static void runProgramChange(int channel, int newInstr) {
+        // Les notes entren pel MidiChannel (noteOn immediat), mentre que receiver.send() és asíncron: el
+        // canvi de programa arribava al sintetitzador després (la latència de Gervill, ~100 ms; una columna
+        // són uns 60 ms), i les notes sonaven encara amb l'instrument vell. Per això el canvi va pel mateix
+        // camí que les notes, de manera sincrònica.
+        if (channel >= 0 && channel < channelDataArray.length
+                && channelDataArray[channel] != null && channelDataArray[channel].midiChannel != null) {
+            channelDataArray[channel].midiChannel.programChange(newInstr);
+            return;
+        }
         try {
             ShortMessage programChange = new ShortMessage();
             programChange.setMessage(ShortMessage.PROGRAM_CHANGE, channel, newInstr, 0);
