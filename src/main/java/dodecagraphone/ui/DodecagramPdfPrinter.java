@@ -62,6 +62,12 @@ public class DodecagramPdfPrinter {
     private static final float MEASURE_LABEL_H = 10f;
     /** [CA] Màxim de sistemes per pàgina per defecte (clau {@code pdfMaxRowsPerPage} del config). [EN] Default max systems per page. */
     public static final int    DEFAULT_TARGET_ROWS = 2;
+    /**
+     * [CA] Amplada de la columna del teclat al PDF, en columnes de la graella (abans 4; ara el
+     * triple). Les tecles en fan el 67% i els slides el 33% ({@code Settings.KEY_WIDTH_REDUCTION}).
+     * [EN] Width of the PDF keyboard column in grid columns (was 4; now triple).
+     */
+    private static final int KEYBOARD_COLS = 12;
     private static final String KEY_MAX_ROWS   = "pdfMaxRowsPerPage";
     /** [CA] Llegeix el màxim de sistemes per pàgina del config (mínim 1). [EN] Reads max systems per page from config (min 1). */
     private static int targetRows() {
@@ -194,7 +200,7 @@ public class DodecagramPdfPrinter {
 
         double colWidthF = Settings.getColWidth();
         int colWidthPx   = (int) Math.max(1, Math.round(colWidthF));
-        int keyWidthPx   = 4 * colWidthPx;
+        int keyWidthPx   = KEYBOARD_COLS * colWidthPx;
 
         // Pàgina A4 apaisada: amplada i alçada intercanviades respecte de la
         // A4 vertical que fan servir la resta de mètodes d'aquesta classe.
@@ -370,7 +376,7 @@ public class DodecagramPdfPrinter {
         fixedCols = Math.max(colsPerMeasure, (fixedCols / colsPerMeasure) * colsPerMeasure);
 
         int fixedSlicePx = (int) Math.round(fixedCols * colWidthF);
-        int keyWidthPx   = 4 * colWidthPx;
+        int keyWidthPx   = KEYBOARD_COLS * colWidthPx;
 
         // El buffer offscreen d'una partitura nova només cobreix un parell de
         // pàgines, i les files del dodecagrama en blanc se'n retallen: s'ha
@@ -790,7 +796,7 @@ public class DodecagramPdfPrinter {
         int nKeys = score.getnKeys();
         if (nKeys <= 0 || gridH <= 0 || colWidthPx <= 0) return null;
 
-        int w = 4 * colWidthPx;
+        int w = KEYBOARD_COLS * colWidthPx;
         BufferedImage img = new BufferedImage(w, gridH, BufferedImage.TYPE_INT_RGB);
         Graphics2D gk = img.createGraphics();
         DrawKit.fons(gk, 0, 0, w, gridH);
@@ -799,6 +805,15 @@ public class DodecagramPdfPrinter {
         boolean showChoice = keyboard != null && keyboard.isShowChoice();
         double keyFrac   = Settings.KEY_WIDTH_REDUCTION;
         double slideFrac = 1.0 - keyFrac;
+
+        // Com a la pantalla: si hi ha alguna tecla seleccionada, les altres s'apaguen
+        // (tecla.apaga del tema); si no n'hi ha cap, totes van enceses.
+        boolean anySelected = false;
+        if (showChoice) {
+            for (int k = 0; k < nKeys && !anySelected; k++) {
+                anySelected = keyboard.findIfSelectedVisible(ToneRange.keyIdToMidi(k));
+            }
+        }
 
         for (int keyId = 0; keyId < nKeys; keyId++) {
             int midi = ToneRange.keyIdToMidi(keyId);
@@ -812,6 +827,7 @@ public class DodecagramPdfPrinter {
                 boolean selected = keyboard.findIfSelectedVisible(midi);
                 int slideW = (int) Math.round(slideFrac * w);
                 int keyW2  = w - slideW;
+                if (!selected && anySelected) keyColor = DrawKit.aparencaDeTeclaApagada(midi);
                 if (selected) {
                     DrawKit.slide(gk, 0, y, slideW, h);
                     DrawKit.tecla(gk, slideW, y, keyW2, h, keyColor);

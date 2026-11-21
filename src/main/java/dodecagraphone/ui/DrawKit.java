@@ -225,7 +225,7 @@ public final class DrawKit {
      * <p>
      * [CA] {@link #TRANSPOSICIO} està <b>en desús</b>: la franja ja no dibuixa la
      * marca de transposició (ara surt al botó de l'instrument, p. ex.
-     * {@code Glock (24 st)}). Es conserva, amb la clau {@code marca.transposicio}
+     * {@code Glock (24)}). Es conserva, amb la clau {@code marca.transposicio}
      * dels temes, per si la marca torna; ara no la fa servir res.
      * [EN] {@link #TRANSPOSICIO} is unused: the strip no longer draws it.
      */
@@ -283,6 +283,38 @@ public final class DrawKit {
     /** [CA] Mida de la lletra de la interfície (botons, estat, títols) per a una fila d'alçada {@code rowH}. */
     public static int midaDeLletraDeInterficie(double rowH) {
         return Math.max(8, (int) (rowH * FONT_INTERFICIE_PROPORCIO));
+    }
+
+    private static final double FONT_MENUS_ESCALA = T.decimal("font.menus.escala");
+
+    /** Fonts que ja hem ampliat nosaltres (per no ampliar-les dues vegades). */
+    private static final java.util.Set<Font> FONTS_AMPLIADES =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+    /**
+     * [CA] Amplia les fonts de Swing (diàlegs, menús, selector de fitxers, desplegables…) per
+     * l'escala {@code font.menus.escala} del tema. S'ha de cridar <b>després</b> de cada
+     * {@code UIManager.setLookAndFeel}, que torna les fonts al seu valor; és idempotent: una font
+     * que ja és una d'ampliades per aquí no es torna a ampliar. Amb escala 1 no fa res.
+     * <p>
+     * [EN] Enlarges Swing's UI fonts by the theme's {@code font.menus.escala}. Call it after each
+     * {@code setLookAndFeel}; idempotent.
+     */
+    public static void ampliaFontsDeSwing() {
+        if (FONT_MENUS_ESCALA <= 0 || Math.abs(FONT_MENUS_ESCALA - 1.0) < 1e-9) return;
+        javax.swing.UIDefaults defs = javax.swing.UIManager.getDefaults();
+        java.util.List<Object> claus = java.util.Collections.list(defs.keys());
+        for (Object k : claus) {
+            if (!(k instanceof String) || !((String) k).toLowerCase().endsWith("font")) continue;
+            Object v = defs.get(k);
+            if (!(v instanceof Font)) continue;
+            Font f = (Font) v;
+            if (FONTS_AMPLIADES.contains(f)) continue;
+            Font nova = new javax.swing.plaf.FontUIResource(
+                    f.deriveFont((float) (f.getSize2D() * FONT_MENUS_ESCALA)));
+            FONTS_AMPLIADES.add(nova);
+            javax.swing.UIManager.put(k, nova);
+        }
     }
 
     private static final double FONT_MARQUES_PROPORCIO = T.decimal("font.marques.proporcio");
@@ -477,7 +509,14 @@ public final class DrawKit {
 
     /** [CA] El nom d'una nota dins de la seva cel·la, en la font actual. / [EN] A note name. */
     public static void nomDeNota(Graphics2D g, String nom, int x, int y, int w, int h, int midi) {
-        g.setColor(NOTA_GRIS != null && NOTA_GRIS_TEXT != null ? NOTA_GRIS_TEXT : tintaDeNota(midi));
+        // Amb un sol color per a totes les notes, el text és el del tema. Si cada nota té el seu
+        // color i {@code nota.gris.text = colorsets}, el decideix ColorSets (negre sobre les notes
+        // pàl·lides —re, ri, mi— i blanc sobre les altres); el nom de les tecles no hi passa.
+        Color tinta;
+        if (NOTA_GRIS != null && NOTA_GRIS_TEXT != null) tinta = NOTA_GRIS_TEXT;
+        else if (NOTA_GRIS == null && NOTA_GRIS_TEXT == null) tinta = ColorSets.getGridSquareFontColor(midi);
+        else tinta = tintaDeNota(midi);
+        g.setColor(tinta);
         g.drawString(nom, (int) (2 + x + w / 3), (int) (y + h * 0.8));
     }
 

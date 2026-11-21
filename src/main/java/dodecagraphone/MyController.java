@@ -4650,10 +4650,10 @@ public class MyController {
             instr = (channel == 9)
                     ? I18n.t("mixer.drumsTrack")
                     : SoundWithMidi.getInstrumentMnemonic(SoundWithMidi.getInstrumentInChannel(channel));
-            // Transposició de l'instrument (so − dibuix, en semitons): «Glock (24 st)».
+            // Transposició de l'instrument (so − dibuix, en semitons): «Glock (24)».
             // Sense transposició o a la bateria, només el nom: «Piano».
             int semis = (channel == 9) ? 0 : -track.getDisplayOffset();
-            if (semis != 0) instr += " (" + semis + " st)";
+            if (semis != 0) instr += " (" + semis + ")";
         }
 //        this.buttons.updateTrackButton(name);
 //        this.buttons.updateChannelButton("" + channel);

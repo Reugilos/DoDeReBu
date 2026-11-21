@@ -132,7 +132,7 @@ public class MyChordSymbolLine extends MyComponent {
          * [CA] Transposició de la pista; groc, informativa i no editable.
          * <b>En desús:</b> ja no es dibuixa a la franja. La transposició de
          * l'instrument surt ara al botó de l'instrument, entre parèntesis
-         * ({@code Glock (24 st)}, vegeu {@code MyController.updateTextOfButtons}).
+         * ({@code Glock (24)}, vegeu {@code MyController.updateTextOfButtons}).
          * Es conserva el valor, i el tractament que en fan {@code MyController}
          * i {@link DrawKit.Marca#TRANSPOSICIO}, per si es torna a posar la marca;
          * ara no hi ha cap codi que el crei, de manera que és inabastable.
@@ -140,7 +140,7 @@ public class MyChordSymbolLine extends MyComponent {
          * [EN] Track transposition; yellow, informational, not editable.
          * <b>Deprecated in practice:</b> it is no longer drawn in the strip; the
          * instrument's transposition now appears on the instrument button, in
-         * brackets ({@code Glock (24 st)}). Kept, with its handling in
+         * brackets ({@code Glock (24)}). Kept, with its handling in
          * {@code MyController} and {@link DrawKit.Marca#TRANSPOSICIO}, in case the
          * mark returns; nothing creates it now, so it is unreachable.
          */
@@ -1060,14 +1060,14 @@ public class MyChordSymbolLine extends MyComponent {
             kinds.add(MarkKind.TEMPO);
             symbols.add(beatFigureAt(col) == 8 ? 2 : 1);
         }
-        if (velocity != null) {
-            texts.add(dynamicText(velocity));
-            kinds.add(MarkKind.VOLUME);
-            symbols.add(0);
-        }
         if (instrument != null) {
             texts.add(dodecagraphone.model.sound.SoundWithMidi.getInstrumentMnemonic(instrument));
             kinds.add(MarkKind.INSTRUMENT);
+            symbols.add(0);
+        }
+        if (velocity != null) {
+            texts.add(dynamicText(velocity));
+            kinds.add(MarkKind.VOLUME);
             symbols.add(0);
         }
         if (texts.isEmpty()) return 0;

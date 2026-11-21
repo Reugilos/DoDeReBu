@@ -686,6 +686,8 @@ public class MyDialogs {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {
         }
+        // El L&F torna les fonts al seu valor: es tornen a ampliar (idempotent).
+        DrawKit.ampliaFontsDeSwing();
 
         File cwd = new File(System.getProperty("user.dir"));
         File startDir = (lastDirectory != null && lastDirectory.exists()) ? lastDirectory : cwd;
