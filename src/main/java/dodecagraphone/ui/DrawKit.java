@@ -102,23 +102,23 @@ public final class DrawKit {
     // tema moni de dins del programa fa de reserva per a qualsevol valor que falti.
     // Es llegeixen una sola vegada, en carregar-se aquesta classe.
 
-    private static final Tema T = Tema.actual();
+    private static Tema T;
 
     // ── Colors ───────────────────────────────────────────────────────────────
 
-    private static final Color FONS = T.color("fons");
-    private static final Color TINTA = T.color("tinta");
-    private static final Color SEPARADOR_DE_FILA = T.color("graella.separador.color");
+    private static Color FONS;
+    private static Color TINTA;
+    private static Color SEPARADOR_DE_FILA;
     /** [CA] {@code null} vol dir que el color el decideix ColorSets. */
-    private static final Color PAUTA_ESPAI = T.color("pauta.espai");
-    private static final Color PAUTA_LINIA = T.color("pauta.linia");
-    private static final Color PAUTA_DO_CENTRAL = T.color("pauta.doCentral");
+    private static Color PAUTA_ESPAI;
+    private static Color PAUTA_LINIA;
+    private static Color PAUTA_DO_CENTRAL;
     /** [CA] Els mateixos valors per al PDF; {@code null} = com a la pantalla. */
-    private static final Color PDF_PAUTA_ESPAI = T.color("pdf.pauta.espai");
-    private static final Color PDF_PAUTA_LINIA = T.color("pdf.pauta.linia");
-    private static final Color PDF_PAUTA_DO_CENTRAL = T.color("pdf.pauta.doCentral");
-    private static final Color PDF_SEPARADOR_DE_FILA = T.color("pdf.graella.separador.color");
-    private static final float PDF_SEPARADOR_GRUIX = T.decimal("pdf.graella.separador.gruix");
+    private static Color PDF_PAUTA_ESPAI;
+    private static Color PDF_PAUTA_LINIA;
+    private static Color PDF_PAUTA_DO_CENTRAL;
+    private static Color PDF_SEPARADOR_DE_FILA;
+    private static float PDF_SEPARADOR_GRUIX;
 
     /**
      * [CA] Cert mentre es prepara el buffer de la graella per al PDF: les files
@@ -144,79 +144,79 @@ public final class DrawKit {
     public static Color colorSeparadorPdf() {
         return PDF_SEPARADOR_DE_FILA != null ? PDF_SEPARADOR_DE_FILA : SEPARADOR_DE_FILA;
     }
-    private static final Color PATRO_TRIAT = T.color("patro.triat");
-    private static final Color PATRO_FORA = T.color("patro.fora");
-    private static final Color TEXT_SOBRE_NOTA = T.color("nota.text");
+    private static Color PATRO_TRIAT;
+    private static Color PATRO_FORA;
+    private static Color TEXT_SOBRE_NOTA;
     /** [CA] {@code null}: el MI té el color de ColorSets. */
-    private static final Color NOTA_MI = T.color("nota.mi");
+    private static Color NOTA_MI;
     /** [CA] {@code null}: les notes de la partitura van del color de la seva nota. Si no, totes van d'aquest. */
-    private static final Color NOTA_GRIS = T.color("nota.gris");
+    private static Color NOTA_GRIS;
     /** [CA] Text de les notes de la graella quan van totes d'un sol color ({@code null} = el de sempre). */
-    private static final Color NOTA_GRIS_TEXT = T.color("nota.gris.text");
+    private static Color NOTA_GRIS_TEXT;
     /** [CA] Si una nota que sona a la graella agafa el seu color (en lloc del fons). */
-    private static final boolean NOTA_SONA_COLOR = T.si("nota.sona.color");
+    private static boolean NOTA_SONA_COLOR;
     /**
      * [CA] Com d'apagades es veuen les tecles <b>no seleccionades</b> del teclat
      * (les que no són a la plantilla triada): 0 = color ple, 1 = el color
      * {@code tecla.apaga.cap} (blanc per defecte; un gris fosc fa un color «apagat» que admet text blanc). Les seleccionades sempre van amb el color ple.
      */
-    private static final float TECLA_APAGA = Math.max(0f, Math.min(1f, T.decimal("tecla.apaga")));
+    private static float TECLA_APAGA;
     /** [CA] El color cap al qual s'apaguen les tecles no seleccionades (el blanc, si el tema no en diu cap). */
-    private static final Color TECLA_APAGA_CAP = T.color("tecla.apaga.cap");
+    private static Color TECLA_APAGA_CAP;
     /** [CA] {@code null}: el text de les tecles en silenci és el de les notes. */
-    private static final Color TEXT_TECLA_SILENCI = T.color("tecla.text");
+    private static Color TEXT_TECLA_SILENCI;
     /** [CA] {@code null}: la vora de la nota va del color del text de la nota. */
-    private static final Color VORA_DE_NOTA = T.color("nota.vora.color");
-    private static final int VORA_DE_NOTA_DESPLACAMENT = T.enter("nota.vora.desplacament");
-    private static final Color FONS_NOTA_PUNTEJADA = T.color("notaPuntejada.fons");
-    private static final Color TEXT_NOTA_PUNTEJADA = T.color("notaPuntejada.text");
-    private static final Color SELECCIO_FARCIMENT = T.color("seleccio.farciment");
-    private static final float SELECCIO_FARCIMENT_ALFA = T.decimal("seleccio.farciment.alfa");
-    private static final Color SELECCIO_VORA = T.color("seleccio.vora");
-    private static final float SELECCIO_VORA_ALFA = T.decimal("seleccio.vora.alfa");
-    private static final Color SELECCIO_LLETRA_FARCIMENT = T.color("seleccioLletra.farciment");
-    private static final Color SELECCIO_LLETRA_VORA = T.color("seleccioLletra.vora");
-    private static final Color MARCA_SELECCIONADA_FILET = T.color("marcaSeleccionada.filet");
-    private static final Color MARCA_SELECCIONADA_MARC = T.color("marcaSeleccionada.marc");
-    private static final Color LLETRA = T.color("lletra.text");
-    private static final Color LLETRA_EN_EDICIO = T.color("lletra.edicio");
-    private static final Color CURSOR_DE_TEXT = T.color("lletra.cursor");
-    private static final Color BOTO_DE_FORMAT = T.color("botoFormat.fons");
-    private static final Color FONS_LINIA_DESTAT = T.color("liniaEstat.fons");
-    private static final Color TEXT_LINIA_DESTAT = T.color("liniaEstat.text");
-    private static final Color PANELL_DE_BOTONS = T.color("panellBotons.fons");
-    private static final Color BOTO_NORMAL = T.color("boto.normal");
-    private static final Color BOTO_PREMUT = T.color("boto.premut");
-    private static final Color TEXT_DE_BOTO = T.color("boto.text");
-    private static final Color TEXT_DE_BOTO_PREMUT = T.color("boto.textPremut");
-    private static final int BOTO_ARC = T.enter("boto.arrodoniment");
-    private static final int BOTO_MARGE = T.enter("boto.marge");
-    private static final Color SLIDE = T.color("slide");
-    private static final Color TEXT_TECLA_QUE_SONA = T.color("tecla.textQueSona");
+    private static Color VORA_DE_NOTA;
+    private static int VORA_DE_NOTA_DESPLACAMENT;
+    private static Color FONS_NOTA_PUNTEJADA;
+    private static Color TEXT_NOTA_PUNTEJADA;
+    private static Color SELECCIO_FARCIMENT;
+    private static float SELECCIO_FARCIMENT_ALFA;
+    private static Color SELECCIO_VORA;
+    private static float SELECCIO_VORA_ALFA;
+    private static Color SELECCIO_LLETRA_FARCIMENT;
+    private static Color SELECCIO_LLETRA_VORA;
+    private static Color MARCA_SELECCIONADA_FILET;
+    private static Color MARCA_SELECCIONADA_MARC;
+    private static Color LLETRA;
+    private static Color LLETRA_EN_EDICIO;
+    private static Color CURSOR_DE_TEXT;
+    private static Color BOTO_DE_FORMAT;
+    private static Color FONS_LINIA_DESTAT;
+    private static Color TEXT_LINIA_DESTAT;
+    private static Color PANELL_DE_BOTONS;
+    private static Color BOTO_NORMAL;
+    private static Color BOTO_PREMUT;
+    private static Color TEXT_DE_BOTO;
+    private static Color TEXT_DE_BOTO_PREMUT;
+    private static int BOTO_ARC;
+    private static int BOTO_MARGE;
+    private static Color SLIDE;
+    private static Color TEXT_TECLA_QUE_SONA;
     /** [CA] Si una tecla que sona es ressalta (fons blanc, text negre). Amb {@code no} es veu igual que en silenci. */
-    private static final boolean TECLA_RESSALTA = T.si("tecla.ressalta");
+    private static boolean TECLA_RESSALTA;
     /** [CA] Tecla del PDF sense color a la paleta. / [EN] PDF key fallback. */
-    private static final Color TECLA_SENSE_COLOR = T.color("tecla.senseColor");
-    private static final boolean TEXT_SUAVITZAT = T.si("text.suavitzat");
+    private static Color TECLA_SENSE_COLOR;
+    private static boolean TEXT_SUAVITZAT;
 
     // Les caixes d'Acords i de Lletra, a l'esquerra, per sobre i per sota del teclat
-    private static final Color CAIXA_ACORDS = T.color("caixaAcords.fons");
-    private static final Color CAIXA_LLETRA = T.color("caixaLletra.fons");
-    private static final Color CAIXA_VORA = T.color("caixa.vora.color");
-    private static final Stroke TRAC_CAIXA = new BasicStroke(T.decimal("caixa.vora.gruix"));
-    private static final boolean CAIXA_AMB_VORA = T.decimal("caixa.vora.gruix") > 0;
+    private static Color CAIXA_ACORDS;
+    private static Color CAIXA_LLETRA;
+    private static Color CAIXA_VORA;
+    private static Stroke TRAC_CAIXA;
+    private static boolean CAIXA_AMB_VORA;
 
     // Els tips (les finestretes que expliquen un botó). Color null = el del sistema.
-    private static final Color TIP_FONS = T.color("tip.fons");
-    private static final Color TIP_TEXT = T.color("tip.text");
-    private static final Color TIP_VORA = T.color("tip.vora.color");
-    private static final int TIP_VORA_GRUIX = T.enter("tip.vora.gruix");
-    private static final int TIP_MARGE = T.enter("tip.marge");
-    private static final int TIP_FONT_MIDA = T.enter("tip.font.mida");
+    private static Color TIP_FONS;
+    private static Color TIP_TEXT;
+    private static Color TIP_VORA;
+    private static int TIP_VORA_GRUIX;
+    private static int TIP_MARGE;
+    private static int TIP_FONT_MIDA;
 
     // Les icones dels botons (play, pausa, inici) i les fletxes de «Tò >>»
-    private static final double ICONA_PROPORCIO = T.decimal("icona.proporcio");
-    private static final double FLETXA_PROPORCIO = T.decimal("fletxa.proporcio");
+    private static double ICONA_PROPORCIO;
+    private static double FLETXA_PROPORCIO;
 
     /**
      * [CA] Els quatre tipus de marca de canvi de la franja d'acords. El color de
@@ -234,12 +234,12 @@ public final class DrawKit {
     }
 
     /** [CA] Fons del carril de marques ({@code null} = cap). */
-    private static final Color MARQUES_FONS = T.color("marques.fons");
-    private static final Color MARCA_TEMPO = T.color("marca.tempo");
-    private static final Color MARCA_TONALITAT = T.color("marca.tonalitat");
-    private static final Color MARCA_VOLUM = T.color("marca.volum");
+    private static Color MARQUES_FONS;
+    private static Color MARCA_TEMPO;
+    private static Color MARCA_TONALITAT;
+    private static Color MARCA_VOLUM;
     /** [CA] En desús: la marca de transposició ja no es dibuixa (vegeu {@link Marca}). */
-    private static final Color MARCA_TRANSPOSICIO = T.color("marca.transposicio");
+    private static Color MARCA_TRANSPOSICIO;
 
     private static Color fonsDeMarca(Marca m) {
         switch (m) {
@@ -252,40 +252,158 @@ public final class DrawKit {
 
     // ── Traços ───────────────────────────────────────────────────────────────
 
-    private static final Stroke TRAC_COMPAS = new BasicStroke(T.decimal("compas.gruix"));
+    private static Stroke TRAC_COMPAS;
     /** [CA] La barra de compàs damunt de la pantalla, sobre la del buffer. */
-    private static final Stroke TRAC_COMPAS_PANTALLA = new BasicStroke(T.decimal("compas.pantalla.gruix"));
-    private static final Stroke TRAC_TEMPS = new BasicStroke(T.decimal("temps.gruix"), BasicStroke.CAP_BUTT,
+    private static Stroke TRAC_COMPAS_PANTALLA;
+    private static Stroke TRAC_TEMPS;
+    private static Stroke TRAC_SEPARADOR_DE_FILA;
+    private static Stroke TRAC_VORA_DE_NOTA;
+    private static Stroke TRAC_DOBLE_BARRA_GRUIXUDA;
+    private static Stroke TRAC_DOBLE_BARRA_PRIMA;
+    private static int DOBLE_BARRA_SEPARACIO;
+    private static Stroke TRAC_BARRA_DE_REPRODUCCIO;
+    private static Stroke TRAC_MARCA_FILET;
+    private static Stroke TRAC_MARCA_MARC;
+    private static Stroke TRAC_CURSOR;
+
+    /**
+     * [CA] Llegeix tots els valors del tema actual. Es crida en carregar la classe i cada cop que
+     * es canvia de tema ({@link #recarrega()}). Els camps no són {@code final} per poder-ho fer.
+     * [EN] Reads every theme value; called at class load and on each theme switch.
+     */
+    private static void carrega() {
+        T = Tema.actual();
+        FONS = T.color("fons");
+        TINTA = T.color("tinta");
+        SEPARADOR_DE_FILA = T.color("graella.separador.color");
+        PAUTA_ESPAI = T.color("pauta.espai");
+        PAUTA_LINIA = T.color("pauta.linia");
+        PAUTA_DO_CENTRAL = T.color("pauta.doCentral");
+        PDF_PAUTA_ESPAI = T.color("pdf.pauta.espai");
+        PDF_PAUTA_LINIA = T.color("pdf.pauta.linia");
+        PDF_PAUTA_DO_CENTRAL = T.color("pdf.pauta.doCentral");
+        PDF_SEPARADOR_DE_FILA = T.color("pdf.graella.separador.color");
+        PDF_SEPARADOR_GRUIX = T.decimal("pdf.graella.separador.gruix");
+        PATRO_TRIAT = T.color("patro.triat");
+        PATRO_FORA = T.color("patro.fora");
+        TEXT_SOBRE_NOTA = T.color("nota.text");
+        NOTA_MI = T.color("nota.mi");
+        NOTA_GRIS = T.color("nota.gris");
+        NOTA_GRIS_TEXT = T.color("nota.gris.text");
+        NOTA_SONA_COLOR = T.si("nota.sona.color");
+        TECLA_APAGA = Math.max(0f, Math.min(1f, T.decimal("tecla.apaga")));
+        TECLA_APAGA_CAP = T.color("tecla.apaga.cap");
+        TEXT_TECLA_SILENCI = T.color("tecla.text");
+        VORA_DE_NOTA = T.color("nota.vora.color");
+        VORA_DE_NOTA_DESPLACAMENT = T.enter("nota.vora.desplacament");
+        FONS_NOTA_PUNTEJADA = T.color("notaPuntejada.fons");
+        TEXT_NOTA_PUNTEJADA = T.color("notaPuntejada.text");
+        SELECCIO_FARCIMENT = T.color("seleccio.farciment");
+        SELECCIO_FARCIMENT_ALFA = T.decimal("seleccio.farciment.alfa");
+        SELECCIO_VORA = T.color("seleccio.vora");
+        SELECCIO_VORA_ALFA = T.decimal("seleccio.vora.alfa");
+        SELECCIO_LLETRA_FARCIMENT = T.color("seleccioLletra.farciment");
+        SELECCIO_LLETRA_VORA = T.color("seleccioLletra.vora");
+        MARCA_SELECCIONADA_FILET = T.color("marcaSeleccionada.filet");
+        MARCA_SELECCIONADA_MARC = T.color("marcaSeleccionada.marc");
+        LLETRA = T.color("lletra.text");
+        LLETRA_EN_EDICIO = T.color("lletra.edicio");
+        CURSOR_DE_TEXT = T.color("lletra.cursor");
+        BOTO_DE_FORMAT = T.color("botoFormat.fons");
+        FONS_LINIA_DESTAT = T.color("liniaEstat.fons");
+        TEXT_LINIA_DESTAT = T.color("liniaEstat.text");
+        PANELL_DE_BOTONS = T.color("panellBotons.fons");
+        BOTO_NORMAL = T.color("boto.normal");
+        BOTO_PREMUT = T.color("boto.premut");
+        TEXT_DE_BOTO = T.color("boto.text");
+        TEXT_DE_BOTO_PREMUT = T.color("boto.textPremut");
+        BOTO_ARC = T.enter("boto.arrodoniment");
+        BOTO_MARGE = T.enter("boto.marge");
+        SLIDE = T.color("slide");
+        TEXT_TECLA_QUE_SONA = T.color("tecla.textQueSona");
+        TECLA_RESSALTA = T.si("tecla.ressalta");
+        TECLA_SENSE_COLOR = T.color("tecla.senseColor");
+        TEXT_SUAVITZAT = T.si("text.suavitzat");
+        CAIXA_ACORDS = T.color("caixaAcords.fons");
+        CAIXA_LLETRA = T.color("caixaLletra.fons");
+        CAIXA_VORA = T.color("caixa.vora.color");
+        TRAC_CAIXA = new BasicStroke(T.decimal("caixa.vora.gruix"));
+        CAIXA_AMB_VORA = T.decimal("caixa.vora.gruix") > 0;
+        TIP_FONS = T.color("tip.fons");
+        TIP_TEXT = T.color("tip.text");
+        TIP_VORA = T.color("tip.vora.color");
+        TIP_VORA_GRUIX = T.enter("tip.vora.gruix");
+        TIP_MARGE = T.enter("tip.marge");
+        TIP_FONT_MIDA = T.enter("tip.font.mida");
+        ICONA_PROPORCIO = T.decimal("icona.proporcio");
+        FLETXA_PROPORCIO = T.decimal("fletxa.proporcio");
+        MARQUES_FONS = T.color("marques.fons");
+        MARCA_TEMPO = T.color("marca.tempo");
+        MARCA_TONALITAT = T.color("marca.tonalitat");
+        MARCA_VOLUM = T.color("marca.volum");
+        MARCA_TRANSPOSICIO = T.color("marca.transposicio");
+        TRAC_COMPAS = new BasicStroke(T.decimal("compas.gruix"));
+        TRAC_COMPAS_PANTALLA = new BasicStroke(T.decimal("compas.pantalla.gruix"));
+        TRAC_TEMPS = new BasicStroke(T.decimal("temps.gruix"), BasicStroke.CAP_BUTT,
             BasicStroke.JOIN_BEVEL, 0, T.decimals("temps.guions"), 0);
-    private static final Stroke TRAC_SEPARADOR_DE_FILA = new BasicStroke(T.decimal("graella.separador.gruix"));
-    private static final Stroke TRAC_VORA_DE_NOTA = new BasicStroke(T.decimal("nota.vora.gruix"));
-    private static final Stroke TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(T.decimal("dobleBarra.gruixuda"));
-    private static final Stroke TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(T.decimal("dobleBarra.prima"));
-    private static final int DOBLE_BARRA_SEPARACIO = T.enter("dobleBarra.separacio");
-    private static final Stroke TRAC_BARRA_DE_REPRODUCCIO = new BasicStroke(T.decimal("reproduccio.gruix"));
-    private static final Stroke TRAC_MARCA_FILET = new BasicStroke(T.decimal("marcaSeleccionada.filet.gruix"));
-    private static final Stroke TRAC_MARCA_MARC = new BasicStroke(T.decimal("marcaSeleccionada.marc.gruix"));
-    private static final Stroke TRAC_CURSOR = new BasicStroke(T.decimal("lletra.cursor.gruix"));
+        TRAC_SEPARADOR_DE_FILA = new BasicStroke(T.decimal("graella.separador.gruix"));
+        TRAC_VORA_DE_NOTA = new BasicStroke(T.decimal("nota.vora.gruix"));
+        TRAC_DOBLE_BARRA_GRUIXUDA = new BasicStroke(T.decimal("dobleBarra.gruixuda"));
+        TRAC_DOBLE_BARRA_PRIMA = new BasicStroke(T.decimal("dobleBarra.prima"));
+        DOBLE_BARRA_SEPARACIO = T.enter("dobleBarra.separacio");
+        TRAC_BARRA_DE_REPRODUCCIO = new BasicStroke(T.decimal("reproduccio.gruix"));
+        TRAC_MARCA_FILET = new BasicStroke(T.decimal("marcaSeleccionada.filet.gruix"));
+        TRAC_MARCA_MARC = new BasicStroke(T.decimal("marcaSeleccionada.marc.gruix"));
+        TRAC_CURSOR = new BasicStroke(T.decimal("lletra.cursor.gruix"));
+        FAMILIA_ACORDS = familiaDisponible(T.text("font.acords"));
+        ESTIL_ACORDS = T.estil("font.acords.estil");
+        FAMILIA_LLETRA = familiaDisponible(T.text("font.lletra"));
+        ESTIL_LLETRA = T.estil("font.lletra.estil");
+        FAMILIA_INTERFICIE = familiaDisponible(T.text("font.interficie"));
+        ESTIL_INTERFICIE = T.estil("font.interficie.estil");
+        FONT_DE_TECLA_PER_ALCADA = T.decimal("tecla.font.proporcio");
+        FONT_INTERFICIE_PROPORCIO = T.decimal("font.interficie.proporcio");
+        FONT_ACORDS_PROPORCIO = T.decimal("font.acords.proporcio");
+        FONT_MENUS_ESCALA = T.decimal("font.menus.escala");
+        FONT_MENUS_MINIMA = T.decimal("font.menus.minima");
+        FONT_MARQUES_PROPORCIO = T.decimal("font.marques.proporcio");
+        FONT_DE_TECLA_MINIMA = T.enter("tecla.font.minima");
+        TRIANGLET_MITJA_AMPLADA = T.enter("trianglet.mitjaAmplada");
+        TRIANGLET_ALCADA = T.enter("trianglet.alcada");
+        BOTO_DE_FORMAT_ARC = T.enter("botoFormat.arrodoniment");
+    }
+
+    static { carrega(); }
+
+    /**
+     * [CA] Torna a llegir el tema actual ({@link Tema#actual()}) i en recalcula tots els valors.
+     * Qui el canvia ha de repintar-ho tot i tornar a calcular els colors guardats pels components.
+     * [EN] Re-reads the current theme.
+     */
+    public static void recarrega() {
+        carrega();
+    }
 
     // ── Fonts ────────────────────────────────────────────────────────────────
 
-    private static final String FAMILIA_ACORDS = familiaDisponible(T.text("font.acords"));
-    private static final int ESTIL_ACORDS = T.estil("font.acords.estil");
-    private static final String FAMILIA_LLETRA = familiaDisponible(T.text("font.lletra"));
-    private static final int ESTIL_LLETRA = T.estil("font.lletra.estil");
-    private static final String FAMILIA_INTERFICIE = familiaDisponible(T.text("font.interficie"));
-    private static final int ESTIL_INTERFICIE = T.estil("font.interficie.estil");
+    private static String FAMILIA_ACORDS;
+    private static int ESTIL_ACORDS;
+    private static String FAMILIA_LLETRA;
+    private static int ESTIL_LLETRA;
+    private static String FAMILIA_INTERFICIE;
+    private static int ESTIL_INTERFICIE;
     /** [CA] La lletra d'una tecla és una fracció de la seva alçada. */
-    private static final double FONT_DE_TECLA_PER_ALCADA = T.decimal("tecla.font.proporcio");
-    private static final double FONT_INTERFICIE_PROPORCIO = T.decimal("font.interficie.proporcio");
-    private static final double FONT_ACORDS_PROPORCIO = T.decimal("font.acords.proporcio");
+    private static double FONT_DE_TECLA_PER_ALCADA;
+    private static double FONT_INTERFICIE_PROPORCIO;
+    private static double FONT_ACORDS_PROPORCIO;
 
     /** [CA] Mida de la lletra de la interfície (botons, estat, títols) per a una fila d'alçada {@code rowH}. */
     public static int midaDeLletraDeInterficie(double rowH) {
         return Math.max(8, (int) (rowH * FONT_INTERFICIE_PROPORCIO));
     }
 
-    private static final double FONT_MENUS_ESCALA = T.decimal("font.menus.escala");
+    private static double FONT_MENUS_ESCALA;
+    private static double FONT_MENUS_MINIMA;
 
     /** Fonts que ja hem ampliat nosaltres (per no ampliar-les dues vegades). */
     private static final java.util.Set<Font> FONTS_AMPLIADES =
@@ -301,23 +419,25 @@ public final class DrawKit {
      * {@code setLookAndFeel}; idempotent.
      */
     public static void ampliaFontsDeSwing() {
-        if (FONT_MENUS_ESCALA <= 0 || Math.abs(FONT_MENUS_ESCALA - 1.0) < 1e-9) return;
+        if ((FONT_MENUS_ESCALA <= 0 || Math.abs(FONT_MENUS_ESCALA - 1.0) < 1e-9) && FONT_MENUS_MINIMA <= 0) return;
         javax.swing.UIDefaults defs = javax.swing.UIManager.getDefaults();
         java.util.List<Object> claus = java.util.Collections.list(defs.keys());
         for (Object k : claus) {
             if (!(k instanceof String) || !((String) k).toLowerCase().endsWith("font")) continue;
+            // El llistat de fitxers del selector i els tips ja tenien una mida bona: no es toquen.
+            if ("FileChooser.listFont".equals(k) || "ToolTip.font".equals(k)) continue;
             Object v = defs.get(k);
             if (!(v instanceof Font)) continue;
             Font f = (Font) v;
             if (FONTS_AMPLIADES.contains(f)) continue;
             Font nova = new javax.swing.plaf.FontUIResource(
-                    f.deriveFont((float) (f.getSize2D() * FONT_MENUS_ESCALA)));
+                    f.deriveFont((float) Math.max(f.getSize2D() * (FONT_MENUS_ESCALA > 0 ? FONT_MENUS_ESCALA : 1.0), FONT_MENUS_MINIMA)));
             FONTS_AMPLIADES.add(nova);
             javax.swing.UIManager.put(k, nova);
         }
     }
 
-    private static final double FONT_MARQUES_PROPORCIO = T.decimal("font.marques.proporcio");
+    private static double FONT_MARQUES_PROPORCIO;
 
     /** [CA] Proporció de l'alçada d'una fila que fa la lletra de les marques de la franja superior. */
     public static double proporcioDeLletraDeMarques() {
@@ -328,7 +448,7 @@ public final class DrawKit {
     public static double proporcioDeLletraDAcords() {
         return FONT_ACORDS_PROPORCIO;
     }
-    private static final int FONT_DE_TECLA_MINIMA = T.enter("tecla.font.minima");
+    private static int FONT_DE_TECLA_MINIMA;
 
     /**
      * [CA] La família demanada si és instal·lada o és una de les lògiques de Java
@@ -351,9 +471,9 @@ public final class DrawKit {
 
     // ── Mides ────────────────────────────────────────────────────────────────
 
-    private static final int TRIANGLET_MITJA_AMPLADA = T.enter("trianglet.mitjaAmplada");
-    private static final int TRIANGLET_ALCADA = T.enter("trianglet.alcada");
-    private static final int BOTO_DE_FORMAT_ARC = T.enter("botoFormat.arrodoniment");
+    private static int TRIANGLET_MITJA_AMPLADA;
+    private static int TRIANGLET_ALCADA;
+    private static int BOTO_DE_FORMAT_ARC;
     /**
      * [CA] Marge del text dins de la caixa d'una marca. És públic perquè la
      * franja d'acords el necessita per saber quant ocupa una marca; no és del

@@ -523,6 +523,17 @@ public class MyGridScore extends MyComponent {
         return choice;
     }
 
+    /** [CA] Torna a calcular els colors de totes les cel·les (després d'un canvi de tema). */
+    public void refreshAppearance() {
+        for (int row = 0; row < nKeys; row++) {
+            for (int col = 0; col < nCols; col++) {
+                MyGridSquare sq = grid[row + BUFFER][col];
+                if (sq != null) sq.refreshAppearance();
+            }
+        }
+        this.updateStripsNKeyboard();
+    }
+
     public void updateStripsNKeyboard() {
         this.updateStripsNKeyboard(this.usePentagramaStrips);
     }

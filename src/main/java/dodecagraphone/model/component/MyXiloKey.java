@@ -47,15 +47,15 @@ public class MyXiloKey extends MyComponent {
     /**
      * The color that the key takes when it is playing
      */
-    private final Color color_playing;
+    private Color color_playing;
     /**
      * The color that the key takes when it is not playing
      */
     private Color color_silent;
     /** [CA] Color en silenci d'una tecla seleccionada (o amb l'elecció amagada): el ple. */
-    private final Color color_full;
+    private Color color_full;
     /** [CA] Color en silenci d'una tecla no seleccionada: apagat (segons el tema). */
-    private final Color color_dim;
+    private Color color_dim;
     /** [CA] Cert si la tecla és fora de la plantilla triada (apagada quan calla). */
     private boolean dimmed = false;
     /**
@@ -198,6 +198,14 @@ public class MyXiloKey extends MyComponent {
     private Color colorWhilePlaying() {
         if (DrawKit.teclaRessalta()) return this.color_playing;
         return this.dimmed ? this.color_full : this.color_dim;
+    }
+
+    /** [CA] Torna a calcular els colors de la tecla (després d'un canvi de tema). */
+    public void refreshAppearance() {
+        this.color_playing = DrawKit.aparencaDeTeclaQueSona(midi);
+        this.color_full = DrawKit.aparencaDeTecla(midi);
+        this.color_dim = DrawKit.aparencaDeTeclaApagada(midi);
+        setSilentLook(this.dimmed);
     }
 
     public void setDimmed(boolean dim) {

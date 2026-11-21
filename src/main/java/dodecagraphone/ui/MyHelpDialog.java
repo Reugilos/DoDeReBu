@@ -415,6 +415,7 @@ public class MyHelpDialog {
             { I18n.t("help.export.midi.key"), I18n.t("help.export.midi.desc") },
             { I18n.t("help.export.svg.key"),  I18n.t("help.export.svg.desc") },
             { I18n.t("help.export.pdf.key"),      I18n.t("help.export.pdf.desc") },
+            { I18n.t("help.export.theme.key"),    I18n.t("help.export.theme.desc") },
             { I18n.t("help.export.pdfBlank.key"), I18n.t("help.export.pdfBlank.desc") },
         };
     }

@@ -44,6 +44,13 @@ public class MyButton extends MyComponent {
     protected Color colorPressed = DrawKit.aparencaDeBoto(true);
     /** Color of the button when it is not pressed. */
     protected Color colorUnpressed = DrawKit.aparencaDeBoto(false);
+
+    /** [CA] Torna a llegir els colors del tema (després d'un canvi de tema). */
+    public void refreshAppearance() {
+        this.colorPressed = DrawKit.aparencaDeBoto(true);
+        this.colorUnpressed = DrawKit.aparencaDeBoto(false);
+        this.color = this.isPressed() ? this.colorPressed : this.colorUnpressed;
+    }
     /**
      * [CA] True mentre el botó està premut. És {@code volatile} perquè
      * l'escriuen els events de ratolí (EDT) i el llegeixen els fils de

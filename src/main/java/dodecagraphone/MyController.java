@@ -3380,6 +3380,40 @@ public class MyController {
         }
     }
 
+    /**
+     * [CA] Botó «Tema»: passa al tema següent de la carpeta {@code temes} (circular) i ho repinta
+     * tot en viu. No desa res al config: el {@code tema} del config és només l'inicial.
+     * <p>
+     * [EN] Theme button: switches to the next theme in the themes folder (circular) and
+     * repaints everything. The config is not touched.
+     */
+    public void onThemeButtonPressed(MyButton togg) {
+        if (togg != null) togg.setPressed(false);
+        dodecagraphone.ui.Tema.seguent();
+        DrawKit.recarrega();
+        ColorSets.initColors();
+        // El L&F torna les fonts de Swing al seu valor: es tornen a ampliar amb l'escala del tema nou.
+        try {
+            javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
+        I18n.applySwingDefaults();
+        DrawKit.ampliaFontsDeSwing();
+        // Els components guarden alguns colors calculats d'avançada: es tornen a calcular.
+        this.myChordSymbolLine.invalidateFontCaches();
+        this.keyboard.refreshAppearance();
+        this.buttons.refreshAppearance();
+        this.allPurposeScore.refreshAppearance();
+        this.allPurposeScore.drawFullGridinOffscreen();
+        this.myChordSymbolLine.setNeedsDrawing(true);
+        this.myChordSymbolLine.drawFullChordLineInOffscreen();
+        this.myLyrics.setNeedsDrawing(true);
+        this.myLyrics.drawFullLyricsInOffscreen();
+        this.updateTextOfButtons();
+        this.drawFull(true);
+        if (getUi() != null && getUi().getPanel() != null) getUi().getPanel().repinta(true);
+    }
+
     public void onHelpButtonPressed(MyButton togg){
         java.awt.Frame owner = (java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(this.getUi().getPanel());
         dodecagraphone.ui.MyHelpDialog.show(owner, resolveHelpAnchor());
@@ -4658,6 +4692,7 @@ public class MyController {
 //        this.buttons.updateTrackButton(name);
 //        this.buttons.updateChannelButton("" + channel);
         this.buttons.updateInstrButton(instr);
+        this.buttons.updateThemeButton(dodecagraphone.ui.Tema.actual().nom());
 //        this.mixer.refreshMixer();
 //        this.buttons.setNeedsDrawing(false);
     }

@@ -379,6 +379,14 @@ public class MyGridSquare extends MyComponent {
         }
     }
 
+    /** [CA] Torna a calcular els colors guardats de la cel·la (després d'un canvi de tema). */
+    public void refreshAppearance() {
+        this.color_on = DrawKit.aparencaDeNota(this.midi);
+        this.color_off = DrawKit.aparencaDePauta(this.midi);
+        this.color_playing = DrawKit.aparencaDeNotaQueSona(this.midi);
+        this.color = this.isSqVisible() ? this.color_on : this.color_off;
+    }
+
     public void updateColor() {
         if (this.isSqVisible()) {
             this.color = color_on;

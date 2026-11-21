@@ -42,7 +42,7 @@ import java.util.Properties;
  * punt decimal. Guions: {@code llarg,buit}. Estils de lletra: {@code normal}
  * o {@code negreta}. Interruptors: {@code si} o {@code no}.
  * <p>
- * El tema es llegeix una sola vegada, en arrencar: canviar-lo demana reiniciar.
+ * El config en tria només el tema inicial; el botó «Tema» ({@link #seguent()}) en canvia en viu, circularment, entre tots els de la carpeta.
  * <p>
  * [EN] The graphic theme used by {@link DrawKit}. Each theme is a text file in
  * the {@code temes} folder next to {@code config.properties}; the config picks
@@ -89,6 +89,47 @@ public final class Tema {
             actual = carrega(AppConfig.get().get(CLAU_CONFIG, DEFECTE).trim());
         }
         return actual;
+    }
+
+    /**
+     * [CA] Els noms dels temes que hi ha a la carpeta {@code temes} (els de fàbrica i els de l'usuari),
+     * en ordre: primer els de fàbrica, i després la resta alfabèticament.
+     * [EN] Names of all themes in the themes folder: factory ones first, then alphabetical.
+     */
+    public static synchronized java.util.List<String> llista() {
+        sembra();
+        java.util.List<String> noms = new java.util.ArrayList<>();
+        try (java.util.stream.Stream<Path> s = Files.list(carpeta())) {
+            s.map(p -> p.getFileName().toString())
+                    .filter(n -> n.endsWith(EXTENSIO))
+                    .map(n -> n.substring(0, n.length() - EXTENSIO.length()))
+                    .forEach(noms::add);
+        } catch (IOException ex) {
+            System.err.println("Tema: no es pot llegir " + carpeta() + " (" + ex.getMessage() + ")");
+        }
+        for (String f : DE_FABRICA) if (!noms.contains(f)) noms.add(f);
+        java.util.List<String> res = new java.util.ArrayList<>();
+        for (String f : DE_FABRICA) if (noms.contains(f)) res.add(f);
+        java.util.List<String> altres = new java.util.ArrayList<>(noms);
+        altres.removeAll(res);
+        java.util.Collections.sort(altres, String.CASE_INSENSITIVE_ORDER);
+        res.addAll(altres);
+        return res;
+    }
+
+    /**
+     * [CA] Passa al tema següent de la llista (circular) i el carrega. No toca el config: el tema
+     * del config és només l'inicial. Qui ho crida ha de fer {@link DrawKit#recarrega()} i repintar.
+     * [EN] Moves to the next theme (circular) and loads it; the config is not touched.
+     *
+     * @return [CA] el nom del tema nou / [EN] the new theme name
+     */
+    public static synchronized String seguent() {
+        java.util.List<String> l = llista();
+        int i = l.indexOf(actual().nom());
+        String nou = l.get((i + 1) % l.size());
+        actual = carrega(nou);
+        return actual.nom();
     }
 
     /** [CA] La carpeta dels temes. / [EN] The themes folder. */

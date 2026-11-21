@@ -99,6 +99,7 @@ public class MyButtonPanel extends MyComponent {
     private int id_PrintButton = 41;
     private int id_TremoloButton = 42;
     private int id_MetronomeButton = 43;
+    private int id_ThemeButton = 44;
     /**
      * True if the button panel has been modified and needs to be repaint.
      */
@@ -608,6 +609,18 @@ public class MyButtonPanel extends MyComponent {
 //        this.buttons.get(this.id_ChannelButton).setText(text);
 //    }
 //
+    /** [CA] Posa el nom del tema actual al botó Tema. / [EN] Shows the current theme name on the Theme button. */
+    public void updateThemeButton(String text) {
+        this.setModified(true);
+        if (this.buttons.get(this.id_ThemeButton) != null) this.buttons.get(this.id_ThemeButton).setText(text);
+    }
+
+    /** [CA] Torna a calcular els colors guardats de tots els botons (després d'un canvi de tema). */
+    public void refreshAppearance() {
+        for (MyButton b : this.buttons.values()) b.refreshAppearance();
+        this.setModified(true);
+    }
+
     public void updateInstrButton(String text) {
         this.setModified(true);
         if (this.buttons.get(this.id_InstrButton)!=null) this.buttons.get(this.id_InstrButton).setText(text);

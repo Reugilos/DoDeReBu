@@ -90,6 +90,12 @@ public class MyXiloKeyboard extends MyComponent {
      * [EN] Recalculates dimensions and positions of all keys and slides
      * according to the current state (showChoice, keyboard side).
      */
+    /** [CA] Torna a calcular els colors de totes les tecles (després d'un canvi de tema). */
+    public void refreshAppearance() {
+        for (MyXiloKey k : this.xilokeys) k.refreshAppearance();
+        resetDimensions();
+    }
+
     public void resetDimensions(){
         // Si no hi ha cap tecla seleccionada, totes es veuen enceses (color ple); només
         // quan n'hi ha alguna de seleccionada, les altres s'apaguen.

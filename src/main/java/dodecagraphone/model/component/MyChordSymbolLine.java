@@ -514,6 +514,13 @@ public class MyChordSymbolLine extends MyComponent {
     }
 
     /** Font de les marques i l'alçada de fila per a la qual es va calcular. */
+    /** [CA] Oblida les fonts calculades (després d'un canvi de tema, que en canvia la proporció). */
+    public void invalidateFontCaches() {
+        cachedChordFont = null;
+        cachedMarkFont = null;
+        chordFontOverride = null;
+    }
+
     private Font   cachedMarkFont = null;
     private double cachedMarkRowH = 0;
 

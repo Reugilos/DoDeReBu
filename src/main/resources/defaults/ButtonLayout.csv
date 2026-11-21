@@ -41,4 +41,5 @@ Id;Name;IsToggle;Row;Col;TextOn;TextOff;TipText;IsActive
 43;MetronomeButton;T;14;3;buttonLayout.MetronomeButton.textOn;buttonLayout.MetronomeButton.textOff;buttonLayout.MetronomeButton.tipText;On
 41;PrintButton;B;15;1;buttonLayout.PrintButton.textOn;;buttonLayout.PrintButton.tipText;On
 37;ExportButton;B;15;2;buttonLayout.ExportButton.textOn;;buttonLayout.ExportButton.tipText;Off
+44;ThemeButton;B;15;2;buttonLayout.ThemeButton.textOn;;buttonLayout.ThemeButton.tipText;On
 38;HelpButton;B;15;3;buttonLayout.HelpButton.textOn;;buttonLayout.HelpButton.tipText;On
