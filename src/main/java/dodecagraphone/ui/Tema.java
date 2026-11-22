@@ -42,7 +42,7 @@ import java.util.Properties;
  * punt decimal. Guions: {@code llarg,buit}. Estils de lletra: {@code normal}
  * o {@code negreta}. Interruptors: {@code si} o {@code no}.
  * <p>
- * El config en tria només el tema inicial; el botó «Tema» ({@link #seguent()}) en canvia en viu, circularment, entre tots els de la carpeta.
+ * El config en tria el tema d'arrencada; el botó «Tema» ({@link #seguent()}) en canvia en viu, circularment, entre tots els de la carpeta, i el controlador en desa el nom al config.
  * <p>
  * [EN] The graphic theme used by {@link DrawKit}. Each theme is a text file in
  * the {@code temes} folder next to {@code config.properties}; the config picks
@@ -118,7 +118,7 @@ public final class Tema {
     }
 
     /**
-     * [CA] Passa al tema següent de la llista (circular) i el carrega. No toca el config: el tema
+     * [CA] Passa al tema següent de la llista (circular) i el carrega. No toca el config (ho fa el controlador): el tema
      * del config és només l'inicial. Qui ho crida ha de fer {@link DrawKit#recarrega()} i repintar.
      * [EN] Moves to the next theme (circular) and loads it; the config is not touched.
      *

@@ -3418,7 +3418,14 @@ public class MyController {
      */
     public void onThemeButtonPressed(MyButton togg) {
         if (togg != null) togg.setPressed(false);
-        dodecagraphone.ui.Tema.seguent();
+        String nouTema = dodecagraphone.ui.Tema.seguent();
+        // El tema triat es desa al config.properties: és el que s'obrirà la propera vegada.
+        try {
+            AppConfig.get().set(dodecagraphone.ui.Tema.CLAU_CONFIG, nouTema);
+            AppConfig.get().save();
+        } catch (Exception ex) {
+            System.err.println("No s'ha pogut desar el tema al config: " + ex.getMessage());
+        }
         DrawKit.recarrega();
         ColorSets.initColors();
         // El L&F torna les fonts de Swing al seu valor: es tornen a ampliar amb l'escala del tema nou.
