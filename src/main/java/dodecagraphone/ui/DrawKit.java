@@ -213,6 +213,7 @@ public final class DrawKit {
     private static int TIP_VORA_GRUIX;
     private static int TIP_MARGE;
     private static int TIP_FONT_MIDA;
+    private static double TIP_FONT_PROPORCIO;
 
     // Les icones dels botons (play, pausa, inici) i les fletxes de «Tò >>»
     private static double ICONA_PROPORCIO;
@@ -335,6 +336,7 @@ public final class DrawKit {
         TIP_VORA_GRUIX = T.enter("tip.vora.gruix");
         TIP_MARGE = T.enter("tip.marge");
         TIP_FONT_MIDA = T.enter("tip.font.mida");
+        TIP_FONT_PROPORCIO = T.decimal("tip.font.proporcio");
         ICONA_PROPORCIO = T.decimal("icona.proporcio");
         FLETXA_PROPORCIO = T.decimal("fletxa.proporcio");
         MARQUES_FONS = T.color("marques.fons");
@@ -982,7 +984,17 @@ public final class DrawKit {
             tip.setBackground(TIP_FONS);
         }
         if (TIP_TEXT != null) tip.setForeground(TIP_TEXT);
-        if (TIP_FONT_MIDA > 0) tip.setFont(new Font(FAMILIA_INTERFICIE, Font.PLAIN, TIP_FONT_MIDA));
+        if (TIP_FONT_MIDA > 0) {
+            tip.setFont(new Font(FAMILIA_INTERFICIE, Font.PLAIN, TIP_FONT_MIDA));
+        } else if (TIP_FONT_PROPORCIO > 0) {
+            // [CA] Creix amb la pantalla com la resta de textos (relativa a l'alçada d'una fila),
+            // però mai per sota de la mida del sistema, que és la que ja va bé a les pantalles petites.
+            Font base = tip.getFont();
+            if (base != null) {
+                int mida = (int) Math.round(Settings.getRowHeight() * TIP_FONT_PROPORCIO);
+                if (mida > base.getSize()) tip.setFont(base.deriveFont((float) mida));
+            }
+        }
         javax.swing.border.Border marge = javax.swing.BorderFactory.createEmptyBorder(
                 TIP_MARGE, TIP_MARGE, TIP_MARGE, TIP_MARGE);
         if (TIP_VORA != null && TIP_VORA_GRUIX > 0) {

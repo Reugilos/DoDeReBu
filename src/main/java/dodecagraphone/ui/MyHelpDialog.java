@@ -135,7 +135,7 @@ public class MyHelpDialog {
           .append("tr:nth-child(even) td{background:#eeeeee;}")
           .append("tr:nth-child(even) td.key{background:#d8d8d8;}")
           .append("div.idx{background:").append(idxBg).append(";border:1px solid ").append(border)
-              .append(";padding:6px 12px;margin-bottom:12px;line-height:2.0;}")
+              .append(";padding:6px 12px;margin-bottom:12px;line-height:1.5;}")
           .append("a{color:").append(hdrBg).append(";text-decoration:none;}")
           .append("a:hover{text-decoration:underline;}")
           .append("p.note{margin:2px 0 4px 0;font-size:11px;color:#555;}")
@@ -164,7 +164,7 @@ public class MyHelpDialog {
         };
         sb.append("<a name=\"top\"></a><div class=\"idx\">");
         for (int i = 0; i < sections.length; i++) {
-            if (i > 0) sb.append(" &nbsp;&middot;&nbsp; ");
+            if (i > 0) sb.append("<br>"); // un apartat per línia
             sb.append("<a href=\"#").append(sections[i][0]).append("\">")
               .append(I18n.t(sections[i][1])).append("</a>");
         }
