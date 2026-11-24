@@ -187,8 +187,10 @@ public class DodecagramPdfPrinter {
             printLandscape(outputFile);
         } finally {
             chordLine.setHideInitialMarks(false);
-            // La graella s'ha dibuixat en mode PDF: es torna a pintar per a la pantalla.
+            // La graella i la lletra s'han dibuixat en mode PDF: es tornen a pintar per a la pantalla.
             controller.getAllPurposeScore().drawFullGridinOffscreen();
+            controller.getMyLyrics().setNeedsDrawing(true);
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
             controller.redrawChordLine();
         }
     }
@@ -245,6 +247,7 @@ public class DodecagramPdfPrinter {
         // assegurar que el buffer offscreen cobreix les columnes demanades.
         ensureBufferFor(score, chordLine, lyrics, cols + 1);
         chordLine.setNeedsDrawing(true);
+        lyrics.setNeedsDrawing(true);
         DrawKit.setModePdf(true);
         try {
             controller.getCam().drawFullCamInOffscreen();
@@ -354,8 +357,10 @@ public class DodecagramPdfPrinter {
             printBody(outputFile);
         } finally {
             chordLine.setPrintingMarks(false);
-            // La graella ha estat dibuixada en mode PDF: es torna a pintar per a la pantalla.
+            // La graella i la lletra s'han dibuixat en mode PDF: es tornen a pintar per a la pantalla.
             controller.getAllPurposeScore().drawFullGridinOffscreen();
+            controller.getMyLyrics().setNeedsDrawing(true);
+            controller.getMyLyrics().drawFullLyricsInOffscreen();
             controller.redrawChordLine();
         }
     }
@@ -391,6 +396,7 @@ public class DodecagramPdfPrinter {
 
         // La graella del PDF porta les franges del pentagrama més fosques i els
         // separadors de fila com a vectors (vegeu DrawKit.setModePdf).
+        lyrics.setNeedsDrawing(true);
         DrawKit.setModePdf(true);
         try {
             controller.getCam().drawFullCamInOffscreen();
@@ -593,20 +599,28 @@ public class DodecagramPdfPrinter {
                         if (!isBeat[col] && !isMeasure[col]) continue;
                         float lineX = MARGIN + (float) ((keyWidthPx + (col - startCol) * colWidthF) * rowScaleX);
                         if (lineX <= MARGIN || lineX >= MARGIN + pdfUsableW) continue;
-                        if (isMeasure[col])
-                            pdf.drawMeasureLine(lineX, yImgBottom, vLineH);
-                        else
-                            pdf.drawBeatLine(lineX, yImgBottom, vLineH);
-                    }
-                    // Barres al fons (prova): les notes que travessen una barra, repintades per damunt.
-                    if (MyGridScore.LINIES_AL_FONS) {
-                        BufferedImage ov = notesOverLinesOverlay(rowImg, score, startCol, limitCol,
-                                isBeat, isMeasure, keyWidthPx, chordH, colWidthF, rowScaleX);
-                        if (ov != null) {
-                            PDImageXObject ovImg = PDImageXObject.createFromByteArray(
-                                    doc, toBytes(ov), "ov" + i);
-                            cs.drawImage(ovImg, MARGIN, yImgBottom, pdfUsableW, rowImgPdfH);
+                        // Barres al fons: la barra es talla allà on una nota la travessa (així no cal cap
+                        // imatge damunt, que el visor de PDF mostra amb franges); la resta, igual.
+                        java.util.List<float[]> talls = new java.util.ArrayList<>();
+                        if (MyGridScore.LINIES_AL_FONS) {
+                            int nK = score.getnKeys();
+                            int cellH2 = score.cellHeightPx();
+                            for (int row = 0; row < nK; row++) {
+                                if (score.noteStateAt(row, col) != 2) continue;
+                                float top = yImgTop - (chordH + score.rowTopPx(row)) * scaleY;
+                                talls.add(new float[]{top - cellH2 * scaleY, top});
+                            }
                         }
+                        float yTop = yImgBottom + vLineH;
+                        float cursor = yImgBottom;
+                        talls.sort((p, q) -> Float.compare(p[0], q[0]));
+                        for (float[] t : talls) {
+                            if (t[0] > cursor) {
+                                drawBarSegment(isMeasure[col], lineX, cursor, Math.min(t[0], yTop) - cursor);
+                            }
+                            cursor = Math.max(cursor, t[1]);
+                        }
+                        if (yTop > cursor) drawBarSegment(isMeasure[col], lineX, cursor, yTop - cursor);
                     }
                 }
 
@@ -638,6 +652,12 @@ public class DodecagramPdfPrinter {
      * this transparent image (row-sized) carries only the pixels of the notes crossing or starting
      * at them, copied from the row, and is drawn after the lines. {@code null} if none.
      */
+    private void drawBarSegment(boolean measure, float x, float yBottom, float h) throws IOException {
+        if (h <= 0.01f) return;
+        if (measure) pdf.drawMeasureLine(x, yBottom, h);
+        else pdf.drawBeatLine(x, yBottom, h);
+    }
+
     private BufferedImage notesOverLinesOverlay(BufferedImage rowImg, MyAllPurposeScore score,
             int startCol, int limitCol, boolean[] isBeat, boolean[] isMeasure,
             int keyWidthPx, int chordH, double colWidthF, float rowScaleX) {
@@ -645,6 +665,9 @@ public class DodecagramPdfPrinter {
         int nKeys = score.getnKeys();
         // Barra de compàs de 1,5 pt: en píxels de la imatge, més un marge.
         int k = (int) Math.ceil(2f / Math.max(0.05f, rowScaleX)) + 1;
+        // Sense passar de 3: la vora de la imatge no ha de caure dins del nom de la nota, o el visor
+        // (que remostra les imatges per separat) hi deixa una franja clara; en paper no es veu.
+        k = Math.min(k, 3);
         BufferedImage ov = null;
         for (int col = startCol; col <= limitCol && col < isBeat.length; col++) {
             if (!isBeat[col] && !isMeasure[col]) continue;

@@ -877,12 +877,19 @@ public class MyLyrics extends MyComponent {
             // a dibuixar aquest mateix text en screen-space per evitar que es
             // vegi borrós, i evita blitejar aquest buffer per no duplicar-lo.
             List<LyricSegment> segs = lyricsByTrack.get(displayTrackId);
+            // Només al PDF: la lletra més gran (la imatge es redueix en incrustar-la).
+            java.awt.Font fontAbans = offscreenGraphics.getFont();
+            if (DrawKit.isModePdf() && DrawKit.proporcioDeLletraPdf() != 1.0) {
+                offscreenGraphics.setFont(fontAbans.deriveFont(
+                        (float) (fontAbans.getSize2D() * DrawKit.proporcioDeLletraPdf())));
+            }
             if (segs != null && !segs.isEmpty()) {
                 DrawKit.comencaLletra(offscreenGraphics, false);
                 for (LyricSegment seg : segs) {
                     drawSegment(seg, offscreenGraphics);
                 }
             }
+            offscreenGraphics.setFont(fontAbans);
 
             // Preview: text currently being typed (shown in dark-grey).
             if (editMode && editBuffer.length() > 0 && editTrack == displayTrackId) {

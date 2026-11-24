@@ -1676,7 +1676,7 @@ public class MyGridScore extends MyComponent {
         }
         // Al PDF la imatge es redueix en incrustar-la: amb un sol píxel la separació quedaria
         // difuminada, o sigui que n'hi ha dos.
-        int gapPx = DrawKit.isModePdf() ? 2 : 1;
+        int gapPx = DrawKit.isModePdf() ? DrawKit.separacioDeNotaPdf() : 1;
         int wNota = gapAfter ? Math.max(1, wdth - gapPx) : wdth;
         if (sq != null && sq.isSqVisible()) {
             color = sq.getColor();
@@ -1737,7 +1737,23 @@ public class MyGridScore extends MyComponent {
                     DrawKit.casella(g, screenX, screenY, wNota, hght, sq.getColor());
 
                     if (name != null) {
-                        DrawKit.nomDeNota(g, name, screenX, screenY, wdth, hght, midi);
+                        int wTotal = 0;
+                        if (DrawKit.isModePdf()) {
+                            // Al PDF el nom és més gros: cal saber quant fa tota la nota (cel·les enllaçades).
+                            int cells = 1;
+                            int step = Settings.getnColsSquare();
+                            int nc2 = col + step;
+                            while (nc2 < this.grid[row + BUFFER].length) {
+                                MyGridSquare q2 = this.grid[row + BUFFER][nc2];
+                                if (q2 == null) break;
+                                q2.updateState();
+                                if (!(q2.isSqVisible() && q2.isSq_is_linked())) break;
+                                cells++;
+                                nc2 += step;
+                            }
+                            wTotal = cells * wdth;
+                        }
+                        DrawKit.nomDeNota(g, name, screenX, screenY, wdth, hght, midi, wTotal);
                     }
                     // Ja no es dibuixa la ratlla vertical de davant (DrawKit.voraDeNota, que es
                     // conserva): les notes consecutives se separen amb el píxel de menys de dalt.

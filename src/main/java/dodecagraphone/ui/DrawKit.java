@@ -119,6 +119,9 @@ public final class DrawKit {
     private static Color PDF_PAUTA_DO_CENTRAL;
     private static Color PDF_SEPARADOR_DE_FILA;
     private static float PDF_SEPARADOR_GRUIX;
+    private static double PDF_NOTA_FONT;
+    private static double PDF_LLETRA_FONT;
+    private static int PDF_NOTA_SEPARACIO;
 
     /**
      * [CA] Cert mentre es prepara el buffer de la graella per al PDF: les files
@@ -136,6 +139,12 @@ public final class DrawKit {
 
     /** [CA] El PDF dibuixa els separadors de fila com a vectors? / [EN] Vector row separators? */
     public static boolean separadorsPdfVectorials() { return PDF_SEPARADOR_GRUIX > 0f; }
+
+    /** [CA] Separació (px del bitmap) entre notes contigües no lligades al PDF; la imatge es redueix en incrustar-la. */
+    public static int separacioDeNotaPdf() { return Math.max(1, PDF_NOTA_SEPARACIO); }
+
+    /** [CA] Multiplicador de la lletra de la lletra (síl·labes) al PDF. */
+    public static double proporcioDeLletraPdf() { return PDF_LLETRA_FONT > 0 ? PDF_LLETRA_FONT : 1.0; }
 
     /** [CA] Gruix (punts PDF) dels separadors de fila al PDF. */
     public static float gruixSeparadorPdf() { return PDF_SEPARADOR_GRUIX; }
@@ -285,6 +294,9 @@ public final class DrawKit {
         PDF_PAUTA_DO_CENTRAL = T.color("pdf.pauta.doCentral");
         PDF_SEPARADOR_DE_FILA = T.color("pdf.graella.separador.color");
         PDF_SEPARADOR_GRUIX = T.decimal("pdf.graella.separador.gruix");
+        PDF_NOTA_FONT = T.decimal("pdf.nota.font.proporcio");
+        PDF_LLETRA_FONT = T.decimal("pdf.lletra.font.proporcio");
+        PDF_NOTA_SEPARACIO = T.enter("pdf.nota.separacio");
         PATRO_TRIAT = T.color("patro.triat");
         PATRO_FORA = T.color("patro.fora");
         TEXT_SOBRE_NOTA = T.color("nota.text");
@@ -637,6 +649,15 @@ public final class DrawKit {
 
     /** [CA] El nom d'una nota dins de la seva cel·la, en la font actual. / [EN] A note name. */
     public static void nomDeNota(Graphics2D g, String nom, int x, int y, int w, int h, int midi) {
+        nomDeNota(g, nom, x, y, w, h, midi, 0);
+    }
+
+    /**
+     * [CA] Com {@link #nomDeNota(Graphics2D, String, int, int, int, int, int)}, sabent l'amplada de
+     * tota la nota ({@code wNota}, 0 = no se sap). Al PDF, si el nom ampliat no hi cap, s'encongeix
+     * fins que hi càpiga, però mai per sota de la mida de la pantalla.
+     */
+    public static void nomDeNota(Graphics2D g, String nom, int x, int y, int w, int h, int midi, int wNota) {
         // Amb un sol color per a totes les notes, el text és el del tema. Si cada nota té el seu
         // color i {@code nota.gris.text = colorsets}, el decideix ColorSets (negre sobre les notes
         // pàl·lides —re, ri, mi— i blanc sobre les altres); el nom de les tecles no hi passa.
@@ -645,6 +666,22 @@ public final class DrawKit {
         else if (NOTA_GRIS == null && NOTA_GRIS_TEXT == null) tinta = ColorSets.getGridSquareFontColor(midi);
         else tinta = tintaDeNota(midi);
         g.setColor(tinta);
+        if (modePdf && PDF_NOTA_FONT > 0 && PDF_NOTA_FONT != 1.0) {
+            // Només al PDF: el nom de la nota més gros (la imatge es redueix en incrustar-la).
+            Font abans = g.getFont();
+            float mida = (float) (abans.getSize2D() * PDF_NOTA_FONT);
+            if (wNota > 0) {
+                int disponible = wNota - (2 + w / 3) - 1;
+                int ample = g.getFontMetrics(abans.deriveFont(mida)).stringWidth(nom);
+                if (ample > disponible && ample > 0) {
+                    mida = Math.max(abans.getSize2D(), mida * disponible / ample);
+                }
+            }
+            g.setFont(abans.deriveFont(mida));
+            g.drawString(nom, (int) (2 + x + w / 3), (int) (y + h * 0.8));
+            g.setFont(abans);
+            return;
+        }
         g.drawString(nom, (int) (2 + x + w / 3), (int) (y + h * 0.8));
     }
 
